@@ -105,6 +105,9 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
         if nd == ndc:
             dset = pu.execute_comparison(dset, dc, cmprt)
 
+    if center == None:
+        return pu.locate_extrema(dset, ledg, redg, nd)
+
     inb, ind = pu.find_indices(nd, center, ledg, redg, draw1D, draw2D, True)
     print('Plot center', center[0], center[1], center[2], 'gives indices:', ind[0], ind[1], ind[2], 'for uniform grid level', level)
 
@@ -180,6 +183,34 @@ def level_zoom(h5f, gridlist, zoom, smin, smax):
 
 
 def collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, getmap, drawu, drawa, drawg, draw1D, draw2D):
+    if len(center) != 3:
+        curmin, curmax = np.inf, -np.inf
+        locmin, locmax = None, None
+        lev_num = -1
+        for iref in range(maxglev + 1):
+            if iref in plotlevels:
+                lev_num += 1
+                blks = []
+
+                if drawu:
+                    levok, bextr, cextr = reconstruct_uniform(h5f, var, cmpr, lev_num, iref, gridlist, None, usc, draw1D, draw2D)
+                    if levok:
+                        curmin, curmax, locmin, locmax = pu.check_extrema(curmin, curmax, locmin, locmax, bextr, cextr)
+
+                if drawa:
+                    for ib in gridlist:
+                        levok, bextr, cextr = read_block(h5f, var, cmpr, ib, iref, None, usc, (getmap and drawa), draw1D, draw2D)
+                        if levok:
+                            curmin, curmax, locmin, locmax = pu.check_extrema(curmin, curmax, locmin, locmax, bextr, cextr)
+
+        print('Found in position: %s %s %s \tmin value %s' % (locmin[0], locmin[1], locmin[2], curmin))
+        print('Found in position: %s %s %s \tmax value %s' % (locmax[0], locmax[1], locmax[2], curmax))
+        if center[0]:
+            center = locmin
+        elif center[1]:
+            center = locmax
+        print('Plot center set to: %s %s %s' % center)
+
     l1, h1, l2, h2, l3, h3 = [], [], [], [], [], []
     lev_num = -1
     for iref in range(maxglev + 1):
@@ -214,7 +245,7 @@ def collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgc
                             h3.append(extr[5])
             if blks != []:
                 refis.append(blks)
-    return refis, [l1, h1, l2, h2, l3, h3]
+    return refis, [l1, h1, l2, h2, l3, h3], center
 
 
 def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
@@ -227,11 +258,12 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     ledge = h5g.attrs['left_edge']
     redge = h5g.attrs['right_edge']
     ngb = h5g.attrs['n_b']
-    inb, ind = pu.find_indices(ngb, oc, ledge, redge, draw1D, draw2D, False)
-    if not any(inb):
-        return False, [], []
-    if not getmap:
-        return levok, [[], inb, ledge / usc, redge / usc, olev, []], []
+    if oc != None:
+        inb, ind = pu.find_indices(ngb, oc, ledge, redge, draw1D, draw2D, False)
+        if not any(inb):
+            return False, [], []
+        if not getmap:
+            return levok, [[], inb, ledge / usc, redge / usc, olev, []], []
     off = h5g.attrs['off']
     n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
     ce = n_b + off
@@ -239,6 +271,9 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     cmpr0, cmprb, h5c, cmprd, cmprl, cmprt, diff_struct = cmpr
     if cmpr0:
         dset = pu.execute_comparison(dset, h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
+
+    if oc == None:
+        return pu.locate_extrema(dset, ledge, redge, ngb)
 
     b2d, b1d, extr = take_cuts_and_lines(dset, ind, draw1D, draw2D)
 

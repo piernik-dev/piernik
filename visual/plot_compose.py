@@ -233,7 +233,7 @@ def plotcompose(pthfilen, var, output, options):
 
     refis = []
     if drawd or drawg:
-        refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
+        refis, extr, center = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
 
         if refis == [] or pu.list_any(extr, []):
             drawd = False

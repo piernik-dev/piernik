@@ -285,6 +285,32 @@ def color_axes(wax, color):
     return
 
 
+def locate_extrema(dset, ledge, redge, ngb):
+    d3min, d3max = np.min(dset), np.max(dset)
+    i3min = np.unravel_index(np.argmin(dset, axis=None), dset.shape)
+    i3max = np.unravel_index(np.argmax(dset, axis=None), dset.shape)
+    c3min = block_cell_center(ledge, redge, ngb, i3min)
+    c3max = block_cell_center(ledge, redge, ngb, i3max)
+    return True, [d3min, d3max], [c3min, c3max]
+
+
+def check_extrema(curmin, curmax, locmin, locmax, bextr, cextr):
+    if bextr[0] <= curmin:
+        curmin = bextr[0]
+        locmin = cextr[0]
+    if bextr[1] >= curmax:
+        curmax = bextr[1]
+        locmax = cextr[1]
+    return curmin, curmax, locmin, locmax
+
+
+def block_cell_center(le, re, ngb, i3):
+    dl = list3_div(list3_subtraction(re, le), [np.float(ngb[0]), np.float(ngb[1]), np.float(ngb[2])])
+    dd = [np.float(i3[0]) + 0.5, np.float(i3[1]) + 0.5, np.float(i3[2]) + 0.5]
+    lp = list3_mult(dl, dd)
+    return list3_add(le, lp)
+
+
 def detindex(nd, cxyz, smin, smax):
     return int(np.floor(nd * (cxyz - smin) / (smax - smin)))
 
