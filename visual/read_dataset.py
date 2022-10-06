@@ -108,10 +108,10 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
     inb, ind = pu.find_indices(nd, center, ledg, redg, draw1D, draw2D, True)
     print('Plot center', center[0], center[1], center[2], 'gives indices:', ind[0], ind[1], ind[2], 'for uniform grid level', level)
 
-    b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
+    b2d, b1d, extr = take_cuts_and_lines(dset, ind, draw1D, draw2D)
     block = b2d, inb, pu.list3_division(ledg, usc), pu.list3_division(redg, usc), level, b1d
 
-    return levelmet, block, [d1min, d1max, d2min, d2max, d3min, d3max]
+    return levelmet, block, extr
 
 
 def collect_dataset(h5f, dset_name, cmpr, level, gridlist, nd, loff):
@@ -240,9 +240,9 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     if cmpr0:
         dset = pu.execute_comparison(dset, h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 
-    b2d, b1d, d1min, d1max, d2min, d2max, d3min, d3max = take_cuts_and_lines(dset, ind, draw1D, draw2D)
+    b2d, b1d, extr = take_cuts_and_lines(dset, ind, draw1D, draw2D)
 
-    return levok, [b2d, inb, ledge / usc, redge / usc, olev, b1d], [d1min, d1max, d2min, d2max, d3min, d3max]
+    return levok, [b2d, inb, ledge / usc, redge / usc, olev, b1d], extr
 
 
 def take_cuts_and_lines(dset, ind, draw1D, draw2D):
@@ -282,7 +282,7 @@ def take_cuts_and_lines(dset, ind, draw1D, draw2D):
         d1max = max(d1max)
         d1min = min(d1min)
 
-    return [yz, xz, xy], [fx, fy, fz], d1min, d1max, d2min, d2max, d3min, d3max
+    return [yz, xz, xy], [fx, fy, fz], [d1min, d1max, d2min, d2max, d3min, d3max]
 
 
 def collect_particles(h5f, drawh, center, player, uupd, usc, plotlevels, gridlist):
