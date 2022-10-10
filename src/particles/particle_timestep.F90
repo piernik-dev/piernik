@@ -115,6 +115,48 @@ contains
 
    end subroutine max_pacc_3d
 
+!> \todo this is a part of cg_list_dataop::get_extremum; consider merge it together
+   subroutine locate_extremum(prop)
+
+      use constants,    only: I_ONE, ndims
+      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_2DOUBLE_PRECISION, &
+           &                  MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_MAXLOC, MPI_IN_PLACE
+      use MPIFUN,       only: MPI_Allreduce, MPI_Send, MPI_Recv
+      use mpisetup,     only: err_mpi, master, proc, FIRST
+      use types,        only: value
+
+      implicit none
+
+      type(value),   intent(out) :: prop    !< precise location of the extremum to be found
+      integer(kind=4), parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
+      enum, bind(C)
+         enumerator :: I_V, I_P !< value and proc
+      end enum
+      real, dimension(I_V:I_P)   :: v_red
+
+      v_red(I_V) = prop%val
+      v_red(I_P) = real(proc)
+
+      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, MPI_MAXLOC, MPI_COMM_WORLD, err_mpi)
+
+      prop%val = v_red(I_V)
+      prop%proc = int(v_red(I_P), kind=4)
+
+      if (prop%proc /= 0) then
+         if (proc == prop%proc) then ! slave
+            call MPI_Send (prop%loc,    ndims, MPI_INTEGER,          FIRST, tag1, MPI_COMM_WORLD, err_mpi)
+            call MPI_Send (prop%coords, ndims, MPI_DOUBLE_PRECISION, FIRST, tag2, MPI_COMM_WORLD, err_mpi)
+            call MPI_Send (prop%assoc,  I_ONE, MPI_DOUBLE_PRECISION, FIRST, tag3, MPI_COMM_WORLD, err_mpi)
+         endif
+         if (master) then
+            call MPI_Recv (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+            call MPI_Recv (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+            call MPI_Recv (prop%assoc,  I_ONE, MPI_DOUBLE_PRECISION, prop%proc, tag3, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+         endif
+      endif
+
+   end subroutine locate_extremum
+
    subroutine timestep_nbody(dt)
 
       use cg_leaves,    only: leaves
@@ -164,6 +206,7 @@ contains
       if (factor_v * dt_nbody > one)) dt_nbody = dt_nbody / factor_v
 #endif /* DUST_PARTICLES */
 
+      call locate_extremum(pacc_max)
       call piernik_MPI_Allreduce(dt_nbody, pMIN)
       dt_hydro = dt
 
