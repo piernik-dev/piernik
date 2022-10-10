@@ -49,27 +49,23 @@ contains
 
    subroutine max_pvel_1d(cg, max_v)
 
-      use constants,      only: ndims, xdim, zdim, zero
+      use constants,      only: ndims, zero
       use grid_cont,      only: grid_container
       use particle_types, only: particle
 
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
-      type(particle), pointer                    :: pset
       real, dimension(ndims),        intent(out) :: max_v
-      integer(kind=4)                            :: cdim
-      real                                       :: v_tmp
+      real, dimension(ndims)                     :: v_tmp
+      type(particle), pointer                    :: pset
 
-      !Better way to do this? Was easier with arrays
       max_v = zero
-      do cdim = xdim, zdim
-         pset => cg%pset%first
-         do while (associated(pset))
-            v_tmp = abs(pset%pdata%vel(cdim))
-            if (v_tmp > max_v(cdim)) max_v(cdim) = v_tmp
-            pset => pset%nxt
-         enddo
+      pset => cg%pset%first
+      do while (associated(pset))
+         v_tmp = abs(pset%pdata%vel)
+         where (v_tmp > max_v) max_v = v_tmp
+         pset => pset%nxt
       enddo
 
    end subroutine max_pvel_1d
