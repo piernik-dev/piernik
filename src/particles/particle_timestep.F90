@@ -70,40 +70,48 @@ contains
 
    end function max_pvel_dl
 
-   subroutine max_pacc_3d(cg, max_pacc)
+   subroutine max_pacc_3d(cg, factor_a)
 
-      use constants,      only: CENTER, half, LO, xdim, zdim, zero
+      use constants,      only: CENTER, half, LO, ndims, xdim, zdim, one, zero
       use grid_cont,      only: grid_container
       use mpisetup,       only: proc
-      use types,          only: value
       use particle_types, only: particle
 
       implicit none
 
-      type(grid_container), pointer, intent(in)  :: cg
-      type(value),                   intent(out) :: max_pacc
-      type(particle), pointer                    :: pset
-      real                                       :: acc2, max_acc
-      integer(kind=4)                            :: cdim
+      type(grid_container), pointer, intent(in)    :: cg
+      real,                          intent(inout) :: factor_a
+      type(particle), pointer                      :: pset
+      real                                         :: acc2, eta, max_acc, new_fa
+      real, dimension(ndims)                       :: max_crd
+      integer(kind=4)                              :: cdim
 
-      max_pacc%assoc = huge(1.)
-
-      max_acc  = zero
+      max_acc = -one
+      max_crd = huge(1.)
       pset => cg%pset%first
       do while (associated(pset))
          acc2 = sum(pset%pdata%acc(:)**2)
          if (acc2 > max_acc) then
             max_acc = acc2
-            max_pacc%coords(:) = pset%pdata%pos(:)
-            !max_pacc%proc = i !> \todo it might be an information about extremum particle, but the scheme of log file is to print the process number
+            max_crd = pset%pdata%pos(:)
          endif
          pset => pset%nxt
       enddo
-      max_pacc%val = sqrt(max_acc)
-      do cdim = xdim, zdim
-         max_pacc%loc(cdim) = int( half + (max_pacc%coords(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
-      enddo
-      max_pacc%proc = proc
+
+      if (max_acc < zero) return
+
+      eta = minval(cg%dl)   !scale timestep with cell size
+      max_acc = sqrt(max_acc)
+      new_fa = max_acc / eta
+      if (new_fa > factor_a) then
+         factor_a        = new_fa
+         pacc_max%val    = max_acc
+         pacc_max%coords = max_crd
+         pacc_max%proc   = proc
+         do cdim = xdim, zdim
+            pacc_max%loc(cdim) = int( half + (pacc_max%coords(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
+         enddo
+      endif
 
    end subroutine max_pacc_3d
 
@@ -126,7 +134,7 @@ contains
       real,            intent(inout) :: dt
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      real                           :: eta, eps, factor_a, factor_v, dt_hydro
+      real                           :: eps, factor_a, factor_v, dt_hydro
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
@@ -139,10 +147,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         eta = minval(cg%dl)   !scale timestep with cell size
 
-         call max_pacc_3d(cg, pacc_max)
-         factor_a = max(factor_a, pacc_max%val / eta)
+         call max_pacc_3d(cg, factor_a)
 
 #ifdef DUST_PARTICLES
          factor_v = max(factor_v, max_pvel_dl(cg))
