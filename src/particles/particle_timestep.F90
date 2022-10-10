@@ -119,14 +119,11 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: zero, two, pMIN
+      use constants,    only: zero, one, two, pMIN
       use dataio_pub,   only: msg, printinfo
       use grid_cont,    only: grid_container
       use mpisetup,     only: piernik_MPI_Allreduce, master
       use particle_pub, only: lf_c, ignore_dt_fluid
-#ifdef DUST_PARTICLES
-      use constants,    only: one
-#endif /* DUST_PARTICLES */
 
       implicit none
 
@@ -140,8 +137,8 @@ contains
 #endif /* VERBOSE */
 
       eps      = 1.0e-1
-      factor_a = zero
-      factor_v = zero
+      factor_a = -one
+      factor_v = -one
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -156,14 +153,18 @@ contains
          cgl => cgl%nxt
       enddo
 
-      dt_nbody = lf_c * sqrt(two * eps / factor_a)
+      if (factor_a > zero) then
+         dt_nbody = lf_c * sqrt(two * eps / factor_a)
+      else
+         dt_nbody = huge(1.)
+      endif
+      pacc_max%assoc = dt_nbody
 
 #ifdef DUST_PARTICLES
       if (factor_v * dt_nbody > one)) dt_nbody = dt_nbody / factor_v
 #endif /* DUST_PARTICLES */
 
       call piernik_MPI_Allreduce(dt_nbody, pMIN)
-      pacc_max%assoc = dt_nbody
       dt_hydro = dt
 
       if (ignore_dt_fluid) then
