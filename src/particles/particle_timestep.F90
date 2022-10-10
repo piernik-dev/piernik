@@ -121,7 +121,6 @@ contains
       use cg_list,      only: cg_list_element
       use constants,    only: zero, two, pMIN
       use dataio_pub,   only: msg, printinfo
-      use global,       only: dt_max
       use grid_cont,    only: grid_container
       use mpisetup,     only: piernik_MPI_Allreduce, master
       use particle_pub, only: lf_c, ignore_dt_fluid
@@ -163,7 +162,6 @@ contains
       if (factor_v * dt_nbody > one)) dt_nbody = dt_nbody / factor_v
 #endif /* DUST_PARTICLES */
 
-      dt_nbody = min(dt_nbody, dt_max)
       call piernik_MPI_Allreduce(dt_nbody, pMIN)
       pacc_max%assoc = dt_nbody
       dt_hydro = dt
