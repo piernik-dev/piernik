@@ -47,7 +47,7 @@ module particle_timestep
 
 contains
 
-   subroutine max_pvel_1d(cg, max_v)
+   real function max_pvel_dl(cg) result (factor)
 
       use constants,      only: ndims, zero
       use grid_cont,      only: grid_container
@@ -56,9 +56,8 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
-      real, dimension(ndims),        intent(out) :: max_v
-      real, dimension(ndims)                     :: v_tmp
       type(particle), pointer                    :: pset
+      real, dimension(ndims)                     :: max_v, v_tmp
 
       max_v = zero
       pset => cg%pset%first
@@ -67,8 +66,9 @@ contains
          where (v_tmp > max_v) max_v = v_tmp
          pset => pset%nxt
       enddo
+      factor = maxval(max_v / cg%dl)
 
-   end subroutine max_pvel_1d
+   end function max_pvel_dl
 
    subroutine max_pacc_3d(cg, max_pacc)
 
@@ -109,16 +109,16 @@ contains
 
    subroutine timestep_nbody(dt)
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: one, pMIN, two
-      use dataio_pub,     only: msg, printinfo
-      use global,         only: dt_max
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: piernik_MPI_Allreduce, master
-      use particle_pub,   only: lf_c, ignore_dt_fluid
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: zero, two, pMIN
+      use dataio_pub,   only: msg, printinfo
+      use global,       only: dt_max
+      use grid_cont,    only: grid_container
+      use mpisetup,     only: piernik_MPI_Allreduce, master
+      use particle_pub, only: lf_c, ignore_dt_fluid
 #ifdef DUST_PARTICLES
-      use constants,      only: ndims
+      use constants,    only: one
 #endif /* DUST_PARTICLES */
 
       implicit none
@@ -126,18 +126,14 @@ contains
       real,            intent(inout) :: dt
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-
       real                           :: eta, eps, factor, dt_hydro
-#ifdef DUST_PARTICLES
-      real, dimension(ndims)         :: max_v
-#endif /* DUST_PARTICLES */
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
 
       eps      = 1.0e-1
-      factor   = one
+      factor   = zero
       dt_nbody = huge(1.)
 
       cgl => leaves%first
@@ -149,16 +145,19 @@ contains
          if (abs(pacc_max%val) > tiny(1.)) then
             dt_nbody = sqrt(two*eta*eps/pacc_max%val)
 
-#ifdef DUST_PARTICLES
-            call max_pvel_1d(cg, max_v)
-            if (any(max_v * dt_nbody > cg%dl)) factor = max(max_v / cg%dl)
-#endif /* DUST_PARTICLES */
-
-            dt_nbody  = lf_c * dt_nbody / factor
+            dt_nbody  = lf_c * dt_nbody
          endif
+
+#ifdef DUST_PARTICLES
+            factor = max(factor, max_pvel_dl(cg))
+#endif /* DUST_PARTICLES */
 
          cgl => cgl%nxt
       enddo
+
+#ifdef DUST_PARTICLES
+      if (factor * dt_nbody > one)) dt_nbody = dt_nbody / factor
+#endif /* DUST_PARTICLES */
 
       dt_nbody = min(dt_nbody, dt_max)
       call piernik_MPI_Allreduce(dt_nbody, pMIN)
