@@ -118,7 +118,7 @@ contains
       use mpisetup,       only: piernik_MPI_Allreduce, master
       use particle_pub,   only: lf_c, ignore_dt_fluid
 #ifdef DUST_PARTICLES
-      use constants,      only: ndims, xdim, zdim, big
+      use constants,      only: ndims
 #endif /* DUST_PARTICLES */
 
       implicit none
@@ -129,7 +129,6 @@ contains
 
       real                           :: eta, eps, factor, dt_hydro
 #ifdef DUST_PARTICLES
-      integer(kind=4)                :: cdim
       real, dimension(ndims)         :: max_v
 #endif /* DUST_PARTICLES */
 
@@ -152,17 +151,10 @@ contains
 
 #ifdef DUST_PARTICLES
             call max_pvel_1d(cg, max_v)
-            if (any(max_v*dt_nbody > cg%dl)) then
-               factor = big
-               do cdim = xdim, zdim
-                  if ((max_v(cdim) .notequals. zero)) then
-                     factor = min(cg%dl(cdim)/max_v(cdim), factor)
-                  endif
-               enddo
-            endif
+            if (any(max_v * dt_nbody > cg%dl)) factor = max(max_v / cg%dl)
 #endif /* DUST_PARTICLES */
 
-            dt_nbody  = lf_c * factor * dt_nbody
+            dt_nbody  = lf_c * dt_nbody / factor
          endif
 
          cgl => cgl%nxt
