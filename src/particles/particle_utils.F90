@@ -38,77 +38,13 @@ module particle_utils
    implicit none
 
    private
-   public :: max_pvel_1d, max_pacc_3d, add_part_in_proper_cg, is_part_in_cg, npf
+   public :: add_part_in_proper_cg, is_part_in_cg, npf
    public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
    integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
 
 contains
-
-   subroutine max_pvel_1d(cg, max_v)
-
-      use constants,      only: ndims, xdim, zdim, zero
-      use grid_cont,      only: grid_container
-      use particle_types, only: particle
-
-      implicit none
-
-      type(grid_container), pointer, intent(in)  :: cg
-      type(particle), pointer                    :: pset
-      real, dimension(ndims),        intent(out) :: max_v
-      integer(kind=4)                            :: cdim
-      real                                       :: v_tmp
-
-      !Better way to do this? Was easier with arrays
-      max_v = zero
-      do cdim = xdim, zdim
-         pset => cg%pset%first
-         do while (associated(pset))
-            v_tmp = abs(pset%pdata%vel(cdim))
-            if (v_tmp > max_v(cdim)) max_v(cdim) = v_tmp
-            pset => pset%nxt
-         enddo
-      enddo
-
-   end subroutine max_pvel_1d
-
-   subroutine max_pacc_3d(cg, max_pacc)
-
-      use constants, only: CENTER, half, LO, xdim, zdim, zero
-      use grid_cont, only: grid_container
-      use mpisetup,  only: proc
-      use types,     only: value
-      use particle_types, only: particle
-
-      implicit none
-
-      type(grid_container), pointer, intent(in)  :: cg
-      type(value),                   intent(out) :: max_pacc
-      type(particle), pointer                    :: pset
-      real                                       :: acc2, max_acc
-      integer(kind=4)                            :: cdim
-
-      max_pacc%assoc = huge(1.)
-
-      max_acc  = zero
-      pset => cg%pset%first
-      do while (associated(pset))
-         acc2 = sum(pset%pdata%acc(:)**2)
-         if (acc2 > max_acc) then
-            max_acc = acc2
-            max_pacc%coords(:) = pset%pdata%pos(:)
-            !max_pacc%proc = i !> \todo it might be an information about extremum particle, but the scheme of log file is to print the process number
-         endif
-         pset => pset%nxt
-      enddo
-      max_pacc%val = sqrt(max_acc)
-      do cdim = xdim, zdim
-         max_pacc%loc(cdim) = int( half + (max_pacc%coords(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
-      enddo
-      max_pacc%proc = proc
-
-   end subroutine max_pacc_3d
 
    subroutine is_part_in_cg(cg, pos, indomain, in, phy, out)
 
