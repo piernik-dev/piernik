@@ -126,15 +126,15 @@ contains
       real,            intent(inout) :: dt
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      real                           :: eta, eps, factor, dt_hydro
+      real                           :: eta, eps, factor_a, factor_v, dt_hydro
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
 
       eps      = 1.0e-1
-      factor   = zero
-      dt_nbody = huge(1.)
+      factor_a = zero
+      factor_v = zero
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -142,21 +142,19 @@ contains
          eta = minval(cg%dl)   !scale timestep with cell size
 
          call max_pacc_3d(cg, pacc_max)
-         if (abs(pacc_max%val) > tiny(1.)) then
-            dt_nbody = sqrt(two*eta*eps/pacc_max%val)
-
-            dt_nbody  = lf_c * dt_nbody
-         endif
+         factor_a = max(factor_a, pacc_max%val / eta)
 
 #ifdef DUST_PARTICLES
-            factor = max(factor, max_pvel_dl(cg))
+         factor_v = max(factor_v, max_pvel_dl(cg))
 #endif /* DUST_PARTICLES */
 
          cgl => cgl%nxt
       enddo
 
+      dt_nbody = lf_c * sqrt(two * eps / factor_a)
+
 #ifdef DUST_PARTICLES
-      if (factor * dt_nbody > one)) dt_nbody = dt_nbody / factor
+      if (factor_v * dt_nbody > one)) dt_nbody = dt_nbody / factor_v
 #endif /* DUST_PARTICLES */
 
       dt_nbody = min(dt_nbody, dt_max)
