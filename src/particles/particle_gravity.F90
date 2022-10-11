@@ -179,7 +179,7 @@ contains
    function phi_pm_part(pos, mass)
 
       use constants,    only: ndims, xdim, ydim, zdim
-      use particle_pub, only: eps
+      use particle_pub, only: r_soft
       use units,        only: newtong
 
       implicit none
@@ -188,7 +188,7 @@ contains
       real,                   intent(in) :: mass
       real                               :: r, phi_pm_part
 
-      r = sqrt(pos(xdim)**2 + pos(ydim)**2 + pos(zdim)**2 + eps**2)
+      r = sqrt(pos(xdim)**2 + pos(ydim)**2 + pos(zdim)**2 + r_soft**2)
       phi_pm_part = -newtong*mass / r
 
    end function phi_pm_part

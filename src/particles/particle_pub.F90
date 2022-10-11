@@ -42,14 +42,14 @@ module particle_pub
 
    private
    public :: init_particles, cleanup_particles
-   public :: eps, lf_c, ignore_dt_fluid, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, dump_diagnose, twodtscheme, default_ti, time_integrator
+   public :: eps, lf_c, ignore_dt_fluid, is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b, dump_diagnose, r_soft, twodtscheme, default_ti, time_integrator
 
    real    :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
    logical :: ignore_dt_fluid    !< option to test only nbody part of the code, never true by default
    logical :: dump_diagnose        !< dump diagnose for each particle to a seperate log file
    logical :: twodtscheme
    logical :: is_setacc_cic, is_setacc_int, is_setacc_tsc, mask_gpot1b
-   real    :: eps
+   real    :: eps, r_soft
    character(len=cbuff_len)            :: time_integrator
    character(len=cbuff_len), parameter :: default_ti = "none"
 
@@ -80,6 +80,7 @@ contains
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
       eps                  = 0.0
+      r_soft               = 0.0
       twodtscheme          = .false.
       ignore_dt_fluid      = .false.
       dump_diagnose        = .false.
@@ -112,6 +113,7 @@ contains
 
          rbuff(1) = lf_c
          rbuff(2) = eps
+         rbuff(3) = r_soft
 
          lbuff(1) = mask_gpot1b
          lbuff(2) = twodtscheme
@@ -131,6 +133,7 @@ contains
 
          lf_c                 = rbuff(1)
          eps                  = rbuff(2)
+         r_soft               = rbuff(3)
 
          mask_gpot1b          = lbuff(1)
          twodtscheme          = lbuff(2)
