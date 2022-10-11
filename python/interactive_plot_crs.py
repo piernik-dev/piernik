@@ -142,7 +142,8 @@ proton_field_names = ["cr_p+n01", "cr01", "cr1", "cr_p+"]
 def _total_cr_e(field, data):
     list_cr_e = []
     for element in h5ds.field_list:
-        if search(spc_e_lab, str(element[1])):
+        #print(element, spc_e_lab, str(element[1]), spc_e_lab in element)
+        if search(spc_e_lab.replace("+","\+"), str(element[1])):
             list_cr_e.append(element[1])
     cr_e_tot = data[str(list_cr_e[0])]
     for element in list_cr_e[1:]:
@@ -153,7 +154,7 @@ def _total_cr_e(field, data):
 def _total_cr_n(field, data):
     list_cr_n = []
     for element in h5ds.field_list:
-        if search(spc_n_lab, str(element[1])):
+        if search(spc_n_lab.replace("+","\+"), str(element[1])):
             list_cr_n.append(element[1])
     cr_n_tot = data[str(list_cr_n[0])]
     for element in list_cr_n[1:]:
@@ -213,7 +214,7 @@ def add_cr_n_tot_to(h5_dataset, name):
             h5ds.add_field(("gdf", name+"_tot"), units="1/(pc**3)", function=_total_cr_n, display_name="Total CR electron number density",
                            dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
     except:
-        die("Failed to construct field 'cr_%sn_tot'" %name)
+        die("Failed to construct field '%s_tot'" %name)
     return h5_dataset
 
 def _total_cr_species_n(field, data):
@@ -236,13 +237,11 @@ def add_cr_e_tot_to(h5_dataset, name):
             h5ds.add_field(("gdf", name+"_tot"), units="Msun/(Myr**2*pc)", function=_total_cr_e,
                            display_name="Total CR species energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
     except:
-        die("Failed to construct field 'cree_tot'")
+        die("Failed to construct field '" + name+ "e_tot'")
     return h5_dataset
 
 def add_total_n_to(h5_dataset, name):
-        global field_name_total_n
-        field_name_total_n = plot_field
-    #try:
+    try:
         if (h5ds.all_data()[name].units == "dimensionless"):
             h5ds.add_field(("gdf", name), units="", function=_total_cr_species_n,
                            display_name="Total CR " + name + " number density", sampling_type="cell")
@@ -250,9 +249,9 @@ def add_total_n_to(h5_dataset, name):
             h5ds.add_field(("gdf", name), units="Msun/(Myr**2*pc)", function=_total_cr_species_n, display_name="Total CR "+name+" number density",
                            dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
          # TODO BUG units should be "1/(pc**3)"; fix it after fixing it in PIERNIK!
-    #except:
-        #die("Failed to construct field '" + name+ "n_tot'")
-        return h5_dataset
+    except:
+        die("Failed to construct field '" + name+ "n_tot'")
+    return h5_dataset
 
 
 def add_tot_fields(h5_dataset):
