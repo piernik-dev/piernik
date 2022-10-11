@@ -169,20 +169,19 @@ contains
       use dataio_pub,   only: msg, printinfo
       use grid_cont,    only: grid_container
       use mpisetup,     only: piernik_MPI_Allreduce, master
-      use particle_pub, only: lf_c, ignore_dt_fluid
+      use particle_pub, only: lf_c, eps, ignore_dt_fluid
 
       implicit none
 
       real,            intent(inout) :: dt
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      real                           :: eps, factor_a, factor_v, dt_hydro
+      real                           :: factor_a, factor_v, dt_hydro
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
 
-      eps      = 1.0e-1
       factor_a = -one
       factor_v = -one
 

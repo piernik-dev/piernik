@@ -72,14 +72,14 @@ contains
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
-      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b, ignore_dt_fluid, dump_diagnose, eps
+      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c, eps, mask_gpot1b, ignore_dt_fluid, dump_diagnose
 
       time_integrator      = default_ti
       interpolation_scheme = default_is
 
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
-      eps                  = 0.0
+      eps                  = 0.1
       r_soft               = 0.0
       twodtscheme          = .false.
       ignore_dt_fluid      = .false.
