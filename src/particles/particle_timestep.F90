@@ -62,8 +62,10 @@ contains
       max_v = zero
       pset => cg%pset%first
       do while (associated(pset))
-         v_tmp = abs(pset%pdata%vel)
-         where (v_tmp > max_v) max_v = v_tmp
+         if (pset%pdata%phy) then
+            v_tmp = abs(pset%pdata%vel)
+            where (v_tmp > max_v) max_v = v_tmp
+         endif
          pset => pset%nxt
       enddo
       factor = maxval(max_v / cg%dl)
@@ -90,10 +92,12 @@ contains
       max_crd = huge(1.)
       pset => cg%pset%first
       do while (associated(pset))
-         acc2 = sum(pset%pdata%acc(:)**2)
-         if (acc2 > max_acc) then
-            max_acc = acc2
-            max_crd = pset%pdata%pos(:)
+         if (pset%pdata%phy) then
+            acc2 = sum(pset%pdata%acc(:)**2)
+            if (acc2 > max_acc) then
+               max_acc = acc2
+               max_crd = pset%pdata%pos(:)
+            endif
          endif
          pset => pset%nxt
       enddo
