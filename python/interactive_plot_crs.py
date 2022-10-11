@@ -25,10 +25,6 @@ if (version[0:3] != "2.7"):
 else:
     not_py27 = False
 
-spc_label = "e-" # DEFAULT
-spc_n_lab = "cr_" + spc_label + "n" # -> "cr_e-n" default
-spc_e_lab = "cr_" + spc_label + "e" # -> "cr_e-e" default
-
 # ------- Parse arguments
 parser = OptionParser(
     "Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
@@ -99,9 +95,13 @@ user_limits = (options.default_range is not True)
 save_spectrum = (options.not_save_spec is not True)
 use_logscale = (options.use_linscale is not True)
 use_linscale = (options.use_linscale)
+
+spc_label = options.crspecies.replace("cr_","")
+spc_n_lab = "cr_" + spc_label + "n" # -> "cr_e-n" default
+spc_e_lab = "cr_" + spc_label + "e" # -> "cr_e-e" default
 if (options.crspecies[0:3] != "cr_"): options.crspecies = "cr_" + options.crspecies
-plot_field = options.fieldname if len(options.fieldname)>1 else options.crspecies + "_tot" # DEFAULT cr_e-_tot
-print(plot_field)
+plot_field = options.fieldname if len(options.fieldname)>1 else options.crspecies + "e_tot" # DEFAULT cr_e-e_tot
+
 plot_var = options.var_name
 plot_vel = options.plot_vel
 plot_mag = options.plot_mag
@@ -139,26 +139,26 @@ proton_field_names = ["cr_p+n01", "cr01", "cr1", "cr_p+"]
 # ------- Local functions -----------
 
 
-def _total_cree(field, data):
-    list_cree = []
+def _total_cr_e(field, data):
+    list_cr_e = []
     for element in h5ds.field_list:
         if search(spc_e_lab, str(element[1])):
-            list_cree.append(element[1])
-    cree_tot = data[str(list_cree[0])]
-    for element in list_cree[1:]:
-        cree_tot = cree_tot + data[element]
-    return cree_tot
+            list_cr_e.append(element[1])
+    cr_e_tot = data[str(list_cr_e[0])]
+    for element in list_cr_e[1:]:
+        cr_e_tot = cr_e_tot + data[element]
+    return cr_e_tot
 
 
-def _total_cren(field, data):
-    list_cren = []
+def _total_cr_n(field, data):
+    list_cr_n = []
     for element in h5ds.field_list:
         if search(spc_n_lab, str(element[1])):
-            list_cren.append(element[1])
-    cren_tot = data[str(list_cren[0])]
-    for element in list_cren[1:]:
-        cren_tot = cren_tot + data[element]
-    return cren_tot
+            list_cr_n.append(element[1])
+    cr_n_tot = data[str(list_cr_n[0])]
+    for element in list_cr_n[1:]:
+        cr_n_tot = cr_n_tot + data[element]
+    return cr_n_tot
 
 
 def _total_B(field, data):
@@ -204,16 +204,16 @@ def copy_field(field, data):
     copied_field = data[field_name_to_copy]
     return copied_field
 
-def add_cren_tot_to(h5_dataset, name):
+def add_cr_n_tot_to(h5_dataset, name):
     try:
-        if (h5ds.all_data()["cr_"+name+"n01"].units == "dimensionless"):
-            h5ds.add_field(("gdf", "cr_"+name+"n_tot"), units="", function=_total_cren,
+        if (h5ds.all_data()[name+"01"].units == "dimensionless"):
+            h5ds.add_field(("gdf", name+"_tot"), units="", function=_total_cr_n,
                            display_name="Total CR electron number density", sampling_type="cell")
         else:
-            h5ds.add_field(("gdf", "cr_"+name+"n_tot"), units="1/(pc**3)", function=_total_cren, display_name="Total CR electron number density",
+            h5ds.add_field(("gdf", name+"_tot"), units="1/(pc**3)", function=_total_cr_n, display_name="Total CR electron number density",
                            dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
     except:
-        die("Failed to construct field 'cren_tot'")
+        die("Failed to construct field 'cr_%sn_tot'" %name)
     return h5_dataset
 
 def _total_cr_species_n(field, data):
@@ -227,17 +227,17 @@ def _total_cr_species_n(field, data):
         CR_species_n_tot = CR_species_n_tot + data[element]
     return CR_species_n_tot
 
-def add_cree_tot_to(h5_dataset, name):
-    #try:
-        if (h5ds.all_data()[name].units == "dimensionless"):
-            h5ds.add_field(("gdf", name), units="", function=_total_cree,
+def add_cr_e_tot_to(h5_dataset, name):
+    try:
+        if (h5ds.all_data()[name + '01'].units == "dimensionless"):
+            h5ds.add_field(("gdf", name+"_tot"), units="", function=_total_cr_e,
                            display_name="Total CR species energy density", sampling_type="cell")
         else:
-            h5ds.add_field(("gdf", name), units="Msun/(Myr**2*pc)", function=_total_cree,
+            h5ds.add_field(("gdf", name+"_tot"), units="Msun/(Myr**2*pc)", function=_total_cr_e,
                            display_name="Total CR species energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
-    #except:
-        #die("Failed to construct field 'cree_tot'")
-        return h5_dataset
+    except:
+        die("Failed to construct field 'cree_tot'")
+    return h5_dataset
 
 def add_total_n_to(h5_dataset, name):
         global field_name_total_n
@@ -259,8 +259,8 @@ def add_tot_fields(h5_dataset):
     global plot_CRisotope
     if (plot_field[-4:] == "_tot"):
       print("add_tot_fields, plot_field is:", plot_field)
-      h5_dataset = add_cree_tot_to(h5_dataset, plot_field)
-      h5_dataset = add_cren_tot_to(h5_dataset, plot_field)
+      h5_dataset = add_cr_e_tot_to(h5_dataset, spc_e_lab)
+      h5_dataset = add_cr_n_tot_to(h5_dataset, spc_n_lab)
     else:
       #h5_dataset = add_total_n_to(h5_dataset, plot_field)
       plot_CRisotope = True
@@ -509,7 +509,6 @@ if f_run is True:
                    dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my)
 
     plt.title("Component: " + plot_field + " | t = %9.3f Myr" % time)
-
     try:
         cbar = plt.colorbar(shrink=0.9, pad=0.01, label=plot_units)
     except:
@@ -569,9 +568,8 @@ if f_run is True:
         global click_coords, image_number, f_run, marker_index
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]
-        fieldname = plot_field
+        fieldname = spc_label
         if (fieldname[-3] == "e" or fieldname[-3] == "n"): fieldname = plot_field[0:-3]  # If just one bin is plotted on clickable field, strip the bin number + quantity from fieldname
-        print(fieldname, plot_field)
         plot_field_click = frbuffer_plot_field
 
         if (plot_field[0:-2] != "en_ratio"):
