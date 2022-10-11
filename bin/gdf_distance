@@ -3,7 +3,7 @@ import h5py as h5
 import numpy as np
 
 sp_key = 'simulation_parameters'
-pkeys = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'energy', 'mass', 'position_x', 'position_y', 'position_z', 'velocity_x', 'velocity_y', 'velocity_z']
+pkeys = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'energy', 'mass', 'position_x', 'position_y', 'position_z', 'velocity_x', 'velocity_y', 'velocity_z', 'dynamical_time', 'formation_time']
 auto_vectors = True  # False
 
 
