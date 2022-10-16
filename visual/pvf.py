@@ -98,9 +98,9 @@ def cli_params(argv):
         elif pu.recognize_opt(opt, ("-c", "--center")):
             global center, cu
             if arg == 'max':
-                cu, center = True, [False, True,]
+                cu, center = True, [False, True, ]
             elif arg == 'min':
-                cu, center = True, [True, False,]
+                cu, center = True, [True, False, ]
             else:
                 cx, cy, cz = arg.split(',')
                 cu, center = True, [float(cx), float(cy), float(cz)]

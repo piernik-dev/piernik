@@ -105,7 +105,7 @@ def reconstruct_uniform(h5f, var, cmpr, levnum, level, gridlist, center, usc, dr
         if nd == ndc:
             dset = pu.execute_comparison(dset, dc, cmprt)
 
-    if center == None:
+    if center is None:
         return pu.locate_extrema(dset, ledg, redg, nd)
 
     inb, ind = pu.find_indices(nd, center, ledg, redg, draw1D, draw2D, True)
@@ -258,7 +258,7 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     ledge = h5g.attrs['left_edge']
     redge = h5g.attrs['right_edge']
     ngb = h5g.attrs['n_b']
-    if oc != None:
+    if oc is not None:
         inb, ind = pu.find_indices(ngb, oc, ledge, redge, draw1D, draw2D, False)
         if not any(inb):
             return False, [], []
@@ -272,7 +272,7 @@ def read_block(h5f, dset_name, cmpr, ig, olev, oc, usc, getmap, draw1D, draw2D):
     if cmpr0:
         dset = pu.execute_comparison(dset, h5c['data']['grid_' + str(ig).zfill(10)][cmprd][:, :, :].swapaxes(0, 2), cmprt)
 
-    if oc == None:
+    if oc is None:
         return pu.locate_extrema(dset, ledge, redge, ngb)
 
     b2d, b1d, extr = take_cuts_and_lines(dset, ind, draw1D, draw2D)
