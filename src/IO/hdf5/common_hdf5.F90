@@ -129,6 +129,8 @@ contains
       integer                                              :: k, ke
 #endif /* COSM_RAYS */
 
+      if (.not. allocated(hdf_vars)) allocate(hdf_vars(0))
+
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
             case ('')
@@ -292,7 +294,7 @@ contains
 
       subroutine append_var(n)
 
-         use dataio_pub, only: warn
+         use dataio_pub, only: warn, die
          use mpisetup,   only: master
 
          implicit none
@@ -307,8 +309,7 @@ contains
          endif
 
          if (.not. allocated(hdf_vars)) then
-            allocate(hdf_vars(1))
-            hdf_vars = trim(n)
+            call die("[common_hdf5:init_hdf5:append_var] hdf_vars not allocated")
          else
             if (.not. any(trim(n) == hdf_vars)) then
                allocate(tmp(lbound(hdf_vars, dim=1):ubound(hdf_vars, dim=1) + 1))

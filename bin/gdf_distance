@@ -222,7 +222,7 @@ def compare_dlists(h5f1, h5f2):
         for v in fc:
             vec.append([v])
 
-    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec
+    return 0. if (len(f1) == len(fc)) and (len(f2) == len(fc)) else 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec  # correct also for empty sets
 
 
 def compare_time(h5f1, h5f2):
@@ -504,7 +504,7 @@ if __name__ == "__main__":
             norms, normsl, nlev = piernik_gdf_compare(sys.argv[1], sys.argv[2], levels)
             tot_norm = 0.
             failed = False
-            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len)))
+            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len))) if len(norms) == 0 else 0
             for i in sorted(norms.keys()):
                 toprint = "Difference of %-*s:" % (longestkey + 1, i)
                 if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
