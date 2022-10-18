@@ -266,18 +266,18 @@ contains
       nrecv = 0
 
       !Count number of particles to be sent
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do j = FIRST, LAST
-            pset => cg%pset%first
-            do while (associated(pset))
-               ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
-               if (attribute_to_proc(pset, j, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
-               pset => pset%nxt
-            enddo
+      do j = FIRST, LAST
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+               pset => cg%pset%first
+               do while (associated(pset))
+                  ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
+                  if (attribute_to_proc(pset, j, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
+                  pset => pset%nxt
+               enddo
+            cgl => cgl%nxt
          enddo
-         cgl => cgl%nxt
       enddo
       nchcg = nsend(proc)
       nsend(proc) = 0
@@ -286,13 +286,13 @@ contains
       call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       !Store data of particles to be sent
-      allocate(part_send(sum(nsend(:))*npf), part_chcg(nchcg*npf))
+      allocate(part_send(sum(nsend) * npf), part_chcg(nchcg * npf))
       ind = 1
       inc = 1
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do j = FIRST, LAST
+      do j = FIRST, LAST
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
             pset => cg%pset%first
             do while (associated(pset))
                if (attribute_to_proc(pset, j, cg%ijkse)) then
@@ -304,9 +304,14 @@ contains
                endif
                pset => pset%nxt
             enddo
+            cgl => cgl%nxt
          enddo
+      enddo
 
-         !Remove particles out of cg
+      !Remove particles out of cg
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
          pset => cg%pset%first
          do while (associated(pset))
 #ifdef NBODY_CHECK_PID
