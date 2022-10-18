@@ -282,9 +282,6 @@ contains
       nchcg = nsend(proc)
       nsend(proc) = 0
 
-      !Exchange information about particles numbers to be sent / received
-      call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
-
       !Store data of particles to be sent
       allocate(part_send(sum(nsend) * npf), part_chcg(nchcg * npf))
       ind = 1
@@ -328,9 +325,12 @@ contains
          cgl => cgl%nxt
       enddo
 
+      !Exchange information about particles numbers to be sent / received
+      call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
+
       !Send / receive particle data
-      counts = npf * nsend
       allocate(part_recv(sum(nrecv) * npf))
+      counts = npf * nsend
       countr = npf * nrecv
       disps(FIRST) = 0
       dispr(FIRST) = 0
