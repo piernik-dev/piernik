@@ -267,11 +267,11 @@ def colorbar_mode(drawd, drawh, figmode):
     if drawd and drawh and figmode == 3:
         cbar_mode = 'each'
     elif drawd and drawh and figmode != 3:
-        cbar_mode = 'none'
+        cbar_mode = None
     elif drawd or drawh:
         cbar_mode = 'single'
     else:
-        cbar_mode = 'none'
+        cbar_mode = None
     return cbar_mode
 
 
