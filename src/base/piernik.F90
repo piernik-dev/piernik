@@ -59,7 +59,7 @@ program piernik
    use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
 #if defined DEBUG && defined GRAV && defined NBODY
-   use particle_utils,    only: print_all_particles
+   use particle_diag,     only: print_all_particles
 #endif /* DEBUG && GRAV && NBODY */
 
    implicit none
