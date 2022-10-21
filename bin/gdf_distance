@@ -360,7 +360,7 @@ def compare_particles(h5f1, h5f2):
                 ds2[i] = pp2[id][k]
                 i += 1
         norm = compare_data(ds1, ds2)
-        # Assumed that the only vextors for particles are the XYZ-vectors
+        # Assumed that the only vectors for particles are the XYZ-vectors
         pn["particles `" + (kv[0] if len(kv) == 1 else kv[0][:-2] + "_[x..z]") + "'"] = norm
         tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
     print("All particles difference: %g" % tot_datanorm)
@@ -504,7 +504,7 @@ if __name__ == "__main__":
             norms, normsl, nlev = piernik_gdf_compare(sys.argv[1], sys.argv[2], levels)
             tot_norm = 0.
             failed = False
-            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len))) if len(norms) == 0 else 0
+            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len))) if len(norms) != 0 else 0
             for i in sorted(norms.keys()):
                 toprint = "Difference of %-*s:" % (longestkey + 1, i)
                 if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
