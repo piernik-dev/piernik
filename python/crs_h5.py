@@ -112,9 +112,9 @@ def nr_get_q(q_start, e_to_npc_ratio, p_ratio, exit_code):
             break
         dx = min(x * 1e-3, 10e-2)
         dx = sign(dx) * max(abs(dx), 1.0e-10)
-        df = 0.5 * (fun(x + dx, e_to_npc_ratio, p_ratio) -
-                    fun(x - dx, e_to_npc_ratio, p_ratio)) / dx
-        delta = -fun(x, e_to_npc_ratio, p_ratio) / df
+        df = 0.5 * (spectral_slope_root_function(x + dx, e_to_npc_ratio, p_ratio) -
+                    spectral_slope_root_function(x - dx, e_to_npc_ratio, p_ratio)) / dx
+        delta = -spectral_slope_root_function(x, e_to_npc_ratio, p_ratio) / df
         if abs(delta) <= tol_f:
             exit_code = False
             return x, exit_code
@@ -127,15 +127,15 @@ def nr_get_q(q_start, e_to_npc_ratio, p_ratio, exit_code):
 # function used to find q: ----------------------
 
 
-def fun(x, e2npc_ratio, p_ratio):
+def spectral_slope_root_function(x, e2npc_ratio, p_ratio):
     if abs(x - 3.0) < q_eps:
-        fun = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
+        root_function_value = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
     elif abs(x - 4.0) < q_eps:
-        fun = -e2npc_ratio + p_ratio * log(p_ratio) / (p_ratio - 1.0)
+        root_function_value = -e2npc_ratio + p_ratio * log(p_ratio) / (p_ratio - 1.0)
     else:
-        fun = -e2npc_ratio + ((3.0 - x) / (4.0 - x)) * \
+        root_function_value = -e2npc_ratio + ((3.0 - x) / (4.0 - x)) * \
             ((p_ratio**(4.0 - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
-    return fun
+    return root_function_value
 
 
 def prepare_q_tabs():
