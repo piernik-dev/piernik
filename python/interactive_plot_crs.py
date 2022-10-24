@@ -100,7 +100,7 @@ spc_label = options.crspecies.replace("cr_","")
 spc_n_lab = "cr_" + spc_label + "n" # -> "cr_e-n" default
 spc_e_lab = "cr_" + spc_label + "e" # -> "cr_e-e" default
 if (options.crspecies[0:3] != "cr_"): options.crspecies = "cr_" + options.crspecies
-plot_field = options.fieldname if len(options.fieldname)>1 else options.crspecies + "e_tot" # DEFAULT cr_e-e_tot
+plot_field = options.fieldname if len(options.fieldname)>1 else options.crspecies + "n_tot" # DEFAULT cr_e-e_tot
 
 plot_var = options.var_name
 plot_vel = options.plot_vel
@@ -393,6 +393,19 @@ if f_run is True:
         except:
             die("Failed to construct field %s" % plot_field)
 
+    if (plot_field[0:-2] == "BC_ratio"):
+        try:
+            if str(dsSlice["crBe9n01"].units) == "dimensionless":  # DEPRECATED
+                h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
+                               display_name="Ratio B/C in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
+            else:
+                h5ds.add_field(("gdf", plot_field), units="dimensionless", function=BC_ratio, display_name="Ratio B/C in %i-th bin" %
+                               int(plot_field[-2:]), dimensions=dimensions.energy, sampling_type="cell", take_log=True)
+        except:
+            die("Failed to construct field %s" % plot_field)
+
+
+
     dsSlice = add_tot_fields(dsSlice)
 
 # For elegant labels when plot_field is cree?? or cren??
@@ -572,6 +585,16 @@ if f_run is True:
         plot_field_click = frbuffer_plot_field
 
         if (plot_field[0:-2] != "en_ratio"):
+            prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
+                plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
+        else:
+            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
+                    coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
+            # once again appended - needed as ylimit for the plot
+            plot_max = h5ds.find_max(
+                "cre" + plot_var + str(plot_field_click[-2:]))[0]
+
+        if (plot_field[0:-2] != "BC_ratio"):
             prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
                 plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
         else:
