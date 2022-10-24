@@ -100,7 +100,7 @@ def nq2f(n, q, p_l, p_r):
 #
 
 
-def nr_get_q(q_start, alpha, p_ratio, exit_code):
+def nr_get_q(q_start, e_to_npc_ratio, p_ratio, exit_code):
     iter_limit = 30
     tol_f = 1.0e-9
     x = q_start
@@ -112,9 +112,9 @@ def nr_get_q(q_start, alpha, p_ratio, exit_code):
             break
         dx = min(x * 1e-3, 10e-2)
         dx = sign(dx) * max(abs(dx), 1.0e-10)
-        df = 0.5 * (fun(x + dx, alpha, p_ratio) -
-                    fun(x - dx, alpha, p_ratio)) / dx
-        delta = -fun(x, alpha, p_ratio) / df
+        df = 0.5 * (fun(x + dx, e_to_npc_ratio, p_ratio) -
+                    fun(x - dx, e_to_npc_ratio, p_ratio)) / dx
+        delta = -fun(x, e_to_npc_ratio, p_ratio) / df
         if abs(delta) <= tol_f:
             exit_code = False
             return x, exit_code
@@ -127,13 +127,13 @@ def nr_get_q(q_start, alpha, p_ratio, exit_code):
 # function used to find q: ----------------------
 
 
-def fun(x, alpha, p_ratio):
+def fun(x, e2npc_ratio, p_ratio):
     if abs(x - 3.0) < q_eps:
-        fun = -alpha + (-1.0 + p_ratio) / log(p_ratio)
+        fun = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
     elif abs(x - 4.0) < q_eps:
-        fun = -alpha + p_ratio * log(p_ratio) / (p_ratio - 1.0)
+        fun = -e2npc_ratio + p_ratio * log(p_ratio) / (p_ratio - 1.0)
     else:
-        fun = -alpha + ((3.0 - x) / (4.0 - x)) * \
+        fun = -e2npc_ratio + ((3.0 - x) / (4.0 - x)) * \
             ((p_ratio**(4.0 - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
     return fun
 
