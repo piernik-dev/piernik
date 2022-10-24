@@ -653,9 +653,9 @@ if f_run is True:
 
                 for ind in range(1, ncrb + 1):
                     ecrs.append(
-                        float(mean(position[fieldname + 'e' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[spc_e_lab + str(ind).zfill(2)][0].v)))
                     ncrs.append(
-                        float(mean(position[fieldname + 'n' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
 
                 fig2, exit_code = crs_plot_main(
                     plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
