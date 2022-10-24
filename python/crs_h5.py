@@ -100,7 +100,7 @@ def nq2f(n, q, p_l, p_r):
 #
 
 
-def nr_get_q(q_start, e_to_npc_ratio, p_ratio, exit_code):
+def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, exit_code : bool) -> float:
     iter_limit = 30
     tol_f = 1.0e-9
     x = q_start
@@ -126,8 +126,7 @@ def nr_get_q(q_start, e_to_npc_ratio, p_ratio, exit_code):
 
 # function used to find q: ----------------------
 
-
-def spectral_slope_root_function(x, e2npc_ratio, p_ratio):
+def spectral_slope_root_function(x : float, e2npc_ratio : float, p_ratio : float) -> float:
     if abs(x - 3.0) < q_eps:
         root_function_value = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
     elif abs(x - 4.0) < q_eps:
@@ -199,7 +198,7 @@ def fill_q_grid():
     return
 
 
-def interpolate_q(e2npc_ratio):
+def interpolate_q(e2npc_ratio : float) -> float:
     global arr_dim_q, alpha_tab_q, q_grid
     index = int((log10(e2npc_ratio / alpha_tab_q[0]) / log10(
         alpha_tab_q[-1] / alpha_tab_q[0])) * (arr_dim_q - 1))  # + 1
