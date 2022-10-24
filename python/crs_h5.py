@@ -199,16 +199,16 @@ def fill_q_grid():
     return
 
 
-def interpolate_q(alpha):
+def interpolate_q(e2npc_ratio):
     global arr_dim_q, alpha_tab_q, q_grid
-    index = int((log10(alpha / alpha_tab_q[0]) / log10(
+    index = int((log10(e2npc_ratio / alpha_tab_q[0]) / log10(
         alpha_tab_q[-1] / alpha_tab_q[0])) * (arr_dim_q - 1))  # + 1
     if (index < 0 or index > arr_dim_q - 1):
         index = max(0, min(arr_dim_q - 1, index))
         q_out = q_grid[index]
     else:
         index2 = index + 1
-        q_out = q_grid[index] + (alpha - alpha_tab_q[index]) * (
+        q_out = q_grid[index] + (e2npc_ratio - alpha_tab_q[index]) * (
             q_grid[index] - q_grid[index2]) / (alpha_tab_q[index] - alpha_tab_q[index2])
 
     return q_out
