@@ -100,7 +100,7 @@ def nq2f(n, q, p_l, p_r):
 #
 
 
-def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, exit_code : bool) -> float:
+def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, q_not_found : bool) -> float:
     iter_limit = 30
     tol_f = 1.0e-9
     x = q_start
@@ -108,7 +108,7 @@ def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, exit_code
     for i in range(iter_limit):
         if abs(x) >= q_big:
             x = (x / abs(x)) * q_big
-            exit_code = True
+            q_not_found = True
             break
         dx = min(x * 1e-3, 10e-2)
         dx = sign(dx) * max(abs(dx), 1.0e-10)
@@ -116,13 +116,13 @@ def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, exit_code
                     spectral_slope_root_function(x - dx, e_to_npc_ratio, p_ratio)) / dx
         delta = -spectral_slope_root_function(x, e_to_npc_ratio, p_ratio) / df
         if abs(delta) <= tol_f:
-            exit_code = False
-            return x, exit_code
+            q_not_found = False
+            return x, q_not_found
         else:
             x = x + delta
     nr_get_q = x
 
-    return nr_get_q, exit_code
+    return nr_get_q, q_not_found
 
 # function used to find q: ----------------------
 
