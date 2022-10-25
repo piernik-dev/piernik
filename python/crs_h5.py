@@ -100,7 +100,7 @@ def nq2f(n, q, p_l, p_r):
 #
 
 
-def nr_get_q(q_start, alpha, p_ratio, exit_code):
+def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, q_not_found : bool) -> float:
     iter_limit = 30
     tol_f = 1.0e-9
     x = q_start
@@ -108,38 +108,37 @@ def nr_get_q(q_start, alpha, p_ratio, exit_code):
     for i in range(iter_limit):
         if abs(x) >= q_big:
             x = (x / abs(x)) * q_big
-            exit_code = True
+            q_not_found = True
             break
         dx = min(x * 1e-3, 10e-2)
         dx = sign(dx) * max(abs(dx), 1.0e-10)
-        df = 0.5 * (fun(x + dx, alpha, p_ratio) -
-                    fun(x - dx, alpha, p_ratio)) / dx
-        delta = -fun(x, alpha, p_ratio) / df
+        df = 0.5 * (spectral_slope_root_function(x + dx, e_to_npc_ratio, p_ratio) -
+                    spectral_slope_root_function(x - dx, e_to_npc_ratio, p_ratio)) / dx
+        delta = -spectral_slope_root_function(x, e_to_npc_ratio, p_ratio) / df
         if abs(delta) <= tol_f:
-            exit_code = False
-            return x, exit_code
+            q_not_found = False
+            return x, q_not_found
         else:
             x = x + delta
     nr_get_q = x
 
-    return nr_get_q, exit_code
+    return nr_get_q, q_not_found
 
 # function used to find q: ----------------------
 
-
-def fun(x, alpha, p_ratio):
+def spectral_slope_root_function(x : float, e2npc_ratio : float, p_ratio : float) -> float:
     if abs(x - 3.0) < q_eps:
-        fun = -alpha + (-1.0 + p_ratio) / log(p_ratio)
+        root_function_value = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
     elif abs(x - 4.0) < q_eps:
-        fun = -alpha + p_ratio * log(p_ratio) / (p_ratio - 1.0)
+        root_function_value = -e2npc_ratio + p_ratio * log(p_ratio) / (p_ratio - 1.0)
     else:
-        fun = -alpha + ((3.0 - x) / (4.0 - x)) * \
+        root_function_value = -e2npc_ratio + ((3.0 - x) / (4.0 - x)) * \
             ((p_ratio**(4.0 - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
-    return fun
+    return root_function_value
 
 
 def prepare_q_tabs():
-    global alpha_tab_q, q_grid, q_big, q_space
+    global e2npc_tab_q, q_grid, q_big, q_space
     q_grid = zeros(arr_dim_q)  # for later interpolation
     q_space = zeros(helper_arr_dim)  # for start values
 
@@ -160,17 +159,17 @@ def prepare_q_tabs():
         q_space[int(0.5 * helper_arr_dim) + i - 1] = - \
             q_space[int(0.5 * helper_arr_dim) - i]
 
-    a_max_q = (1.0 + 0.1) * p_fix_ratio
-    a_min_q = 1.00000005
-    alpha_tab_q = zeros(arr_dim_q)
-    alpha_tab_q[:] = a_min_q
+    e2npc_q_max = (1.0 + 0.1) * p_fix_ratio
+    e2npc_q_min = 1.00000005
+    e2npc_tab_q = zeros(arr_dim_q)
+    e2npc_tab_q[:] = e2npc_q_min
 
     j = min(arr_dim_q - int(arr_dim_q / (arr_dim_q / 100.)), arr_dim_q - 1)
     while (q_grid[j] <= (-q_big) and (q_grid[arr_dim_q - 1] <= (-q_big))):
-        a_max_q = a_max_q - a_max_q * 0.005
+        e2npc_q_max = e2npc_q_max - e2npc_q_max * 0.005
         for i in range(0, arr_dim_q):
-            alpha_tab_q[i] = a_min_q * \
-                10.0**((log10(a_max_q / a_min_q)) /
+            e2npc_tab_q[i] = e2npc_q_min * \
+                10.0**((log10(e2npc_q_max / e2npc_q_min)) /
                        float(arr_dim_q) * float(i))
         # computing q_grid takes so little time, that saving the grid is not necessary.
         fill_q_grid()
@@ -178,18 +177,18 @@ def prepare_q_tabs():
 
 
 def fill_q_grid():
-    global q_grid, alpha_tab_q, p_fix_ratio, arr_dim_q, helper_arr_dim, q_space
+    global q_grid, e2npc_tab_q, p_fix_ratio, arr_dim_q, helper_arr_dim, q_space
     previous_solution = q_grid[int(len(q_grid) / 2)]
     exit_code = True
     x = previous_solution
     for i in range(1, arr_dim_q, 1):
         x, exit_code = nr_get_q(
-            previous_solution, alpha_tab_q[i], p_fix_ratio, exit_code)
+            previous_solution, e2npc_tab_q[i], p_fix_ratio, exit_code)
         if exit_code is True:
             for j in range(1, helper_arr_dim, 1):
                 x = q_space[j]
                 x, exit_code = nr_get_q(
-                    x, alpha_tab_q[i], p_fix_ratio, exit_code)
+                    x, e2npc_tab_q[i], p_fix_ratio, exit_code)
                 if exit_code is False:
                     q_grid[i] = x
                     prev_solution = x
@@ -199,17 +198,17 @@ def fill_q_grid():
     return
 
 
-def interpolate_q(alpha):
-    global arr_dim_q, alpha_tab_q, q_grid
-    index = int((log10(alpha / alpha_tab_q[0]) / log10(
-        alpha_tab_q[-1] / alpha_tab_q[0])) * (arr_dim_q - 1))  # + 1
+def interpolate_q(e2npc_ratio : float) -> float:
+    global arr_dim_q, e2npc_tab_q, q_grid
+    index = int((log10(e2npc_ratio / e2npc_tab_q[0]) / log10(
+        e2npc_tab_q[-1] / e2npc_tab_q[0])) * (arr_dim_q - 1))  # + 1
     if (index < 0 or index > arr_dim_q - 1):
         index = max(0, min(arr_dim_q - 1, index))
         q_out = q_grid[index]
     else:
         index2 = index + 1
-        q_out = q_grid[index] + (alpha - alpha_tab_q[index]) * (
-            q_grid[index] - q_grid[index2]) / (alpha_tab_q[index] - alpha_tab_q[index2])
+        q_out = q_grid[index] + (e2npc_ratio - e2npc_tab_q[index]) * (
+            q_grid[index] - q_grid[index2]) / (e2npc_tab_q[index] - e2npc_tab_q[index2])
 
     return q_out
 # plot data ------------------------------------
