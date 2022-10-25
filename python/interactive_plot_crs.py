@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from colored_io import die, prtinfo, prtwarn, read_var
 from copy import copy
-from crs_h5 import crs_initialize, crs_plot_main, crs_plot_main_fpq
+from crs_h5 import crs_initialize, crs_plot_main, crs_plot_main_fpq, crs_plot_ratio
 from crs_pf import initialize_pf_arrays
 from math import isnan, pi
 import matplotlib.pyplot as plt
@@ -393,7 +393,7 @@ if f_run is True:
         except:
             die("Failed to construct field %s" % plot_field)
 
-    if (plot_field[0:-2] == "BC_ratio"):
+    if (plot_field[0:-2] == "cr_Be9n_tot"):
         try:
             if str(dsSlice["crBe9n01"].units) == "dimensionless":  # DEPRECATED
                 h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
@@ -594,16 +594,6 @@ if f_run is True:
             plot_max = h5ds.find_max(
                 "cre" + plot_var + str(plot_field_click[-2:]))[0]
 
-        if (plot_field[0:-2] != "BC_ratio"):
-            prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
-                plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
-        else:
-            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
-                    coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
-            # once again appended - needed as ylimit for the plot
-            plot_max = h5ds.find_max(
-                "cre" + plot_var + str(plot_field_click[-2:]))[0]
-
         btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v **
                 2 + position["mag_field_z"].v**2)**0.5
         btot_uG = 2.85 * btot  # WARNING magic number @btot - conversion factor
@@ -656,9 +646,14 @@ if f_run is True:
                         float(mean(position[fieldname + 'e' + str(ind).zfill(2)][0].v)))
                     ncrs.append(
                         float(mean(position[fieldname + 'n' + str(ind).zfill(2)][0].v)))
+                print(plot_field)
+                if(plot_field == "cr_Be9n_tot"):
 
-                fig2, exit_code = crs_plot_main(
-                    plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
+                    fig2, exit_code = crs_plot_ratio(BC_ratio(plot_field, data), plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index])
+
+                else:
+                    fig2, exit_code = crs_plot_main(
+                        plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 
             elif (plot_ovlp is True):  # for overlap_layer
                 prtinfo("Plotting layer with overlap...")

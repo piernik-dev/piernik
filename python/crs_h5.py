@@ -384,25 +384,12 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 
     return s
 
-def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
+def plot_data_ratio(plot_var, ratio, p, time, location, i_lo_cut, i_up_cut,A):
     global first_run, e_small, i_plot, par_plot_color, par_plot_linestyle, s, clean_plot
     global plot_p_min, plot_p_max, plot_var_min, plot_var_max, use_color_list, i_plot, handle_list, tightened, highlighted, plotted_init_slope
 
-    p_lo_cut = pl[0]
-    p_up_cut = pr[-1]
-
-
-    if plot_var == 'BC_ratio':
-
-        plot_var_l1 = fl1
-        plot_var_r1 = fr1
-        plot_var_lo_cut1 = f_lo_cut1
-        plot_var_up_cut1 = f_up_cut1
-
-        plot_var_l2 = fl2
-        plot_var_r2 = fr2
-        plot_var_lo_cut2 = f_lo_cut2
-        plot_var_up_cut2 = f_up_cut2
+    p_lo_cut = p[0]
+    p_up_cut = p[-1]
 
     if clean_plot:
         s.cla()
@@ -420,9 +407,6 @@ def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
         plot_p_max = p_up_cut
 
         handle_list = []
-
-        if (plot_var == "BC_ratio"):
-            plot_var_min = 0.1 * e_small
 
     if par_fixed_dims:  # overwrite
         if (plot_var == "BC_ratio"):
@@ -446,13 +430,6 @@ def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
     if (par_visible_gridx):
         plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
 
-# plot floor value
-    p_range = linspace(s.get_xlim()[0], s.get_xlim()[1])
-    e_smalls = zeros(len(p_range))
-    e_smalls[:] = e_small
-    if (plot_var == "BC_ratio"):
-        plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
-
     par_plot_color = set_plot_color(par_plot_color, i_plot, colors)
     # par_plot_linestyle = set_plot_color(par_plot_linestyle, i_plot, linestyles)      ### WARNING temporary trick
 
@@ -462,7 +439,7 @@ def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
         plot_var, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
     # spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
     # spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
-"""
+    """
     for i in range(0, size(fr1)):
         if (par_plot_e3):  # multiply times gamma**3
             plt.plot([pl[i], pr[i]], [(pl[i]**3) * plot_var_l[i], (pr[i]**3) *
@@ -480,10 +457,6 @@ def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
                      solid_capstyle='round', color="xkcd:gray", alpha=par_alpha * 0.2)
             plt.plot([pr[i], pr[i]], [plot_var_min, plot_var_r[i]], lw=par_plot_width,
                      solid_capstyle='round', color="xkcd:gray", alpha=par_alpha * 0.2)
-"""
-    for i in range(0, size(fr1)):
-
-
 
     if (not par_plot_e3):
         plt.plot([pr[size(fr) - 1], pr[size(fr) - 1]], [plot_var_r[size(fr) - 1], plot_var_min], lw=2 *
@@ -510,6 +483,10 @@ def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
         if (not (clean_plot is True)):
             # if cleaning plot is on, init slope must be replotted each iteration
             plotted_init_slope = True
+    """
+    p = p/A
+
+    plt.plot(p,ratio, label = 'B to C ratio',color=par_plot_color, alpha=par_alpha, linestyle=par_plot_linestyle)
 
     if (par_visible_title):
         if (par_simple_title):
@@ -517,6 +494,7 @@ def plot_data_ratio(plot_var, pl, pr, time, location, i_lo_cut, i_up_cut):
         else:
             plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (
                 plot_var, time, location[0], location[1], location[2]))
+
     if (tightened is not True):
         plt.tight_layout()
         tightened = True
@@ -883,112 +861,37 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
 
     return plot, empty_cell
 
-def crs_plot_ratio(parameter_names, parameter_values, plot_var, ncrs, ecrs, time, location, **kwargs):
-    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncrb, cre_eff, i_plot, marker, clean_plot, hide_axes
+def crs_plot_ratio(ratio_values, plot_var, ncrs, ecrs, time, location, **kwargs):
+    global first_run, p_min_fix, p_max_fix, ncrb, cre_eff, i_plot, marker, clean_plot, hide_axes
 
     marker = kwargs.get("marker", "x")
     clean_plot = kwargs.get("clean_plot", "True")
     hide_axes = kwargs.get("hide_axes", False)
 
     i_lo = 0
-    i_up = ncrb
+    i_up = len(ratio_values)
     active_bins = []
     empty_cell = True
 
-    if (not got_q_tabs and not q_explicit):
-        prepare_q_tabs()
-        got_q_tabs = True
-
-    active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
-    if (num_active_bins > 1):
-        empty_cell = False
-
-    # i_lo = max(i_lo,1) # temporarily do not display the leftmost bin # FIXME
+    #active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
+    #if (num_active_bins > 1):
+    #    empty_cell = False
 
     prtinfo("\033[44mTime = %6.2f |  i_lo = %2d, i_up = %2d %s" % (time, i_lo if not empty_cell else 0,
             i_up if not empty_cell else 0, '(empty cell / failed to construct spectrum)' if empty_cell else ' '))
-
-    if (verbosity_1):   # Display number density and energy density before exiting
-        ncrs1e3 = []
-        for item in ncrs:
-            ncrs1e3.append(float('%1.3e' % item))
-        prtinfo("n = " + str(ncrs1e3))
 
     if (empty_cell):
         return plt.subplot(122), empty_cell
 
     exit_code = False
 
-    pln = p_fix[0:ncrb - 1]
-    prn = p_fix[1:ncrb]
+    pln = p_fix[0:ncrb]
     pln = array(pln)
-    prn = array(prn)
-
-    if (not q_explicit):
-        if (verbosity_2):
-            prtinfo("Spectral indices q will be interpolated")
-    else:
-        if (verbosity_2):
-            prtinfo("Spectral indices q will be obtained explicitly")
-
-    q_nr1 = []
-    fln1 = []
-    frn1 = []
-
-    q_nr2 = []
-    fln2 = []
-    frn2 = []
-
-    q_nr1 = array(q_nr1)
-    fln1 = array(fln1)
-    frn1 = array(fln1)
-    frn1 = frn * (prn[i_lo:i_up + 1] / pln[i_lo:i_up + 1]) ** (-q_nr1)
-
-    q_nr2 = array(q_nr2)
-    fln2 = array(fln2)
-    frn2 = array(fln2)
-    frn2 = frn * (prn[i_lo:i_up + 1] / pln[i_lo:i_up + 1]) ** (-q_nr2)
 
     plot = False
-
-    # retrieve slopes and f values for cutoffs
-    fln1[0] = fl_lo
-    frn1[0] = fr_lo
-    fln1[-1] = fl_up
-    frn1[-1] = fr_up
-    q_nr1[0] = -log10(frn1[0] / fln1[0]) / log10(prn[0] / pln[0])
-    q_nr1[0] = sign(q_nr1[0]) * min(abs(q_nr1[0]), q_big)
-    q_nr1[-1] = -log10(frn1[-1] / fln1[-1]) / log10(prn[-1] / pln[-1])
-    q_nr1[-1] = sign(q_nr1[-1]) * min(abs(q_nr1[-1]), q_big)
-
-    fln2[0] = fl_lo
-    frn2[0] = fr_lo
-    fln2[-1] = fl_up
-    frn2[-1] = fr_up
-    q_nr2[0] = -log10(frn[0] / fln[0]) / log10(prn[0] / pln[0])
-    q_nr2[0] = sign(q_nr[0]) * min(abs(q_nr[0]), q_big)
-    q_nr2[-1] = -log10(frn[-1] / fln[-1]) / log10(prn[-1] / pln[-1])
-    q_nr2[-1] = sign(q_nr[-1]) * min(abs(q_nr[-1]), q_big)
-
-    if (verbosity_2):
-        dummyCRSfile = open("crs.dat", "a")
-        p_all = list(p_fix)    # fixes list binding problem - appending p_fix
-        p_all[i_lo] = pln[0]
-        p_all[i_up] = prn[-1]
-        q_all = zeros(ncrb)
-        q_all[i_lo:i_up] = q_nr
-        f_all = zeros(ncrb + 1)
-        f_all[i_lo:i_up] = fln
-        string = "%15.3e %4.2f %2d %2d %2d" % (time, 0.0, ncrb, i_lo, i_up)
-        string = string + " " + str(p_all).strip("[").strip("]") + " " + str(
-            f_all).strip("[").strip("]") + " " + str(q_all).strip("[").strip("]")
-        dummyCRSfile.write("%s " % string.replace(
-            "\n", "").replace("nan", "0.0") + "\n")
-        dummyCRSfile.close()
-
+    A = 9
     if empty_cell is not True:
-        plot = plot_data(plot_var, pln[i_lo:i_up + 1], prn[i_lo:i_up + 1], fln, frn,
-                         q_nr, time, location, i_lo, i_up)
+        plot = plot_data_ratio(plot_var, pln[i_lo:i_up + 1], time, location, i_lo, i_up,A)
         i_plot = i_plot + 1
 
     return plot, empty_cell
