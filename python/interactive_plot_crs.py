@@ -168,7 +168,12 @@ def _total_B(field, data):
     return b_tot
 
 def en_ratio(field, data):  # DEPRECATED (?)
+    print('Hello ! ')
     bin_nr = field.name[1][-2:]
+    print("field : ")
+    print(field)
+    print("data : ")
+    print(data)
     for element in h5ds.field_list:
         if search(spc_n_lab + str(bin_nr.zfill(2)), str(element[1])):
             cren_data = data[spc_n_lab + str(bin_nr.zfill(2))]
@@ -179,14 +184,49 @@ def en_ratio(field, data):  # DEPRECATED (?)
     return en_ratio
 
 def BC_ratio(field, data):  # Boron to Carbon
+    print('Hello ! ')
     bin_nr = field.name[1][-2:]
-    for element in h5ds.field_list:
-        if search("cr_Be9n" + str(bin_nr.zfill(2)), str(element[1])) and search("cr_C12n" + str(bin_nr.zfill(2)), str(element[1])):
-            Bn_data = data["cr_Be9n" + str(bin_nr.zfill(2))]
-            # necessary to avoid FPEs
-            cren_data[cren_data <= par_epsilon**2] = par_epsilon
-            Cn_data = data["cr_C12n" + str(bin_nr.zfill(2))]
-            BC_ratio = Bn_data / Cn_data
+    print(field.name)
+    print("field : ")
+    print(field)
+    print("data : ")
+    print(data)
+    BC_ratio = []
+    for ind in range(1, ncrb + 1):
+
+
+            """
+            if search("cr_Be9n" + str(ind).zfill(2), str(element[1])) and search("cr_C12n" + str(ind).zfill(2), str(element[1])):
+                  Bn_data = data["cr_Be9n" + str(ind).zfill(2)]
+                  #print('Bn data : ')
+                  #print(data["cr_Be9n" + str(ind).zfill(2)])
+                  # necessary to avoid FPEs
+                  cren_data[cren_data <= par_epsilon**2] = par_epsilon
+                  Cn_data = data["cr_C12n" + str(ind).zfill(2)]
+                  #print('Cn data : ')
+                  #print(data["cr_C12n" + str(ind).zfill(2)])
+                  BC_ratio = Bn_data/Cn_data
+            """
+            for element in h5ds.field_list:
+               if search("cr_Be9n" + str(ind).zfill(2), str(element[1])) and search("cr_C12n" + str(ind).zfill(2), str(element[1])):
+                  print(str(ind).zfill(2))
+
+                  Bn_data = data["cr_Be9n" + str(ind).zfill(2)]
+                  print('Bn data : ')
+                  print(data["cr_Be9n" + str(ind).zfill(2)])
+                  # necessary to avoid FPEs
+                  cren_data[cren_data <= par_epsilon**2] = par_epsilon
+                  Cn_data = data["cr_C12n" + str(ind).zfill(2)]
+                  print('Cn data : ')
+                  print(data["cr_C12n" + str(ind).zfill(2)])
+                  BC_ratio.append(Bn_data/Cn_data)
+               else:
+
+                  print('Oups !')
+
+            break
+    print('BC ratio : ')
+    print(BC_ratio)
     return BC_ratio
 """
 def Gamma_Rays(field, data):  # Gamma ray spectrum from proton spectrum
@@ -393,16 +433,20 @@ if f_run is True:
         except:
             die("Failed to construct field %s" % plot_field)
 
-    if (plot_field[0:-2] == "cr_Be9n_tot"):
-        try:
-            if str(dsSlice["crBe9n01"].units) == "dimensionless":  # DEPRECATED
-                h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
-                               display_name="Ratio B/C in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
-            else:
-                h5ds.add_field(("gdf", plot_field), units="dimensionless", function=BC_ratio, display_name="Ratio B/C in %i-th bin" %
-                               int(plot_field[-2:]), dimensions=dimensions.energy, sampling_type="cell", take_log=True)
-        except:
-            die("Failed to construct field %s" % plot_field)
+    if (plot_field == "cr_Be9n_tot"):
+        print('hello ! ')
+        #try:
+        print(dsSlice["cr_Be9n01"].units)
+        if str(dsSlice["cr_Be9n01"].units) == "dimensionless":  # DEPRECATED
+            print('case 1 ')
+            h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
+                           display_name="Ratio B/C in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
+        else:
+            print('case 2 ')
+            print(plot_field[-2:])
+            h5ds.add_field(("gdf", plot_field), units="dimensionless", function=BC_ratio, display_name="Ratio B/C in %i-th bin", dimensions=dimensions.energy, sampling_type="cell", take_log=True)
+        #except:
+            #die("Failed to construct field %s" % plot_field)
 
 
 
@@ -646,6 +690,8 @@ if f_run is True:
                         float(mean(position[fieldname + 'e' + str(ind).zfill(2)][0].v)))
                     ncrs.append(
                         float(mean(position[fieldname + 'n' + str(ind).zfill(2)][0].v)))
+                    #print('number : ')
+                    #print(str(ind).zfill(2))
                 print(plot_field)
                 if(plot_field == "cr_Be9n_tot"):
 
