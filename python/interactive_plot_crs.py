@@ -689,14 +689,7 @@ if f_run is True:
                     ecrs.append(
                         float(mean(position[spc_e_lab + str(ind).zfill(2)][0].v)))
                     ncrs.append(
-<<<<<<< HEAD
-                        float(mean(position[fieldname + 'n' + str(ind).zfill(2)][0].v)))
-                    #print('number : ')
-                    #print(str(ind).zfill(2))
-=======
                         float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
-                        
->>>>>>> 20fa2074a6df50263e719648cbb9400b4a3c38bf
                 print(plot_field)
                 if(plot_field == "cr_Be9n_tot"):
 
