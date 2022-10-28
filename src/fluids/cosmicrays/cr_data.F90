@@ -68,6 +68,7 @@ module cr_data
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
+   integer(kind=4)                                         :: ncrsp_auto
 
    integer                                                 :: ncrsp_auto
    integer                                                 :: ncrsp_prim
@@ -240,34 +241,27 @@ contains
 #undef VS
 
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eN14(PRES), eO16(PRES), eLi7(PRES), eBe9(PRES), eBe10(PRES)]
-      ncrsp_auto = count(eCRSP)
+      ncrsp_auto = count(eCRSP, kind=4)
       ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eBe10(PRIM)]
-      !print *, 'ePRIM : ', ePRIM
-      ncrsp_prim = count(ePRIM)
+      ncrsp_prim = count(ePRIM, kind=4)
       ncrsp_sec = ncrsp_auto - ncrsp_prim
 
       allocate(icr_prim(ncrsp_prim))
       allocate(icr_sec(ncrsp_sec))
       icr_prim(:) = 0
       icr_sec(:) = 0
-      !print *, ' icr_prim : ', icr_prim, ' size ',  size(icr_prim)
-      !print *, ' icr_sec : ', icr_sec, ' size ',  size(icr_sec)
       iprim = 1
       isec = 1
-
-      print *, 'ncrp_auto : ', ncrsp_auto
 
       do i = 1, ncrsp_auto
 
          if (ePRIM(i)) then
 
-            !print *, 'i ', i, ' iprim ', iprim
             icr_prim(iprim) = i
             iprim=iprim+1
 
          else
 
-            !print *, 'i ', i, ' isec ', isec
             icr_sec(isec) = i
             isec=isec+1
 
@@ -280,8 +274,7 @@ contains
       rel_abound(:) = 0.
 
       do icr = 1, ncrsp_auto
-        !print *, 'step icr :', icr
-         !if (icr == icr_E .and. ePRIM(icr) .and. eCRSP(icr))   rel_abound(icr) = 0
+
          if (icr == icr_H1 .and. eH1(PRIM))  rel_abound(icr) = 1.
          if (icr == icr_C12 .and. eC12(PRIM)) rel_abound(icr) = primary_C12
          if (icr == icr_N14 .and. eN14(PRIM)) rel_abound(icr) = primary_N14
@@ -289,13 +282,6 @@ contains
 
       enddo
 
-      !print *, icr_prim
-      !print *, icr_sec
-      !print *, 'all specie logicals:', eCRSP, 'number : ', ncrsp_auto
-      !print *, 'primaries : ', ePRIM, 'nicr_prim numbers : ', ncrsp_prim
-      !print *, 'number of secondaries : ', ncrsp_sec
-
-      !stop
    end subroutine init_cr_species
 
    subroutine cr_species_tables(ncrsp, crness)

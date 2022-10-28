@@ -48,7 +48,7 @@ contains
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN, I_ONE
+      use constants,        only: xdim, ydim, zdim, half, zero, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
@@ -67,10 +67,10 @@ contains
       real                           :: K_cre_max_sum, abs_max_ud, dt_aux
       logical                        :: empty_cell
 
-      dt_cre       = big
-      dt_cre_K     = big
-      dt_cre_synch = big
-      dt_cre_adiab = big
+      dt_cre       = huge(1.)
+      dt_cre_K     = huge(1.)
+      dt_cre_synch = huge(1.)
+      dt_cre_adiab = huge(1.)
 
       if (.not. use_cresp_evol) return
 
@@ -190,26 +190,26 @@ contains
 !----------------------------------------------------------------------------------------------------
 !! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
 
-   subroutine cresp_timestep_cell(cresp_n, cresp_e, p_loss_terms, cresp_dt_cell, i_spc, empty_cell)
+   subroutine cresp_timestep_cell(cresp_n, cresp_e, p_loss_terms, dt_cell, i_spc, empty_cell)
 
-      use initcrspectrum,     only: adiab_active, synch_active, spec_mod_trms
-      use initcosmicrays,     only: ncrb
-      use cresp_crspectrum,   only: cresp_find_prepare_spectrum
-      use constants,          only: big
+      use constants,        only: big
+      use cresp_crspectrum, only: cresp_find_prepare_spectrum
+      use initcosmicrays,   only: ncrb
+      use initcrspectrum,   only: adiab_active, synch_active, spec_mod_trms
 
       implicit none
 
-      real,               intent(out) :: cresp_dt_cell
-      type(spec_mod_trms), intent(in) :: p_loss_terms
-      logical,            intent(out) :: empty_cell
-      integer(kind=4)                 :: i_up_cell
-      integer(kind=4),    intent(in)  :: i_spc
-      real                            :: dt_cre_adiab_cell, dt_cre_synch_cell
       real, dimension(1:ncrb), intent(inout) :: cresp_n, cresp_e
+      type(spec_mod_trms), intent(in)  :: p_loss_terms
+      integer(kind=4),     intent(in)  :: i_spc
+      real,                intent(out) :: dt_cell
+      logical,             intent(out) :: empty_cell
+      integer(kind=4)                  :: i_up_cell
+      real                             :: dt_cre_adiab_cell, dt_cre_synch_cell
 
-      dt_cre_adiab = big
-      dt_cre_synch = big
-      cresp_dt_cell = big
+      dt_cell = huge(1.)
+      dt_cre_adiab = huge(1.)
+      dt_cre_synch = huge(1.)
 
       empty_cell = .false.
 

@@ -89,11 +89,11 @@ contains
 
    subroutine map_ngp(iv, factor)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
-      use dataio_pub, only: die
-      use domain,     only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use dataio_pub,     only: die
+      use domain,         only: dom
       use particle_types, only: particle
 
       implicit none
@@ -129,10 +129,10 @@ contains
 
    subroutine map_cic(iv, factor)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER
-      use domain,    only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: half, xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use domain,         only: dom
       use particle_types, only: particle
 
       implicit none
@@ -162,7 +162,7 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     cn = nint((part%pos(cdim) - cg%coord(CENTER, cdim)%r(1))*cg%idl(cdim)) + 1
+                     cn = nint((part%pos(cdim) - dom%edge(cdim, LO)) * cg%idl(cdim) + half) + 1
                      if (cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
                         ijkp(cdim, LO) = cn - 1
                      else
@@ -198,10 +198,10 @@ contains
 
    subroutine map_tsc(iv, factor)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
-      use domain,    only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
+      use domain,         only: dom
       use particle_types, only: particle
 
       implicit none

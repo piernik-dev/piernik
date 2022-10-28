@@ -59,9 +59,7 @@ module dataio
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
-#ifdef NBODY
-   character(len=dsetnamelen), dimension(12) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
-#endif /* NBODY */
+   character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
@@ -107,8 +105,8 @@ module dataio
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump,    &
+                              domain_dump, vars, pvars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files, &
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
@@ -267,7 +265,6 @@ contains
       use constants,  only: idlen, cbuff_len, INT4
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
-
       implicit none
 
       problem_name  = "nameless"
@@ -295,9 +292,7 @@ contains
 
       domain_dump   = 'phys_domain'
       vars(:)       = ''
-#ifdef NBODY
-      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
-#endif /* NBODY */
+      pvars(:)      = ''
       mag_center    = .false.
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
@@ -422,6 +417,9 @@ contains
          lbuff(10) = gdf_strict
          lbuff(11) = h5_64bit
 
+         cbuff(20) = user_message_file(1:cbuff_len)
+         cbuff(21) = system_message_file(1:cbuff_len)
+
          cbuff(31) = problem_name
          cbuff(32) = run_id
          cbuff(40) = domain_dump
@@ -429,9 +427,9 @@ contains
          do iv = 1, nvarsmx
             cbuff(40+iv) = vars(iv)
          enddo
-
-         cbuff(90) = user_message_file(1:cbuff_len)
-         cbuff(91) = system_message_file(1:cbuff_len)
+         do iv = 1, nvarsmx
+            cbuff(40+nvarsmx+iv) = pvars(iv)
+         enddo
 
       endif
 
@@ -482,15 +480,19 @@ contains
          gdf_strict          = lbuff(10)
          h5_64bit            = lbuff(11)
 
+         user_message_file   = trim(cbuff(20))
+         system_message_file = trim(cbuff(21))
+
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
          domain_dump         = trim(cbuff(40))
+
          do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
-
-         user_message_file   = trim(cbuff(90))
-         system_message_file = trim(cbuff(91))
+         do iv = 1, nvarsmx
+            pvars(iv)        = trim(cbuff(40+nvarsmx+iv))
+         enddo
 
       endif
 
@@ -517,7 +519,7 @@ contains
       use global,       only: t, nstep
       use restart_hdf5, only: read_restart_hdf5
 #ifdef NBODY
-      use cg_particles_io, only: init_nbody_hdf5
+      use particles_io, only: init_nbody_hdf5
 #endif /* NBODY */
 #endif /* HDF5 */
 
@@ -525,12 +527,19 @@ contains
 
       logical :: tn
       integer :: i
+      integer, parameter :: fg_len = 5  ! length of "f12.4" or "g14.4"
+      character(len=fg_len) :: fg_fmt
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
-      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+      ! We strongly prefer to use f format where possible. Too bad that the g format is so compiler-dependent and often less smart than it could be.
+      fg_fmt = "f12.4"
+      if (maxval(dom%edge) < 1.) fg_fmt = "f12.9"
+      if ((maxval(dom%edge) > 1e6) .or. (maxval(dom%edge) < 1e-4)) fg_fmt = "e12.5"
+
+      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
 
       if (master) tn = walltime_end%time_left(wend)
 
@@ -949,7 +958,7 @@ contains
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
 #ifdef NBODY
-      use particle_utils,   only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
+      use particle_diag,    only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
 #endif /* NBODY */
 
       implicit none

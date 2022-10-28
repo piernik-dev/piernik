@@ -41,7 +41,6 @@ program piernik
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
-   use func,              only: operator(.equals.)
    use global,            only: t, nstep, dt, dtm, print_divB, tstep_attempt
    use initpiernik,       only: init_piernik
    use lb_helpers,        only: costs_maintenance
@@ -60,7 +59,7 @@ program piernik
    use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
 #if defined DEBUG && defined GRAV && defined NBODY
-   use particle_utils,    only: print_all_particles
+   use particle_diag,     only: print_all_particles
 #endif /* DEBUG && GRAV && NBODY */
 
    implicit none
@@ -155,7 +154,7 @@ program piernik
       call check_cfl_violation(flind)
 
       rs = repeat_step()  ! enforce function call
-      if ((t .equals. tlast) .and. .not. first_step .and. .not. rs) call die("[piernik] timestep is too small: t == t + 2 * dt")
+      if ((t - tlast < tiny(1.0)) .and. .not. first_step .and. .not. rs) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
       call costs_maintenance
