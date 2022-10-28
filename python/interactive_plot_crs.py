@@ -687,15 +687,21 @@ if f_run is True:
 
                 for ind in range(1, ncrb + 1):
                     ecrs.append(
-                        float(mean(position[fieldname + 'e' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[spc_e_lab + str(ind).zfill(2)][0].v)))
                     ncrs.append(
+<<<<<<< HEAD
                         float(mean(position[fieldname + 'n' + str(ind).zfill(2)][0].v)))
                     #print('number : ')
                     #print(str(ind).zfill(2))
+=======
+                        float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
+                        
+>>>>>>> 20fa2074a6df50263e719648cbb9400b4a3c38bf
                 print(plot_field)
                 if(plot_field == "cr_Be9n_tot"):
 
                     fig2, exit_code = crs_plot_ratio(BC_ratio(plot_field, data), plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index])
+
 
                 else:
                     fig2, exit_code = crs_plot_main(
