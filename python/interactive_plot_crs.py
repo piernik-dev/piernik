@@ -7,7 +7,7 @@ from crs_pf import initialize_pf_arrays
 from math import isnan, pi
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from numpy import array as np_array, log, log10, mean, rot90
+from numpy import array as np_array, log, log10, mean, rot90, shape
 from os import getcwd, makedirs, path
 from optparse import OptionParser
 from re import search
@@ -159,6 +159,8 @@ def _total_cr_n(field, data):
     cr_n_tot = data[str(list_cr_n[0])]
     for element in list_cr_n[1:]:
         cr_n_tot = cr_n_tot + data[element]
+    #print('cr_n_tot :')
+    #print(cr_n_tot)
     return cr_n_tot
 
 
@@ -184,49 +186,23 @@ def en_ratio(field, data):  # DEPRECATED (?)
     return en_ratio
 
 def BC_ratio(field, data):  # Boron to Carbon
-    print('Hello ! ')
     bin_nr = field.name[1][-2:]
-    print(field.name)
-    print("field : ")
-    print(field)
-    print("data : ")
-    print(data)
     BC_ratio = []
-    for ind in range(1, ncrb + 1):
 
+    for ind in range(1,ncrb+1):
+        print(ind)
+        for element1 in h5ds.field_list:
+                if ("cr_Be9n" + str(ind).zfill(2) == str(element1[1])):
+                        for element2 in h5ds.field_list:
+                             if ("cr_C12n" + str(ind).zfill(2) == str(element2[1])):
+                                Bn_data = data["cr_Be9n" + str(ind).zfill(2)]
+                                Cn_data = data["cr_C12n" + str(ind).zfill(2)]
+                                BC_ratio.append(Bn_data/Cn_data)
 
-            """
-            if search("cr_Be9n" + str(ind).zfill(2), str(element[1])) and search("cr_C12n" + str(ind).zfill(2), str(element[1])):
-                  Bn_data = data["cr_Be9n" + str(ind).zfill(2)]
-                  #print('Bn data : ')
-                  #print(data["cr_Be9n" + str(ind).zfill(2)])
-                  # necessary to avoid FPEs
-                  cren_data[cren_data <= par_epsilon**2] = par_epsilon
-                  Cn_data = data["cr_C12n" + str(ind).zfill(2)]
-                  #print('Cn data : ')
-                  #print(data["cr_C12n" + str(ind).zfill(2)])
-                  BC_ratio = Bn_data/Cn_data
-            """
-            for element in h5ds.field_list:
-               if search("cr_Be9n" + str(ind).zfill(2), str(element[1])) and search("cr_C12n" + str(ind).zfill(2), str(element[1])):
-                  print(str(ind).zfill(2))
-
-                  Bn_data = data["cr_Be9n" + str(ind).zfill(2)]
-                  print('Bn data : ')
-                  print(data["cr_Be9n" + str(ind).zfill(2)])
-                  # necessary to avoid FPEs
-                  cren_data[cren_data <= par_epsilon**2] = par_epsilon
-                  Cn_data = data["cr_C12n" + str(ind).zfill(2)]
-                  print('Cn data : ')
-                  print(data["cr_C12n" + str(ind).zfill(2)])
-                  BC_ratio.append(Bn_data/Cn_data)
-               else:
-
-                  print('Oups !')
-
-            break
-    print('BC ratio : ')
+    print('BC_ratio : ')
     print(BC_ratio)
+    print('shape :')
+    print(shape(BC_ratio))
     return BC_ratio
 """
 def Gamma_Rays(field, data):  # Gamma ray spectrum from proton spectrum
@@ -433,18 +409,18 @@ if f_run is True:
         except:
             die("Failed to construct field %s" % plot_field)
 
-    if (plot_field == "cr_Be9n_tot"):
+    if (plot_field == "cr_Be9n_"):
         print('hello ! ')
         #try:
         print(dsSlice["cr_Be9n01"].units)
-        if str(dsSlice["cr_Be9n01"].units) == "dimensionless":  # DEPRECATED
+        """
+        if str(dsSlice["cr_Be9n01"].units) == "":  # DEPRECATED
             print('case 1 ')
             h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
                            display_name="Ratio B/C in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
         else:
-            print('case 2 ')
-            print(plot_field[-2:])
-            h5ds.add_field(("gdf", plot_field), units="dimensionless", function=BC_ratio, display_name="Ratio B/C in %i-th bin", dimensions=dimensions.energy, sampling_type="cell", take_log=True)
+        """
+        h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio, display_name="Ratio B/C in %i-th bin", dimensions=dimensions.energy, sampling_type="cell", take_log=True)
         #except:
             #die("Failed to construct field %s" % plot_field)
 
@@ -627,10 +603,34 @@ if f_run is True:
         fieldname = spc_label
         if (fieldname[-3] == "e" or fieldname[-3] == "n"): fieldname = plot_field[0:-3]  # If just one bin is plotted on clickable field, strip the bin number + quantity from fieldname
         plot_field_click = frbuffer_plot_field
-
+        """
         if (plot_field[0:-2] != "en_ratio"):
             prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
                 plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
+        """
+        if(plot_field == "cr_Be9n_tot"): #Plot B to C ratio rather than spectra
+            """
+            prtinfo("Value of BC ratio at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
+                    coords[2], position["cr_Be9n" + str(plot_field_click[-2:])] / position["cr_C12n" + str(plot_field_click[-2:])]))
+            """
+            BC_ratio = []
+
+            for ind in range(1,ncrb+1):
+
+               for element1 in h5ds.field_list:
+                   if ("cr_Be9n" + str(ind).zfill(2) == str(element1[1])):
+                       for element2 in h5ds.field_list:
+                            if ("cr_C12n" + str(ind).zfill(2) == str(element2[1])):
+                                 Bn_data = position["cr_Be9n" + str(ind).zfill(2)]
+                                 Cn_data = position["cr_C12n" + str(ind).zfill(2)]
+                                 BC_ratio.append(Bn_data/Cn_data)
+
+            BC_ratio = np_array(BC_ratio)
+            print('BC_ratio : ')
+            print(BC_ratio)
+            print('shape :')
+            print(shape(BC_ratio))
+
         else:
             prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
                     coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
@@ -692,14 +692,16 @@ if f_run is True:
                         float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
 
                 print(plot_field)
+                """
                 if(plot_field == "cr_Be9n_tot"):
 
                     fig2, exit_code = crs_plot_ratio(BC_ratio(plot_field, data), plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index])
 
 
                 else:
-                    fig2, exit_code = crs_plot_main(
-                        plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
+                """
+                fig2, exit_code = crs_plot_main(
+                    plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 
             elif (plot_ovlp is True):  # for overlap_layer
                 prtinfo("Plotting layer with overlap...")
