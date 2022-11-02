@@ -690,6 +690,7 @@ if f_run is True:
                         float(mean(position[spc_e_lab + str(ind).zfill(2)][0].v)))
                     ncrs.append(
                         float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
+
                 print(plot_field)
                 if(plot_field == "cr_Be9n_tot"):
 
