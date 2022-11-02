@@ -222,7 +222,7 @@ contains
          return
       endif
 
-      cresp_dt_cell = min(dt_cre_adiab, dt_cre_synch)
+      dt_cell = min(dt_cre_adiab, dt_cre_synch)
 
    end subroutine cresp_timestep_cell
 

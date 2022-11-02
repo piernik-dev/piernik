@@ -70,7 +70,6 @@ module cr_data
    integer, parameter                                      :: nicr = icr_LAST - 1
    integer(kind=4)                                         :: ncrsp_auto
 
-   integer                                                 :: ncrsp_auto
    integer                                                 :: ncrsp_prim
    integer                                                 :: ncrsp_sec
 
@@ -120,15 +119,15 @@ module cr_data
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
-   real, parameter :: sigma_C12_Li7  = 10   !< mbarn
-   real, parameter :: sigma_C12_Be9  =  6   !< mbarn
+   real, parameter :: sigma_C12_Li7  = 10.   !< mbarn
+   real, parameter :: sigma_C12_Be9  =  6.   !< mbarn
    real, parameter :: sigma_C12_Be10 =  3.5 !< mbarn
 
    real, parameter :: sigma_N14_Li7  =  9.5 !< mbarn
 
    real, parameter :: sigma_O16_Li7  =  9.5 !< mbarn
    real, parameter :: sigma_O16_Be9  =  4.5 !< mbarn
-   real, parameter :: sigma_O16_Be10 =  2   !< mbarn
+   real, parameter :: sigma_O16_Be10 =  2.   !< mbarn
 
    real, parameter :: sigma_P_P      =  25. !< mbarn
 
