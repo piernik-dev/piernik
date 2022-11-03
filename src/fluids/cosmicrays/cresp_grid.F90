@@ -150,14 +150,13 @@ contains
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
       real                           :: dgas
-      real, dimension(ncrb)          :: dcr_e, dcr_n
+      real, dimension(ncrb)          :: dcr_n, dcr_e
       real, parameter                :: gamma_lor = 10.0
       real, dimension(ncrb)          :: q_spc
       real, dimension(ncrb,nspc)     :: q_spc_all
 
-
       allocate(crspc_bins_all(2*nspc*ncrb))
-  !    allocate(dcr_e(ncrb), dcr_n(ncrb))
+     ! allocate(dcr_e(ncrb), dcr_n(ncrb))
 
       if (.not. use_cresp_evol) return
 
@@ -174,6 +173,8 @@ contains
       q_spc = 0.
       q_spc_all = 0.
       usrc_cell = 0.0
+      dcr_e = 0.0
+      dcr_n = 0.0
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -210,9 +211,7 @@ contains
                      if (i_spc == icr_C12 .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
                      if (i_spc == icr_N14 .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
                      if (i_spc == icr_O16 .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
-                     !print *, 'q spc : ', q_spc
 
-                     !q_spc(:,i_spc) =
 #ifdef DEBUG
                      call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
 #endif /* DEBUG */
@@ -225,124 +224,51 @@ contains
                         endif
                      endif
 
-                     !print *, 'i_spc : ', i_spc
                      usrc_cell = 0.0
 
-                     !crspc_bins_all(i_spc) = crel
-                     !print *, crspc_bins_all(i_spc)
-
-                     !stop
- !                    print *, 'i_spc step ', i_spc, ' crel = ', crspc_bins_all%f
- ! spallation source terms
                      cg%u(iarr_crspc2_n(i_spc,:), i, j, k) = cresp%n
                      cg%u(iarr_crspc2_e(i_spc,:), i, j, k) = cresp%e
 
-
-!                     call src_cr_spallation_and_decay_cresp(cresp%n, cresp%e)
-!                      print *, 'cr_all ', cr_all(iarr_spc)
-
-
-                     !print *, 'primaries : ', icr_prim, ' secondaries : ', icr_sec
-                    ! print *,  ' lbound : ', lbound(icr_prim, 1), ' ubound : ', ubound(icr_prim, 1)
-
-
-                     !stop
-                     !print *, ' ncrsp_prim ', ncrsp_prim
-                     !print *, ' ncrsp_sec ', ncrsp_sec
-                     !stop
-
-
-                     !print *, shape(usrc_cell(iarr_crspc2_n(:,:)))
-                     !cresp%n = cresp%n + dt_doubled*usrc_cell(iarr_crspc2_n(:,:))
-                     !cresp%e = cresp%e + dt_doubled*usrc_cell(iarr_crspc2_e(:,:))
-
-                     !print *, 'crel q : ', crel%q
-
-
-
-
                      if (dfpq%any_dump) then
-                     !print *, 'dump'
-                     !stop
                         if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
                         if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
                         if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
                      endif
                   enddo
 
-                  !print *, 'q spc all : ', q_spc_all
-
                   do i_prim = 1, ncrsp_prim
                      associate( cr_prim => cr_table(icr_prim(i_prim)) )
-                        !print *, 'cr_prim : ', cr_prim
-                        !print *, 'i_prim : ', i_prim
+
                         if (eCRSP(icr_prim(i_prim))) then
 
                            do i_sec = 1, ncrsp_sec
                            associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                           ! **(3-q_spc_all(:,icr_prim(i_prim)))
-                           ! **(4-q_spc_all(:,icr_prim(i_prim)))
-
                               if (eCRSP(icr_sec(i_sec))) then
-                                 dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2_n(cr_prim,:))
-                                 dcr_n = min(u_cell(iarr_crspc2_n(cr_prim,:)), dcr_n)  ! Don't decay more elements than available
-                                 !print *, 'i_sec : ', i_sec
-                                 !print *, 'u_cell n sec :', u_cell(iarr_crspc2_n(cr_sec,:))
-                                 !print *, 'u_cell e sec :', u_cell(iarr_crspc2_e(cr_sec,:))
-                                 !print *, 'dgas : ', dgas
-                                 !print *, 'u_cell : ', u_cell(iarr_crspc2_n(cr_prim,:))
+
+                                 drc_n = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
+                                 drc_e = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
 
                                  usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
                                  usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
 
-                                 dcr_e = cr_sigma(cr_prim, cr_sec) * dgas *(cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))* u_cell(iarr_crspc2_e(cr_prim,:))
-                                 dcr_e = min(u_cell(iarr_crspc2_e(cr_prim,:)), dcr_e)  ! Don't decay more elements than available
-
                                  usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
                                  usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + dcr_e
-                                 !if (cr_sigma(cr_prim, cr_sec) .gt. 0.0) then
-                                    !print *, i_prim, i_sec
-                                    !print *, 'sigma : ', cr_sigma(cr_prim, cr_sec)
-                                    !print *, 'dcr_n : ', dcr_n
-                                    !print *, 'dcr_e : ', dcr_e
-                                 !endif
 
-                           !if (cr_sigma(cr_prim, cr_sec) .gt. 0.) then
-
-                           !   print *, i_prim, icr_prim(i_prim)
-                           !   print *, i_sec, icr_sec(i_sec)
-                           !   print *, ' cr_prim : ', cr_prim
-                           !   print *, 'cr_sec : ', cr_sec
-                           !   print *, 'cr_table prim: ' ,cr_table(icr_prim(i_prim))
-                           !   print *, 'cr_table sec : ',cr_table(icr_sec(i_sec))
-                           !   print *, 'sigma : ', cr_sigma(cr_prim, cr_sec)
-                           !   print *, 'prim mass : ', cr_mass(icr_prim(i_prim))
-                           !   print *, 'sec mass : ', cr_mass(icr_sec(i_sec))
-                           !print *, 'dcr_n : ', dcr_n
-                           !print *, 'dcr_e : ', dcr_e
-                           !endif
                               endif
                            end associate
                            enddo
 
                         endif
                      end associate
-                  !print *, icr_prim(i_prim)
                   enddo
 
                   i_sec = cr_table(icr_Be10) !; i_sec_n = iarr_crspc2_n(i_sec,:) ; i_sec_e = iarr_crspc2_e(i_sec,:)
                   if (eCRSP(icr_Be10)) then
-                     !print *, 'ok'
-                     !print *, 'Be10 life time : ', cr_tau(i_sec), ' MyR'
-                     !usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
-                     !print *, 'n before : ', usrc_cell(iarr_crspc2_e(i_sec,:))
-                     !print *, 'e before : ', usrc_cell(iarr_crspc2_n(i_sec,:))
+
                      usrc_cell(iarr_crspc2_n(i_sec,:)) = usrc_cell(iarr_crspc2_n(i_sec,:)) -u_cell(iarr_crspc2_n(i_sec,:))/(gamma_lor*cr_tau(i_sec))
-                     !print *, 'usrc_cell (n) : ', usrc_cell(iarr_crspc2_n(i_sec,:))
                      usrc_cell(iarr_crspc2_e(i_sec,:)) = usrc_cell(iarr_crspc2_e(i_sec,:)) -u_cell(iarr_crspc2_e(i_sec,:))/(gamma_lor*cr_tau(i_sec))
-                     !print *, 'u_cell n :', u_cell(iarr_crspc2_n(i_sec,:))
-                     !print *, 'u_cell e :', u_cell(iarr_crspc2_e(i_sec,:))
+
                   endif
 
 
@@ -520,5 +446,41 @@ contains
       call ppp_main%stop(crcg_label)
 
    end subroutine cresp_clean_grid
+
+   function cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2, dgas, q_spc_all)
+
+      use cr_data,          only: cr_sigma, cr_mass, icr_prim, icr_sec
+      use fluidindex,       only: flind
+      use initcosmicrays,   only: nspc, ncrb
+
+      implicit none
+
+      integer                        :: cr_prim, cr_sec, i_prim, i_sec
+      real, dimension(ncrb)          :: cr_species_production_spallation
+      real                           :: dgas
+      real, dimension(flind%all)     :: u_cell
+      real, dimension(ncrb,nspc)     :: q_spc_all
+      integer(kind=4), allocatable, dimension(:,:) :: iarr_crspc2
+
+      cr_species_production_spallation = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2(cr_prim,:))
+      cr_species_production_spallation = min(u_cell(iarr_crspc2(cr_prim,:)), cr_species_production_spallation)  ! Don't decay more elements than available
+
+      !dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2_n(cr_prim,:))
+      !dcr_n = min(u_cell(iarr_crspc2_n(cr_prim,:)), dcr_n)  ! Don't decay more elements than available
+      !
+      !usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
+      !usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
+      !
+      !dcr_e = cr_sigma(cr_prim, cr_sec) * dgas *(cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))* u_cell(iarr_crspc2_e(cr_prim,:))
+      !dcr_e = min(u_cell(iarr_crspc2_e(cr_prim,:)), dcr_e)  ! Don't decay more elements than available
+      !
+      !usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
+      !usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + dcr_e
+
+   end function cr_species_production_spallation
+
+   !function cr_species_radioactive_decay
+
+   !end function cr_species_radioactive_decay
 
 end module cresp_grid
