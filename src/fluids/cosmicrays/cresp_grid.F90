@@ -150,7 +150,7 @@ contains
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
       real                           :: dgas
-      real, dimension(ncrb)          :: dcr_n, dcr_e, cr_species_production_spallation
+      real, dimension(ncrb)          :: cr_species_production_spallation
       real, parameter                :: gamma_lor = 10.0
       real, dimension(ncrb)          :: q_spc
       real, dimension(ncrb,nspc)     :: q_spc_all
@@ -173,8 +173,6 @@ contains
       q_spc = 0.
       q_spc_all = 0.
       usrc_cell = 0.0
-      dcr_e = 0.0
-      dcr_n = 0.0
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -250,9 +248,11 @@ contains
                                  !drc_e = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
 
                                  usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
+
                                  usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
 
                                  usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
+
                                  usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
 
                               endif
