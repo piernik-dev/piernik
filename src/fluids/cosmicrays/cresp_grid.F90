@@ -150,7 +150,7 @@ contains
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
       real                           :: dgas
-      real, dimension(ncrb)          :: dcr_n, dcr_e
+      real, dimension(ncrb)          :: dcr_n, dcr_e, cr_species_production_spallation
       real, parameter                :: gamma_lor = 10.0
       real, dimension(ncrb)          :: q_spc
       real, dimension(ncrb,nspc)     :: q_spc_all
@@ -246,14 +246,14 @@ contains
 
                               if (eCRSP(icr_sec(i_sec))) then
 
-                                 drc_n = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
-                                 drc_e = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
+                                 !drc_n = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
+                                 !drc_e = cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
 
-                                 usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
-                                 usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
+                                 usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
+                                 usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_n, dgas, q_spc_all)
 
-                                 usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
-                                 usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + dcr_e
+                                 usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
+                                 usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + cr_species_production_spallation(cr_prim, cr_sec, i_prim, i_sec, u_cell, iarr_crspc2_e, dgas, q_spc_all)
 
                               endif
                            end associate
@@ -463,6 +463,7 @@ contains
       integer(kind=4), allocatable, dimension(:,:) :: iarr_crspc2
 
       cr_species_production_spallation = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2(cr_prim,:))
+
       cr_species_production_spallation = min(u_cell(iarr_crspc2(cr_prim,:)), cr_species_production_spallation)  ! Don't decay more elements than available
 
       !dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2_n(cr_prim,:))
