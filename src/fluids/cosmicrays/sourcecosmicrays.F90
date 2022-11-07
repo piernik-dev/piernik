@@ -131,6 +131,7 @@ contains
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
       use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec
+      use dataio_pub,     only: die
       use domain,         only: dom
       use fluids_pub,     only: has_ion, has_neu
       use fluidindex,     only: flind
