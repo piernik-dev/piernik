@@ -150,6 +150,8 @@ contains
       real                                       :: gn
       integer                                    :: i, j
 
+      if (dom%eff_dim == 0) call die("[sourcecosmicrays:src_cr_spallation_and_decay] dom%eff_dim == 0 is not supported yet")
+
       gn = 1.0 / dom%eff_dim / gamma_lor
       dgas = 0.0
       if (has_ion) dgas = dgas + uu(:, flind%ion%idn) / mp

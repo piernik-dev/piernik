@@ -174,7 +174,11 @@ contains
       endif
 
       ! this is the minimal total area of internal boundaries (periodic case), achievable for some perfect domain divisions
-      ideal_bnd_area = dom%eff_dim * (pieces * product(real(this%n_d(:)))**(dom%eff_dim-1))**(1./dom%eff_dim)
+      if (dom%eff_dim == 0) then
+         ideal_bnd_area = 1.
+      else
+         ideal_bnd_area = dom%eff_dim * (pieces * product(real(this%n_d(:)))**(dom%eff_dim-1))**(1./dom%eff_dim)
+      endif
 
       ! Try to find a close-to-optimal cartesian decomposition into same-sized blocks
       call decompose_patch_uniform(p_size(:), this%n_d, pieces, level_id)
@@ -559,8 +563,10 @@ contains
 
       if (master) then
 #ifdef VERBOSE
-         write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(pieces/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:),"], cells= ", int(ideal_bnd_area)
-         call printinfo(msg)
+         if (dom%eff_dim /= 0) then
+            write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(pieces/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:),"], cells= ", int(ideal_bnd_area)
+            call printinfo(msg)
+         endif
 #endif /* VERBOSE */
          write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_rectlinear] Level ",level_id,": grid divided to [",p_size(:)," ] pieces"
          call printinfo(msg)
