@@ -27,7 +27,6 @@
  /
 
  $MPI_BLOCKS
-!   psize = 1, 16, 1
  /
 
  $UNITS
@@ -79,5 +78,5 @@
  /
 
  $AMR
-   bsize = 315, 315, 1
+   bsize = 320, 320, 1
  /
