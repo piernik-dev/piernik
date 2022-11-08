@@ -723,6 +723,17 @@ def setup_piernik(data=None):
               rundir.rstrip('/') + '\033[0m')
         fatal_problem = True
 
+    # Add a link to original problem directory to make it easier to access auxiliary files stored there
+    # ToDo: add a setup option to copy selected extra files
+    orig_prob_link = rundir + "problem"
+    if (os.path.islink(orig_prob_link)):
+        os.remove(orig_prob_link)
+    try:
+        os.symlink("../../" + probdir, orig_prob_link)
+    except FileExistsError:
+        print('\033[91m' + "Cannot create the link to original problem because '" + orig_prob_link + "' exists (and is not a symbolic link)" + '\033[0m')
+        fatal_problem = True
+
     if (options.nocompile):
         print("\033[93mCompilation of '%s' skipped on request." % args[0] +
               """
