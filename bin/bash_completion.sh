@@ -9,7 +9,7 @@ _piernik_completions()
   if [ "${#COMP_WORDS[@]}" -gt "2" ]; then
     COMPREPLY=($( compgen -W "-v --verbose -q --laconic --debug \
     -n --nocompile --copy -l --linkexe -p --param= -d --define= --f90flags= \
-    -c --compiler= -o --obj=" -- "${COMP_WORDS[COMP_CWORD]}" ))
+    -c --compiler= -o --obj= -k --keeppar --linkproblem" -- "${COMP_WORDS[COMP_CWORD]}" ))
     [[ $COMPREPLY == *= ]] && compopt -o nospace
   else
     COMPREPLY=($( compgen -W "$( find problems/ -type d | sed 's/^problems\///' ) \
