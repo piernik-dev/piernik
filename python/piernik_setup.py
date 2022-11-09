@@ -659,8 +659,7 @@ def setup_piernik(data=None):
             makejobs = "-j%i" % multiprocessing.cpu_count()
         makecmd = "make %s -C %s" % (makejobs, objdir)
         if(sp.call([makecmd], shell=True) != 0):
-            sys.exit('\033[91m' + "It appears that '%s' crashed. \
-    Cannot continue." % makecmd + '\033[0m')
+            sys.exit('\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m')
 
     try:
         os.makedirs(rundir)
@@ -748,7 +747,7 @@ def setup_piernik(data=None):
             makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
         if re.search(r"Circular", output[1].decode("ascii")):
             print('\033[91m' +
-                  "Circular dependencies foud in '%s'." % objdir + '\033[0m')
+                  "Circular dependencies found in '%s'." % objdir + '\033[0m')
     else:
         if (fatal_problem):
             print('\033[93m' +
