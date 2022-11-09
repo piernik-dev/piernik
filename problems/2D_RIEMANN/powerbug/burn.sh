@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Sample script that may help to determine parameters for stress-testing a computer with Piernik.
+# Tested only on Linux. Will require changes to run on MacOS.
 
 MODE="ramspam"
 if [ $# -ge 1 ] ; then
@@ -11,6 +12,7 @@ if [ $# -ge 1 ] ; then
 	echo "  burn    – for maximum CPU heating (may need adjustments for particular CPU)"
 	echo "  ramspam – for huge CPU heating and a lot of RAM usage"
 	echo "  scan    – tries few combinations of adjustable parameters to help to determine optimum block size for the burn mode"
+	echo "  user    – user-defined: provide bs and k as arguments"
 	echo "  help    – this help"
 	exit 0
     fi
@@ -19,7 +21,6 @@ fi
 # Count available CPU threads.
 NTHR=$( lscpu -p | grep -cv '^#' )
 VENDOR=$( grep vendor_id /proc/cpuinfo | uniq | awk '{print $3}' )
-
 k=1
 SL="Riemann"
 case $MODE in
@@ -40,11 +41,26 @@ case $MODE in
 		;;
 	esac
 	;;
+    "user")
+	# Get $bs and $k from arguments. Bogus values will crash Piernik thus no error checking	here.
+	if [ $# -ge 2 ] ; then
+	    BSL=$2
+	else
+	    echo "You need to provide at least bs, e.g.:"
+	    echo "$0 user 300 1  # equivalent to '$0 burn' on AMD"
+	    exit 5
+	fi
+	[ $# -ge 3 ] && k=$3
+	;;
     "ramspam")
 	BSL=256
 	# Use all the available memory.
-	# Assume an estimate for RES = 19 + 11.7 * k**2 kB
-	k=$( LC_ALL=C free | awk '/Mem/ {print int(sqrt(($NF/1024./'"$NTHR"'-19)/11.7))}' )
+	# Assume an estimate for RES = 19450 + 11960 * k**2 kB
+	k=$( LC_ALL=C free | awk '/Mem/ {print int(sqrt(($NF/'"$NTHR"'-19450.)/11960.))}' )
+	if [ "$k" -lt 1 ] ; then
+	    echo "k=$k means that there is not enough free RAM"
+	    exit 6
+	fi
 	;;
     "scan")
 	# Scan for most energy-consuming setup parameters.
