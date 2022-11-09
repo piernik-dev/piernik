@@ -687,7 +687,7 @@ contains
       elsewhere
          n_bl(:) = 1
       endwhere
-      tot_bl = product(n_bl(:), mask=dom%has_dir(:))
+      tot_bl = product(n_bl(:))
 
       call this%allocate_pse(tot_bl)
 
