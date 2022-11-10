@@ -185,7 +185,7 @@ contains
                   if (has_ion) dgas = dgas + cg%u(flind%ion%idn, i, j, k) / mp
                   if (has_neu) dgas = dgas + cg%u(flind%neu%idn, i, j, k) / mH
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                  dgas = dgas * clight
+                  !dgas = dgas
 
                   do i_spc = 1, nspc
 
@@ -281,7 +281,7 @@ contains
                     ! print *, i_spc
                     ! print *, 'usrc_cell n : ', usrc_cell(iarr_crspc2_n(i_spc,:))
                     ! print *, 'usrc_cell e : ', usrc_cell(iarr_crspc2_e(i_spc,:))
-                    ! print *, 'dt_2 : ', dt_doubled
+                    !print *, 'dt_2 : ', dt_doubled
                      !if (maxval(usrc_cell(iarr_crspc2_n(i_spc,:))) .gt. 0.0) stop
                      !if (maxval(usrc_cell(iarr_crspc2_e(i_spc,:))) .gt. 0.0) stop
                   enddo
@@ -452,8 +452,9 @@ contains
 
    function cr_species_products_spallation(u_cell, cr_prim, cr_sec, i_prim, i_sec, iarr_crspc2, dgas, q_spc_all)
 
-      use cr_data,          only: cr_sigma, cr_mass, icr_prim, icr_sec
+      use cr_data,          only: cr_sigma, cr_mass, icr_prim, icr_sec, sigma_C12_Be9
       use initcosmicrays,   only: nspc, ncrb
+      use units,            only: clight
 
       implicit none
 
@@ -464,10 +465,18 @@ contains
       real, dimension(ncrb, nspc), intent(in)      :: q_spc_all
       integer(kind=4), dimension(ncrb), intent(in) :: iarr_crspc2
 
-      cr_species_products_spallation = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim)) * u_cell(iarr_crspc2(:))
+      cr_species_products_spallation = cr_sigma(cr_prim, cr_sec) * dgas * clight * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim)) * u_cell(iarr_crspc2(:))
 
       cr_species_products_spallation = min(u_cell(iarr_crspc2(:)), cr_species_products_spallation)  ! Don't decay more elements than available
 
+      !if(cr_sigma(cr_prim, cr_sec)>0.0) then
+
+         !print *, "primary density : ", u_cell(iarr_crspc2(:))
+         !print *, "cr species product term : ", cr_sigma(cr_prim, cr_sec) * dgas * clight * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim)) * u_cell(iarr_crspc2(:))
+         !print *, "min we take : ", cr_species_products_spallation
+         !print *, "reaction rate : ", cr_sigma(cr_prim, cr_sec) * dgas * clight
+
+      !endif
       !dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim))*u_cell(iarr_crspc2_n(cr_prim,:))
       !dcr_n = min(u_cell(iarr_crspc2_n(cr_prim,:)), dcr_n)  ! Don't decay more elements than available
       !
