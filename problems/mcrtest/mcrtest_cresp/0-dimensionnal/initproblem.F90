@@ -395,10 +395,16 @@ contains
             output1 = 0
             output2 = 0
 
-            do i = 1, ncrb
-               output1 = output1 + cg%u(iarr_crspc2_n(cr_index(icr_C12),ncrb), 1, 1, 1)
-               output2 = output2 + cg%u(iarr_crspc2_n(cr_index(icr_Be9),ncrb), 1, 1, 1)
-            enddo
+            print *, 'array of C12 :' , cg%u(iarr_crspc2_n(cr_index(icr_C12),:), 1, 1, 1)
+            print *, 'array of Be9 :' , cg%u(iarr_crspc2_n(cr_index(icr_Be9),:), 1, 1, 1)
+
+
+            output1 = sum(cg%u(iarr_crspc2_n(cr_index(icr_C12),:), 1, 1, 1))
+            output2 = sum(cg%u(iarr_crspc2_n(cr_index(icr_Be9),:), 1, 1, 1))
+
+            print *, 'output 1 :', output1
+            print *, 'output 2 :', output2
+
 
             call piernik_MPI_Allreduce(output1, pSUM)
             if (master) call pop_vector(user_vars,[output1])
