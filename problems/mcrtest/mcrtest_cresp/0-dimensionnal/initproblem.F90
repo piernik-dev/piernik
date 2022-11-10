@@ -371,50 +371,57 @@ contains
       implicit none
 
       character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-      integer                                                              :: i
+      integer                                                              :: i, j, k
       real, dimension(:), intent(inout), allocatable                       :: user_vars
       real                                                                 :: output1, output2
       type(bin_old), dimension(:), allocatable                             :: crspc_bins_all
       type(cg_list_element), pointer                                       :: cgl
       type(grid_container), pointer                                        :: cg
 
-      allocate(crspc_bins_all(2*nspc*ncrb))
+      !allocate(crspc_bins_all(2*nspc*ncrb))
       !call ppp_main%start(crug_label)
 
-      cgl => leaves%first
-      do while (associated(cgl))
+      if (present(tsl_names)) then
+         call pop_vector(tsl_names, len(tsl_names(1)), ["cr_C12n_tot"])    !   add to header
+         call pop_vector(tsl_names, len(tsl_names(1)), ["cr_Be9n_tot"])    !   add to header
 
-         cg => cgl%cg
-         call cg%costs%start
+      else
 
-         if (present(tsl_names)) then
-            call pop_vector(tsl_names, len(tsl_names(1)), ["cr_C12n_tot"])    !   add to header
-            call pop_vector(tsl_names, len(tsl_names(1)), ["cr_Be9n_tot"])    !   add to header
-         else
+         cgl => leaves%first
+         do while (associated(cgl))
+
+            cg => cgl%cg
+            call cg%costs%start
+
             ! do mpi stuff here...
             output1 = 0
             output2 = 0
 
-            print *, 'array of C12 :' , cg%u(iarr_crspc2_n(cr_index(icr_C12),:), 1, 1, 1)
-            print *, 'array of Be9 :' , cg%u(iarr_crspc2_n(cr_index(icr_Be9),:), 1, 1, 1)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
 
+                     output1 = sum(cg%u(iarr_crspc2_n(icr_C12,:), i, j, k))
+                     output2 = sum(cg%u(iarr_crspc2_n(icr_Be9,:), i, j, k))
 
-            output1 = sum(cg%u(iarr_crspc2_n(cr_index(icr_C12),:), 1, 1, 1))
-            output2 = sum(cg%u(iarr_crspc2_n(cr_index(icr_Be9),:), 1, 1, 1))
+                  enddo
+               enddo
+            enddo
 
-            print *, 'output 1 :', output1
-            print *, 'output 2 :', output2
+            call cg%costs%stop(I_IC)
+            cgl=>cgl%nxt
 
+         enddo
 
-            call piernik_MPI_Allreduce(output1, pSUM)
-            if (master) call pop_vector(user_vars,[output1])
-            call piernik_MPI_Allreduce(output2, pSUM)
-            if (master) call pop_vector(user_vars,[output2])!   pop value
-         endif
-         call cg%costs%stop(I_IC)
-         cgl=>cgl%nxt
+         call piernik_MPI_Allreduce(output1, pSUM)
+         if (master) call pop_vector(user_vars,[output1])
+         call piernik_MPI_Allreduce(output2, pSUM)
+         if (master) call pop_vector(user_vars,[output2])!   pop value
 
-      enddo
+      endif
+
+      !deallocate(crspc_bins_all(2*nspc*ncrb))
+
    end subroutine mcrtest_tsl
 
 end module initproblem
