@@ -465,7 +465,7 @@ contains
       real, dimension(ncrb, nspc), intent(in)      :: q_spc_all
       integer(kind=4), dimension(ncrb), intent(in) :: iarr_crspc2
 
-      cr_species_products_spallation = cr_sigma(cr_prim, cr_sec) * dgas * clight * (cr_mass(icr_prim(i_prim))/cr_mass(icr_sec(i_sec)))**(3-q_spc_all(:,i_prim)) * u_cell(iarr_crspc2(:))
+      cr_species_products_spallation = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2(:))
 
       cr_species_products_spallation = min(u_cell(iarr_crspc2(:)), cr_species_products_spallation)  ! Don't decay more elements than available
 
