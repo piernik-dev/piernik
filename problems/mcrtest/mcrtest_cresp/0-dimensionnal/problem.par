@@ -30,7 +30,7 @@ $BASE_DOMAIN
  /
 
  $END_CONTROL
-    tend   = 1. !00.0
+    tend   = 10. !00.0
     nend   = 100000
  /
 
@@ -62,8 +62,8 @@ $BASE_DOMAIN
     cfl_cr        = 0.9
     cr_active     = 1.0
     ncrb          = 8      ! number of spectrum bins (including cutoff bins)
-    K_cr_paral(:) = 100*1.0e4  !100*1.0e3 ! upper limit K_cre_paral
-    K_cr_perp(:)  = 100*1.0e2 ! 1.e2 ! upper limit K_cre_perp
+    K_cr_paral(:) = 100*0.0 !1.0e4  !100*1.0e3 ! upper limit K_cre_paral
+    K_cr_perp(:)  = 100*0.0 !1.0e2 ! 1.e2 ! upper limit K_cre_perp
  /
 
  $COSMIC_RAY_SPECTRUM
@@ -137,7 +137,7 @@ $BASE_DOMAIN
  /
 
  $PIERNIK_DEBUG
-    constant_dt = 0.0
+    constant_dt = 0.01
  /
 
  $INTERACTIONS
@@ -153,7 +153,7 @@ $BASE_DOMAIN
      ub_ampl  = 0.0   ! amplitude of synchrotron cooling coefficient with time
      omega_d  = 0.157 ! omega_d parameter for test with periodic adiabatic compression: u_d0 = u_d0 + div_v * cos(omega_d * t)
      omega_b  = 0.0   ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t)
-     dt_ini   = 0.01        ! initial timestep, optional, if absent, initial dt shall be computed. Use value less than dt_max
-     force_dt = .false.      ! < if .true. - dt_ini shall be constant throughout entire simulation
+     dt_ini   = 0.0001        ! initial timestep, optional, if absent, initial dt shall be computed. Use value less than dt_max
+     force_dt = .true.      ! < if .true. - dt_ini shall be constant throughout entire simulation
 
  /

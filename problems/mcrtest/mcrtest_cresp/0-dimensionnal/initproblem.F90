@@ -72,7 +72,7 @@ contains
       x0             = 0.0         !< x-position of the blob
       y0             = 0.0         !< y-position of the blob
       z0             = 0.0         !< z-position of the blob
-      r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      !r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
       vxd0           = 0.0         !< initial velocity_x, refers to whole domain
       vyd0           = 0.0         !< initial velocity_y, refers to whole domain
       vzd0           = 0.0         !< initial velocity_z, refers to whole domain
@@ -373,7 +373,8 @@ contains
       character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
       integer                                                              :: i, j, k
       real, dimension(:), intent(inout), allocatable                       :: user_vars
-      real                                                                 :: output1, output2
+      real(kind=8), dimension(ncrb)                                        :: cr_total
+      real(kind=8)                                                         :: output1, output2, output3
       type(bin_old), dimension(:), allocatable                             :: crspc_bins_all
       type(cg_list_element), pointer                                       :: cgl
       type(grid_container), pointer                                        :: cg
@@ -383,7 +384,8 @@ contains
 
       if (present(tsl_names)) then
          call pop_vector(tsl_names, len(tsl_names(1)), ["cr_C12n_tot"])    !   add to header
-         call pop_vector(tsl_names, len(tsl_names(1)), ["cr_Be9n_tot"])    !   add to header
+         call pop_vector(tsl_names, len(tsl_names(1)), ["cr_Be9n_tot"])    !   add to
+         call pop_vector(tsl_names, len(tsl_names(1)), ["Total"])
 
       else
 
@@ -396,13 +398,19 @@ contains
             ! do mpi stuff here...
             output1 = 0
             output2 = 0
+            output3 = 0
+
+            cr_total = 0
 
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
 
+                     cr_total(:) = cg%u(iarr_crspc2_n(icr_Be9,:), i, j, k)+cg%u(iarr_crspc2_n(icr_C12,:), i, j, k)
+
                      output1 = sum(cg%u(iarr_crspc2_n(icr_C12,:), i, j, k))
                      output2 = sum(cg%u(iarr_crspc2_n(icr_Be9,:), i, j, k))
+                     output3 = sum(cr_total(:))
 
                   enddo
                enddo
@@ -416,7 +424,9 @@ contains
          call piernik_MPI_Allreduce(output1, pSUM)
          if (master) call pop_vector(user_vars,[output1])
          call piernik_MPI_Allreduce(output2, pSUM)
-         if (master) call pop_vector(user_vars,[output2])!   pop value
+         if (master) call pop_vector(user_vars,[output2])
+         call piernik_MPI_Allreduce(output2, pSUM)
+         if (master) call pop_vector(user_vars,[output3])!   pop value
 
       endif
 
