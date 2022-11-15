@@ -20,10 +20,14 @@
 #define THERM
 #define SHEAR
 #define RESISTIVE
-#define DEBUG
 /* RANDOMIZE is known for unsolved problems when default integer type is forced to 64-bit
    because there is no appropriate variant of h5ltget_attribute_int_f */
 #undef RANDOMIZE
+
+/* Debugging */
+#define DEBUG
+#define VERBOSE
+#define CRESP_VERBOSED
 
 /* Barely used, abandoned, historical ... */
 #define CORIOLIS
