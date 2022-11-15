@@ -1416,6 +1416,8 @@ contains
 #ifdef CRESP_VERBOSED
    subroutine save_loc(bound_case, loc1, loc2)
 
+      use cresp_helpers, only: extension
+
       implicit none
 
       integer(kind=4),                 intent(in) :: bound_case
