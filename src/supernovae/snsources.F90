@@ -245,11 +245,13 @@ contains
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #endif /* SHEAR */
-                     do jpm = auxper(ydim,LO), auxper(ydim,HI)
-                        posr(ydim) = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
-                        ! BEWARE:  for num < -744.6 the exp(num) is the underflow
-                        decr = decr + exp(-sum(posr, mask=dom%has_dir))
-                     enddo
+                     if (dom%eff_dim > 0) then
+                        do jpm = auxper(ydim,LO), auxper(ydim,HI)
+                           posr(ydim) = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
+                           ! BEWARE:  for num < -744.6 the exp(num) is the underflow
+                           decr = decr + exp(-sum(posr, mask=dom%has_dir))
+                        enddo
+                     endif
                   enddo
                   decr = decr * ampl
 

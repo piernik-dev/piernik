@@ -265,10 +265,11 @@ contains
       this%ksb = this%ijkseb(zdim, LO)
       this%keb = this%ijkseb(zdim, HI)
 
+      ! Beware: 0-dimensional simulations should not rely on cg%vol or cg%dvol
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
-            this%dvol = product(this%dl(:), mask=dom%has_dir(:))
+            this%vol = merge(0., product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:)), dom%eff_dim == 0)
+            this%dvol = merge(0., product(this%dl(:), mask=dom%has_dir(:)), dom%eff_dim == 0)
          case (GEO_RPZ)
             if (.not. dom%has_dir(ydim)) then
                this%dl(ydim) = dpi
