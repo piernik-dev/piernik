@@ -100,9 +100,10 @@ case $VENDOR in
 	# sensors | grep ": .*°C" | sed 's/\(.*\): *\([^C]*\)°C.*/\1 \2/' | awk '{if ($NF > 0.) print}' | tr '\n' ' '
 	;;
 esac
+[ $( sensors | grep -E $SENS | wc -l ) == 0 ] && SENS='(:.*°C)'  # Fallback
 touch $SHOW_TEMP
 sleep 5 && while [ -e $SHOW_TEMP ] ; do
-    ( cat $SHOW_TEMP; sensors | grep -E $SENS ) | tr '\n' ' ' ; echo
+    ( cat $SHOW_TEMP; sensors | grep -E $SENS | sed 's/\([^°]*\)°C.*/\1°C/;s/  */ /' ) | tr '\n' ' ' ; echo
     sleep 5
     killall -CONT piernik 2> /dev/null || rm $SHOW_TEMP
 done &
@@ -111,7 +112,7 @@ SHOW_STEP=.__step__
 touch $SHOW_STEP
 # Check if all instances are reaching the same values.
 OSTEP=0
-while [ -e $SHOW_TEMP ] ; do
+sleep 5 && while [ -e $SHOW_TEMP ] ; do
     [ -e 1/out ] && \
 	STEP=$( tail -n 1 [1-9]*/out | \
 		    grep nstep | \
