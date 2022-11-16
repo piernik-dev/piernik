@@ -69,7 +69,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
             P.ylim(hl[1], hl[2])
 
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize, player, labh = parts[1:]
+        pxyz, pm, nbins, pcolor, psize, player, pstype, labh = parts[1:]
         pn1, pmm = pxyz[ncut], pm
         ax = plot1d_particles(ax, pn1, pmm, nbins, [smin[ncut], smax[ncut]], pcolor, psize)
         label.append(labh)
