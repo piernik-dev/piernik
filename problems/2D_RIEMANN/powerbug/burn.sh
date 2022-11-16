@@ -22,7 +22,8 @@ fi
 NTHR=$( lscpu -p | grep -cv '^#' )
 VENDOR=$( grep vendor_id /proc/cpuinfo | uniq | awk '{print $3}' )
 k=1
-SL="Riemann"
+#SL="Riemann"
+SL="RTVD"
 case $MODE in
     "burn")
 	# Maximum power draw depends on CPU model and problem configuration:
