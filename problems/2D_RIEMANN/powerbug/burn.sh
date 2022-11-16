@@ -66,7 +66,7 @@ case $MODE in
 	# Scan for most energy-consuming setup parameters.
 	# It seems that n_d has the biggest impact. Its optimal size may change with size and organization of the CPU cache.
 
-	BSL="92 116 148 188 236 300"
+	BSL="92 116 148 188 236 300 380 480"
 	SL="Riemann RTVD"
 	;;
     *)
@@ -107,6 +107,28 @@ sleep 5 && while [ -e $SHOW_TEMP ] ; do
     killall -CONT piernik 2> /dev/null || rm $SHOW_TEMP
 done &
 
+SHOW_STEP=.__step__
+touch $SHOW_STEP
+# Check if all instances are reaching the same values.
+OSTEP=0
+while [ -e $SHOW_TEMP ] ; do
+    [ -e 1/out ] && \
+	STEP=$( tail -n 1 [1-9]*/out | \
+		    grep nstep | \
+		    sort -n -k 3 | \
+		    head -n 1 | \
+		    awk '{print $3}' )
+    [ "${STEP:-0}" -gt 0 ] && \
+        if [ "$STEP" != "$OSTEP" ] ; then
+            OSTEP=$STEP
+            grep "nstep = *$STEP" [1-9]*/out | \
+		sort -n | \
+		column -t | \
+		awk '{if (NR==1) {dt=$9; t=$12; print} else if (dt != $9 || t != $12) print "Differs: ", $0}'
+        fi
+    sleep 10
+done &
+
 # Create separate directories for each run.
 for i in $( seq "$NTHR" ) ; do
     [ -d "$i" ] && rm -r "$i"
@@ -115,8 +137,8 @@ for i in $( seq "$NTHR" ) ; do
     ln -s ../piernik "${i}/piernik"
 done
 
-for bs in $BSL ; do
-    for s in $SL ; do
+for s in $SL ; do
+    for bs in $BSL ; do
 	nd=$(( "$bs * $k" ))
 	echo "${MODE}: n_d= $nd  solver= $s" > $SHOW_TEMP
 	# Run $NTHR independent single-threaded Piernik copies as this draws most electrical power.
@@ -129,26 +151,6 @@ for bs in $BSL ; do
 	    )
 	done
 
-	# Check if all instances are reaching the same values.
-        OSTEP=0
-	while [ -e $SHOW_TEMP ] ; do
-	    [ -e 1/out ] && \
-		STEP=$( tail -n 1 [1-9]*/out | \
-			    grep nstep | \
-			    sort -n -k 3 | \
-			    head -n 1 | \
-			    awk '{print $3}' )
-            [ "${STEP:-0}" -gt 0 ] && \
-                if [ "$STEP" != "$OSTEP" ] ; then
-                    OSTEP=$STEP
-                    grep "nstep = *$STEP" [1-9]*/out | \
-			sort -n | \
-			column -t | \
-			awk '{if (NR==1) {dt=$9; t=$12; print} else if (dt != $9 || t != $12) print "Differs: ", $0}'
-                fi
-            sleep 10
-        done &
-
         # ToDo also check if all $NTHR are alive and not stuck.
 
 	# Run each Piernik configuration for limited amount of time.
@@ -159,7 +161,7 @@ for bs in $BSL ; do
     done
 done
 
-rm $SHOW_TEMP
+rm $SHOW_TEMP $SHOW_STEP
 
 # Continue mprime, if it was there.
 [ $MPRIME == 1 ]  && killall -CONT mprime
