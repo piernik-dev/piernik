@@ -270,7 +270,7 @@ contains
                      do jpm = mantle(xdim,LO), mantle(xdim,HI)
                         do kpm = mantle(xdim,LO), mantle(xdim,HI)
                            r2 = (cg%x(i)-x0+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-y0+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-z0+real(kpm)*dom%L_(zdim))**2
-                           if (r2/r0 < 0.4999*log(huge(1.))) &  ! preventing numerical underflow
+                                if (r2/r0**2 < 0.9999*log(huge(1.))) &  ! preventing numerical underflow
                                 decr = decr + exp(-r2/r0**2)
                         enddo
                      enddo
