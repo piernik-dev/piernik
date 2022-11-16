@@ -395,6 +395,7 @@ contains
       class(component_fluid), pointer     :: pfl
 
       if (.not. thermal_active) return
+      hfunc = huge(1.)  ! suppress spurious compiler warning triggered by -Wmaybe-uninitialized
 
       cgl => leaves%first
       do while (associated(cgl))

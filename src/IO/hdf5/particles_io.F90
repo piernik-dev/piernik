@@ -137,7 +137,7 @@ contains
 
       if (proc_ncg == proc) n_part = count_cg_particles(get_nth_cg(cg_src_ncg))
 
-      ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + 1)
+      ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + I_ONE)
       if (master) then
          if (proc_ncg /= proc) call MPI_Recv(n_part, I_ONE, MPI_INTEGER, proc_ncg, ptag, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
       else
