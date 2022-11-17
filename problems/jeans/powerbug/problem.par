@@ -1,0 +1,100 @@
+ $BASE_DOMAIN
+    nb = 32
+    n_d = 64, 64, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 1.1446968195470935
+    ymin   = 0.0
+    ymax   = 1.1446968195470935
+    zmin   = 0.0
+    zmax   = 1.1446968195470935
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0e10
+    nend   = 100000000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='jeans'
+    run_id =  'ts1'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 0.00
+    dt_tsl  = 0.00
+    vars(1:) = 'dens'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.67
+    selfgrav = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-8
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+    external_gp = "null"
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.5e7
+    p0     = 1.5e7
+    amp    = 0.001
+    ix     = 2
+    iy     = 0
+    iz     = 0
+    mode   = 0
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "periodic"
+    norm_tol=1e-12
+    nsmool = 1000
+    ! base_no_fft = .true.
+    ! ord_time_extrap = 2
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /
