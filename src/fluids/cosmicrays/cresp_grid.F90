@@ -128,7 +128,7 @@ contains
       use initcrspectrum,   only: cresp_substep, n_substeps_max
       use named_array_list, only: wna
       use ppp,              only: ppp_main
-      use sourcecosmicrays, only: cr_species_products_spallation
+      use sourcecosmicrays, only: cr_spallation_sources
       use timestep_cresp,   only: cresp_timestep_cell
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
@@ -229,7 +229,7 @@ contains
                      endif
                   enddo
 
-                  call cr_species_products_spallation(i,j,k,cg%u(:, i, j, k),dt_doubled)
+                  call cr_spallation_sources(i,j,k,cg%u(:, i, j, k),dt_doubled)
 
                enddo
             enddo

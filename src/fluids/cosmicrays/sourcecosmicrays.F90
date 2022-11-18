@@ -36,7 +36,7 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr, src_cr_spallation_and_decay, cr_species_products_spallation
+   public :: src_gpcr, src_cr_spallation_and_decay, cr_spallation_sources
 
 contains
 
@@ -183,7 +183,7 @@ contains
 
    end subroutine src_cr_spallation_and_decay
 
-   subroutine cr_species_products_spallation(i,j,k,u_cell,dt_doubled)
+   subroutine cr_spallation_sources(i,j,k,u_cell,dt_doubled)
 
       use all_boundaries, only: all_fluid_boundaries
       use constants,        only: xdim, ydim, zdim, onet
@@ -195,7 +195,7 @@ contains
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, ncrb
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old
-      use initcrspectrum,   only: cresp_substep, n_substeps_max
+      use initcrspectrum,   only: cresp_substep, n_substeps_max, p_fix
       use named_array_list, only: wna
       use ppp,              only: ppp_main
       use timestep_cresp,   only: cresp_timestep_cell
@@ -218,7 +218,7 @@ contains
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
       !real, dimension(n, flind%all), intent(in)  :: uu
-      real, dimension(1:ncrb)        :: dcr_n, dcr_e
+      real, dimension(1:ncrb)        :: dcr_n, dcr_e, Q_prim, Q_sec, S_prim, S_sec
       real                           :: dgas
       !real                           :: dt_doubled
       real, parameter                :: gamma_lor = 10.0
@@ -266,6 +266,6 @@ contains
 
       enddo
 
-   end subroutine cr_species_products_spallation
+   end subroutine cr_spallation_sources
 
 end module sourcecosmicrays
