@@ -36,7 +36,7 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr, src_cr_spallation_and_decay
+   public :: src_gpcr, src_cr_spallation_and_decay, cr_species_products_spallation
 
 contains
 
@@ -182,5 +182,90 @@ contains
       enddo
 
    end subroutine src_cr_spallation_and_decay
+
+   subroutine cr_species_products_spallation(i,j,k,u_cell,dt_doubled)
+
+      use all_boundaries, only: all_fluid_boundaries
+      use constants,        only: xdim, ydim, zdim, onet
+      use cresp_crspectrum, only: cresp_update_cell, q
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
+      use dataio_pub,       only: msg, warn
+      use func,             only: emag
+      use global,           only: dt
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, ncrb
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old
+      use initcrspectrum,   only: cresp_substep, n_substeps_max
+      use named_array_list, only: wna
+      use ppp,              only: ppp_main
+      use timestep_cresp,   only: cresp_timestep_cell
+      use fluidindex,       only: flind
+      use fluids_pub,       only: has_ion, has_neu
+      use units,            only: clight, mH, mp
+#ifdef DEBUG
+      use cresp_crspectrum, only: cresp_detect_negative_content
+#endif /* DEBUG */
+
+      implicit none
+
+      integer                        :: i, j, k, nssteps_max, i_prim, i_sec, i_sec_n, i_sec_e
+      integer(kind=4)                :: nssteps, i_spc
+      type(spec_mod_trms)            :: sptab
+      type(bin_old), dimension(:), allocatable :: crspc_bins_all
+      real                           :: dt_crs_sstep, dt_cresp, dt_doubled
+      logical                        :: inactive_cell, cfl_violation_step
+      character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
+      real, dimension(flind%all)     :: u_cell
+      real, dimension(flind%all)     :: usrc_cell
+      !real, dimension(n, flind%all), intent(in)  :: uu
+      real, dimension(1:ncrb)        :: dcr_n, dcr_e
+      real                           :: dgas
+      !real                           :: dt_doubled
+      real, parameter                :: gamma_lor = 10.0
+
+      dgas = 0.0
+      if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
+      if (has_neu) dgas = dgas + u_cell(flind%neu%idn) / mH
+      sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
+
+      usrc_cell = 0.0
+
+      do i_prim = 1, ncrsp_prim
+         associate( cr_prim => cr_table(icr_prim(i_prim)) )
+
+            if (eCRSP(icr_prim(i_prim))) then
+
+               do i_sec = 1, ncrsp_sec
+               associate( cr_sec => cr_table(icr_sec(i_sec)) )
+
+                  if (eCRSP(icr_sec(i_sec))) then
+
+                     dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_n(cr_prim,:))
+                     dcr_e = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_e(cr_prim,:))
+
+                     usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
+
+                     usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
+
+                     usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
+
+                     usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + dcr_e
+
+                  endif
+               end associate
+               enddo
+
+            endif
+         end associate
+      enddo
+
+      do i_spc = 1, nspc
+
+         u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_n(i_spc,:))
+         u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_e(i_spc,:))
+
+      enddo
+
+   end subroutine cr_species_products_spallation
 
 end module sourcecosmicrays
