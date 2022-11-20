@@ -185,16 +185,16 @@ contains
 
    subroutine cr_spallation_sources(i,j,k,u_cell,dt_doubled)
 
-      use all_boundaries, only: all_fluid_boundaries
-      use constants,        only: xdim, ydim, zdim, onet
+      use all_boundaries,   only: all_fluid_boundaries
+      use constants,        only: xdim, ydim, zdim, onet, one, zero
       use cresp_crspectrum, only: cresp_update_cell, q
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
       use dataio_pub,       only: msg, warn
       use func,             only: emag
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, ncrb
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old, eps
       use initcrspectrum,   only: cresp_substep, n_substeps_max, p_fix
       use named_array_list, only: wna
       use ppp,              only: ppp_main
@@ -209,7 +209,7 @@ contains
       implicit none
 
       integer                        :: i, j, k, nssteps_max, i_prim, i_sec, i_sec_n, i_sec_e
-      integer(kind=4)                :: nssteps, i_spc
+      integer(kind=4)                :: nssteps, i_spc, i_bin
       type(spec_mod_trms)            :: sptab
       type(bin_old), dimension(:), allocatable :: crspc_bins_all
       real                           :: dt_crs_sstep, dt_cresp, dt_doubled
@@ -217,11 +217,13 @@ contains
       character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
-      !real, dimension(n, flind%all), intent(in)  :: uu
-      real, dimension(1:ncrb)        :: dcr_n, dcr_e, Q_prim, Q_sec, S_prim, S_sec
+      real, dimension(1:ncrb)        :: dcr_n, dcr_e, Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
+      !real, dimension(1:ncrb)        :: Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
       real                           :: dgas
       !real                           :: dt_doubled
       real, parameter                :: gamma_lor = 10.0
+      real, dimension(ncrb)          :: q_spc
+      real, dimension(ncrb,nspc)     :: q_spc_all
 
       dgas = 0.0
       if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
@@ -229,6 +231,21 @@ contains
       sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
 
       usrc_cell = 0.0
+      q_spc = 0.0
+      q_spc_all = 0.0
+
+      Q_ratio_1 = 0.0
+      S_ratio_1 = 0.0
+
+      do i_spc = 1, nspc
+
+         if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, substeps = nssteps)
+         !if (i_spc == icr_H1 .and. eH1(PRIM))  q_spc_all(:,i_spc) = q_spc
+         if (i_spc == icr_C12 .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
+         if (i_spc == icr_N14 .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
+         if (i_spc == icr_O16 .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
+
+      enddo
 
       do i_prim = 1, ncrsp_prim
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
@@ -240,8 +257,29 @@ contains
 
                   if (eCRSP(icr_sec(i_sec))) then
 
+                     do i_bin = 1, ncrb-1
+
+                        if (p_fix(i_bin) > zero) then
+
+                           Q_ratio_1(i_bin+1) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_prim),p_fix(i_bin),p_fix(i_bin+1))
+                           S_ratio_1(i_bin+1) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_prim),p_fix(i_bin),p_fix(i_bin+1))
+
+                           if(abs(Q_ratio_1(i_bin+1))>eps) Q_ratio_2(i_bin+1) = one - Q_ratio_1(i_bin+1)
+                           if(abs(S_ratio_1(i_bin+1))>eps) S_ratio_2(i_bin+1) = one - S_ratio_1(i_bin+1)
+
+
+                        endif
+
+                     enddo
+
                      dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_n(cr_prim,:))
                      dcr_e = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_e(cr_prim,:))
+
+                     dcr_n = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
+                     dcr_e = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
+
+                     dcr_n = Q_ratio_2 * dcr_n
+                     dcr_e = S_ratio_2 * dcr_n
 
                      usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
 
@@ -267,5 +305,45 @@ contains
       enddo
 
    end subroutine cr_spallation_sources
+
+   function Q_ratio(A_prim, A_sec, q_l, p_L, p_R)
+
+      use constants,      only: zero, one, three
+      use initcrspectrum, only: eps
+
+      implicit none
+
+      real :: A_prim, A_sec, q_l, p_L, p_R
+      real(kind=4) :: Q_ratio
+
+      Q_ratio = zero
+
+      if(abs(q_l - three) > eps) then
+         Q_ratio = ((A_prim/A_sec)**(three-q_l)-one)/((p_R/p_L)**(three-q_l)-one)
+      else
+         Q_ratio = log(A_prim/A_sec)/log(p_R/p_L)
+      endif
+
+   end function Q_ratio
+
+   function S_ratio(A_prim, A_sec, q_l, p_L, p_R)
+
+      use constants,      only: zero, one, four
+      use initcrspectrum, only: eps
+
+      implicit none
+
+      real :: A_prim, A_sec, q_l, p_L, p_R
+      real(kind=4) :: S_ratio
+
+      S_ratio = zero
+
+      if(abs(q_l - four) > eps) then
+         S_ratio = ((A_prim/A_sec)**(four-q_l)-one)/((p_R/p_L)**(four-q_l)-one)
+      else
+         S_ratio = log(A_prim/A_sec)/log(p_R/p_L)
+      endif
+
+   end function S_ratio
 
 end module sourcecosmicrays
