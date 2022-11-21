@@ -229,12 +229,11 @@ contains
                      endif
                   enddo
 
-                  call cr_spallation_sources(i,j,k,cg%u(:, i, j, k),dt_doubled)
+                  call cr_spallation_sources(i,j,k,cg%u(:, i, j, k),dt_doubled, q_spc_all)
 
                enddo
             enddo
          enddo
-
 
          call cg%costs%stop(I_MHD)
          cgl=>cgl%nxt

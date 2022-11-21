@@ -183,12 +183,12 @@ contains
 
    end subroutine src_cr_spallation_and_decay
 
-   subroutine cr_spallation_sources(i,j,k,u_cell,dt_doubled)
+   subroutine cr_spallation_sources(i,j,k,u_cell,dt_doubled, q_spc_all)
 
       use all_boundaries,   only: all_fluid_boundaries
       use constants,        only: xdim, ydim, zdim, onet, one, zero
       use cresp_crspectrum, only: cresp_update_cell, q
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be9, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
       use dataio_pub,       only: msg, warn
       use func,             only: emag
       use global,           only: dt
@@ -222,8 +222,9 @@ contains
       real                           :: dgas
       !real                           :: dt_doubled
       real, parameter                :: gamma_lor = 10.0
-      real, dimension(ncrb)          :: q_spc
       real, dimension(ncrb,nspc)     :: q_spc_all
+
+      inactive_cell       = .false.
 
       dgas = 0.0
       if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
@@ -231,24 +232,16 @@ contains
       sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
 
       usrc_cell = 0.0
-      q_spc = 0.0
-      q_spc_all = 0.0
 
       Q_ratio_1 = 0.0
       S_ratio_1 = 0.0
-
-      do i_spc = 1, nspc
-
-         if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, substeps = nssteps)
-         !if (i_spc == icr_H1 .and. eH1(PRIM))  q_spc_all(:,i_spc) = q_spc
-         if (i_spc == icr_C12 .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
-         if (i_spc == icr_N14 .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
-         if (i_spc == icr_O16 .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
-
-      enddo
+      Q_ratio_2 = 0.0
+      S_ratio_2 = 0.0
 
       do i_prim = 1, ncrsp_prim
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
+         !print *, 'index prim : ', icr_prim(i_prim)
+         !print *, 'i prim : ', i_prim
 
             if (eCRSP(icr_prim(i_prim))) then
 
@@ -257,14 +250,14 @@ contains
 
                   if (eCRSP(icr_sec(i_sec))) then
 
-                     do i_bin = 1, ncrb
+                     do i_bin = 1, ncrb-1
 
-                        if (p_fix(i_bin) > zero) then
+                        if (p_fix(i_bin+1) > zero) then
 
-                           if (p_fix(i_bin+1) > zero) then
+                           if (p_fix(i_bin) > zero) then
 
-                              Q_ratio_1(i_bin+1) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_bin),p_fix(i_bin),p_fix(i_bin+1))
-                              S_ratio_1(i_bin+1) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_bin),p_fix(i_bin),p_fix(i_bin+1))
+                              Q_ratio_1(i_bin+1) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin+1,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
+                              S_ratio_1(i_bin+1) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin+1,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
 
                               if(abs(Q_ratio_1(i_bin+1))>eps) Q_ratio_2(i_bin+1) = one - Q_ratio_1(i_bin+1)
                               if(abs(S_ratio_1(i_bin+1))>eps) S_ratio_2(i_bin+1) = one - S_ratio_1(i_bin+1)
@@ -273,11 +266,14 @@ contains
 
                         endif
 
-                     if (icr_prim(i_prim)==icr_C12) print *, 'Q_ratio : ', Q_ratio_1, ' S ratio : ', S_ratio_1
+
 
                      !if (icr_prim(i_prim)==icr_C12) stop
 
                      enddo
+
+                     !Q_ratio_2 = 1.0 - Q_ratio_1
+                     !S_ratio_2 = 1.0 - S_ratio_1
 
                      dcr_n = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_n(cr_prim,:))
                      dcr_e = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_e(cr_prim,:))
@@ -318,7 +314,7 @@ contains
       implicit none
 
       real :: A_prim, A_sec, q_l, p_L, p_R
-      real(kind=8) :: Q_ratio
+      real :: Q_ratio
 
       Q_ratio = zero
 
@@ -338,7 +334,7 @@ contains
       implicit none
 
       real :: A_prim, A_sec, q_l, p_L, p_R
-      real(kind=4) :: S_ratio
+      real :: S_ratio
 
       S_ratio = zero
 
