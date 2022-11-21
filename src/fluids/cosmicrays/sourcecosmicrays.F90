@@ -257,18 +257,25 @@ contains
 
                   if (eCRSP(icr_sec(i_sec))) then
 
-                     do i_bin = 1, ncrb-1
+                     do i_bin = 1, ncrb
 
                         if (p_fix(i_bin) > zero) then
 
-                           Q_ratio_1(i_bin+1) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_prim),p_fix(i_bin),p_fix(i_bin+1))
-                           S_ratio_1(i_bin+1) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_prim),p_fix(i_bin),p_fix(i_bin+1))
+                           if (p_fix(i_bin+1) > zero) then
 
-                           if(abs(Q_ratio_1(i_bin+1))>eps) Q_ratio_2(i_bin+1) = one - Q_ratio_1(i_bin+1)
-                           if(abs(S_ratio_1(i_bin+1))>eps) S_ratio_2(i_bin+1) = one - S_ratio_1(i_bin+1)
+                              Q_ratio_1(i_bin+1) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_bin),p_fix(i_bin),p_fix(i_bin+1))
+                              S_ratio_1(i_bin+1) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc(i_bin),p_fix(i_bin),p_fix(i_bin+1))
 
+                              if(abs(Q_ratio_1(i_bin+1))>eps) Q_ratio_2(i_bin+1) = one - Q_ratio_1(i_bin+1)
+                              if(abs(S_ratio_1(i_bin+1))>eps) S_ratio_2(i_bin+1) = one - S_ratio_1(i_bin+1)
+
+                           endif
 
                         endif
+
+                     if (icr_prim(i_prim)==icr_C12) print *, 'Q_ratio : ', Q_ratio_1, ' S ratio : ', S_ratio_1
+
+                     !if (icr_prim(i_prim)==icr_C12) stop
 
                      enddo
 
@@ -278,16 +285,13 @@ contains
                      dcr_n = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
                      dcr_e = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
 
-                     dcr_n = Q_ratio_2 * dcr_n
-                     dcr_e = S_ratio_2 * dcr_n
-
                      usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n
 
-                     usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n
+                     usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + Q_ratio_2 * dcr_n
 
                      usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
 
-                     usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + dcr_e
+                     usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + S_ratio_2 * dcr_e
 
                   endif
                end associate
@@ -314,7 +318,7 @@ contains
       implicit none
 
       real :: A_prim, A_sec, q_l, p_L, p_R
-      real(kind=4) :: Q_ratio
+      real(kind=8) :: Q_ratio
 
       Q_ratio = zero
 
