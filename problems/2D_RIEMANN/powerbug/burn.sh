@@ -1,6 +1,13 @@
 #!/bin/bash
 
-# Sample script that may help to determine parameters for stress-testing a computer with Piernik.
+# Sample script that may help to stress-test a computer with Piernik.  This
+# variant is intended for stress-testing RAM problems.  For stressing
+# PSU/VRM/cooling, see the other variant in problems/jeans/powerbug .
+
+# By using the right size of the 2D Riemann problem and smart decomposition
+# into blocks, this setup may test nearly whole RAM while reaching quite high
+# usage of CPU power.
+
 # Tested only on Linux. Will require changes to run on MacOS.
 
 MODE="ramspam"
@@ -9,8 +16,8 @@ if [ $# -ge 1 ] ; then
     if [ "$MODE" == "help" ] ; then
 	echo "Usage: $0 [mode]"
 	echo "  where the mode is:"
-	echo "  burn    – for maximum CPU heating (may need adjustments for particular CPU)"
-	echo "  ramspam – for huge CPU heating and a lot of RAM usage"
+	echo "  burn    – for huge CPU heating (may need adjustments for particular CPU)"
+	echo "  ramspam – for high CPU heating and a lot of RAM usage (default)"
 	echo "  scan    – tries few combinations of adjustable parameters to help to determine optimum block size for the burn mode"
 	echo "  user    – user-defined: provide bs and k as arguments"
 	echo "  help    – this help"
@@ -97,8 +104,6 @@ case $VENDOR in
     *)
 	echo "Unknown vendor '$VENDOR'. Figure out sensors first, then make an update."
 	exit 3
-	# An alternative that can be used as a dirty fallback:
-	# sensors | grep ": .*°C" | sed 's/\(.*\): *\([^C]*\)°C.*/\1 \2/' | awk '{if ($NF > 0.) print}' | tr '\n' ' '
 	;;
 esac
 [ $( sensors | grep -E $SENS | wc -l ) == 0 ] && SENS='(:.*°C)'  # Fallback

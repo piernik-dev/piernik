@@ -1,4 +1,11 @@
-! ./setup 2D_RIEMANN/powerbug -o powerbug
+! For maximum RAM stress run:
+!
+! ./setup 2D_RIEMANN/powerbug -o R_powerbug --linkproblem
+! cd runs/powerbug_R_powerbug
+! ./problem/burn.sh
+!
+! Different CPU modelss reach thr maximum power demand on different parameters.
+! See the burn.sh scripts for more hints about optimizing it for specific CPU.
 
  $BASE_DOMAIN
 

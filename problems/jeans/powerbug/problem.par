@@ -1,3 +1,12 @@
+! For maximum heat dissipation (thermal/power stress) run:
+!
+! ./setup jeans/powerbug -o J_powerbug --linkproblem
+! cd runs/powerbug_J_powerbug
+! ./problem/burn.sh
+!
+! Different CPU modelss reach thr maximum power demand on different parameters.
+! See the burn.sh scripts for more hints about optimizing it for specific CPU.
+
  $BASE_DOMAIN
     nb = 32
     n_d = 64, 64, 1
@@ -83,14 +92,15 @@
 
  $MULTIGRID_SOLVER
     stdout    = .true.
+    level_depth = 0       ! Turn off multigrid solve only on base level
  /
 
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "periodic"
-    norm_tol=1e-12
-    nsmool = 1000
-    ! base_no_fft = .true.
-    ! ord_time_extrap = 2
+    norm_tol = 1e-12      ! Spend as much time as possible in the V-cycles
+    nsmool = 1000         ! Do mostly the relaxation, minimize other activities
+    base_no_FFT = .true.  ! Force the red-black Gauss-Seidel relaxation on the whole domain
+    ! ord_time_extrap = 0
  /
 
  $INTERACTIONS
