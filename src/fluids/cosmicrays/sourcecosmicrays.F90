@@ -208,7 +208,7 @@ contains
 
       implicit none
 
-      integer                        :: i, j, k, nssteps_max, i_prim, i_sec, i_sec_n, i_sec_e
+      integer                        :: i,j,k,nssteps_max, i_prim, i_sec, i_sec_n, i_sec_e
       integer(kind=4)                :: nssteps, i_spc, i_bin
       type(spec_mod_trms)            :: sptab
       type(bin_old), dimension(:), allocatable :: crspc_bins_all
@@ -266,10 +266,6 @@ contains
 
                         endif
 
-
-
-                     !if (icr_prim(i_prim)==icr_C12) stop
-
                      enddo
 
                      !Q_ratio_2 = 1.0 - Q_ratio_1
@@ -288,6 +284,16 @@ contains
                      usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e
 
                      usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + S_ratio_2 * dcr_e
+
+                     do i_bin = 1, ncrb
+
+                        if(dcr_n(i_bin)*p_fix(i_bin-1) > zero) print *, 'Primary Ratio ',i_bin,' : ', dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin-1))
+                        if(Q_ratio_2(i_bin)*dcr_n(i_bin)*p_fix(i_bin-1) > zero) print *, 'Secondary Ratio ',i_bin,' : ', S_ratio_2(i_bin)*dcr_e(i_bin)/(Q_ratio_2(i_bin)*dcr_n(i_bin)*p_fix(i_bin-1))
+
+                     enddo
+                     !if (icr_prim(i_prim)==icr_C12) then
+                     !   if (icr_sec(i_sec)==icr_Be9) stop
+                     !endif
 
                   endif
                end associate
