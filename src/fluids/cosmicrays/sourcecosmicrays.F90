@@ -250,17 +250,20 @@ contains
 
                   if (eCRSP(icr_sec(i_sec))) then
 
-                     do i_bin = 1, ncrb-1
+                     do i_bin = 1, ncrb
 
-                        if (p_fix(i_bin+1) > zero) then
+                        if (p_fix(i_bin) > zero) then
 
-                           if (p_fix(i_bin) > zero) then
+                           if (p_fix(i_bin-1) > zero) then
 
-                              Q_ratio_1(i_bin+1) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin+1,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
-                              S_ratio_1(i_bin+1) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin+1,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
+                              Q_ratio_1(i_bin) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin-1),p_fix(i_bin))
+                              S_ratio_1(i_bin) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin-1),p_fix(i_bin))
 
-                              if(abs(Q_ratio_1(i_bin+1))>eps) Q_ratio_2(i_bin+1) = one - Q_ratio_1(i_bin+1)
-                              if(abs(S_ratio_1(i_bin+1))>eps) S_ratio_2(i_bin+1) = one - S_ratio_1(i_bin+1)
+                              if(abs(Q_ratio_1(i_bin))>eps) Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
+                              if(abs(S_ratio_1(i_bin))>eps) S_ratio_2(i_bin) = one - S_ratio_1(i_bin)
+
+                              !if(dcr_n(i_bin)*p_fix(i_bin-1) > zero) print *, 'Primary Ratio ',i_bin,' : ', dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin-1))
+                              !if(Q_ratio_2(i_bin)*dcr_n(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))*p_fix(i_bin-1) > zero) print *, 'Secondary Ratio ',i_bin,' : ', S_ratio_2(i_bin)*dcr_e(i_bin)/(Q_ratio_2(i_bin)*dcr_n(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))*p_fix(i_bin-1))
 
                            endif
 
@@ -285,12 +288,6 @@ contains
 
                      usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + S_ratio_2 * dcr_e
 
-                     do i_bin = 1, ncrb
-
-                        if(dcr_n(i_bin)*p_fix(i_bin-1) > zero) print *, 'Primary Ratio ',i_bin,' : ', dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin-1))
-                        if(Q_ratio_2(i_bin)*dcr_n(i_bin)*p_fix(i_bin-1) > zero) print *, 'Secondary Ratio ',i_bin,' : ', S_ratio_2(i_bin)*dcr_e(i_bin)/(Q_ratio_2(i_bin)*dcr_n(i_bin)*p_fix(i_bin-1))
-
-                     enddo
                      !if (icr_prim(i_prim)==icr_C12) then
                      !   if (icr_sec(i_sec)==icr_Be9) stop
                      !endif
