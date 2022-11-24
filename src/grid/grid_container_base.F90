@@ -265,10 +265,11 @@ contains
       this%ksb = this%ijkseb(zdim, LO)
       this%keb = this%ijkseb(zdim, HI)
 
+      ! Beware: 0-dimensional simulations should not rely on cg%vol or cg%dvol
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
-            this%dvol = product(this%dl(:), mask=dom%has_dir(:))
+            this%vol = merge(0., product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:)), dom%eff_dim == 0)
+            this%dvol = merge(0., product(this%dl(:), mask=dom%has_dir(:)), dom%eff_dim == 0)
          case (GEO_RPZ)
             if (.not. dom%has_dir(ydim)) then
                this%dl(ydim) = dpi
@@ -281,11 +282,19 @@ contains
             this%dvol = product(this%dl(:), mask=(dom%has_dir(:) .or. [.false., .true., .false.])) ! multiply by actual radius to get true cell volume
       end select
 
-      this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+      if (dom%eff_dim == 0) then
+         this%maxxyz = 1
+      else
+         this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+      endif
 
       call this%set_coords
 
-      this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      if (dom%eff_dim == 0) then
+         this%dxmn  = minval(dom%L_(:))
+      else
+         this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      endif
       this%dxmn2 = (this%dxmn)**2
 
       ! some shortcuts for convenience
