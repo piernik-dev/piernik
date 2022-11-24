@@ -659,8 +659,7 @@ def setup_piernik(data=None):
             makejobs = "-j%i" % multiprocessing.cpu_count()
         makecmd = "make %s -C %s" % (makejobs, objdir)
         if(sp.call([makecmd], shell=True) != 0):
-            sys.exit('\033[91m' + "It appears that '%s' crashed. \
-    Cannot continue." % makecmd + '\033[0m')
+            sys.exit('\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m')
 
     try:
         os.makedirs(rundir)
@@ -723,6 +722,17 @@ def setup_piernik(data=None):
               rundir.rstrip('/') + '\033[0m')
         fatal_problem = True
 
+    # Add a link to original problem directory to make it easier to access auxiliary files stored there
+    if options.link_problem:
+        orig_prob_link = rundir + "problem"
+        if (os.path.islink(orig_prob_link)):
+            os.remove(orig_prob_link)
+        try:
+            os.symlink("../../" + probdir, orig_prob_link)
+        except FileExistsError:
+            print('\033[91m' + "Cannot create the link to original problem because '" + orig_prob_link + "' exists (and is not a symbolic link)" + '\033[0m')
+            fatal_problem = True
+
     if (options.nocompile):
         print("\033[93mCompilation of '%s' skipped on request." % args[0] +
               """
@@ -737,7 +747,7 @@ def setup_piernik(data=None):
             makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
         if re.search(r"Circular", output[1].decode("ascii")):
             print('\033[91m' +
-                  "Circular dependencies foud in '%s'." % objdir + '\033[0m')
+                  "Circular dependencies found in '%s'." % objdir + '\033[0m')
     else:
         if (fatal_problem):
             print('\033[93m' +
@@ -813,6 +823,9 @@ runs/<problem>_POSTFIX rather than runs/<problem> .""")
 
     parser.add_option("-k", "--keeppar", action="store_true", dest="keep_par",
                       help="Do not override existing problem.par file with the default one.")
+
+    parser.add_option("--linkproblem", action="store_true", dest="link_problem",
+                      help="Make a symbolic link to the original problem directory in the run directory.")
 
     if data is None:
         all_args = []
