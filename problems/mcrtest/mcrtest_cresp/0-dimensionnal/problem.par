@@ -31,7 +31,7 @@ $BASE_DOMAIN
 
  $END_CONTROL
     tend   = 10. !00.0
-    nend   = 1
+    nend   = 1 !00000
  /
 
  $OUTPUT_CONTROL
@@ -61,7 +61,7 @@ $BASE_DOMAIN
  $COSMIC_RAYS
     cfl_cr        = 0.9
     cr_active     = 1.0
-    ncrb          = 8      ! number of spectrum bins (including cutoff bins)
+    ncrb          = 16      ! number of spectrum bins (including cutoff bins)
     K_cr_paral(:) = 100*0.0 !1.0e4  !100*1.0e3 ! upper limit K_cre_paral
     K_cr_perp(:)  = 100*0.0 !1.0e2 ! 1.e2 ! upper limit K_cre_perp
  /
@@ -137,7 +137,7 @@ $BASE_DOMAIN
  /
 
  $PIERNIK_DEBUG
-    constant_dt = 0.000002
+    constant_dt = 0.01
  /
 
  $INTERACTIONS
