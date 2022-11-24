@@ -777,7 +777,7 @@ if f_run is True:
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
                 spectrum_file_out = str(output_path + '/' + filename_nam + '_' + 'slice_' +
-                                        slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number)
+                                        slice_ax + '_' + plot_var + '_' + spc_label + '_spec_%03d.pdf' % image_number)
                 # bbox not working in py27 FIXME
                 s.savefig(spectrum_file_out, transparent='True',
                           bbox_inches="tight", dpi=150)
