@@ -608,6 +608,9 @@ if f_run is True:
             prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
                 plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
         """
+        print('Here it comes : ')
+        print(plot_field)
+
         if(plot_field == "cr_Be9n_tot"): #Plot B to C ratio rather than spectra
             """
             prtinfo("Value of BC ratio at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
@@ -632,11 +635,13 @@ if f_run is True:
             print(shape(BC_ratio))
 
         else:
-            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
-                    coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
-            # once again appended - needed as ylimit for the plot
-            plot_max = h5ds.find_max(
-                "cre" + plot_var + str(plot_field_click[-2:]))[0]
+
+            if(plot_field[-3:]!='tot'):
+                prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
+                        coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
+                # once again appended - needed as ylimit for the plot
+                plot_max = h5ds.find_max(
+                    "cre" + plot_var + str(plot_field_click[-2:]))[0]
 
         btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v **
                 2 + position["mag_field_z"].v**2)**0.5
