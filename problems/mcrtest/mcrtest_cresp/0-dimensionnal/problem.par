@@ -31,13 +31,13 @@ $BASE_DOMAIN
 
  $END_CONTROL
     tend   = 10. !00.0
-    nend   = 100000
+    nend   = 1
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
-    run_id = 't0d'
-    dt_hdf  = 1.0
+    run_id = 't00'
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 1.0e-10
     dt_tsl  = 1.0e-3
@@ -85,12 +85,12 @@ $BASE_DOMAIN
     initial_spectrum = 'plpc' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
     cre_active(:)  = 8*0.0 !1.0
     NR_iter_limit = 50
-    arr_dim = 100
+    arr_dim = 200
     adiab_active(:)  = 8*.false.
     !adiab_active(2)  = .false.
     synch_active(:)  = 8*.false.
     nullify_empty_bins = .false.
-!    NR_smap_file =
+    NR_smap_file = 'NR_smaps_arr_dim200.h5'
  /
 
  $CR_SPECIES
@@ -137,7 +137,7 @@ $BASE_DOMAIN
  /
 
  $PIERNIK_DEBUG
-    constant_dt = 0.01
+    constant_dt = 0.000002
  /
 
  $INTERACTIONS
