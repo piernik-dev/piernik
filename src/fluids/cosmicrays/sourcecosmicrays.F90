@@ -305,30 +305,30 @@ contains
 
                            usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
                          !
-                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)
+                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
 
                         else
 
                            usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
                          !
-                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1)
+                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
 
 
 
                         endif
 
-                        if(icr_prim(i_prim)==icr_C12) then
-                              if(icr_sec(i_sec)==icr_Be9) then
-                                 if (dcr_n(i_bin)*p_fix(i_bin) > zero) then
-
-                                    print *, 'Primary Ratio n',i_bin,' : ', Q_ratio_1(i_bin), Q_ratio_2(i_bin), 'de/dnp : ', dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin))
-
-                                    print *, 'Primary Ratio e',i_bin,' : ', S_ratio_1(i_bin), S_ratio_2(i_bin), 'e_c/n_c p : ', u_cell(iarr_crspc2_e(cr_prim,i_bin))/(u_cell(iarr_crspc2_n(cr_prim,i_bin)) * p_fix(i_bin))
-
-                                 endif
-
-                              endif
-                        endif
+                        !if(icr_prim(i_prim)==icr_C12) then
+                        !      if(icr_sec(i_sec)==icr_Be9) then
+                        !         if (dcr_n(i_bin)*p_fix(i_bin) > zero) then
+                        !
+                        !            print *, 'Primary Ratio n',i_bin,' : ', Q_ratio_1(i_bin), Q_ratio_2(i_bin), 'de/dnp : ', dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin))
+                        !
+                        !            print *, 'Primary Ratio e',i_bin,' : ', S_ratio_1(i_bin), S_ratio_2(i_bin), 'e_c/n_c p : ', u_cell(iarr_crspc2_e(cr_prim,i_bin))/(u_cell(iarr_crspc2_n(cr_prim,i_bin)) * p_fix(i_bin))
+                        !
+                        !         endif
+                        !
+                        !      endif
+                        !endif
 
 
 
@@ -344,11 +344,11 @@ contains
 
                      enddo
 
-                     if(icr_prim(i_prim)==icr_C12) then
-                           if(icr_sec(i_sec)==icr_Be9) then
-                              stop
-                           endif
-                     endif
+                     !if(icr_prim(i_prim)==icr_C12) then
+                     !      if(icr_sec(i_sec)==icr_Be9) then
+                     !         stop
+                     !      endif
+                     !endif
 
                      !if (icr_prim(i_prim)==icr_C12) then
                      !   if (icr_sec(i_sec)==icr_Be9) stop
