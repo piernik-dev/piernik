@@ -342,7 +342,7 @@ class PPPset:
             if n == 0:
                 ndel.append(e)
         for i in ndel:
-            del(ev[i])
+            del (ev[i])
         if len(ndel) > 0:
             self.descr += "\\n(omitted %d timer%s below %g%% threshold)" % (len(ndel), "" if len(ndel) == 1 else "s", args.cutsmall[0])
 
