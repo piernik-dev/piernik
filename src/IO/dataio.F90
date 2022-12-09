@@ -657,8 +657,8 @@ contains
             case ('ppp')
                if (abs(umsg_param) < huge(1_4)) then
                   umsg_request = max(1, int(umsg_param))
-                  write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
-                       " step(s)" // trim(merge("s", " ", umsg_request == 1))
+                  write(msg,'(a,i6,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
+                       " step" // trim(merge(" ", "s", umsg_request == 1))
                   if (master) call printinfo(msg)
                else
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
