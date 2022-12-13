@@ -270,6 +270,7 @@ contains
 
                     do icr = 1, nspc
                         if (icr==icr_H1) e_tot_sn = cre_eff(icr) * decr
+                        !if (icr==icr_H1) print *, 'e tot sn : ', e_tot_sn
                         if (e_tot_sn > smallcree .and. use_cresp) then
 !                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
                             call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn, icr)

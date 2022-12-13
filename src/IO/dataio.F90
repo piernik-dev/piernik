@@ -1696,6 +1696,7 @@ contains
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)            :: id
       character(len=*), parameter     :: log_label = "write_log"
+      real                            :: cr_e_tot, cr_n_tot
 
       call ppp_main%start(log_label, PPP_IO)
 
@@ -1840,6 +1841,8 @@ contains
          call cgl%cg%costs%start
 
          cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_n,:,:,:),1)
+         cr_n_tot = sum(cgl%cg%u(iarr_crspc_n,:,:,:))
+         print *, 'total n density : ', cr_n_tot
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
@@ -1852,6 +1855,9 @@ contains
          call cgl%cg%costs%start
 
          cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_e,:,:,:),1)
+
+         cr_e_tot = sum(cgl%cg%u(iarr_crspc_e,:,:,:))
+         print *, 'total e density : ', cr_e_tot
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt

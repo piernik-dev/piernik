@@ -31,7 +31,7 @@ $BASE_DOMAIN
 
  $END_CONTROL
     tend   = 10. !00.0
-    nend   = 10000
+    nend   = 1
  /
 
  $OUTPUT_CONTROL
@@ -101,6 +101,12 @@ $BASE_DOMAIN
     eLi7= .true., .false., .true., .false.
     eBe9=.true., .false., .true., .false.
     eBe10=.true., .false., .true., .false.
+ /
+
+ $SN_SOURCES
+    r_sn         =  50.0    ! radius of explosion (gauss function)
+    h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
+    f_sn_kpc2    = 100000.0    ! surface frequency of SN ( / kpc^2 / Myr )
  /
 
  $MULTIGRID_SOLVER
