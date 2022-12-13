@@ -1,13 +1,9 @@
-#define IONIZED
-
-#define COSM_RAYS
-
-#define CRESP
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
 
-#define MAGNETIC
+#define IONIZED
+#define COSM_RAYS
+#define CRESP
 
-#define RTVD
+#define MAGNETIC
