@@ -37,14 +37,13 @@
 
 module initproblem
 
-   use constants,    only: fnamelen
+   use constants, only: fnamelen
 
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
    real               :: u_d0, u_b0, u_d_ampl, omega_d, Btot
    character(len=fnamelen) :: outfile
@@ -72,19 +71,19 @@ contains
 
       implicit none
 
-      d0             = 1.0       !< density
-      p0             = 1.0         !< pressure
-      bx0            =   0.        !< Magnetic field component x
-      by0            =   0.        !< Magnetic field component y
-      bz0            =   0.        !< Magnetic field component z
-      x0             = 0.0         !< x-position of the blob
-      y0             = 0.0         !< y-position of the blob
-      z0             = 0.0         !< z-position of the blob
+      d0      = 1.0       !< density
+      p0      = 1.0         !< pressure
+      bx0     =   0.        !< Magnetic field component x
+      by0     =   0.        !< Magnetic field component y
+      bz0     =   0.        !< Magnetic field component z
+      x0      = 0.0         !< x-position of the blob
+      y0      = 0.0         !< y-position of the blob
+      z0      = 0.0         !< z-position of the blob
 
-      beta_cr        = 0.0         !< ambient level
-      amp_cr1        = 1.0         !< amplitude of the blob
+      beta_cr = 0.0         !< ambient level
+      amp_cr1 = 1.0         !< amplitude of the blob
 
-      outfile        = 'crs.dat'
+      outfile = 'crs.dat'
 
       if (master) then
 
@@ -190,22 +189,22 @@ contains
 
    subroutine problem_initial_conditions
 
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use constants,          only: xdim, ydim, zdim, LO, HI, zero, two
-      use domain,             only: dom
-      use dataio_pub,         only: msg, printinfo
-      use fluidindex,         only: flind
-      use fluidtypes,         only: component_fluid
-      use func,               only: ekin, emag
-      use grid_cont,          only: grid_container
-      use global,             only: skip_sweep, repetitive_steps
-      use initcosmicrays,     only: iarr_crn, iarr_crs
-      use user_hooks,         only: problem_customize_solution
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, zero, two
+      use dataio_pub,       only: msg, printinfo
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag
+      use global,           only: skip_sweep, repetitive_steps
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_crn, iarr_crs
+      use user_hooks,       only: problem_customize_solution
 #ifdef CRESP
-      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,     only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
+      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+      use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
 #endif /* CRESP */
 
       implicit none
@@ -217,7 +216,7 @@ contains
       real                            :: e_tot
 #endif /* CRESP */
       class(component_fluid), pointer :: fl
-      integer                         :: i, j, k, icr, ipm, jpm, kpm
+      integer                         :: i, j, k
 
 ! Skip all the sweeps to simulate isolated case evolution -- allows to test CRESP algorithm without spatial transport
       skip_sweep  = [.true., .true., .true.]
@@ -245,8 +244,8 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
-         cg%u(fl%idn,:,:,:) = d0
-         cg%u(fl%imx:fl%imz,:,:,:) = zero
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = zero
 
 #ifndef ISO
          do k = cg%ks, cg%ke
@@ -260,7 +259,7 @@ contains
          enddo
 #endif /* !ISO */
 
-         cg%u(iarr_crs,:,:,:) = 0.0
+         cg%u(iarr_crs,RNG) = 0.0
 
 ! Spatial distribution: uniformly fill the whole domain
          do k = cg%ks, cg%ke
@@ -304,25 +303,26 @@ contains
 
       set_tabs_for_cresp = forward
       call append_cooling_terms(set_tabs_for_cresp)
-      if (forward .eqv. .false.) then
-         call printer
-      endif
+      if (.not. forward) call printer
 
    end subroutine isolated_problem_customize_solution
 
    subroutine append_cooling_terms(set_tabs_for_cresp)
 
-      use cg_leaves,       only: leaves
-      use cg_list,         only: cg_list_element
-      use constants,       only: LO, HI, onet, xdim, ydim, zdim
-      use crhelpers,       only: divv_i, div_v
-      use domain,          only: dom
-      use dataio_pub,      only: msg, printinfo
-      use fluidindex,      only: flind
-      use fluidtypes,      only: component_fluid
-      use grid_cont,       only: grid_container
-      use global,          only: t
-      use initcrspectrum,  only: adiab_active, synch_active
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: LO, HI, onet, xdim, ydim, zdim
+      use crhelpers,      only: div_v
+      use domain,         only: dom
+      use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
+      use grid_cont,      only: grid_container
+      use global,         only: t
+      use initcrspectrum, only: adiab_active, synch_active
+#ifdef CRESP_VERBOSED
+      use crhelpers,      only: divv_i
+      use dataio_pub,     only: msg, printinfo
+#endif /* CRESP_VERBOSED */
 
       implicit none
 
@@ -336,13 +336,11 @@ contains
       fl => flind%ion
       cgl => leaves%first
 
-      if (set_tabs_for_cresp .eqv. .true.) then
+      if (set_tabs_for_cresp) then
          do while (associated(cgl))
             cg => cgl%cg
 
-            if (synch_active) then
-               call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
-            endif
+            if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
 
             if (adiab_active) then
                denom_dims  = 1. / (dom%D_x + dom%D_y + dom%D_z)
@@ -375,12 +373,12 @@ contains
 
    subroutine printer
 
-      use constants,       only: LO, HI
-      use cresp_grid,      only: cfl_cresp_violation
-      use dataio_pub,      only: nh
-      use global,          only: t, dt, repetitive_steps
-      use initcosmicrays,  only: nspc
-      use initcrspectrum,  only: crel
+      use constants,      only: LO, HI
+      use cresp_grid,     only: cfl_cresp_violation
+      use dataio_pub,     only: nh
+      use global,         only: t, dt, repetitive_steps
+      use initcosmicrays, only: nspc
+      use initcrspectrum, only: crel
 
       implicit none
 
