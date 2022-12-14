@@ -156,7 +156,7 @@ contains
                             acc(:)=0.0
                             ener = 0.0
                             tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
-                            call is_part_in_cg(cg, pos, in, phy, out)
+                            call is_part_in_cg(cg, pos, .true., in, phy, out)
                             dmass_stars = dmass_stars + mass
                             cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens* cg%dvol * 2*dt
                             cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))

@@ -1,0 +1,99 @@
+# This setup differs from the default one mostly in scaling sizes and times
+# by a factor of 1e-75.  All gravitational potential structures should
+# remain identical.
+# Smaller domains are crashing due to evaluation of the refinement criteria.
+
+ $BASE_DOMAIN
+    n_d = 3*16
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -2.e-75
+    xmax   =  2.e-75
+    ymin   = -2.e-75
+    ymax   =  2.e-75
+    zmin   = -2.e-75
+    zmax   =  2.e-75
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 1 ! we can set here 0 as well, but this would issue a warning
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='maclaurin'
+    run_id =  'sph'
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_log  = 0.0
+    dt_tsl  = 0.0
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', 'relerr', 'level'
+    h5_64bit = .true.
+ /
+
+ $FLUID_DUST
+    selfgrav = .true.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1e-50
+    smallei= 1e-50
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    x0     = 0.
+    y0     = 0.5e-75
+    z0     = 1.e-75
+    d0     = 1.
+    a1     = 0.7e-75
+    e      = 0.
+    nsub   = 3
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+!    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "isolated"
+    mpole_solver  = "3d"
+    mpole_level   = 0   ! base level evaluation of multipole moments seems to be good enough for maclaurin, even -2 would be sufficient
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+    bsize = 3*8
+    level_max = 3
+ /

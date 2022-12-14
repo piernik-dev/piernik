@@ -270,6 +270,7 @@ contains
       integer, parameter                :: galfile = 1
       real, dimension(:,:), allocatable :: pos, vel
       real, dimension(:),   allocatable :: mass
+      real, dimension(ndims)            :: posi, veli
 
       open(unit=galfile, file=bgfile, action='read', status='old')
       read(galfile,*) nbodies
@@ -278,9 +279,9 @@ contains
             call printio(msg)
          endif
 
-         allocate(mass(nbodies),pos(nbodies,ndims),vel(nbodies,ndims))
+         allocate(mass(nbodies), pos(nbodies,ndims), vel(nbodies,ndims))
 
-         read(galfile,*) (mass(i),i=1,nbodies), ((pos(i,j),j=1,ndims),i=1,nbodies), ((vel(i,j),j=1,ndims),i=1,nbodies)
+         read(galfile,*) (mass(i), i = 1, nbodies), ((pos(i,j), j = 1, ndims), i = 1, nbodies), ((vel(i,j), j = 1, ndims), i = 1, nbodies)
 
       close(galfile)
 
@@ -289,11 +290,13 @@ contains
          i = i + I_ONE
          if (i > nbodies) exit
 #ifdef VERBOSE
-         if (modulo(i, 10000) .eq. 0) then
+         if (modulo(i, 10000) == 0) then
             write(msg,'(i8,a)') i, ' particles read' ; call printio(msg)
          endif
 #endif /* VERBOSE */
-         call add_part_in_proper_cg(i, mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
+         posi = pos(i,:)
+         veli = vel(i,:)
+         call add_part_in_proper_cg(i, mass(i), posi, veli, [0.0, 0.0, 0.0], 0.0)
       enddo
       ! ToDo: check whether all particles were added exactly once
       deallocate(mass,pos,vel)

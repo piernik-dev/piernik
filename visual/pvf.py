@@ -48,7 +48,7 @@ def print_usage():
     print(' -a CUT1[,CUT2], \t--axes CUT1[,CUT2] \t\t\tselect plot cuts from the following: 1x, 1y, 1z, xy, xz, yz, 1D, 2D [default: all 2D cuts, otherwise all 1D]')
     print('\t\t\t--amr\t\t\t\t\tcollect all refinement levels of grid to plot [default: True while AMR refinement level structure exists]')
     print(' -b BINS, \t\t--bins BINS \t\t\t\tmake a 2D histogram plot using BINS number instead of scattering particles [default: 1, which leads to scattering]')
-    print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\t\tplot cuts across given point coordinates CX, CY, CZ [default: computed domain center]')
+    print(' -c CX,CY,CZ, \t\t--center CX,CY,CZ \t\t\tplot cuts across given point coordinates CX, CY, CZ (give "max" or "min" key to find CX,CY,CZ automatically) [default: computed domain center]')
     print(' -C\t\t\t--compare-adjusted-grids \t\tadjust ranges of grids to compare [default: switched-off]')
     print(' -d VAR[,VAR2], \t--dataset VAR[,VAR2] \t\t\tspecify one or more datafield(s) to plot [default: print available datafields; all or _all_ to plot all available datafields]')
     print(' -D COLORMAP, \t\t--colormap COLORMAP \t\t\tuse COLORMAP palette [default: %s]' % ps.plot2d_colormap)
@@ -97,8 +97,13 @@ def cli_params(argv):
 
         elif pu.recognize_opt(opt, ("-c", "--center")):
             global center, cu
-            cx, cy, cz = arg.split(',')
-            cu, center = True, [float(cx), float(cy), float(cz)]
+            if arg == 'max':
+                cu, center = True, [False, True, ]
+            elif arg == 'min':
+                cu, center = True, [True, False, ]
+            else:
+                cx, cy, cz = arg.split(',')
+                cu, center = True, [float(cx), float(cy), float(cz)]
 
         elif pu.recognize_opt(opt, ("-d", "--dataset")):
             global dnames

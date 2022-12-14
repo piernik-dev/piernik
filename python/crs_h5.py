@@ -297,7 +297,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
     e_smalls[:] = e_small
     if (plot_var == "e"):
         plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
-    elif(plot_var == "n"):
+    elif (plot_var == "n"):
         plt.plot(p_range, e_small / (c * p_range),
                  color="xkcd:azure", label="$n_{small}$")
 

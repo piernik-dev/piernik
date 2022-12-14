@@ -30,7 +30,6 @@
 
 #ifdef NBODY
 #   define NBODY_MULTIGRID
-#   define NBODY_1FILE
 #endif /* NBODY */
 
 #ifdef NBODY_MULTIGRID

@@ -34,7 +34,6 @@ module initproblem
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
-   public :: d0, mode
 
    ! Private variables
    real :: kx, ky, kz
@@ -77,13 +76,13 @@ contains
       implicit none
 
       ! namelist default parameter values
-      d0          = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
-      p0          = 1.e-3                 !< Average pressure of the medium (for calculating sound speed ot temperature)
-      ix          = 2                     !< Number of perturbation waves in the x direction
-      iy          = 0                     !< Number of perturbation waves in the y direction
-      iz          = 0                     !< Number of perturbation waves in the z direction
-      amp         = 0.0                   !< Perturbation relative amplitude
-      mode        = 0                     !< Variant of the test. 0: cos(kx *x + ky*y + kz*z), 1: cos(kx *x) * cos(ky*y) * cos(kz*z)
+      d0          = 1.0    !< Average density of the medium (density bias required for correct EOS evaluation)
+      p0          = 1.e-3  !< Average pressure of the medium (for calculating sound speed of temperature)
+      ix          = 2      !< Number of perturbation waves in the x direction
+      iy          = 0      !< Number of perturbation waves in the y direction
+      iz          = 0      !< Number of perturbation waves in the z direction
+      amp         = 0.0    !< Perturbation relative amplitude
+      mode        = 0      !< Variant of the test. 0: cos(kx*x + ky*y + kz*z), 1: cos(kx*x) * cos(ky*y) * cos(kz*z)
 
       if (master) then
 

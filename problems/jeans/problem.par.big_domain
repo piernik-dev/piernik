@@ -1,0 +1,103 @@
+# This setup differs from the default one mostly in scaling sizes and times
+# by a factor of 1e+50.  All hydrodynamical structures should remain
+# identical.
+# Bigger domains are likely to crash due to floating point overflow in fluxes.
+# Dirty debug is not possible here because it is based on huge(real(1.0,4))
+
+ $BASE_DOMAIN
+    n_d = 64, 64, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 1.1446968195470935e+50
+    ymin   = 0.0
+    ymax   = 1.1446968195470935e+50
+    zmin   = 0.0
+    zmax   = 1.1446968195470935e+50
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='jeans'
+    run_id =  'ts1'
+    dt_hdf  = 1.0
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'ener', 'dens', 'gpot', 'velx', 'vely', 'velz'
+    H5_64bit = .true.
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.67
+    selfgrav = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 0.
+    smallei= 0.
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+    external_gp = "null"
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.5e7
+    p0     = 1.5e+107
+    amp    = 0.001
+    ix     = 2
+    iy     = 0
+    iz     = 0
+    mode   = 0
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+!    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "periodic"
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /

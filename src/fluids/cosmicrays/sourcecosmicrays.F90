@@ -117,6 +117,7 @@ contains
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
       use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
+      use dataio_pub,     only: die
       use domain,         only: dom
       use fluids_pub,     only: has_ion, has_neu
       use fluidindex,     only: flind
@@ -135,6 +136,8 @@ contains
       real, parameter                            :: gamma_lor = 10.0 !< \todo should taken from cosmic ray species settings
       real                                       :: gn
       integer                                    :: i, j
+
+      if (dom%eff_dim == 0) call die("[sourcecosmicrays:src_cr_spallation_and_decay] dom%eff_dim == 0 is not supported yet")
 
       gn = 1.0 / dom%eff_dim / gamma_lor
       dgas = 0.0

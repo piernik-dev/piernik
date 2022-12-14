@@ -290,6 +290,9 @@ contains
 !!
 !! this%aux is the noise filter (epsilon in Loechner's paper)
 !!
+!! Known limitations:
+!! * Extremely small and big cell sizes easily cause FP over- and underflows. Don't go much beyond 1e±70.
+!!
 !! OPT: this routine seems to take way too much CPU! Implement 3D variant without functions?
 !!
 !<

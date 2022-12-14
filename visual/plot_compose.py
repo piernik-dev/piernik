@@ -69,7 +69,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
             P.ylim(hl[1], hl[2])
 
     if parts[0]:
-        pxyz, pm, nbins, pcolor, psize, player, labh = parts[1:]
+        pxyz, pm, nbins, pcolor, psize, player, pstype, labh = parts[1:]
         pn1, pmm = pxyz[ncut], pm
         ax = plot1d_particles(ax, pn1, pmm, nbins, [smin[ncut], smax[ncut]], pcolor, psize)
         label.append(labh)
@@ -233,7 +233,7 @@ def plotcompose(pthfilen, var, output, options):
 
     refis = []
     if drawd or drawg:
-        refis, extr = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
+        refis, extr, center = rd.collect_gridlevels(h5f, var, cmpr, refis, maxglev, plotlevels, gridlist, cgcount, center, usc, drawd, drawu, drawa, drawg, draw1D, draw2D)
 
         if refis == [] or pu.list_any(extr, []):
             drawd = False

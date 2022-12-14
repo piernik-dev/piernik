@@ -3,8 +3,15 @@ import h5py as h5
 import numpy as np
 
 sp_key = 'simulation_parameters'
-pkeys = ['acceleration_x', 'acceleration_y', 'acceleration_z', 'energy', 'mass', 'position_x', 'position_y', 'position_z', 'velocity_x', 'velocity_y', 'velocity_z']
-auto_vectors = True  # False
+pkeys = [['position_x', 'position_y', 'position_z'],
+         ['velocity_x', 'velocity_y', 'velocity_z'],
+         ['acceleration_x', 'acceleration_y', 'acceleration_z'],
+         ['energy'],
+         ['mass'],
+         ['dynamical_time'],
+         ['formation_time']]
+pkeys_flat = set()  # to be made from pkeys[]
+auto_vectors = True
 
 
 def is_comparable(fname1, fname2):
@@ -215,7 +222,7 @@ def compare_dlists(h5f1, h5f2):
         for v in fc:
             vec.append([v])
 
-    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec
+    return 0. if (len(f1) == len(fc)) and (len(f2) == len(fc)) else 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec  # correct also for empty sets
 
 
 def compare_time(h5f1, h5f2):
@@ -291,8 +298,15 @@ def get_particles(h5f):
     for v in plist:
         if len(plist[v]) != n:
             print("Warning: incomplete list for particle quantity '%s' in '%s': read %d out of %d." % (v, h5f.filename, len(plist[v]), n))
+    for i in pkeys:
+        for j in i:
+            pkeys_flat.add(j)
+    if not auto_vectors:
+        pkeys.clear()
+        for i in pkeys_flat:
+            pkeys.append([i])
     if "id" in plist.keys():
-        if set(plist.keys()) != (set(pkeys) ^ set(['id'])):
+        if set(plist.keys()) != (set(pkeys_flat) ^ set(['id'])):
             print("Non-standard set of particle quantities detected in '%s':" % h5f.filename, set(plist.keys()))
     return plist
 
@@ -304,7 +318,7 @@ def convert_particles(p):
         if id in pp:
             print("Duplicated id %d" % id)
         pp[id] = {}
-        for k in pkeys:
+        for k in pkeys_flat:
             pp[id][k] = p[k][i]
     return pp
 
@@ -335,19 +349,19 @@ def compare_particles(h5f1, h5f2):
         if id not in pp2:
             del pp1[id]
 
-    if auto_vectors:
-        print("ToDo: vectorize particle data")
     tot_datanorm = 0.
-    for k in pkeys:
-        ds1 = np.zeros((n_comm_p))
-        ds2 = np.zeros((n_comm_p))
+    for kv in pkeys:
+        ds1 = np.zeros((n_comm_p * len(kv)))
+        ds2 = np.zeros((n_comm_p * len(kv)))
         i = 0
         for id in pp1:  # we've already removed particles that were unique to pp1
-            ds1[i] = pp1[id][k]
-            ds2[i] = pp2[id][k]
-            i += 1
+            for k in kv:
+                ds1[i] = pp1[id][k]
+                ds2[i] = pp2[id][k]
+                i += 1
         norm = compare_data(ds1, ds2)
-        pn["particles `" + k + "'"] = norm
+        # Assumed that the only vectors for particles are the XYZ-vectors
+        pn["particles `" + (kv[0] if len(kv) == 1 else kv[0][:-2] + "_[x..z]") + "'"] = norm
         tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
     print("All particles difference: %g" % tot_datanorm)
 
@@ -490,7 +504,7 @@ if __name__ == "__main__":
             norms, normsl, nlev = piernik_gdf_compare(sys.argv[1], sys.argv[2], levels)
             tot_norm = 0.
             failed = False
-            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len)))
+            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len))) if len(norms) != 0 else 0
             for i in sorted(norms.keys()):
                 toprint = "Difference of %-*s:" % (longestkey + 1, i)
                 if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):

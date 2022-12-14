@@ -1,3 +1,12 @@
+! This is a 3D variant of the Jeans test.
+
+! Here we use Dirichlet boundary conditions for gravitational potential in
+! a way that should match periodic boundaries.
+
+!  The default Jeans config is quite minimalistic and tests only most
+! essential parts of the multigrid solver.  This config has more extensive
+! coverage of the multigrid and multipole solvers.
+
  $BASE_DOMAIN
     n_d = 64, 64, 64
     bnd_xl = 'per'
@@ -84,7 +93,7 @@
 
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "dirichlet"
-    gb_no_fft = .true.
+    base_no_fft = .true.
  /
 
  $INTERACTIONS
