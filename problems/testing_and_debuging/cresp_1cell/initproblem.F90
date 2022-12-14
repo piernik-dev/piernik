@@ -287,7 +287,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call append_cooling_terms(.true.)
+      call append_cooling_terms
 
       crel%f = crel%f * e_tot / total_init_cree ! Scale f before saving initial spectrum
       call printer ! Save initial spectrum; CRESP is initialized at this point.
@@ -298,16 +298,17 @@ contains
 
       implicit none
 
-      logical, intent(in)     :: forward
-      logical                 :: set_tabs_for_cresp
+      logical, intent(in) :: forward
 
-      set_tabs_for_cresp = forward
-      call append_cooling_terms(set_tabs_for_cresp)
-      if (.not. forward) call printer
+      if (forward) then
+         call append_cooling_terms
+      else
+         call printer
+      endif
 
    end subroutine isolated_problem_customize_solution
 
-   subroutine append_cooling_terms(set_tabs_for_cresp)
+   subroutine append_cooling_terms
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -331,43 +332,39 @@ contains
       class(component_fluid), pointer :: fl
       real                            :: denom_dims, cos_omega_t
       integer                         :: i, j, k
-      logical                         :: set_tabs_for_cresp
 
       fl => flind%ion
       cgl => leaves%first
 
-      if (set_tabs_for_cresp) then
-         do while (associated(cgl))
-            cg => cgl%cg
+      do while (associated(cgl))
+         cg => cgl%cg
 
-            if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
+         if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
 
-            if (adiab_active) then
-               denom_dims  = 1. / (dom%D_x + dom%D_y + dom%D_z)
-               cos_omega_t = cos(omega_d * t)
+         if (adiab_active) then
+            denom_dims  = 1. / (dom%D_x + dom%D_y + dom%D_z)
+            cos_omega_t = cos(omega_d * t)
 
-               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-                  do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-                     do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                        cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
-                        cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
-                        cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
-                     enddo
+            do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+                  do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+                     cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
+                     cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
+                     cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
                   enddo
                enddo
+            enddo
 
-               call div_v(flind%ion%pos, cg)
+            call div_v(flind%ion%pos, cg)
 
 #ifdef CRESP_VERBOSED
-               write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", u_d0 + u_d_ampl * cos_omega_t
-               call printinfo(msg)
+            write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", u_d0 + u_d_ampl * cos_omega_t
+            call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-            endif
-            cgl => cgl%nxt
-         enddo
-
-      endif
+         endif
+         cgl => cgl%nxt
+      enddo
 
    end subroutine append_cooling_terms
 
