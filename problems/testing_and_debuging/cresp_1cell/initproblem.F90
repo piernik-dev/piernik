@@ -305,7 +305,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: LO, HI, onet, xdim, ydim, zdim
+      use constants,      only: LO, HI, three, xdim, ydim, zdim
       use crhelpers,      only: div_v
       use domain,         only: dom
       use fluidindex,     only: flind
@@ -323,7 +323,7 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
-      real                            :: denom_dims, cos_omega_t
+      real                            :: cos_f, cos_omega_t, denom_dims
       integer                         :: i, j, k
 
       fl => flind%ion
@@ -335,23 +335,24 @@ contains
          if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
 
          if (adiab_active) then
-            denom_dims  = 1. / max(dom%D_x + dom%D_y + dom%D_z, 1)
-            cos_omega_t = cos(omega_d * t)
+            denom_dims  = three / max(dom%D_x + dom%D_y + dom%D_z, 1)
+            cos_omega_t = u_d0 + u_d_ampl * cos(omega_d * t)
+            cos_f = cos_omega_t * denom_dims
 
+            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+               cg%u(flind%ion%imx,i,:,:) = cg%u(flind%ion%idn,i,:,:) * cg%x(i) * cos_f
+            enddo
+            do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+               cg%u(flind%ion%imy,:,j,:) = cg%u(flind%ion%idn,:,j,:) * cg%y(j) * cos_f
+            enddo
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-                  do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                     cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%x(i) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
-                     cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%y(j) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
-                     cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * cg%z(k) * (u_d0 + u_d_ampl * cos_omega_t) / onet * denom_dims
-                  enddo
-               enddo
+               cg%u(flind%ion%imz,:,:,k) = cg%u(flind%ion%idn,:,:,k) * cg%z(k) * cos_f
             enddo
 
             call div_v(flind%ion%pos, cg)
 
 #ifdef CRESP_VERBOSED
-            write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", u_d0 + u_d_ampl * cos_omega_t
+            write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", cos_omega_t
             call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
