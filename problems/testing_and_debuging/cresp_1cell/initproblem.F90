@@ -33,15 +33,15 @@
 
 module initproblem
 
-   use constants, only: fnamelen
+   use constants, only: cbuff_len
 
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                    :: d0, p0, bx0, by0, bz0, amp_cr1, u_d0, u_b0, u_d_ampl, omega_d, Btot
-   character(len=fnamelen) :: outfile
+   real                     :: d0, p0, bx0, by0, bz0, amp_cr1, u_d0, u_b0, u_d_ampl, omega_d, Btot
+   character(len=cbuff_len) :: outfile
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, amp_cr1, u_d0, u_b0, u_d_ampl, omega_d, Btot, outfile
 contains
@@ -63,7 +63,6 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: cbuff_len
       use dataio_pub, only: nh
       use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
