@@ -27,10 +27,6 @@
 
 #include "piernik.h"
 
-#ifndef COSM_RAYS
-#error COSM_RAYS is required for 1cell
-#endif /* COSM_RAYS */
-
 #ifndef CRESP
 #error CRESP is required for 1cell
 #endif /* CRESP */
@@ -192,6 +188,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, zero, two
+      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use dataio_pub,       only: msg, printinfo
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -199,23 +196,16 @@ contains
       use func,             only: ekin, emag
       use global,           only: skip_sweep, repetitive_steps
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crn, iarr_crs
-      use user_hooks,       only: problem_customize_solution
-#ifdef CRESP
-      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+      use initcosmicrays,   only: iarr_crn, iarr_crs, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
-#endif /* CRESP */
+      use user_hooks,       only: problem_customize_solution
 
       implicit none
 
-      real                            :: cs_iso, decr
+      class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-#ifdef CRESP
-      real                            :: e_tot
-#endif /* CRESP */
-      class(component_fluid), pointer :: fl
+      real                            :: cs_iso, decr, e_tot
       integer                         :: i, j, k
 
 ! Skip all the sweeps to simulate isolated case evolution -- allows to test CRESP algorithm without spatial transport
@@ -258,7 +248,6 @@ contains
          decr = amp_cr1
          cg%u(iarr_crn(1),RNG) = cg%u(iarr_crn(1),RNG) + amp_cr1 * decr
 
-#ifdef CRESP
          if (use_cresp) then
             e_tot = cre_eff * decr
             if (e_tot > smallcree) then
@@ -275,7 +264,6 @@ contains
                enddo
             endif
          endif
-#endif /* CRESP */
 
          cgl => cgl%nxt
       enddo
@@ -361,7 +349,6 @@ contains
             write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(0, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([0,0,0]) / three, " | u_d(t, set) = ", cos_omega_t
             call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-
          endif
 
          cg%u(fl%ien,:,:,:) = int_ener + ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:)) + &
