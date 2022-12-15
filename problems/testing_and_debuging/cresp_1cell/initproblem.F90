@@ -211,7 +211,7 @@ contains
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real                            :: cs_iso, decr, e_tot
+      real                            :: decr, e_tot
       integer                         :: i, j, k
 
       if (adiab_active) then
@@ -222,7 +222,6 @@ contains
 
       fl => flind%ion
 
-      cs_iso = sqrt(p0/d0)
 ! NOTICE: Btot is preferred over bx0, by0 and bz0 if these are set as well and overwrites them, B field in nonexistent direction is ignored.
       if (Btot > zero .or. u_b0 > zero) then  ! Distribute Btot evenly over all available directions
          if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / fsynchr / dom%eff_dim)
