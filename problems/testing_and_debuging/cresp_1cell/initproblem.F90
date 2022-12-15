@@ -310,6 +310,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
+      use func,           only: ekin, emag
       use grid_cont,      only: grid_container
       use global,         only: t
       use initcrspectrum, only: adiab_active, synch_active
@@ -320,17 +321,22 @@ contains
 
       implicit none
 
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-      class(component_fluid), pointer :: fl
-      real                            :: cos_f, cos_omega_t, denom_dims
-      integer                         :: i, j, k
+      type(cg_list_element),  pointer     :: cgl
+      type(grid_container),   pointer     :: cg
+      class(component_fluid), pointer     :: fl
+      real, dimension(:,:,:), allocatable :: int_ener
+      real                                :: cos_f, cos_omega_t, denom_dims
+      integer                             :: i, j, k
 
       fl => flind%ion
       cgl => leaves%first
 
       do while (associated(cgl))
          cg => cgl%cg
+
+         allocate(int_ener(cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
+         int_ener = cg%u(fl%ien,:,:,:) - ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:)) - &
+                  &                      emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
 
          if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
 
@@ -357,6 +363,11 @@ contains
 #endif /* CRESP_VERBOSED */
 
          endif
+
+         cg%u(fl%ien,:,:,:) = int_ener + ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:)) + &
+                  &                      emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
+         deallocate(int_ener)
+
          cgl => cgl%nxt
       enddo
 
