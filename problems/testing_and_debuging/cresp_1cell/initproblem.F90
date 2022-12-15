@@ -358,7 +358,7 @@ contains
             call div_v(flind%ion%pos, cg)
 
 #ifdef CRESP_VERBOSED
-            write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(1, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([1,0,0]) * onet, " | u_d(t, set) = ", cos_omega_t
+            write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(0, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([0,0,0]) / three, " | u_d(t, set) = ", cos_omega_t
             call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
