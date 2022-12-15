@@ -194,14 +194,12 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, zero, two
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use dataio_pub,       only: msg, printinfo
       use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
-      use global,           only: repetitive_steps
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crn, iarr_crs, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
+      use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, fsynchr, crel, total_init_cree
 #ifndef ISO
       use func,             only: ekin, emag
 #endif /* !ISO */
@@ -213,12 +211,6 @@ contains
       type(grid_container),   pointer :: cg
       real                            :: decr, e_tot
       integer                         :: i, j, k
-
-      if (adiab_active) then
-         repetitive_steps = .false.
-         write (msg, *) "Parameter 'adiab_active' is TRUE, due to possible large variations of div(V) CFL warnings may show up: changing 'repetitive_steps' to FALSE (hard coded)"
-         call printinfo(msg)
-      endif
 
       fl => flind%ion
 
