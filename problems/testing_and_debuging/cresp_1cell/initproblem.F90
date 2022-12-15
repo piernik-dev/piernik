@@ -53,11 +53,12 @@ contains
 
    subroutine problem_pointers
 
-      use user_hooks, only: problem_customize_solution
+      use user_hooks, only: problem_customize_solution, user_reaction_to_redo_step
 
       implicit none
 
       problem_customize_solution => isolated_problem_customize_solution
+      user_reaction_to_redo_step => printer_rewind_one_line
 
    end subroutine problem_pointers
 
@@ -371,21 +372,29 @@ contains
    subroutine printer
 
       use constants,      only: LO, HI
-      use cresp_grid,     only: cfl_cresp_violation
       use dataio_pub,     only: nh
-      use global,         only: t, dt, repetitive_steps
+      use global,         only: t, dt
       use initcosmicrays, only: nspc
       use initcrspectrum, only: crel
 
       implicit none
 
       open(newunit=nh%lun, file=outfile, status="unknown", position="append")
-      if (repetitive_steps .and. cfl_cresp_violation) then  ! FIXME beware - other instances (though unlikely) of CFL violation should be included
-         backspace(nh%lun)  ! rewind one line if step is repeated in order to keep consistent order of the data in crs file
-      endif
       write(nh%lun, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, dt, nspc, crel%i_cut(LO), crel%i_cut(HI), crel%p, crel%f, crel%q
       close(nh%lun)
 
    end subroutine printer
+
+   subroutine printer_rewind_one_line
+
+      use dataio_pub, only: nh
+
+      implicit none
+
+      open(newunit=nh%lun, file=outfile, status="unknown", position="append")
+      backspace(nh%lun)  ! rewind one line if step is repeated in order to keep consistent order of the data in crs file
+      close(nh%lun)
+
+   end subroutine printer_rewind_one_line
 
 end module initproblem
