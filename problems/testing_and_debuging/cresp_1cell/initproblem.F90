@@ -335,7 +335,7 @@ contains
          if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
 
          if (adiab_active) then
-            denom_dims  = 1. / (dom%D_x + dom%D_y + dom%D_z)
+            denom_dims  = 1. / max(dom%D_x + dom%D_y + dom%D_z, 1)
             cos_omega_t = cos(omega_d * t)
 
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
