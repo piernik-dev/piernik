@@ -198,7 +198,7 @@ contains
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use func,             only: ekin, emag
-      use global,           only: skip_sweep, repetitive_steps
+      use global,           only: repetitive_steps
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crn, iarr_crs, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
@@ -210,9 +210,6 @@ contains
       type(grid_container),   pointer :: cg
       real                            :: cs_iso, decr, e_tot
       integer                         :: i, j, k
-
-! Skip all the sweeps to simulate isolated case evolution -- allows to test CRESP algorithm without spatial transport
-      skip_sweep  = [.true., .true., .true.]
 
       if (adiab_active) then
          repetitive_steps = .false.
