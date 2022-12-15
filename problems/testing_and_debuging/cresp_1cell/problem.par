@@ -99,27 +99,20 @@ $BASE_DOMAIN
  /
 
  $PROBLEM_CONTROL
-    d0        = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
+    d0        = 1.0
     p0        = 1.0
     bx0       = 0.0
     by0       = 0.0
     bz0       = 0.0
-    x0        = 0.0
-    y0        = 0.0
-    z0        = 0.0
-    beta_cr   = 0.0
     amp_cr1   = 1.0
+    u_b0      = 0.0           ! initial magnetic energy-density
+    u_d0      = 0.0           ! initial magnitude of div_v
+    u_d_ampl  = -0.2          ! amplitude of variable u_d component (periodic), sums up with u_d0 to u_d
+    omega_d   = 0.157079633   ! omega_d parameter for test with periodic adiabatic compression: u_d(t) = u_d0 + u_d_ampl * cos(omega_d * t)
+    Btot      = 0. ! 30.      ! Total amplitude of MF in micro Gauss
+    outfile   = 'crs-per.dat' !
  /
 
  $PIERNIK_DEBUG
     constant_dt = 0.01
- /
-
- $CRESP_ISOLATED
-     u_b0     = 0.0         ! initial magnetic energy-density
-     u_d0     = 0.0         ! initial magnitude of div_v
-     u_d_ampl =-0.2         ! amplitude of variable u_d component (periodic), sums up with u_d0 to u_d
-     omega_d  = 0.157079633 ! omega_d parameter for test with periodic adiabatic compression: u_d(t) = u_d0 + u_d_ampl * cos(omega_d * t)
-     Btot     = 0. ! 30.    ! Total amplitude of MF in micro Gauss
-     outfile  = 'crs-per.dat' !
  /

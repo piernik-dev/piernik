@@ -40,13 +40,10 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
-   real               :: u_d0, u_b0, u_d_ampl, omega_d, Btot
+   real                    :: d0, p0, bx0, by0, bz0, amp_cr1, u_d0, u_b0, u_d_ampl, omega_d, Btot
    character(len=fnamelen) :: outfile
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, beta_cr, amp_cr1
-
-   namelist /CRESP_ISOLATED/ u_d0, u_b0, u_d_ampl, omega_d, Btot, outfile
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, amp_cr1, u_d0, u_b0, u_d_ampl, omega_d, Btot, outfile
 contains
 
 !-----------------------------------------------------------------------------
@@ -72,17 +69,17 @@ contains
 
       implicit none
 
-      d0      = 1.0       !< density
-      p0      = 1.0         !< pressure
-      bx0     =   0.        !< Magnetic field component x
-      by0     =   0.        !< Magnetic field component y
-      bz0     =   0.        !< Magnetic field component z
-      x0      = 0.0         !< x-position of the blob
-      y0      = 0.0         !< y-position of the blob
-      z0      = 0.0         !< z-position of the blob
-
-      beta_cr = 0.0         !< ambient level
-      amp_cr1 = 1.0         !< amplitude of the blob
+      d0       = 1.0         !< density
+      p0       = 1.0         !< pressure
+      bx0      =   0.        !< Magnetic field component x
+      by0      =   0.        !< Magnetic field component y
+      bz0      =   0.        !< Magnetic field component z
+      amp_cr1  = 1.0         !< amplitude of the blob
+      u_b0     = 0.0         !< initial magnetic energy-density
+      u_d0     = 0.0         !< initial magnitude of div_v
+      u_d_ampl = -0.2        !< amplitude of variable u_d component (periodic), sums up with u_d0 to u_d
+      omega_d  = 0.157079633 !< omega_d parameter for test with periodic adiabatic compression: u_d(t) = u_d0 + u_d_ampl * cos(omega_d * t)
+      Btot     = 0.          !< Total amplitude of MF in micro Gauss
 
       outfile = 'crs.dat'
 
@@ -109,55 +106,12 @@ contains
          rbuff(3)  = bx0
          rbuff(4)  = by0
          rbuff(5)  = bz0
-         rbuff(6)  = x0
-         rbuff(7)  = y0
-         rbuff(8)  = z0
-         rbuff(9)  = beta_cr
-         rbuff(10) = amp_cr1
-
-      endif
-
-      call piernik_MPI_Bcast(rbuff)
-
-      if (slave) then
-
-         d0        = rbuff(1)
-         p0        = rbuff(2)
-         bx0       = rbuff(3)
-         by0       = rbuff(4)
-         bz0       = rbuff(5)
-         x0        = rbuff(6)
-         y0        = rbuff(7)
-         z0        = rbuff(8)
-         beta_cr   = rbuff(9)
-         amp_cr1   = rbuff(10)
-
-      endif
-
-! Read the second namelist
-      if (master) then
-
-         if (.not.nh%initialized) call nh%init()
-         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=CRESP_ISOLATED)
-         close(nh%lun)
-         open(newunit=nh%lun, file=nh%par_file)
-         nh%errstr=""
-         read(unit=nh%lun, nml=CRESP_ISOLATED, iostat=nh%ierrh, iomsg=nh%errstr)
-         close(nh%lun)
-         call nh%namelist_errh(nh%ierrh, "CRESP_ISOLATED")
-         read(nh%cmdl_nml,nml=CRESP_ISOLATED, iostat=nh%ierrh)
-         call nh%namelist_errh(nh%ierrh, "CRESP_ISOLATED", .true.)
-         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-         write(nh%lun,nml=CRESP_ISOLATED)
-         close(nh%lun)
-         call nh%compare_namelist()
-
-         rbuff(1)  = u_d0
-         rbuff(2)  = u_b0
-         rbuff(3)  = u_d_ampl
-         rbuff(4)  = omega_d
-         rbuff(5)  = Btot
+         rbuff(6)  = amp_cr1
+         rbuff(7)  = u_d0
+         rbuff(8)  = u_b0
+         rbuff(9)  = u_d_ampl
+         rbuff(10) = omega_d
+         rbuff(11) = Btot
 
          cbuff(1)  = outfile
 
@@ -168,11 +122,17 @@ contains
 
       if (slave) then
 
-         u_d0      = rbuff(1)
-         u_b0      = rbuff(2)
-         u_d_ampl  = rbuff(3)
-         omega_d   = rbuff(4)
-         Btot      = rbuff(5)
+         d0        = rbuff(1)
+         p0        = rbuff(2)
+         bx0       = rbuff(3)
+         by0       = rbuff(4)
+         bz0       = rbuff(5)
+         amp_cr1   = rbuff(6)
+         u_d0      = rbuff(7)
+         u_b0      = rbuff(8)
+         u_d_ampl  = rbuff(9)
+         omega_d   = rbuff(10)
+         Btot      = rbuff(11)
 
          outfile   = trim(cbuff(1))
 
@@ -234,7 +194,7 @@ contains
                &                          emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
-         cg%u(iarr_crs,RNG) = 0.0
+         cg%u(iarr_crs,RNG) = zero
 
 ! Spatial distribution: uniformly fill the whole domain
          decr = amp_cr1
@@ -243,7 +203,7 @@ contains
          if (use_cresp) then
             e_tot = cre_eff * decr
             if (e_tot > smallcree) then
-               cresp%n = 0.0 ;  cresp%e = 0.0
+               cresp%n = zero ;  cresp%e = zero
                call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
 
                do k = cg%ks, cg%ke
