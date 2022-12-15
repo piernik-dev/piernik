@@ -53,7 +53,11 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks, only: problem_customize_solution
+
       implicit none
+
+      problem_customize_solution => isolated_problem_customize_solution
 
    end subroutine problem_pointers
 
@@ -198,7 +202,6 @@ contains
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crn, iarr_crs, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
-      use user_hooks,       only: problem_customize_solution
 
       implicit none
 
@@ -216,8 +219,6 @@ contains
          write (msg, *) "Parameter 'adiab_active' is TRUE, due to possible large variations of div(V) CFL warnings may show up: changing 'repetitive_steps' to FALSE (hard coded)"
          call printinfo(msg)
       endif
-
-      problem_customize_solution => isolated_problem_customize_solution
 
       fl => flind%ion
 
