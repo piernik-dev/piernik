@@ -248,41 +248,34 @@ contains
          cg%u(fl%imx:fl%imz,RNG) = zero
 
 #ifndef ISO
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
-                       &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                       &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-               enddo
-            enddo
-         enddo
+         cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
+               &                          emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
          cg%u(iarr_crs,RNG) = 0.0
 
 ! Spatial distribution: uniformly fill the whole domain
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
+         decr = amp_cr1
+         cg%u(iarr_crn(1),RNG) = cg%u(iarr_crn(1),RNG) + amp_cr1 * decr
 
-                  decr = amp_cr1
-
-                  cg%u(iarr_crn(1), i, j, k) = cg%u(iarr_crn(1), i, j, k) + amp_cr1 * decr
 #ifdef CRESP
-                  if (use_cresp) then
-                     e_tot = cre_eff * decr
-                     if (e_tot > smallcree) then
-                        cresp%n = 0.0 ;  cresp%e = 0.0
-                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
+         if (use_cresp) then
+            e_tot = cre_eff * decr
+            if (e_tot > smallcree) then
+               cresp%n = 0.0 ;  cresp%e = 0.0
+               call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
+
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     do i = cg%is, cg%ie
                         cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                         cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
-                     endif
-                  endif
-#endif /* CRESP */
+                     enddo
+                  enddo
                enddo
-            enddo
-         enddo
+            endif
+         endif
+#endif /* CRESP */
 
          cgl => cgl%nxt
       enddo
