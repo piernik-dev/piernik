@@ -197,11 +197,13 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
-      use func,             only: ekin, emag
       use global,           only: repetitive_steps
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crn, iarr_crs, iarr_cre_e, iarr_cre_n
       use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, adiab_active, fsynchr, crel, total_init_cree
+#ifndef ISO
+      use func,             only: ekin, emag
+#endif /* !ISO */
 
       implicit none
 
@@ -296,10 +298,12 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
-      use func,           only: ekin, emag
       use grid_cont,      only: grid_container
       use global,         only: t
       use initcrspectrum, only: adiab_active, synch_active
+#ifndef ISO
+      use func,           only: ekin, emag
+#endif /* !ISO */
 #ifdef CRESP_VERBOSED
       use crhelpers,      only: divv_i
       use dataio_pub,     only: msg, printinfo
@@ -310,9 +314,11 @@ contains
       type(cg_list_element),  pointer     :: cgl
       type(grid_container),   pointer     :: cg
       class(component_fluid), pointer     :: fl
-      real, dimension(:,:,:), allocatable :: int_ener
-      real                                :: cos_f, cos_omega_t, denom_dims
       integer                             :: i, j, k
+      real                                :: cos_f, cos_omega_t, denom_dims
+#ifndef ISO
+      real, dimension(:,:,:), allocatable :: int_ener
+#endif /* !ISO */
 
       fl => flind%ion
       cgl => leaves%first
@@ -320,9 +326,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+#ifndef ISO
          allocate(int_ener(cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
          int_ener = cg%u(fl%ien,:,:,:) - ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:)) - &
                   &                      emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
+#endif /* !ISO */
 
          if (synch_active) call cg%set_constant_b_field([bx0, by0, bz0])  ! this acts only inside cg%ijkse box
 
@@ -349,9 +357,11 @@ contains
 #endif /* CRESP_VERBOSED */
          endif
 
+#ifndef ISO
          cg%u(fl%ien,:,:,:) = int_ener + ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:)) + &
                   &                      emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          deallocate(int_ener)
+#endif /* !ISO */
 
          cgl => cgl%nxt
       enddo
