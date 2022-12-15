@@ -340,16 +340,16 @@ contains
             cos_f = cos_omega_t * denom_dims
 
             do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               cg%u(flind%ion%imx,i,:,:) = cg%u(flind%ion%idn,i,:,:) * cg%x(i) * cos_f
+               cg%u(fl%imx,i,:,:) = cg%u(fl%idn,i,:,:) * cg%x(i) * cos_f
             enddo
             do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-               cg%u(flind%ion%imy,:,j,:) = cg%u(flind%ion%idn,:,j,:) * cg%y(j) * cos_f
+               cg%u(fl%imy,:,j,:) = cg%u(fl%idn,:,j,:) * cg%y(j) * cos_f
             enddo
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-               cg%u(flind%ion%imz,:,:,k) = cg%u(flind%ion%idn,:,:,k) * cg%z(k) * cos_f
+               cg%u(fl%imz,:,:,k) = cg%u(fl%idn,:,:,k) * cg%z(k) * cos_f
             enddo
 
-            call div_v(flind%ion%pos, cg)
+            call div_v(fl%pos, cg)
 
 #ifdef CRESP_VERBOSED
             write (msg, "(A,F10.7,A,F10.7)") "Adiabatic process: got u_d(0, 0, 0) values : u_d(numerical) = ", cg%q(divv_i)%point([0,0,0]) / three, " | u_d(t, set) = ", cos_omega_t
