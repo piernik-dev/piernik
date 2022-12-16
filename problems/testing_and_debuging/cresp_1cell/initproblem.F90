@@ -44,6 +44,7 @@ module initproblem
    character(len=cbuff_len) :: outfile
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, amp_cr1, u_d0, u_b0, u_d_ampl, omega_d, Btot, outfile
+
 contains
 
 !-----------------------------------------------------------------------------
@@ -80,7 +81,7 @@ contains
       omega_d  = 0.157079633 !< omega_d parameter for test with periodic adiabatic compression: u_d(t) = u_d0 + u_d_ampl * cos(omega_d * t)
       Btot     = 0.          !< Total amplitude of MF in micro Gauss
 
-      outfile = 'crs.dat'
+      outfile  = 'crs.dat'
 
       if (master) then
 
@@ -121,17 +122,17 @@ contains
 
       if (slave) then
 
-         d0        = rbuff(1)
-         p0        = rbuff(2)
-         bx0       = rbuff(3)
-         by0       = rbuff(4)
-         bz0       = rbuff(5)
-         amp_cr1   = rbuff(6)
-         u_d0      = rbuff(7)
-         u_b0      = rbuff(8)
-         u_d_ampl  = rbuff(9)
-         omega_d   = rbuff(10)
-         Btot      = rbuff(11)
+         d0       = rbuff(1)
+         p0       = rbuff(2)
+         bx0      = rbuff(3)
+         by0      = rbuff(4)
+         bz0      = rbuff(5)
+         amp_cr1  = rbuff(6)
+         u_d0     = rbuff(7)
+         u_b0     = rbuff(8)
+         u_d_ampl = rbuff(9)
+         omega_d  = rbuff(10)
+         Btot     = rbuff(11)
 
          outfile   = trim(cbuff(1))
 
@@ -168,7 +169,7 @@ contains
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real                            :: decr, e_tot
+      real                            :: e_tot
       integer                         :: i, j, k
 
       fl => flind%ion
@@ -190,17 +191,16 @@ contains
 
 #ifndef ISO
          cg%u(fl%ien,RNG) = p0/fl%gam_1 + ekin(cg%u(fl%imx,RNG), cg%u(fl%imy,RNG), cg%u(fl%imz,RNG), cg%u(fl%idn,RNG)) + &
-               &                          emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
+                          &               emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
 #endif /* !ISO */
 
          cg%u(iarr_crs,RNG) = zero
 
 ! Spatial distribution: uniformly fill the whole domain
-         decr = amp_cr1
-         cg%u(iarr_crn(1),RNG) = cg%u(iarr_crn(1),RNG) + amp_cr1 * decr
+         cg%u(iarr_crn(1),RNG) = cg%u(iarr_crn(1),RNG) + amp_cr1**2
 
          if (use_cresp) then
-            e_tot = cre_eff * decr
+            e_tot = cre_eff * amp_cr1
             if (e_tot > smallcree) then
                cresp%n = zero ;  cresp%e = zero
                call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
