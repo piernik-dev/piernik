@@ -67,7 +67,7 @@ contains
       x0             = 0.0         !< x-position of the blob
       y0             = 0.0         !< y-position of the blob
       z0             = 0.0         !< z-position of the blob
-      r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      r0             = merge(0., 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)), dom%eff_dim == 0)  !< radius of the blob
 
       beta_cr        = 0.0         !< ambient level
       amp_cr1        = 1.0         !< amplitude of the blob
@@ -212,7 +212,8 @@ contains
                      do jpm = mantle(xdim,LO), mantle(xdim,HI)
                         do kpm = mantle(xdim,LO), mantle(xdim,HI)
                            r2 = (cg%x(i)-x0+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-y0+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-z0+real(kpm)*dom%L_(zdim))**2
-                           decr = decr + exp(-r2/r0**2)
+                           if (r2/r0**2 < 0.9999*log(huge(1.))) &  ! preventing numerical underflow
+                                decr = decr + exp(-r2/r0**2)
                         enddo
                      enddo
                   enddo

@@ -292,7 +292,11 @@ contains
          do_refine = .false.
       endif
 
-      level_crit = (63 - int(log(maxval(dom%n_d)-1.)/log(2.)+1)*dom%eff_dim)/dom%eff_dim  ! these are the limits of ordering::Morton_id
+      if (dom%eff_dim == 0) then
+         level_crit = huge(1)
+      else
+         level_crit = (63 - int(log(maxval(dom%n_d)-1.)/log(2.)+1)*dom%eff_dim)/dom%eff_dim  ! these are the limits of ordering::Morton_id
+      endif
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
       if (level_max >  level_crit) then
@@ -359,6 +363,11 @@ contains
       integer(kind=4) :: d, i
       integer(kind=4), dimension(ndims) :: b1, b2
       integer(kind=4) :: sq
+
+      if (dom%eff_dim == 0) then
+         bsize(:) = 1
+         return
+      endif
 
       b1 = INVALID
       b2 = b1

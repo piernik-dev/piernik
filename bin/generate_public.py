@@ -27,7 +27,7 @@ def pretty_format(list, col):
     print "   public :: &"
     str = "        & "
     for item in list:
-        if(len(str) + len(item) + 2 > int(col)):
+        if (len(str) + len(item) + 2 > int(col)):
             print str + "&"
             str = "        & "
         str = str + item + ", "
