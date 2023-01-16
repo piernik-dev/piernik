@@ -30,7 +30,7 @@
 
 module grid_cont_prolong
 
-   use grid_cont_bnd,   only: grid_container_bnd_t
+   use grid_cont_fcflx, only: grid_container_fcflx_t
 
    implicit none
 
@@ -38,7 +38,7 @@ module grid_cont_prolong
    public :: grid_container_prolong_t
 
    !> \brief This type adds auxiliary prolongation arrays to the grid_container
-   type, extends(grid_container_bnd_t), abstract :: grid_container_prolong_t
+   type, extends(grid_container_fcflx_t), abstract :: grid_container_prolong_t
 
       real, dimension(:,:,:), allocatable :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
       real, dimension(:,:,:), pointer     :: prolong_xyz                     !< auxiliary prolongation array for final result.
@@ -46,9 +46,9 @@ module grid_cont_prolong
 
    contains
 
-      procedure          :: init_gc_prolong  !< Initialization
-      procedure          :: cleanup_prolong  !< Deallocate all internals
-      procedure          :: prolong          !< perform prolongation of the data stored in this%prolong_
+      procedure :: init_gc_prolong  !< Initialization
+      procedure :: cleanup_prolong  !< Deallocate all internals
+      procedure :: prolong          !< perform prolongation of the data stored in this%prolong_
 
    end type grid_container_prolong_t
 

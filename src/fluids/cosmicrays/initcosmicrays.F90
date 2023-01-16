@@ -51,6 +51,7 @@ module initcosmicrays
    integer(kind=4)                     :: ncrb         !< number of bins for CRESP
    integer(kind=4)                     :: ncr2b        !< 2*ncrb for CRESP
    integer(kind=4)                     :: ncrtot       !< number of all CR components \deprecated BEWARE: ncrtot (sum of ncrsp and ncr2b) should not be higher than ncr_max = 102
+   integer(kind=4)                     :: ord_cr_prolong  !< prolongation order used in cfdiffusion:cr_diff (may be higher than regular prolongation of fluid)
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -98,6 +99,7 @@ contains
 !! <tr><td>use_CRdecay </td><td>.false.</td><td>logical   </td><td>\copydoc initcosmicrays::use_CRdecay</td></tr>
 !! <tr><td>ncr_user    </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncr_user   </td></tr>
 !! <tr><td>ncrb        </td><td>0      </td><td>integer   </td><td>\copydoc initcosmicrays::ncrb       </td></tr>
+!! <tr><td>ord_cr_prolong </td><td>2  </td><td>integer   </td><td>\copydoc initcosmicrays::ord_cr_prolong </td></tr>
 !! <tr><td>gamma_cr    </td><td>4./3.  </td><td>real array</td><td>\copydoc initcosmicrays::gamma_cr   </td></tr>
 !! <tr><td>K_cr_paral  </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_paral </td></tr>
 !! <tr><td>K_cr_perp   </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_perp  </td></tr>
@@ -109,7 +111,7 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big
+      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big, O_I2
       use cr_data,         only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
@@ -121,7 +123,7 @@ contains
       integer(kind=4) :: nl, nn, icr
       real            :: maxKcrs
 
-      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, &
+      namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, ord_cr_prolong, &
            &                 gamma_cr, K_cr_paral, K_cr_perp, ncr_user, ncrb, gpcr_ess_user
 
       call init_cr_species
@@ -133,6 +135,7 @@ contains
       ncrsp          = ncrsp_auto
       ncr_user       = 0
       ncrb           = 0
+      ord_cr_prolong = O_I2
 
       use_CRdiff     = .true.
       use_CRdecay    = .false.
@@ -173,6 +176,7 @@ contains
 
          ibuff(1) = ncr_user
          ibuff(2) = ncrb
+         ibuff(3) = ord_cr_prolong
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -212,8 +216,9 @@ contains
 
          divv_scheme  = cbuff(1)
 
-         ncr_user     = int(ibuff(1), kind=4)
-         ncrb         = int(ibuff(2), kind=4)
+         ncr_user       = int(ibuff(1), kind=4)
+         ncrb           = int(ibuff(2), kind=4)
+         ord_cr_prolong = int(ibuff(3), kind=4)
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
