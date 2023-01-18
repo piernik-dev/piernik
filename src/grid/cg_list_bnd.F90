@@ -166,10 +166,11 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
-      use constants, only: xdim, zdim, cor_dim, PPP_AMR
-      use domain,    only: dom
-      use global,    only: prefer_merged_MPI
-      use ppp,       only: ppp_main
+      use constants,  only: xdim, zdim, cor_dim, PPP_AMR
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use global,     only: prefer_merged_MPI
+      use ppp,        only: ppp_main
 
       implicit none
 
@@ -183,6 +184,9 @@ contains
       character(len=*), parameter :: ib_label = "internal_boundaries", ibl_label = "internal_boundaries_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
 
       call ppp_main%start(ib_label)
+
+      if (.not. all_same_level()) call die("[cg_list_bnd::internal_boundaries] MPI routines here are not ready for mixing levels yet")
+
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
          dmask(xdim:zdim) = .false.
@@ -213,18 +217,40 @@ contains
       endif
       call ppp_main%stop(ib_label)
 
+   contains
+
+      logical function all_same_level()
+
+         use cg_list,          only: cg_list_element
+
+         implicit none
+
+         type(cg_list_element), pointer :: cgl
+         integer(kind=4) :: l
+
+         all_same_level = .true.
+
+         cgl => this%first
+         if (associated(cgl)) l = cgl%cg%l%id
+         do while (associated(cgl))
+            if (cgl%cg%l%id /= l) all_same_level = .false.
+            cgl => cgl%nxt
+         enddo
+
+      end function all_same_level
+
    end subroutine internal_boundaries
 
 !> \brief This routine exchanges guardcells between local blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
 
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
-      use cg_cost_data,  only: I_OTHER
-      use cg_list,       only: cg_list_element
-      use constants,     only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
-      use dataio_pub,    only: die
-      use grid_cont,     only: grid_container
-      use grid_cont_bnd, only: segment
+      use cg_cost_data,   only: I_OTHER
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
+      use dataio_pub,     only: die
+      use grid_cont,      only: grid_container
+      use grid_cont_bseg, only: segment
 
       implicit none
 
@@ -471,7 +497,7 @@ contains
       use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
-      use grid_cont_bnd,    only: segment
+      use grid_cont_bseg,   only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
            &                      MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
