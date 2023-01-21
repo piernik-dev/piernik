@@ -1666,6 +1666,7 @@ contains
       q = zero
 
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
+         exit_code = .false.
          i = bins(i_active)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
