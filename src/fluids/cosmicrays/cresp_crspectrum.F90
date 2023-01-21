@@ -2038,6 +2038,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
+#ifdef CRESP_VERBOSED
    subroutine print_failcounts
 
       use dataio_pub, only: msg, printinfo
@@ -2049,5 +2050,6 @@ contains
       write(msg, '(A36,   100I8)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
 
    end subroutine print_failcounts
+#endif /* CRESP_VERBOSED */
 
 end module cresp_crspectrum
