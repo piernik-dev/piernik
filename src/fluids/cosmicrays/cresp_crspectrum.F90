@@ -1666,6 +1666,7 @@ contains
       q = zero
 
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
+         exit_code = .false.
          i = bins(i_active)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
@@ -2037,6 +2038,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
+#ifdef CRESP_VERBOSED
    subroutine print_failcounts
 
       use dataio_pub, only: msg, printinfo
@@ -2048,5 +2050,6 @@ contains
       write(msg, '(A36,   100I8)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
 
    end subroutine print_failcounts
+#endif /* CRESP_VERBOSED */
 
 end module cresp_crspectrum

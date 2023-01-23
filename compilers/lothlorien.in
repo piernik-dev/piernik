@@ -14,9 +14,9 @@ F90 += -I/usr/lib64/gfortran/modules/$(subst _,,$(MPI_SUFFIX))
 
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
-F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -fmodule-private
+F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -fmodule-private
 F90FLAGS += -fbacktrace -ggdb
-F90FLAGS += -fcheck=all
+F90FLAGS += -fcheck=all,no-array-temps
 
 # For gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
 F90FLAGS += -pedantic

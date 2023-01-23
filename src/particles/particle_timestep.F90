@@ -47,6 +47,7 @@ module particle_timestep
 
 contains
 
+#ifdef DUST_PARTICLES
    real function max_pvel_dl(cg) result (factor)
 
       use constants,      only: ndims, zero
@@ -71,6 +72,7 @@ contains
       factor = maxval(max_v / cg%dl)
 
    end function max_pvel_dl
+#endif /* DUST_PARTICLES */
 
    subroutine max_pacc_3d(cg, factor_a)
 
