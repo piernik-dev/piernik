@@ -370,6 +370,8 @@ contains
    end function unshear
 !--------------------------------------------------------------------------------------------------
 #ifdef SHEAR_BND
+#if 0
+! Currently unused
    subroutine bnd_shear_u(dir, cg)
 
       use dataio_pub, only: die
@@ -385,5 +387,7 @@ contains
       if (.false.) cg%is_old = cg%is_old .or. (dir == -1) ! suppress compiler warnings
 
    end subroutine bnd_shear_u
+#endif /* 0 */
 #endif /* SHEAR_BND */
+
 end module shear
