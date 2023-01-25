@@ -133,13 +133,17 @@ contains
       endif
 
       if (all(dom%has_dir)) then
-         gnorm = 1./(16./9.*pi*r_sn**3)
+         gnorm = 1./(sqrt(2*pi)**3*r_sn**3) !/(16./9.*pi*r_sn**3) (sqrt(2*pi)**3*r_sn**3)  ! is this 3D case?
       else
-         gnorm = 1./(pi*r_sn**2)
+         gnorm = 1. !/(pi*r_sn**2)  ! is this 2D case? Where is 1D?
       endif
 
 #ifdef COSM_RAYS
       amp_ecr_sn = cr_eff * e_sn * erg * gnorm
+      print *, 'amp_ecr_sn : ', amp_ecr_sn
+      print *, 'cr eff : ', cr_eff
+      !print *, 'gaussian integral : ', amp_ecr_sn
+      !stop
 #endif /* COSM_RAYS */
 
       f_sn = f_sn_kpc2 / Myr * dom%L_(xdim) * dom%L_(ydim) / kpc**2
@@ -170,7 +174,7 @@ contains
       if (.not. repeat_step()) nsn_last = nsn
 
       nsn = int(t * f_sn, kind=4)
-      nsn_per_timestep = nsn - nsn_last
+      nsn_per_timestep = 1 !nsn - nsn_last
 
       do isn = 1, nsn_per_timestep
 
@@ -194,7 +198,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim
+      use constants,        only: xdim, ydim, zdim, pi
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use cr_data,          only: cr_index, cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16, rel_abound
@@ -203,8 +207,9 @@ contains
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       !use initcrspectrum,   only: cresp, cre_eff, smallcree, use_cresp, nspc
       !use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e
-      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc
-      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc, iarr_crspc_e
+      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp, norm_init_spectrum_e, norm_init_spectrum_n, total_init_cree
+
 #endif /* CRESP */
 
       implicit none
@@ -212,7 +217,8 @@ contains
       real, dimension(ndims), intent(in) :: pos
       real,                   intent(in) :: ampl
       integer                            :: i, j, k, ipm, jpm, icr
-      real                               :: decr, ysna
+      real                               :: decr, decr_sum, ysna
+      real, dimension(nspc)              :: cresp_e_sum
       real, dimension(ndims)             :: posr
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
@@ -234,6 +240,9 @@ contains
          ysna = pos(ydim)
 #endif /* !SHEAR */
 
+         decr_sum = 0.0
+         cresp_e_sum = 0.0
+
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             posr(zdim) = ((cg%z(k)-pos(zdim))/r_sn)**2
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -254,10 +263,19 @@ contains
                      endif
                   enddo
                   decr = decr * ampl
+                  decr_sum = decr_sum + decr
+                  !print *, 'decr * ampl gaussian : ', decr_sum
 
 
 #ifdef CRESP
                   if (use_cresp) then
+
+                    ! print *, 'Test : ',
+                    ! print *, 'total_init_cree : ', total_init_cree
+                    ! print *, 'norm_init_spectrum_e : ', norm_init_spectrum_e
+                    ! print *, 'norm_init_spectrum_n : ', norm_init_spectrum_n
+                    !
+                    ! stop
 
 !                     e_tot_sn = decr * cre_eff
 !                     if (e_tot_sn > smallcree) then!
@@ -269,15 +287,21 @@ contains
 !                  endif
 
                     do icr = 1, nspc
-                        if (icr==icr_H1) e_tot_sn = cre_eff(icr) * decr
+
+                       ! print *, 'test sum n: ', sum(norm_init_spectrum_n(icr,:))/total_init_cree(icr)
+                       ! print *, 'test sum e: ', sum(norm_init_spectrum_e(icr,:))/total_init_cree(icr)
+
+                        if (icr==icr_H1) e_tot_sn =  decr !* cre_eff(icr)
                         !if (icr==icr_H1) print *, 'e tot sn : ', e_tot_sn
                         if (e_tot_sn > smallcree .and. use_cresp) then
-!                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
+                         cresp%n = 0.0
+                         cresp%e = 0.0
                             call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn, icr)
                         !stop
 
                             cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
                             cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                           ! cresp_e_sum = cresp_e_sum + cresp%e
                         !print *, 'cresp n ' , cresp%n,  'cresp e ' , cresp%e
                         !print *, 'i : ', i, ' j :', j
                         !if (i == 29 .and. j == 29) then
@@ -286,9 +310,15 @@ contains
                            !print *, 'cresp%e ', rel_abound(icr)*cresp%e
                            !endif
                          endif
+
+                         !cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
+                         !cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                         !cresp_e_sum = cresp_e_sum + cresp%e
                     enddo
+
                   endif
 #else /* CRESP */
+               print *, 'bouh !'
                if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
                if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
                if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
@@ -298,9 +328,23 @@ contains
             enddo
          enddo
 
+         print *, 'total SN energy : ', cg%dvol*ampl*(sqrt(2*pi)**3*r_sn**3)
+         print *, 'Gaussian integral : ', cg%dvol*decr_sum/(sqrt(2*pi)**3*r_sn**3)
+         print *, 'cg dvol : ', cg%dvol
+         print *, 'decr : ', decr
+         print *, 'decr_sum : ', decr_sum
+         print *, 'cresp_e_sum : ', sum(cresp_e_sum(:))
+         print *, 'ampl : ', ampl
+         !print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
+         print *, 'Total proton energy density : ', sum(cgl%cg%u(iarr_crspc2_e(icr_H1,:),:,:,:))
+         print *, 'Total proton density : ', sum(cgl%cg%u(iarr_crspc2_n(icr_H1,:),:,:,:))
+
          cgl => cgl%nxt
       enddo
-
+   !print *, 'total SN energy : ', cg%dvol*ampl*(sqrt(2*pi)**3*r_sn**3)
+   !print *, 'Gaussian integral : ', cg%dvol*ampl
+   !print *, 'cg dvol : ', cg%dvol
+   !print *, 'decr : ', decr
    end subroutine cr_sn
 #endif /* COSM_RAYS */
 !--------------------------------------------------------------------------
