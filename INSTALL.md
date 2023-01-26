@@ -6,7 +6,7 @@ For a typical desktop Linux installation you may need to add few packages to be 
 
 For Ubuntu try:
 
-    sudo apt install git make mpich libhdf5-mpich-dev libfftw3-dev pkg-config python pycodestyle python-numpy gfortran
+    sudo apt install git make mpich libhdf5-mpich-dev libfftw3-dev pkg-config python pycodestyle python-numpy gfortran python3-requests
 
 If the above complains that `E: Unable to locate package mpich` then do:
 
@@ -18,7 +18,7 @@ and try again to install the pacages mentioned above. You may use `libhdf5-openm
 
 For Fedora try:
 
-    sudo dnf install make hdf5-openmpi-devel fftw-devel python environment-modules python3-pycodestyle python2-numpy python3-h5py
+    sudo dnf install make hdf5-openmpi-devel fftw-devel python environment-modules python3-pycodestyle python2-numpy python3-h5py python3-requests
 
 You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
 
