@@ -238,7 +238,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half, I_ONE, base_level_id
       use dataio_pub,       only: die
       use domain,           only: dom
       use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
@@ -274,7 +274,7 @@ contains
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
       integer(kind=4) :: nr, nr_recv
       logical :: all_received
-      integer(kind=4) :: ord_save
+      integer(kind=4) :: ord_save, max_lev
       real, parameter :: flux_factor = half
 
       if (.not. has_cr) return
@@ -288,6 +288,7 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
+      max_lev = min(diff_max_lev, finest%level%l%id)
 
       ! Dirty trick: enforce prolongation order for CR in case someone wants smoother estimates for f/c ifnterpolation of cg%u(iarr_crs,:,:,:)
       ord_save = wna%lst(wna%fi)%ord_prolong
@@ -296,10 +297,10 @@ contains
       call all_fluid_boundaries  ! overkill?
       wna%lst(wna%fi)%ord_prolong = ord_save
 
-      nr_recv = compute_nr_recv(crdim)
-      nr = nr_recv
+      nr_recv = compute_nr_recv(crdim, max_lev - I_ONE)
+      nr = nr_recv  ! at this point we may have some requests posted by compute_nr_recv()
 
-      cgl => leaves%up_to_level(min(diff_max_lev, finest%level%l%id))%p
+      cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -395,7 +396,9 @@ contains
       enddo
 
       call piernik_Waitall(nr, "cr_diff")
-      cgl => leaves%first
+
+      nullify(cgl)
+      if (max_lev - I_ONE >= base_level_id) cgl => leaves%up_to_level(max_lev - I_ONE)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -410,7 +413,7 @@ contains
 
       call all_wcr_boundaries(crdim)
 
-      cgl => leaves%up_to_level(min(diff_max_lev, finest%level%l%id))%p
+      cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -419,30 +422,32 @@ contains
          ! It can be optimized as there are at most four different regions to exchange (we're on coarse side) and array assignments can be made
 
          ! To Do: Figure out where the flux factor value come from. And why it does not depend on dimensionality.
-         wcr => cg%w(wcri)%arr
-         do j = lbound(cg%finebnd(crdim, LO)%uflx, dim=2), ubound(cg%finebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
-            do k = lbound(cg%finebnd(crdim, LO)%uflx, dim=3), ubound(cg%finebnd(crdim, LO)%uflx, dim=3)
-               select case (crdim)
-                  case (xdim)
-                     if (cg%finebnd(crdim, LO)%index(j, k) > cg%is) &
-                          wcr(:, cg%finebnd(crdim, LO)%index(j, k) + 1, j, k) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
-                     if (cg%finebnd(crdim, HI)%index(j, k) < cg%ie) &
-                          wcr(:, cg%finebnd(crdim, HI)%index(j, k), j, k) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
-                  case (ydim)
-                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%js) &
-                          wcr(:, k, cg%finebnd(crdim, LO)%index(j, k) + 1, j) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
-                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%je) &
-                          wcr(:, k, cg%finebnd(crdim, HI)%index(j, k), j) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
-                  case (zdim)
-                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%ks) &
-                          wcr(:, j, k, cg%finebnd(crdim, LO)%index(j, k) + 1) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
-                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%ke) &
-                          wcr(:, j, k, cg%finebnd(crdim, HI)%index(j, k)) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
-                  case default
-                     call die("[crdiffusion:cr_diff] What to receive?")
-               end select
+         if (cg%l%id < max_lev) then
+            wcr => cg%w(wcri)%arr
+            do j = lbound(cg%finebnd(crdim, LO)%uflx, dim=2), ubound(cg%finebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
+               do k = lbound(cg%finebnd(crdim, LO)%uflx, dim=3), ubound(cg%finebnd(crdim, LO)%uflx, dim=3)
+                  select case (crdim)
+                     case (xdim)
+                        if (cg%finebnd(crdim, LO)%index(j, k) > cg%is) &
+                             wcr(:, cg%finebnd(crdim, LO)%index(j, k) + 1, j, k) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                        if (cg%finebnd(crdim, HI)%index(j, k) < cg%ie) &
+                             wcr(:, cg%finebnd(crdim, HI)%index(j, k), j, k) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                     case (ydim)
+                        if (cg%finebnd(crdim, LO)%index(j, k) >= cg%js) &
+                             wcr(:, k, cg%finebnd(crdim, LO)%index(j, k) + 1, j) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                        if (cg%finebnd(crdim, HI)%index(j, k) <= cg%je) &
+                             wcr(:, k, cg%finebnd(crdim, HI)%index(j, k), j) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                     case (zdim)
+                        if (cg%finebnd(crdim, LO)%index(j, k) >= cg%ks) &
+                             wcr(:, j, k, cg%finebnd(crdim, LO)%index(j, k) + 1) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                        if (cg%finebnd(crdim, HI)%index(j, k) <= cg%ke) &
+                             wcr(:, j, k, cg%finebnd(crdim, HI)%index(j, k)) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                     case default
+                        call die("[crdiffusion:cr_diff] What to receive?")
+                  end select
+               enddo
             enddo
-         enddo
+         endif
 
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
