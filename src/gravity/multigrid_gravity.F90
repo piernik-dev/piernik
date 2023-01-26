@@ -524,12 +524,12 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: fft_none
       use dataio_pub,         only: die
+      use domain,             only: dom
       use find_lev,           only: find_level
       use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax
 #ifndef NO_FFT
       use constants,          only: fft_rcr, fft_dst, pi, dpi, zero, half, one
-      use domain,             only: dom
 #endif /* !NO_FFT */
 
       implicit none
