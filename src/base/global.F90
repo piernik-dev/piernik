@@ -340,7 +340,7 @@ contains
          lbuff(6)   = geometry25D
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
-         lbuff(9)  = use_eglm
+         lbuff(9)   = use_eglm
          lbuff(10)  = ch_grid
          lbuff(11)  = do_external_corners
          lbuff(12)  = disallow_negatives
