@@ -169,10 +169,10 @@ contains
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
-         case ("cr_Be10n01" : "cr_Be10n99")
+         case ("cr_B11n01" : "cr_B11n99")
             f%fu = "1/\rm{cm}^3"
             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-         case ("cr_Be10e01" : "cr_Be10e99")
+         case ("cr_B11e01" : "cr_B11e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
