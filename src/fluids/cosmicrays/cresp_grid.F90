@@ -117,7 +117,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
       use cresp_crspectrum, only: cresp_update_cell, q
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_B11, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
       use crhelpers,        only: divv_i
       use dataio_pub,       only: msg, warn
       use func,             only: emag
@@ -258,7 +258,7 @@ contains
 !<
 !   subroutine src_cr_spallation_and_decay_cresp(uu, )
 !
-!      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec
+!      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_B11, icr_prim, icr_sec
 !      use domain,         only: dom
 !      use fluids_pub,     only: has_ion, has_neu
 !      use fluidindex,     only: flind
@@ -288,8 +288,8 @@ contains
 !
 !      usrc(:,:) = 0.0
 !
-!      !i = cr_table(icr_Be10) ; j = iarr_crn(i)
-!      !if (eCRSP(icr_Be10)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
+!      !i = cr_table(icr_B11) ; j = iarr_crn(i)
+!      !if (eCRSP(icr_B11)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
 !
 !      print *, 'primaries : ', icr_prim, ' secondaries : ', icr_sec
 !      print *,  ' lbound : ', lbound(icr_prim, 1), ' ubound : ', ubound(icr_prim, 1)
