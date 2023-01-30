@@ -311,9 +311,14 @@ contains
       flind%crs%beg = flind%crn%beg
 
       flind%crn%all   = ncrn
+      flind%crs%all = flind%crn%all
+
+#ifdef CRESP
       flind%crspc%all = ncr2b * nspc
 
-      flind%crs%all = flind%crn%all + flind%crspc%all
+      flind%crs%all = flind%crs%all + flind%crspc%all
+#endif /* CRESP */
+
       do icr = 1, ncrn
          iarr_crn(icr) = flind%all + icr
          iarr_crs(icr) = flind%all + icr
@@ -324,17 +329,20 @@ contains
          iarr_crspc(icr)      = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
-
+#ifdef CRESP
       flind%all = flind%all + flind%crspc%all
-
+#endif /* CRESP */
       flind%crn%end   = flind%crn%beg + flind%crn%all - I_ONE
+#ifdef CRESP
       flind%crspc%beg = flind%crn%end + I_ONE
       flind%crspc%end = flind%all
       flind%crs%end = flind%crspc%end
-      if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
-      flind%crn%pos = flind%components
       if (flind%crspc%all  /= 0) flind%components = flind%components + I_ONE
       flind%crspc%pos = flind%components
+#endif /* CRESP */
+      if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
+      flind%crn%pos = flind%components
+
 
 #ifdef CRESP
       if (.not. allocated(flind%crspcs)) allocate(flind%crspcs(nspc))
