@@ -36,7 +36,10 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr, src_cr_spallation_and_decay, cr_spallation_sources
+   public :: src_gpcr, src_cr_spallation_and_decay
+#ifdef CRESP
+   public :: cr_spallation_sources
+#endif /* CRESP */
 
 contains
 
@@ -83,9 +86,9 @@ contains
       !print *, flind%crspc%all
 
       usrc = 0.0
-      if (.not. full_dim .or. flind%crspc%all < 1) return
-      !print *, 'break 2'
-
+#ifdef CRESP
+      if (.not. full_dim .or. flind%crspc%all < 1) return ! meaning of this line?
+#endif /* CRESP */
       call set_div_v1d(divv, sweep, i1, i2, cg)
       do icr = 1, flind%crn%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
@@ -130,7 +133,7 @@ contains
 !<
    subroutine src_cr_spallation_and_decay(uu, n, usrc, rk_coeff)
 
-      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec
+      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_B11, icr_prim, icr_sec
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluids_pub,     only: has_ion, has_neu
@@ -161,8 +164,8 @@ contains
 
       usrc(:,:) = 0.0
 
-      i = cr_table(icr_Be10) ; j = iarr_crn(i)
-      if (eCRSP(icr_Be10)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
+      i = cr_table(icr_B11) ; j = iarr_crn(i)
+      if (eCRSP(icr_B11)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
 
       do i = lbound(icr_prim, 1), ubound(icr_prim, 1)
          associate( cr_prim => cr_table(icr_prim(i)) )
@@ -182,29 +185,30 @@ contains
       enddo
 
    end subroutine src_cr_spallation_and_decay
-
+#ifdef CRESP
    subroutine cr_spallation_sources(i,j,k,u_cell,dt_doubled, q_spc_all)
 
       use all_boundaries,   only: all_fluid_boundaries
       use constants,        only: xdim, ydim, zdim, onet, one, zero
+
       use cresp_crspectrum, only: cresp_update_cell, q
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old, eps, cresp_substep, n_substeps_max, p_fix
+      use timestep_cresp,   only: cresp_timestep_cell
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
+#ifdef DEBUG
+      use cresp_crspectrum, only: cresp_detect_negative_content
+#endif /* DEBUG */
       use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be9, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
       use dataio_pub,       only: msg, warn
       use func,             only: emag
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, ncrb
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old, eps
-      use initcrspectrum,   only: cresp_substep, n_substeps_max, p_fix
+      use initcosmicrays,   only: nspc
       use named_array_list, only: wna
       use ppp,              only: ppp_main
-      use timestep_cresp,   only: cresp_timestep_cell
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
       use units,            only: clight, mH, mp
-#ifdef DEBUG
-      use cresp_crspectrum, only: cresp_detect_negative_content
-#endif /* DEBUG */
 
       implicit none
 
@@ -212,7 +216,8 @@ contains
       integer(kind=4)                :: nssteps, i_spc, i_bin
       type(spec_mod_trms)            :: sptab
       type(bin_old), dimension(:), allocatable :: crspc_bins_all
-      real                           :: dt_crs_sstep, dt_cresp, dt_doubled
+      real, dimension(ncrb,nspc)     :: q_spc_all
+      real                           :: dt_crs_sstep, dt_doubled, dt_cresp
       logical                        :: inactive_cell, cfl_violation_step
       character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
       real, dimension(flind%all)     :: u_cell
@@ -222,7 +227,7 @@ contains
       real                           :: dgas
       !real                           :: dt_doubled
       real, parameter                :: gamma_lor = 10.0
-      real, dimension(ncrb,nspc)     :: q_spc_all
+
 
       inactive_cell       = .false.
 
@@ -230,7 +235,6 @@ contains
       if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
       if (has_neu) dgas = dgas + u_cell(flind%neu%idn) / mH
       sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-
       usrc_cell = 0.0
 
       Q_ratio_1 = 0.0
@@ -240,8 +244,6 @@ contains
 
       do i_prim = 1, ncrsp_prim
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
-         !print *, 'index prim : ', icr_prim(i_prim)
-         !print *, 'i prim : ', i_prim
 
             if (eCRSP(icr_prim(i_prim))) then
 
@@ -260,28 +262,14 @@ contains
                               S_ratio_1(i_bin) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1)) !TODO print values of ratio in the last bin
 
                               Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
-                              !   Q_ratio_2(i_bin-1) = Q_ratio_2(i_bin)
-                              !   !Q_ratio_2(i_bin) = 0.0
 
-                              !
                               S_ratio_2(i_bin) = one - S_ratio_1(i_bin)
-                              !   S_ratio_2(i_bin-1) = S_ratio_2(i_bin)
-                              !   !S_ratio_2(i_bin) = 0.0
-
-
-                                    !dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin))
-                              !if(Q_ratio_2(i_bin)*dcr_n(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))*p_fix(i_bin-1) > zero) print *, 'Secondary Ratio ',i_bin,' : ', S_ratio_2(i_bin)*dcr_e(i_bin)/(Q_ratio_2(i_bin)*dcr_n(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))*p_fix(i_bin-1))
 
                            endif
 
                         endif
 
                      enddo
-
-
-
-                     !Q_ratio_2 = 1.0 - Q_ratio_1
-                     !S_ratio_2 = 1.0 - S_ratio_1
 
                      dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_n(cr_prim,:))
                      dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_e(cr_prim,:))
@@ -290,69 +278,25 @@ contains
                      dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
 
                      usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n(:)
-
                      usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e(:)
-
-                        !if (i_bin == ncrb) then
-
-                     !usrc_cell(iarr_crspc2_n(cr_sec,:)) = usrc_cell(iarr_crspc2_n(cr_sec,:)) + dcr_n(:)
-
-                     !usrc_cell(iarr_crspc2_e(cr_sec,:)) = usrc_cell(iarr_crspc2_e(cr_sec,:)) + dcr_e(:)
 
                      do i_bin = 1, ncrb
 
                         if (i_bin == ncrb) then
 
                            usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
-                         !
                            usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
 
                         else
 
                            usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
-                         !
                            usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
 
 
 
                         endif
 
-                        !if(icr_prim(i_prim)==icr_C12) then
-                        !      if(icr_sec(i_sec)==icr_Be9) then
-                        !         if (dcr_n(i_bin)*p_fix(i_bin) > zero) then
-                        !
-                        !            print *, 'Primary Ratio n',i_bin,' : ', Q_ratio_1(i_bin), Q_ratio_2(i_bin), 'de/dnp : ', dcr_e(i_bin)/(dcr_n(i_bin)*p_fix(i_bin))
-                        !
-                        !            print *, 'Primary Ratio e',i_bin,' : ', S_ratio_1(i_bin), S_ratio_2(i_bin), 'e_c/n_c p : ', u_cell(iarr_crspc2_e(cr_prim,i_bin))/(u_cell(iarr_crspc2_n(cr_prim,i_bin)) * p_fix(i_bin))
-                        !
-                        !         endif
-                        !
-                        !      endif
-                        !endif
-
-
-
-
-
-
-
-                        !usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin)*dcr_n(i_bin)
-                        !
-                        !usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_1(i_bin) * dcr_e(i_bin) + S_ratio_2(i_bin) * dcr_e(i_bin)
-
-                        !endif
-
                      enddo
-
-                     !if(icr_prim(i_prim)==icr_C12) then
-                     !      if(icr_sec(i_sec)==icr_Be9) then
-                     !         stop
-                     !      endif
-                     !endif
-
-                     !if (icr_prim(i_prim)==icr_C12) then
-                     !   if (icr_sec(i_sec)==icr_Be9) stop
-                     !endif
 
                   endif
                end associate
@@ -410,5 +354,7 @@ contains
       endif
 
    end function S_ratio
+
+#endif /* CRESP */
 
 end module sourcecosmicrays
