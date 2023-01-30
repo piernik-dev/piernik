@@ -176,7 +176,7 @@ contains
       integer(kind=8), dimension(ndims, LO:HI), intent(in) :: se
       integer(kind=8), dimension(ndims),        intent(in) :: off
       real,            dimension(ndims),        intent(in) :: dl
-      integer,                                  intent(in) :: nexp
+      integer(kind=4),                          intent(in) :: nexp
       real,            dimension(ndims, LO:HI)             :: fbnd
 
       fbnd(:, LO)  = dom%edge(:, LO) + dl(:) * (se(:, LO)         - off(:) - nexp)
@@ -188,7 +188,7 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: LO, HI, ndims, xdim, zdim
+      use constants,          only: LO, HI, ndims, xdim, zdim, I_ZERO
       use domain,             only: dom
       use mpisetup,           only: proc
       use particle_func,      only: particle_in_area
@@ -196,10 +196,12 @@ contains
 
       implicit none
 
-      type(particle), pointer, intent(in) :: pset
-      integer,                 intent(in) :: j
-      integer, dimension(:,:), intent(in) :: se
-      integer                             :: b, cdim
+      type(particle), pointer,         intent(in) :: pset
+      integer,                         intent(in) :: j
+      integer(kind=4), dimension(:,:), intent(in) :: se
+
+      integer                             :: b
+      integer(kind=4)                     :: cdim
       real,    dimension(ndims)           :: ldl
       logical, dimension(ndims, LO:HI)    :: ext_bnd
       type(cg_level_connected_t), pointer :: ll
@@ -217,7 +219,7 @@ contains
                ext_bnd(cdim, LO) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, LO)
                ext_bnd(cdim, HI) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, HI)
             enddo
-            if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, 0), ext_bnd)) to_send = .true.
+            if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, I_ZERO), ext_bnd)) to_send = .true.
          endif
 #ifdef NBODY_CHECK_PID
          if (to_send) then
@@ -417,6 +419,7 @@ contains
 
    integer(kind=4) function count_cg_particles(cg) result(n_part)
 
+      use constants,      only: I_ONE
       use grid_cont,      only: grid_container
       use particle_types, only: particle
 
@@ -428,7 +431,7 @@ contains
       n_part = 0
       pset => cg%pset%first
       do while (associated(pset))
-         if (pset%pdata%phy) n_part = n_part + 1
+         if (pset%pdata%phy) n_part = n_part + I_ONE
       pset => pset%nxt
       enddo
 

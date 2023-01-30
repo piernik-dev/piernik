@@ -1,0 +1,8 @@
+! This problem is not intended to run, so no parameters are set up here.
+
+! This problem is intended to include as many Piernik source files as possible
+! and cover most code lines in a single compilation.
+
+! To check which files aren't included, you may run:
+!     ./setup testing_and_debuging/chimaera -o Chi
+!     for i in $( find src/ -name "*F90" ) ; do ls obj_Chi/$( basename $i ) > /dev/null || ( echo -n $i" " && grep pulled $i ) ; done

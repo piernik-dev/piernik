@@ -1,0 +1,35 @@
+#if !defined LOCAL_FR_SPEED
+#  define GLOBAL_FR_SPEED
+#endif
+
+/* Fluids */
+#define DUST
+#define IONIZED
+/* NEUTRAL is mutually exclusive with IONIZED at this point */
+#undef NEUTRAL
+#define TRACER
+
+/* Big features */
+#define MAGNETIC
+#define CRESP
+#define SELF_GRAV
+#define NBODY
+
+/* Small, single-file features */
+#define SN_SRC
+#define THERM
+#define SHEAR
+#define RESISTIVE
+/* RANDOMIZE is known for unsolved problems when default integer type is forced to 64-bit
+   because there is no appropriate variant of h5ltget_attribute_int_f */
+#undef RANDOMIZE
+
+/* Debugging */
+#define DEBUG
+#define VERBOSE
+#define CRESP_VERBOSED
+
+/* Barely used, abandoned, historical ... */
+#define CORIOLIS
+#undef PGPLOT
+#undef PIERNIK_OPENCL

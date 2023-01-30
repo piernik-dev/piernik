@@ -27,31 +27,19 @@
 
 #include "piernik.h"
 
-!>
-!! \brief This module contains types useful for flux enforcing and exchange in (M)HD solvers
-!!
-!! \todo This can be split into 3 separate modules (fluxpoint, ext_fluxes, fluxarray). Perhaps we should do it some day.
-!<
+!> \brief This module contains ext_fluxes type useful for flux enforcing and exchange in 1D (M)HD solvers
 
 module fluxtypes
+
+   use flx_cell, only: fluxpoint
 
    implicit none
 
    private
-   public  :: fluxpoint, ext_fluxes, fluxarray
+   public  :: ext_fluxes
 
-   !> \brief Structure that contains u-flux at a single cell index.
-
-   type :: fluxpoint
-      real, dimension(:), allocatable :: uflx  !< u-flux
-      real, dimension(:), allocatable :: bflx  !< (b,psi)-flux
-      integer                         :: index !< Index where the flux has to be applied
-   contains
-      procedure :: fpinit                      !< Allocate flux vector
-      procedure :: fpcleanup                   !< Deallocate flux vector
-   end type fluxpoint
-
-   !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the rtvd routine. Unassociated pointer means that no operation is required.
+   !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the RTVD/Riemann routine.
+   !! Unassociated pointer means that no operation is required.
 
    type :: ext_fluxes
       type(fluxpoint), pointer :: li  !< incoming from the left (low index)
@@ -62,55 +50,7 @@ module fluxtypes
       procedure :: init               !< Nullify point flux pointers
    end type ext_fluxes
 
-   !>
-   !! \brief Structure that contains u-flux at a single face of a grid container
-   !!
-   !! \todo Consider moving this to a separate file and s/fainit/nit/, s/facleanup/cleanup/
-   !<
-
-   type :: fluxarray
-      real,    dimension(:,:,:), allocatable :: uflx  !< u-fluxes, shape (flind%all, n_b(dir1), n_b(dir2))
-      real,    dimension(:,:,:), allocatable :: bflx  !< b-fluxes, shape (psidim,    n_b(dir1), n_b(dir2)) (magnetic field components + psi)
-      integer, dimension(:,:),   allocatable :: index !< Index where the flux has to be applied, shape (n_b(dir1), n_b(dir2))
-   contains
-      procedure :: fainit                      !< Allocate flux array
-      procedure :: facleanup                   !< Deallocate flux array
-      procedure :: fa2fp                       !< Pick a point flux
-      procedure :: fp2fa                       !< Store a point flux
-   end type fluxarray
-
 contains
-
-!> \brief Allocate flux vector
-
-   subroutine fpinit(this)
-
-      use constants,  only: psidim, has_B
-      use dataio_pub, only: die
-      use fluidindex, only: flind
-
-      implicit none
-
-      class(fluxpoint), intent(inout) :: this
-
-      if (allocated(this%uflx)) call die("[fluxtypes:fpinit] uflx already allocated")
-      allocate(this%uflx(flind%all))
-      if (has_B) allocate(this%bflx(psidim))
-
-   end subroutine fpinit
-
-!> \brief Deallocate flux vector
-
-   subroutine fpcleanup(this)
-
-      implicit none
-
-      class(fluxpoint), intent(inout) :: this
-
-      if (allocated(this%uflx)) deallocate(this%uflx)
-      if (allocated(this%bflx)) deallocate(this%bflx)
-
-   end subroutine fpcleanup
 
 !> \brief Nullify point flux pointers
 
@@ -118,7 +58,7 @@ contains
 
       implicit none
 
-      class(ext_fluxes), intent(out) :: this
+      class(ext_fluxes), intent(out) :: this  !< object invoking type bound procedure
 
       this%li => null()
       this%lo => null()
@@ -126,94 +66,5 @@ contains
       this%ro => null()
 
    end subroutine init
-
-!> \brief Allocate flux array
-
-   subroutine fainit(this, i1, i2)
-
-      use constants,  only: LO, HI, psidim, has_B
-      use dataio_pub, only: die
-      use fluidindex, only: flind
-
-      implicit none
-
-      class(fluxarray),                  intent(inout) :: this !< object invoking type bound procedure
-      integer(kind=4), dimension(LO:HI), intent(in)    :: i1 !< 1st range
-      integer(kind=4), dimension(LO:HI), intent(in)    :: i2 !< 2nd range
-
-      if (allocated(this%index) .or. allocated(this%uflx)) call die("[fluxtypes:fainit] already allocated")
-      allocate(this%index(          i1(LO):i1(HI), i2(LO):i2(HI)), &
-           &   this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))
-      if (has_B) allocate(this%bflx(psidim,    i1(LO):i1(HI), i2(LO):i2(HI)))
-
-   end subroutine fainit
-
-!> \brief Deallocate flux array
-
-   subroutine facleanup(this)
-
-      implicit none
-
-      class(fluxarray), intent(inout) :: this
-
-      if (allocated(this%index)) deallocate(this%index)
-      if (allocated(this%uflx))  deallocate(this%uflx)
-      if (allocated(this%bflx))  deallocate(this%bflx)
-
-   end subroutine facleanup
-
-!> \brief Pick a point flux
-
-   function fa2fp(this, i1, i2) result(fp)
-
-      use constants,  only: has_B
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(fluxarray), intent(in) :: this !< object invoking type bound procedure
-      integer,          intent(in) :: i1 !< 1st index
-      integer,          intent(in) :: i2 !< 2nd index
-
-      type(fluxpoint) :: fp
-
-      fp%index = this%index(   i1, i2)
-
-      ! It looks like a bogus detection of -Wmaybe-uninitialized that occurs only with -O0.
-
-      if (allocated(this%uflx)) then
-         fp%uflx  = this%uflx (:, i1, i2)
-      else
-         call die("[fluxtypes:fa2fp] .not. allocated(this%uflx)")
-      endif
-      if (has_B) then
-         if (allocated(this%bflx)) then
-            fp%bflx  = this%bflx (:, i1, i2)
-         else
-            call die("[fluxtypes:fa2fp] .not. allocated(this%bflx)")
-         endif
-      endif
-
-   end function fa2fp
-
-!> \brief Store a point flux
-
-   subroutine fp2fa(this, fp, i1, i2)
-
-      use constants,  only: has_B
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(fluxarray), intent(inout) :: this !< object invoking type bound procedure
-      type(fluxpoint),  intent(in)    :: fp !< point flux
-      integer,          intent(in)    :: i1 !< 1st index
-      integer,          intent(in)    :: i2 !< 2nd index
-
-      if (this%index(i1, i2) /= fp%index) call die("[fluxtypes:fp2fa] inconsistent index")
-      this%uflx (:, i1, i2) = fp%uflx
-      if (has_B) this%bflx (:, i1, i2) = fp%bflx
-
-   end subroutine fp2fa
 
 end module fluxtypes

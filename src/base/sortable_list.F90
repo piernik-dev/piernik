@@ -160,6 +160,7 @@ contains
 
       end function tokuda
 
+#ifdef DEBUG
       !> \brief Check if our sorting was performed correctly
 
       subroutine check
@@ -181,6 +182,7 @@ contains
          if (fail) call die("[sortable_list:sort] failed")
 
       end subroutine check
+#endif /* DEBUG */
 
    end subroutine sort
 

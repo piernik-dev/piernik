@@ -448,13 +448,11 @@ if f_run is True:
                        display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
         plot_field = new_field
 
-    for proton_field in proton_field_names:
-      try:
-        # WARNING - this makes field_max unitless
-        field_max = h5ds.find_max(proton_field)[0].v
-        break
-      except:
-        print("MAX for proton field ",proton_field, " not found")
+    # WARNING - this makes field_max unitless
+    try:
+        field_max = h5ds.find_max("cr_p+")[0].v
+    except:
+        field_max = h5ds.find_max("cr1")[0].v
 
 # prepare limits for framebuffer
     # if (options.usr_width == 0.):

@@ -400,14 +400,14 @@ contains
 
 !  outer boundary
       jremap = jsn - delj
-      jremap = mod(mod(jremap, cg%nyb)+cg%nyb, cg%nyb)
+      jremap = mod(mod(jremap, int(cg%nyb))+cg%nyb, int(cg%nyb))
       if (jremap <= (cg%lh1(ydim,LO))) jremap = jremap + cg%nyb
 
       ysnoi(1) = cg%y(jremap) + epso + dysn
 
 !  inner boundary
       jremap = jsn + delj
-      jremap = mod(jremap, cg%nyb)+cg%nyb
+      jremap = mod(jremap, int(cg%nyb))+cg%nyb
       if (jremap >= (cg%lh1(ydim,HI))) jremap = jremap - cg%nyb
 
       ysnoi(3) = cg%y(jremap) + epsi + dysn

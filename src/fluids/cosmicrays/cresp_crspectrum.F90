@@ -1469,7 +1469,7 @@ contains
    subroutine check_init_spectrum(i_spc)
 
       use constants,       only: one, I_ONE
-      use cresp_NR_method, only: bound_name
+      use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, warn, printinfo
       use initcrspectrum,  only: e_small, e_small_approx_p, p_init
 
@@ -1681,6 +1681,7 @@ contains
       q = zero
 
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
+         exit_code = .false.
          i = bins(i_active)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
@@ -1820,7 +1821,7 @@ contains
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
       use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
-      use cresp_NR_method, only: bound_name
+      use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
@@ -1839,7 +1840,7 @@ contains
 
       alpha = e(qi)/(n(qi) * p_fix(ipfix) * clight_cresp)
       n_in  = n(qi)
-      x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated)
+      x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
       if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(cutoff) = fail_count_interpol(cutoff) + 1
@@ -2056,6 +2057,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
+#ifdef CRESP_VERBOSED
    subroutine print_failcounts
 
       use dataio_pub, only: msg, printinfo
@@ -2067,5 +2069,6 @@ contains
       write(msg, '(A36,   100I8)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                          ; call printinfo(msg)
 
    end subroutine print_failcounts
+#endif /* CRESP_VERBOSED */
 
 end module cresp_crspectrum

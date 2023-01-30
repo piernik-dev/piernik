@@ -721,6 +721,7 @@ contains
 
          associate ( seg => cgl%cg%pib_tgt%seg )
          if (allocated(cgl%cg%rof_tgt%seg)) deallocate(cgl%cg%rof_tgt%seg)
+         ! outside means invalid (no f/c boundary to exchange fluxes)
          do dd = xdim, zdim
             cgl%cg%coarsebnd(dd, LO)%index(:, :) = cgl%cg%ijkse(dd, LO) - 1
             cgl%cg%coarsebnd(dd, HI)%index(:, :) = cgl%cg%ijkse(dd, HI) + 1
@@ -772,6 +773,7 @@ contains
 
             if (allocated(cgl%cg%rif_tgt%seg)) deallocate(cgl%cg%rif_tgt%seg)
             do dd = xdim, zdim
+               ! outside means invalid (no f/c boundary to exchange fluxes)
                cgl%cg%finebnd(dd, LO)%index(:, :) = cgl%cg%ijkse(dd, LO) - 1
                cgl%cg%finebnd(dd, HI)%index(:, :) = cgl%cg%ijkse(dd, HI) + 1
             enddo

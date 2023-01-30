@@ -305,8 +305,8 @@ def check_extrema(curmin, curmax, locmin, locmax, bextr, cextr):
 
 
 def block_cell_center(le, re, ngb, i3):
-    dl = list3_div(list3_subtraction(re, le), [np.float(ngb[0]), np.float(ngb[1]), np.float(ngb[2])])
-    dd = [np.float(i3[0]) + 0.5, np.float(i3[1]) + 0.5, np.float(i3[2]) + 0.5]
+    dl = list3_div(list3_subtraction(re, le), [float(ngb[0]), float(ngb[1]), float(ngb[2])])
+    dd = [float(i3[0]) + 0.5, float(i3[1]) + 0.5, float(i3[2]) + 0.5]
     lp = list3_mult(dl, dd)
     return list3_add(le, lp)
 

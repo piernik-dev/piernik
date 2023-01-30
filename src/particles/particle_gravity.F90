@@ -557,6 +557,10 @@ contains
 
    end subroutine get_acc_model
 
+#if 0
+   ! An unused function
+   ! It may be useful for debuging
+
    subroutine direct_nbody_acc(mass, pos, acc, n, epot)
 
       use constants, only: ndims, zero
@@ -598,5 +602,7 @@ contains
       enddo
 
    end subroutine direct_nbody_acc
+
+#endif /* 0 */
 
 end module particle_gravity

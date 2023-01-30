@@ -37,17 +37,20 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff, init_crdiffusion
+   public :: init_crdiffusion, make_diff_sweeps
 
    logical :: has_cr
 
 contains
+
+!> \brief Set up CR-specific auxiliary arrays
 
    subroutine init_crdiffusion
 
       use cg_list_global,   only: all_cg
       use constants,        only: wcr_n
       use crhelpers,        only: divv_i, divv_n
+      use initcosmicrays,   only: ord_cr_prolong
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
       use named_array_list, only: qna
@@ -57,7 +60,9 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all) !, ord_prolong = 2)  ! Smooth prolongation may help with interpolation from coarse grid to fine boundary
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = ord_cr_prolong)
+         ! Dirty trick: Ensure that all prolongation buffers are ready for ord_cr_prolong,
+         ! wcr_n itself doesn't need it.
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -66,16 +71,69 @@ contains
 
    end subroutine init_crdiffusion
 
+!> \brief Execute diffusion
+
+   subroutine make_diff_sweeps(forward)
+
+      use all_boundaries, only: all_fluid_boundaries, all_mag_boundaries
+      use constants,      only: xdim, zdim, I_ONE, PPP_CR
+      use global,         only: skip_sweep
+      use ppp,            only: ppp_main
+
+      implicit none
+
+      logical, intent(in) :: forward  !< order of sweeps: XYZ or ZYX
+
+      integer(kind=4) :: s
+      character(len=*), parameter :: crdiff_label = "CR_diffusion"
+
+      call ppp_main%start(crdiff_label, PPP_CR)
+
+      call all_mag_boundaries
+
+      do s = merge(xdim, zdim, forward), merge(zdim, xdim, forward), merge(I_ONE, -I_ONE, forward)
+         if (.not. skip_sweep(s)) call make_diff_sweep(s)
+      enddo
+
+      ! This call prevents occurence of SIGFPE in the Riemann solver
+      ! Strange thing is that it is not fully deterministic and sometimes the code may work well without this call
+      call all_fluid_boundaries  ! overkill?
+
+      call ppp_main%stop(crdiff_label, PPP_CR)
+
+   contains
+
+      !> \brief Perform single diffusion sweep in forward or backward direction
+
+      subroutine make_diff_sweep(dir)
+
+#ifdef DEBUG
+         use piernikiodebug, only: force_dumps
+#endif /* DEBUG */
+
+         implicit none
+
+         integer(kind=4), intent(in) :: dir !< direction, one of xdim, ydim, zdim
+
+         call cr_diff(dir)
+
+#ifdef DEBUG
+         call force_dumps
+#endif /* DEBUG */
+
+      end subroutine make_diff_sweep
+
+   end subroutine make_diff_sweeps
+
 !>
 !! \brief boundaries for wcr
 !! This procedure is a shameless copy of cg_list_bnd%arr3d_boundaries adapted for wcr
 !! \todo REMOVE ME, FIX ME, MERGE ME with cg_list_bnd%arr3d_boundaries or at least have a decency to make me more general
 !<
-   subroutine all_wcr_boundaries
+   subroutine all_wcr_boundaries(crdim)
 
       use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
-      use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
       use dataio_pub,       only: die
@@ -85,6 +143,8 @@ contains
       use ppp,              only: ppp_main
 
       implicit none
+
+      integer(kind=4), intent(in)             :: crdim
 
       integer(kind=4)                         :: i, d, lh
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
@@ -96,8 +156,9 @@ contains
       if (.not. has_cr) return
 
       call ppp_main%start(awb_label, PPP_CR)
-      call finest%level%restrict_to_base_w_1var(wna%ind(wcr_n))
-      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n))
+
+      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n), no_fc = .true., dir=crdim)  ! skip coarse-to-fine prolongation as it doesn't work well for fluxes
+      ! ToDo: override coarse fluxes with restricted fine fluxes
 
       ! do the external boundaries
       cgl => leaves%first
@@ -145,28 +206,32 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use all_boundaries,   only: all_bnd
+      use all_boundaries,   only: all_fluid_boundaries
       use cg_cost_data,     only: I_DIFFUSE
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half
       use dataio_pub,       only: die
       use domain,           only: dom
+      use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
+      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp, ord_cr_prolong
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
+      use ppp_mpi,          only: piernik_Waitall
 #ifdef MAGNETIC
       use constants,        only: four
+      use global,           only: cc_mag
 #endif /* MAGNETIC */
 
       implicit none
 
       integer(kind=4), intent(in)          :: crdim
+
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
       real                                 :: bb, f1, f2
@@ -180,6 +245,10 @@ contains
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
+      integer(kind=4) :: nr, nr_recv
+      logical :: all_received
+      integer(kind=4) :: ord_save
+      real, parameter :: flux_factor = half
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
@@ -193,8 +262,15 @@ contains
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
 
-      call finest%level%restrict_to_base ! overkill
-      call all_bnd ! overkill
+      ! Dirty trick: enforce prolongation order for CR in case someone wants smoother estimates for f/c ifnterpolation of cg%u(iarr_crs,:,:,:)
+      ord_save = wna%lst(wna%fi)%ord_prolong
+      wna%lst(wna%fi)%ord_prolong = ord_cr_prolong
+      call finest%level%restrict_to_base  ! overkill?
+      call all_fluid_boundaries  ! overkill?
+      wna%lst(wna%fi)%ord_prolong = ord_save
+
+      nr_recv = compute_nr_recv(crdim)
+      nr = nr_recv
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -217,14 +293,18 @@ contains
                   decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * f1
                   fcrdif = K_crs_perp * decr(crdim,:)
 #ifdef MAGNETIC
-                  bcomp(crdim) =  cg%b(crdim,i,j,k) * four
+                  if (cc_mag) then
+                     bcomp(:) =  cg%b(:, i, j, k) + cg%b(:, ild, jld, kld)
+                  else
+                     bcomp(crdim) =  cg%b(crdim,i,j,k) * four
+                  endif
 #endif /* MAGNETIC */
                   if (present_not_crdim(xdim)) then
                      dqm = (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))
                      dqp = (cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))
                      decr(xdim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idx
 #ifdef MAGNETIC
-                     bcomp(xdim)  = sum(cg%b(xdim,i:ih, jld:j, kld:k))
+                     if (.not. cc_mag) bcomp(xdim)  = sum(cg%b(xdim,i:ih, jld:j, kld:k))
 #endif /* MAGNETIC */
                   endif
 
@@ -233,7 +313,7 @@ contains
                      dqp = (cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))
                      decr(ydim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idy
 #ifdef MAGNETIC
-                     bcomp(ydim)  = sum(cg%b(ydim,ild:i, j:jh, kld:k))
+                     if (.not. cc_mag) bcomp(ydim)  = sum(cg%b(ydim,ild:i, j:jh, kld:k))
 #endif /* MAGNETIC */
                   endif
 
@@ -242,7 +322,7 @@ contains
                      dqp = (cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))
                      decr(zdim,:) = (dqp+dqm) * (1.0 + sign(1.0, dqm*dqp)) * cg%idz
 #ifdef MAGNETIC
-                     bcomp(zdim)  = sum(cg%b(zdim,ild:i, jld:j, k:kh))
+                     if (.not. cc_mag) bcomp(zdim)  = sum(cg%b(zdim,ild:i, jld:j, k:kh))
 #endif /* MAGNETIC */
                   endif
 
@@ -255,16 +335,87 @@ contains
             enddo
          enddo
 
+         ! Very general, perhaps not very efficient approach
+         ! It can be optimized as there is either something to exchange or not (we're on fine side) and array assignment can be made
+         do j = lbound(cg%coarsebnd(crdim, LO)%uflx, dim=2), ubound(cg%coarsebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
+            do k = lbound(cg%coarsebnd(crdim, LO)%uflx, dim=3), ubound(cg%coarsebnd(crdim, LO)%uflx, dim=3)
+               select case (crdim)
+                  case (xdim)
+                     if (cg%coarsebnd(crdim, LO)%index(j, k) >= cg%is) &
+                          cg%coarsebnd(crdim, LO)%uflx(:flind%crs%all, j, k) = wcr(:, cg%coarsebnd(crdim, LO)%index(j, k), j, k)
+                     if (cg%coarsebnd(crdim, HI)%index(j, k) <= cg%ie) &
+                          cg%coarsebnd(crdim, HI)%uflx(:flind%crs%all, j, k) = wcr(:, cg%coarsebnd(crdim, HI)%index(j, k)+1, j, k)
+                  case (ydim)
+                     if (cg%coarsebnd(crdim, LO)%index(j, k) >= cg%js) &
+                          cg%coarsebnd(crdim, LO)%uflx(:flind%crs%all, j, k) = wcr(:, k, cg%coarsebnd(crdim, LO)%index(j, k), j)
+                     if (cg%coarsebnd(crdim, HI)%index(j, k) <= cg%je) &
+                          cg%coarsebnd(crdim, HI)%uflx(:flind%crs%all, j, k) = wcr(:, k, cg%coarsebnd(crdim, HI)%index(j, k)+1, j)
+                  case (zdim)
+                     if (cg%coarsebnd(crdim, LO)%index(j, k) >= cg%ks) &
+                          cg%coarsebnd(crdim, LO)%uflx(:flind%crs%all, j, k) = wcr(:, j, k, cg%coarsebnd(crdim, LO)%index(j, k))
+                     if (cg%coarsebnd(crdim, HI)%index(j, k) <= cg%ke) &
+                          cg%coarsebnd(crdim, HI)%uflx(:flind%crs%all, j, k) = wcr(:, j, k, cg%coarsebnd(crdim, HI)%index(j, k)+1)
+                  case default
+                     call die("[crdiffusion:cr_diff] What to send?")
+               end select
+            enddo
+         enddo
+
+         call send_cg_coarsebnd(crdim, cg, nr)
+
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
-      call all_wcr_boundaries
+      call piernik_Waitall(nr, "cr_diff")
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         call cg%costs%start
+
+         call recv_cg_finebnd(crdim, cg, all_received)
+         if (.not. all_received) call die("[crdiffusion:cr_diff] incomplete fluxes")
+         call cg%costs%stop(I_DIFFUSE)
+         cgl => cgl%nxt
+      enddo
+
+      call finalize_fcflx
+
+      call all_wcr_boundaries(crdim)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
+
+         ! Very general, perhaps not very efficient approach, again
+         ! It can be optimized as there are at most four different regions to exchange (we're on coarse side) and array assignments can be made
+
+         ! To Do: Figure out where the flux factor value come from. And why it does not depend on dimensionality.
+         wcr => cg%w(wcri)%arr
+         do j = lbound(cg%finebnd(crdim, LO)%uflx, dim=2), ubound(cg%finebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
+            do k = lbound(cg%finebnd(crdim, LO)%uflx, dim=3), ubound(cg%finebnd(crdim, LO)%uflx, dim=3)
+               select case (crdim)
+                  case (xdim)
+                     if (cg%finebnd(crdim, LO)%index(j, k) > cg%is) &
+                          wcr(:, cg%finebnd(crdim, LO)%index(j, k) + 1, j, k) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                     if (cg%finebnd(crdim, HI)%index(j, k) < cg%ie) &
+                          wcr(:, cg%finebnd(crdim, HI)%index(j, k), j, k) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                  case (ydim)
+                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%js) &
+                          wcr(:, k, cg%finebnd(crdim, LO)%index(j, k) + 1, j) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%je) &
+                          wcr(:, k, cg%finebnd(crdim, HI)%index(j, k), j) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                  case (zdim)
+                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%ks) &
+                          wcr(:, j, k, cg%finebnd(crdim, LO)%index(j, k) + 1) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%ke) &
+                          wcr(:, j, k, cg%finebnd(crdim, HI)%index(j, k)) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                  case default
+                     call die("[crdiffusion:cr_diff] What to receive?")
+               end select
+            enddo
+         enddo
 
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)

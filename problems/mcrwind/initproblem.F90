@@ -273,6 +273,8 @@ contains
 !! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
 !<
 
+#if 0
+! Currently unused
    subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
 
       use constants, only: zdim
@@ -300,6 +302,8 @@ contains
       endif
 
    end subroutine galactic_grav_accel
+#endif /* 0 */
+
 !------------------------------------------------------------------------------
 
    subroutine galactic_grav_pot_3d
