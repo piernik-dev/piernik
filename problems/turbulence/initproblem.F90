@@ -33,9 +33,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real              :: d0, Mrms, t_sn, c_si
+   real :: d0, Mrms, c_si
 
-   namelist /PROBLEM_CONTROL/  d0, c_si, Mrms
+   namelist /PROBLEM_CONTROL/ d0, c_si, Mrms
 
 contains
 
@@ -55,8 +55,6 @@ contains
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
-
-      t_sn = 0.0
 
       d0   = 1.0
       c_si = 0.1
@@ -90,9 +88,9 @@ contains
 
       if (slave) then
 
-         d0       = rbuff(1)
-         Mrms     = rbuff(2)
-         c_si     = rbuff(3)
+         d0   = rbuff(1)
+         Mrms = rbuff(2)
+         c_si = rbuff(3)
 
       endif
 

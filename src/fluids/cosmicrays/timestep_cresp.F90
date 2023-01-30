@@ -31,7 +31,7 @@
 !<
 
 module timestep_cresp
-! pulled by COSM_RAY_ELECTRONS
+! pulled by CRESP
 
    implicit none
 
@@ -48,14 +48,14 @@ contains
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN, I_ONE
+      use constants,        only: xdim, ydim, zdim, half, zero, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_cre_paral, K_cre_perp, cfl_cr, iarr_cre_e, iarr_cre_n, diff_max_lev
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
+      use initcosmicrays,   only: cfl_cr, iarr_cre_e, iarr_cre_n, diff_max_lev
+      use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -67,10 +67,10 @@ contains
       real                           :: K_cre_max_sum, abs_max_ud, dt_aux
       logical                        :: empty_cell
 
-      dt_cre       = big
-      dt_cre_K     = big
-      dt_cre_synch = big
-      dt_cre_adiab = big
+      dt_cre       = huge(1.)
+      dt_cre_K     = huge(1.)
+      dt_cre_synch = huge(1.)
+      dt_cre_adiab = huge(1.)
 
       if (.not. use_cresp_evol) return
 
@@ -110,7 +110,7 @@ contains
 
       if (adiab_active) call cresp_timestep_adiabatic(abs_max_ud)
 
-      K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+      K_cre_max_sum = K_cresp_paral(i_up_max) + K_cresp_perp(i_up_max) ! assumes the same K for energy and number density
       if (K_cre_max_sum > zero) then                               ! K_cre dependent on momentum - maximal for highest bin number
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
@@ -176,20 +176,19 @@ contains
 
    subroutine cresp_timestep_cell(p_loss_terms, dt_cell, empty_cell)
 
-      use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
-      use cresp_crspectrum,   only: cresp_find_prepare_spectrum
-      use constants,          only: big
+      use initcrspectrum,   only: adiab_active, cresp, synch_active, spec_mod_trms
+      use cresp_crspectrum, only: cresp_find_prepare_spectrum
 
       implicit none
 
-      type(spec_mod_trms), intent(in) :: p_loss_terms
-      real,               intent(out) :: dt_cell
-      logical,            intent(out) :: empty_cell
-      integer(kind=4)                 :: i_up_cell
+      type(spec_mod_trms), intent(in)  :: p_loss_terms
+      real,                intent(out) :: dt_cell
+      logical,             intent(out) :: empty_cell
+      integer(kind=4)                  :: i_up_cell
 
-      dt_cell = big
-      dt_cre_adiab = big
-      dt_cre_synch = big
+      dt_cell = huge(1.)
+      dt_cre_adiab = huge(1.)
+      dt_cre_synch = huge(1.)
 
       empty_cell = .false.
 
@@ -210,15 +209,15 @@ contains
 
    real function assume_p_up(cell_i_up)
 
-      use initcosmicrays, only: ncre
+      use initcosmicrays, only: ncrb
       use initcrspectrum, only: p_fix, p_mid_fix
 
       implicit none
 
       integer(kind=4), intent(in) :: cell_i_up
 
-      if (cell_i_up == ncre) then
-         assume_p_up = p_mid_fix(ncre) ! for i = 0 & ncre p_fix(i) = 0.0
+      if (cell_i_up == ncrb) then
+         assume_p_up = p_mid_fix(ncrb) ! for i = 0 & ncrb p_fix(i) = 0.0
       else
          assume_p_up = p_fix(cell_i_up)
       endif

@@ -31,7 +31,6 @@ c_reset = '\033[0m'
 
 fmt = "%s%-*s %40s %4s %30s %s"
 base_job = "https://jenkins.camk.edu.pl"
-gold = "user_gold%20CI"
 
 jobs = []
 longestkey = 0
@@ -40,9 +39,19 @@ w_len = len(w_str % (10, 10)) + 1
 
 for i in ("3-body%20CI", "64-bit%20int%20CR%20test%20CI", "dep.png%20CI", "IO%20v2%20CI",
           "Jeans%20CI", "Maclaurin%20CI", "mergeable%20benchmarking%20CI", "noHDF5%20CI",
-          "PEP8%20CI", "Piernik%20CI", "python3%20CI", "QA%20CI", gold):
+          "PEP8%20CI", "Piernik%20CI", "python3%20CI", "QA%20CI", "user_gold%20CI",
+          "streaming%20instability%20gold%20CI", "resist%20gold%20CI", "CRESP%20gold%20CI",
+          "MHD%20sedov%20AMR%20gold%20CI", "mcrwind%20gold%20CI", "mcrtest%20gold%20CI"):
     jobs.append({"name": i, "finished": False})
     longestkey = max(longestkey, len(i.replace("%20", " ")))
+
+problem_dirs = {"streaming%20instability%20gold%20CI": "streaming_global",
+                "resist%20gold%20CI": "tearing",
+                "CRESP%20gold%20CI": "mcrtest___mcrtest_cresp",
+                "MHD%20sedov%20AMR%20gold%20CI": "sedov___MHD_blast_wave",
+                "mcrwind%20gold%20CI": "mcrwind",
+                "mcrtest%20gold%20CI": "mcrtest"}
+# "user_gold%20CI" is not very predictable, so we don't handle it here
 
 print((c_white + fmt + c_reset) % (" " * w_len, longestkey, "Test", "SHA1", "PR#", "branch", "status"))
 
@@ -79,10 +88,16 @@ while not all_finished:
                 print(fmt % (("" if waiting else " " * w_len), longestkey, j["name"].replace("%20", " "), j["sha1"], j["pr"], j["br"], (c_green if j["status"] else c_red) + data["result"] + c_reset))
                 waiting = False
                 if not j["status"]:
-                    if j["name"] == gold:
-                        gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/goldexec/gold.txt"
-                        gold_out = requests.get(gold_url)
-                        print(gold_out.text)
+                    if "gold%20CI" in j["name"]:
+                        try:
+                            gold_url = base_job + "/job/" + j["name"] + "/lastBuild/artifact/jenkins/workspace/" + problem_dirs[j["name"]] + "/gold_log"
+                            gold_out = requests.get(gold_url)
+                            if "HTTP ERROR 404" in gold_out.text:
+                                print("Unable to retrieve GDF distances")
+                            else:
+                                print(gold_out.text)
+                        except KeyError:
+                            print("Problems with 'user gold CI' must be inspected manually")
 
         all_finished = all_finished and j["finished"]
 

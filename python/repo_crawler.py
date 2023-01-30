@@ -13,8 +13,8 @@ PIERNIK_REPO = r"svn+ssh://ladon/piernik/piernik/trunk"
 REV_START = 7700
 REV_END = 7733
 PROBLEM = "mcrwind"
-SETUP_CMD = "%s --param problem.par.build --compiler gnu47 --debug" % PROBLEM
-SETUP_CMD_OLD = "%s --param problem.par.build --compiler gnudbg" % PROBLEM
+SETUP_CMD = "%s --param problem.par.gold --compiler gnu47 --debug" % PROBLEM
+SETUP_CMD_OLD = "%s --param problem.par.gold --compiler gnudbg" % PROBLEM
 HDF5_FILE = "crwind_final_tst_0001.h5"
 
 

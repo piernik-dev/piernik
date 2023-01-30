@@ -1,12 +1,14 @@
-#define HDF5
-#undef IONIZED
-#undef MAGNETIC
-#define NEUTRAL
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
 
 #undef ISO
 
+#undef IONIZED
+#define NEUTRAL
+
+#undef MAGNETIC
+
 #undef GRAV
+
+#define HDF5

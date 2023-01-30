@@ -49,9 +49,6 @@ contains
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
            &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
            &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
-#ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,            only: cresp_init_grid
-#endif /* COSM_RAY_ELECTRONS */
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, &
            &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
@@ -89,12 +86,10 @@ contains
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef NBODY
-#ifdef GRAV
-      use particle_pub,          only: init_particles
-      use particle_utils,        only: global_count_all_particles
-#endif /* GRAV */
       use particle_gravity,      only: update_particle_gravpot_and_acc
-      use particle_solvers,      only: update_particle_kinetic_energy
+      use particle_pub,          only: init_particles
+      use particle_solvers,      only: init_psolver, update_particle_kinetic_energy
+      use particle_utils,        only: global_count_all_particles
 #endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -106,6 +101,9 @@ contains
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use cresp_grid,            only: cresp_init_grid
+#endif /* CRESP */
 #ifdef RANDOMIZE
       use randomization,         only: init_randomization
 #endif /* RANDOMIZE */
@@ -200,11 +198,12 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-#ifdef NBODY
-      call init_particles
-#endif /* NBODY */
       call init_hydrostatic
 #endif /* GRAV */
+#ifdef NBODY
+      call init_particles
+      call init_psolver
+#endif /* NBODY */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
       call multigrid_par
@@ -237,9 +236,9 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cresp_init_grid                   ! depends on cg
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
 #ifdef GRAV
       if (restarted_sim) call source_terms_grav

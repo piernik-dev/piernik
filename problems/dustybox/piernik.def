@@ -1,11 +1,14 @@
-#define DUST
-#define NEUTRAL
-
-#undef GRAV
-#define ISO
-#define BALSARA
-
-
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED
 #endif
+
+#define ISO
+
+#define NEUTRAL
+#define DUST
+
+#undef GRAV
+
+#define BALSARA
+
+

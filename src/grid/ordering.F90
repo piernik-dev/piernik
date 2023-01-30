@@ -66,6 +66,8 @@ contains
 
       id = INVALID
       select case (dom%eff_dim)
+         case (0) ! Special case
+            id = 1
          case (1) ! No need to process coordinate
             do j1 = xdim, zdim
                if (dom%has_dir(j1)) id = off(j1)

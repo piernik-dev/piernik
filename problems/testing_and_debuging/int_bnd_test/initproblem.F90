@@ -132,7 +132,7 @@ contains
          implicit none
 
 #ifdef HDF5
-         call write_hdf5
+         call write_hdf5(.false.)
 #else /* !HDF5 */
          call warn("[initproblem:problem_initial_conditions:write_h] HDF5 is not available")
 #endif /* !HDF5 */

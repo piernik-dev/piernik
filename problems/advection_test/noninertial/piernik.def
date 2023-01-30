@@ -6,17 +6,18 @@
 !
 #endif
 
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
+
+#undef ISO
+
 #if !defined IONIZED
 #  define  NEUTRAL
 #endif
 
 #define DUST
 
-#if !defined GLOBAL_FR_SPEED
-#  define LOCAL_FR_SPEED
-#endif
 #define NON_INERTIAL
-
-#undef ISO
 
 #undef GRAV

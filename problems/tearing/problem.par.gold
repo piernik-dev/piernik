@@ -38,7 +38,7 @@
     dt_hdf  = 0.01
     dt_log  = 0.001
     dt_tsl  = 0.1
-    dt_res  = 3.0
+    dt_res  = 0.0
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
     h5_64bit = .true.
  /

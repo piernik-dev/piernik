@@ -46,10 +46,12 @@ module common_hdf5
         n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
         create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output, enable_all_hdf_var, &
         dump_announcement, dump_announce_time
-#ifdef NBODY_1FILE
-   public ::  part_types_gname, part_gname, st_gname
-#endif /* NBODY_1FILE */
+#ifdef NBODY
+   public :: part_gname, st_gname, pdsets
 
+   character(len=*), parameter :: part_types_gname = "particle_types", part_gname = "particles", st_gname = "stars"
+   character(len=dsetnamelen), allocatable, dimension(:) :: pdsets
+#endif /* NBODY */
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
@@ -57,9 +59,6 @@ module common_hdf5
         & cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
         & cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
         & cg_dl_aname = "dl", data_gname = "data"
-#ifdef NBODY_1FILE
-   character(len=*), parameter :: part_types_gname="particle_types", part_gname="particles", st_gname="stars"
-#endif /* NBODY_1FILE */
    character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
    ! enumerator for 'otype' used in various functions to distinguish different
@@ -111,17 +110,12 @@ contains
       use global,         only: cc_mag
       use mpisetup,       only: master
 #ifdef COSM_RAYS
+      use cr_data,        only: cr_names, cr_spectral
       use dataio_pub,     only: msg
-#ifdef COSM_RAY_ELECTRONS
-      use fluidindex,     only: iarr_all_crn
-      use initcosmicrays, only: ncre
-#else /* !COSM_RAY_ELECTRONS */
-      use fluidindex,     only: iarr_all_crs
-#endif /* !COSM_RAY_ELECTRONS */
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_names
-#endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use initcosmicrays, only: ncrb
+#endif /* CRESP */
 
       implicit none
 
@@ -131,8 +125,10 @@ contains
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #ifdef COSM_RAYS
-      integer                                              :: k
+      integer                                              :: k, ke
 #endif /* COSM_RAYS */
+
+      if (.not. allocated(hdf_vars)) allocate(hdf_vars(0))
 
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
@@ -194,30 +190,26 @@ contains
                call append_var(aux)
 #ifdef COSM_RAYS
             case ('encr')
-#ifdef COSM_RAY_ELECTRONS
-               do k = 1, size(iarr_all_crn,1)
-#else /* !COSM_RAY_ELECTRONS */
-               do k = 1, size(iarr_all_crs,1)
-#endif /* !COSM_RAY_ELECTRONS */
-                  if (k<=99) then
-#ifdef COSM_RAYS_SOURCES
-                     if (len(trim(cr_names(k))) > 0) then
-                        write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
-                     else
-#endif /* COSM_RAYS_SOURCES */
-                     write(aux,'(A2,I2.2)') 'cr', k
-#ifdef COSM_RAYS_SOURCES
-                     endif
-#endif /* COSM_RAYS_SOURCES */
+               do k = 1, size(cr_names)
+                  if (cr_spectral(k)) cycle
+                  if (len(trim(cr_names(k))) > 0) then
+                     write(aux,'(a3,a)') 'cr_', trim(cr_names(k))
                      call append_var(aux)
                   else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
-                     call warn(msg)
+                     ke = k - count(cr_spectral)
+                     if (ke <= 99) then
+                        write(aux,'(A2,I2.2)') 'cr', ke
+                        call append_var(aux)
+                     else
+                        write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", ke
+                        call warn(msg)
+                     endif
                   endif
                enddo
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
             case ('cren') !< CRESP number density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cren', k
                      call append_var(aux)
@@ -234,7 +226,7 @@ contains
                   endif
                enddo
             case ('cree') !< CRESP energy density fields
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cree', k
                      call append_var(aux)
@@ -251,7 +243,7 @@ contains
                   endif
                enddo
             case ('cref') !< CRESP distribution function
-               do k = 1, ncre+1
+               do k = 1, ncrb+1
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'cref', k
                      call append_var(aux)
@@ -271,7 +263,7 @@ contains
                   endif
                enddo
             case ('creq') !< CRESP spectrum index
-               do k = 1, ncre
+               do k = 1, ncrb
                   if (k<=99) then
                      write(aux,'(A4,I2.2)') 'creq', k
                      call append_var(aux)
@@ -280,8 +272,7 @@ contains
                      call warn(msg)
                   endif
                enddo
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
             case default
                if (.not. has_ion .and. (any(trim(vars(i)) == ["deni", "vlxi", "vlyi", "vlzi", "enei", "ethi", "prei"]) .or. any(trim(vars(i)) == ["momxi", "momyi", "momzi"]))) then
                   if (master) call warn("[common_hdf5:init_hdf5] Cannot safely use plot variable '" // trim(vars(i)) // "' without ionized fluid")
@@ -302,7 +293,7 @@ contains
 
       subroutine append_var(n)
 
-         use dataio_pub, only: warn
+         use dataio_pub, only: warn, die
          use mpisetup,   only: master
 
          implicit none
@@ -317,8 +308,7 @@ contains
          endif
 
          if (.not. allocated(hdf_vars)) then
-            allocate(hdf_vars(1))
-            hdf_vars = trim(n)
+            call die("[common_hdf5:init_hdf5:append_var] hdf_vars not allocated")
          else
             if (.not. any(trim(n) == hdf_vars)) then
                allocate(tmp(lbound(hdf_vars, dim=1):ubound(hdf_vars, dim=1) + 1))
@@ -338,17 +328,13 @@ contains
 
    subroutine cleanup_hdf5
 
-#ifdef NBODY_1FILE
-      use cg_particles_io, only: pdsets
-#endif /* NBODY_1FILE */
-
       implicit none
 
       if (allocated(hdf_vars))       deallocate(hdf_vars)
       if (allocated(hdf_vars_avail)) deallocate(hdf_vars_avail)
-#ifdef NBODY_1FILE
+#ifdef NBODY
       if (allocated(pdsets))         deallocate(pdsets)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
    end subroutine cleanup_hdf5
 
@@ -484,25 +470,22 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,     only: I_ONE
-      use dataio_pub,    only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user,   only: user_attrs_wr, user_attrs_pre
-      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
-         & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
-         & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
-         & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: master, slave
-      use version,       only: env, nenv
-#ifdef COSM_RAY_ELECTRONS
-      use initcrspectrum,  only: write_cresp_to_restart, use_cresp
-      use cresp_io,        only: create_cresp_smap_fields
-      use cresp_NR_method, only: cresp_write_smaps_to_hdf
-#endif /* COSM_RAY_ELECTRONS */
+      use constants,         only: I_ONE
+      use dataio_pub,        only: maxenvlen, maxparlen, use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,       only: user_attrs_wr, user_attrs_pre
+      use hdf5,              only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+         & h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, &
+         & h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
+      use mpisetup,          only: master, slave
+      use version,           only: env, nenv
+#ifdef CRESP
+      use cresp_io,          only: write_cresp_to_restart
+#endif /* CRESP */
 #ifdef RANDOMIZE
-      use randomization, only: write_current_seed_to_restart
+      use randomization,     only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-      use snsources,     only: write_snsources_to_restart
+      use snsources,         only: write_snsources_to_restart
 #endif /* SN_SRC */
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: write_oldsoln_to_restart
@@ -569,21 +552,15 @@ contains
       call H5Pclose_f(prp_id, error)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call write_cresp_to_restart(file_id)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
-#ifdef COSM_RAY_ELECTRONS
-      if (use_cresp) then
-         call create_cresp_smap_fields(file_id) ! create "/cresp/smaps_{LO,UP}/..."
-         call cresp_write_smaps_to_hdf(file_id) ! create "/cresp/smaps_{LO,UP}/{p_f}_ratio"
-      endif
-#endif /* COSM_RAY_ELECTRONS */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -878,12 +855,12 @@ contains
       use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Allgather, MPI_Recv, MPI_Send
       use mpisetup,     only: FIRST, LAST, master, err_mpi, piernik_MPI_Bcast
-#ifdef NBODY_1FILE
-      use constants,      only: I_FIVE
-      use particle_utils, only: count_all_particles
-#else /* !NBODY_1FILE */
-      use constants,      only: I_ZERO
-#endif /* NBODY_1FILE */
+#ifdef NBODY
+      use constants,    only: I_FIVE, I_SIX
+      !use particle_utils, only: count_all_particles
+#else /* !NBODY */
+      use constants,    only: I_ZERO
+#endif /* NBODY */
 
       implicit none
 
@@ -893,21 +870,15 @@ contains
          !>
          !! Function responsible for creating empty datasets, called by master
          !<
-#ifdef NBODY_1FILE
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else /* !NBODY_1FILE */
-         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* !NBODY_1FILE */
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                intent(in) :: cgl_g_id
             integer(kind=4), dimension(:), intent(in) :: cg_n_b
             integer(kind=4), dimension(:), intent(in) :: cg_n_o
             logical(kind=4),               intent(in) :: Z_avail
-#ifdef NBODY_1FILE
-            integer(kind=8)                           :: n_part
+            integer(kind=8),               intent(in) :: n_part
             integer(HID_T),                intent(in) :: st_g_id
-#endif /* NBODY_1FILE */
          end subroutine create_empty_cg_datasets
 
          !>
@@ -927,12 +898,12 @@ contains
       integer(HID_T)                                :: plist_id         !< Property list identifier
       integer(HID_T)                                :: cgl_g_id         !< cg list identifiers
       integer(HID_T)                                :: cg_g_id          !< cg group identifiers
-#ifdef NBODY_1FILE
+#ifdef NBODY
       integer(HID_T)                                :: pt_g_id          !< particle_types identifiers
       integer(HID_T)                                :: ptst_g_id        !< particle_types stars identifiers
       integer(HID_T)                                :: part_g_id        !< particles identifiers
+#endif /* NBODY */
       integer(HID_T)                                :: st_g_id          !< stars identifiers
-#endif /* NBODY_1FILE */
       integer(HID_T)                                :: doml_g_id        !< domain list identifier
       integer(HID_T)                                :: dom_g_id         !< domain group identifier
       integer(kind=4)                               :: error, cg_cnt, p !< error perhaps should be of type integer(HID_T)
@@ -945,9 +916,8 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
-#ifdef NBODY_1FILE
-      integer(kind=8),  pointer                      :: cg_npart
-#endif /* NBODY_1FILE */
+      integer(kind=8),  dimension(:),   pointer     :: cg_npart         !< list of particle count from all cgs/procs
+      integer(kind=8),  dimension(:),   pointer     :: cg_pid_max       !< list of maximum particle id from all cgs/procs
 
       !>
       !! auxiliary array for communication of {cg_le, cg_re, cg_dl} lists
@@ -961,9 +931,6 @@ contains
 
       type(gdf_root_datasets_t)                     :: rd
       type(gdf_parameters_t)                        :: gdf_sp
-#ifdef NBODY_1FILE
-      integer(kind=8)                               :: n_part
-#endif /* NBODY_1FILE */
 
       ! Create a new file and initialize it
 
@@ -1019,10 +986,10 @@ contains
             call gdf_sp%cleanup()
          endif
          call h5gcreate_f(file_id, data_gname, cgl_g_id, error)     ! create "/data"
-#ifdef NBODY_1FILE
+#ifdef NBODY
          call h5gcreate_f(file_id, part_types_gname, pt_g_id, error)     ! create "/particle_types"
          call h5gcreate_f(pt_g_id, st_gname, ptst_g_id, error)     ! create "/particle_types/stars"
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
          call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
 
@@ -1033,16 +1000,22 @@ contains
 
          ! Do not assume that the master knows all the lists
          do p = FIRST, LAST
-            allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
+            allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims), cg_npart(cg_n(p)))
+#ifdef NBODY
+            allocate(cg_pid_max(cg_n(p)))
+#else /* !NBODY */
+            cg_npart = I_ZERO
+#endif /* !NBODY */
             nullify(dbuf)
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             nullify(cg_n_o)
             if (otype == O_RES) allocate(cg_n_o(cg_n(p), ndims))
             if (p == FIRST) then
-               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
-#ifdef NBODY_1FILE
-               n_part = count_all_particles()
-#endif /* NBODY_1FILE */
+               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, cg_npart, cg_pid_max, dbuf, otype)
+#ifdef NBODY
+!               n_part = count_all_particles()
+!               pid_max = pid_gen
+#endif /* NBODY */
             else
                call MPI_Recv(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  p, tag,         MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                call MPI_Recv(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  p, tag+I_ONE,   MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
@@ -1050,26 +1023,26 @@ contains
                if (otype == O_OUT) &
                   & call MPI_Recv(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    p, tag+I_THREE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                if (otype == O_RES) &
-                    & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-#ifdef NBODY_1FILE
-               call MPI_Recv(n_part, I_ONE, MPI_INTEGER, p, tag+I_FIVE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
-#endif /* NBODY_1FILE */
+                  & call MPI_Recv(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  p, tag+I_FOUR,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+#ifdef NBODY
+               call MPI_Recv(cg_npart,   size(cg_npart,   kind=4), MPI_INTEGER8, p, tag+I_FIVE, MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(cg_pid_max, size(cg_pid_max, kind=4), MPI_INTEGER8, p, tag+I_SIX,  MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
+#endif /* NBODY */
             endif
 
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(int(sum(cg_n(:p))-cg_n(p)+g, kind=4)), cg_g_id, error) ! create "/data/grid_%08d"
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
                call h5gcreate_f(cg_g_id, part_gname, part_g_id, error) ! create "/data/grid_%08d/particles
                call h5gcreate_f(part_g_id, st_gname, st_g_id, error) ! create "/data/grid_%08d/particles/stars"
-               allocate(cg_npart)
-               cg_npart = n_part
 
-               if (int(cg_npart, kind=4) /= cg_npart) call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
+               if (int(cg_npart(g),   kind=4) /= cg_npart(g))   call die("[common_hdf5:write_to_hdf5_v2] cg_npart needs to be 64-bit")
+               if (int(cg_pid_max(g), kind=4) /= cg_pid_max(g)) call die("[common_hdf5:write_to_hdf5_v2] pid_max needs to be 64-bit")
 
-               call create_attribute(st_g_id, "n_part", [ int(cg_npart, kind=4) ])  ! create "/data/grid_%08d/particles/stars/stars/n_part"
-               deallocate(cg_npart)
-#endif /* NBODY_1FILE */
+               call create_attribute(st_g_id, "n_part",  [ int(cg_npart(g),   kind=4) ])  ! create "/data/grid_%08d/particles/stars/n_part"
+               call create_attribute(st_g_id, "pid_max", [ int(cg_pid_max(g), kind=4) ])  ! create "/data/grid_%08d/particles/stars/pid_max"
+#endif /* NBODY */
 
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
@@ -1092,39 +1065,34 @@ contains
                   rd%grid_level(indx) = cg_rl(g)
                   rd%grid_left_index(:,indx) = cg_off(g,:)
                   rd%grid_parent_id(indx)     = -1
-#ifdef NBODY_1FILE
-                  if (int(n_part, kind=4) /= n_part) call die("[common_hdf5:write_to_hdf5_v2] n_part needs to be 64-bit")
-
-                  rd%grid_particle_count(1,indx) = int(n_part, kind=4)
-#else /* !NBODY_1FILE */
-                  rd%grid_particle_count(1,indx) = I_ZERO
-#endif /* NBODY_1FILE */
+                  rd%grid_particle_count(1,indx) = int(cg_npart(g), kind=4)
                endif
 
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
-#ifdef NBODY_1FILE
-               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, n_part, st_g_id) !!!!!
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, cg_npart(g), st_g_id) !!!!!
+#ifdef NBODY
                call h5gclose_f(st_g_id, error)
                call h5gclose_f(part_g_id, error)
-#else /* !NBODY_1FILE */
-               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
-#endif /* !NBODY_1FILE */
+#endif /* NBODY */
 
                call h5gclose_f(cg_g_id, error)
             enddo
 
-            deallocate(cg_rl, cg_n_b, cg_off)
+            deallocate(cg_rl, cg_n_b, cg_off, cg_npart)
+#ifdef NBODY
+            deallocate(cg_pid_max)
+#endif /* NBODY */
             if (associated(dbuf)) deallocate(dbuf)
             if (associated(cg_n_o)) deallocate(cg_n_o)
          enddo
          rd%grid_dimensions = cg_all_n_b
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
          call h5gclose_f(pt_g_id, error)
          call h5gclose_f(ptst_g_id, error)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
          call h5gclose_f(cgl_g_id, error)
 
@@ -1162,20 +1130,24 @@ contains
          call rd%cleanup()
       else ! send all the necessary information to the master
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
+#ifdef NBODY
+         allocate(cg_npart(leaves%cnt), cg_pid_max(leaves%cnt))
+#endif /* NBODY */
          nullify(dbuf)
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
          nullify(cg_n_o)
          if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
-         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
+         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, cg_npart, cg_pid_max, dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl, kind=4),  MPI_INTEGER,  FIRST, tag,         MPI_COMM_WORLD, err_mpi)
          call MPI_Send(cg_n_b, size(cg_n_b, kind=4), MPI_INTEGER,  FIRST, tag+I_ONE,   MPI_COMM_WORLD, err_mpi)
          call MPI_Send(cg_off, size(cg_off, kind=4), MPI_INTEGER8, FIRST, tag+I_TWO,   MPI_COMM_WORLD, err_mpi)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf, kind=4),   MPI_REAL8,    FIRST, tag+I_THREE, MPI_COMM_WORLD, err_mpi)
          if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o, kind=4), MPI_INTEGER,  FIRST, tag+I_FOUR,  MPI_COMM_WORLD, err_mpi)
-#ifdef NBODY_1FILE
-         n_part = count_all_particles()
-         call MPI_Send(n_part, I_ONE, MPI_INTEGER, FIRST, tag+I_FIVE, MPI_COMM_WORLD, err_mpi)
-#endif /* NBODY_1FILE */
+#ifdef NBODY
+         call MPI_Send(cg_npart,   size(cg_npart,   kind=4), MPI_INTEGER8, FIRST, tag+I_FIVE, MPI_COMM_WORLD, err_mpi)
+         call MPI_Send(cg_pid_max, size(cg_pid_max, kind=4), MPI_INTEGER8, FIRST, tag+I_SIX,  MPI_COMM_WORLD, err_mpi)
+         deallocate(cg_npart, cg_pid_max)
+#endif /* NBODY */
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
          if (associated(cg_n_o)) deallocate(cg_n_o)
@@ -1205,6 +1177,9 @@ contains
 
       deallocate(cg_n, cg_all_n_b, cg_all_n_o)
 
+      return
+      if (.false.) error = int(st_g_id, kind=4)
+
    end subroutine write_to_hdf5_v2
 
 !>
@@ -1212,12 +1187,15 @@ contains
 !!
 !! The loop here has to match the loop in get_nth_cg!
 !>
+   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, cg_npart, cg_pid_max, dbuf, otype)
 
-   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
-
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: LO, HI, I_ONE
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: LO, HI, I_ONE
+#ifdef NBODY
+      use particle_utils, only: count_cg_particles
+      use star_formation, only: pid_gen
+#endif /* NBODY */
 
       implicit none
 
@@ -1225,6 +1203,8 @@ contains
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
       integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs with respect to level offset (lose level offset in the restart)
+      integer(kind=8), dimension(:),     pointer, intent(inout) :: cg_npart         !< list of particle count from all cgs/procs
+      integer(kind=8), dimension(:),     pointer, intent(inout) :: cg_pid_max       !< list of maximum particle id from all cgs/procs
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
@@ -1237,6 +1217,10 @@ contains
          cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
          cg_n_b(g, :) = cgl%cg%n_b(:)
          cg_off(g, :) = cgl%cg%my_se(:, LO) - cgl%cg%l%off(:)
+#ifdef NBODY
+         cg_npart(g)   = count_cg_particles(cgl%cg)
+         cg_pid_max(g) = pid_gen
+#endif /* NBODY */
          if (otype == O_OUT) then
             dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
             dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
@@ -1246,6 +1230,9 @@ contains
          g = g + 1
          cgl => cgl%nxt
       enddo
+
+      return
+      if (.false.) g = kind(cg_npart) + kind(cg_pid_max)
 
    end subroutine collect_cg_data
 
@@ -1403,11 +1390,11 @@ contains
 
    end subroutine dump_announce_time
 
-#ifdef NBODY_1FILE
-   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets, pdsets)
-#else /* !NBODY_1FILE */
-   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
-#endif /* !NBODY_1FILE */
+#ifdef NBODY
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, ntags, dsets, pdsets)
+#else /* !NBODY */
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, ntags, dsets)
+#endif /* !NBODY */
 
       use constants,  only: dsetnamelen, I_ONE
       use dataio_pub, only: can_i_write
@@ -1421,23 +1408,26 @@ contains
       integer(HID_T),                           intent(in)    :: cgl_g_id
       integer(kind=4),   pointer, dimension(:), intent(in)    :: cg_n
       integer(kind=4),                          intent(in)    :: nproc_io
+      integer(kind=4),                          intent(out)   :: ntags
       character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
-#ifdef NBODY_1FILE
+#ifdef NBODY
       character(len=dsetnamelen), dimension(:), intent(in)    :: pdsets
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       integer(kind=4)                                         :: i, ncg
       integer(HID_T)                                          :: plist_id
       integer(kind=4)                                         :: error    !< error perhaps should be of type integer(HID_T)
 
+      ntags = ubound(dsets, 1, kind=4) + I_ONE
       this%tot_cg_n = sum(cg_n)
       allocate(this%cg_src_p(1:this%tot_cg_n))
       allocate(this%cg_src_n(1:this%tot_cg_n))
       allocate(this%cg_g_id(1:this%tot_cg_n))
-#ifdef NBODY_1FILE
+#ifdef NBODY
       allocate(this%part_g_id(1:this%tot_cg_n))
       allocate(this%st_g_id(1:this%tot_cg_n))
-#endif /* NBODY_1FILE */
+      ntags = ntags + ubound(pdsets, 1, kind=4) + I_ONE
+#endif /* NBODY */
       allocate(this%offsets(0:nproc_io-1))
 
       ! construct source addresses of the cg to be written
@@ -1462,28 +1452,28 @@ contains
          plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
          do ncg = I_ONE, this%tot_cg_n
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
-#ifdef NBODY_1FILE
+#ifdef NBODY
             call h5gopen_f(this%cg_g_id(ncg), part_gname, this%part_g_id(ncg), error, gapl_id = plist_id)
-            call h5gopen_f(this%part_g_id(ncg), "stars", this%st_g_id(ncg), error, gapl_id = plist_id)
-#endif /* NBODY_1FILE */
+            call h5gopen_f(this%part_g_id(ncg), st_gname, this%st_g_id(ncg),   error, gapl_id = plist_id)
+#endif /* NBODY */
          enddo
          call h5pclose_f(plist_id, error)
 
          plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
          allocate(this%dset_id(1:this%tot_cg_n, lbound(dsets, dim=1):ubound(dsets, dim=1)))
-#ifdef NBODY_1FILE
+#ifdef NBODY
          allocate(this%pdset_id(1:this%tot_cg_n, lbound(pdsets, dim=1):ubound(pdsets, dim=1)))
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
          do ncg = I_ONE, this%tot_cg_n
             do i = lbound(dsets, dim=1, kind=4), ubound(dsets, dim=1, kind=4)
                call h5dopen_f(this%cg_g_id(ncg), dsets(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
             enddo
 
-#ifdef NBODY_1FILE
+#ifdef NBODY
             do i = lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
                call h5dopen_f(this%st_g_id(ncg), pdsets(i), this%pdset_id(ncg,i), error, dapl_id = plist_id)
             enddo
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
          enddo
          call h5pclose_f(plist_id, error)
       endif
@@ -1509,26 +1499,26 @@ contains
             do i = lbound(this%dset_id, 2), ubound(this%dset_id, 2)
                call h5dclose_f(this%dset_id(ncg, i), error)
             enddo
-#ifdef NBODY_1FILE
+#ifdef NBODY
             do i = lbound(this%pdset_id, 2), ubound(this%pdset_id, 2)
                call h5dclose_f(this%pdset_id(ncg, i), error)
             enddo
             call h5gclose_f(this%st_g_id(ncg), error)
             call h5gclose_f(this%part_g_id(ncg), error)
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
             call h5gclose_f(this%cg_g_id(ncg), error)
          enddo
       endif
       call h5pclose_f(this%xfer_prp, error)
-      if (allocated(this%dset_id)) deallocate(this%dset_id)
-#ifdef NBODY_1FILE
-      if (allocated(this%pdset_id)) deallocate(this%pdset_id)
-      if (allocated(this%st_g_id)) deallocate(this%st_g_id)
+      if (allocated(this%dset_id))   deallocate(this%dset_id)
+#ifdef NBODY
+      if (allocated(this%pdset_id))  deallocate(this%pdset_id)
+      if (allocated(this%st_g_id))   deallocate(this%st_g_id)
       if (allocated(this%part_g_id)) deallocate(this%part_g_id)
-#endif /* NBODY_1FILE */
-      if (allocated(this%cg_g_id)) deallocate(this%cg_g_id)
-      if (allocated(this%cg_src_p)) deallocate(this%cg_src_p)
-      if (allocated(this%cg_src_n)) deallocate(this%cg_src_n)
+#endif /* NBODY */
+      if (allocated(this%cg_g_id))   deallocate(this%cg_g_id)
+      if (allocated(this%cg_src_p))  deallocate(this%cg_src_p)
+      if (allocated(this%cg_src_n))  deallocate(this%cg_src_n)
 
    end subroutine finalize_write_cg
 

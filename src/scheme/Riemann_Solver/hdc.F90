@@ -118,7 +118,8 @@ contains
          if (ch_grid) then
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
-            chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
+            if (dom%eff_dim > 0) &
+                 chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
          else
             ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke
@@ -145,7 +146,7 @@ contains
       use cg_cost_data, only: I_MHD
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: GEO_XYZ
+      use constants,    only: GEO_XYZ, small
       use dataio_pub,   only: die
       use domain,       only: dom
       use global,       only: cfl_glm, ch_grid, dt
@@ -165,7 +166,7 @@ contains
          if (ch_grid) then
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
-            cgl%cg%wa =  cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt
+            cgl%cg%wa = merge(small, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt, dom%eff_dim == 0)
          else
             ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke
@@ -305,15 +306,18 @@ contains
       if (qna%exists(psi_n)) then
 
          fac = 0.
-         cgl => leaves%first
-         do while (associated(cgl))
-            call cgl%cg%costs%start
 
-            fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt))
+         if (dom%eff_dim > 0) then
+            cgl => leaves%first
+            do while (associated(cgl))
+               call cgl%cg%costs%start
 
-            call cgl%cg%costs%stop(I_MHD)
-            cgl => cgl%nxt
-         enddo
+               fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt))
+
+               call cgl%cg%costs%stop(I_MHD)
+               cgl => cgl%nxt
+            enddo
+         endif
          fac = exp(-fac)
          call piernik_MPI_Allreduce(fac, pMIN)
 

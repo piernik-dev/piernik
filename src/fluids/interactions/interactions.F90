@@ -255,6 +255,7 @@ contains
 
    end function fluid_interactions_dummy
 
+#ifndef BALSARA
    function fluid_interactions_aero_drag(dens, velx) result(acc)
 
       use fluidindex,       only: flind
@@ -285,6 +286,7 @@ contains
       acc(:, flind%neu%pos) = -acc(:, flind%dst%pos) * dens(:, flind%dst%pos) / dens(:, flind%neu%pos)
 
    end function fluid_interactions_aero_drag_ep
+#endif /* !BALSARA */
 
 !>
 !! \details
@@ -458,6 +460,7 @@ contains
 
    end subroutine update_grain_size
 
+#ifndef BALSARA
 !>
 !! \brief Function that computes contribution from a drag force for all fluids
 !! \param dens density flind%fluids x ncells array
@@ -484,6 +487,7 @@ contains
       enddo
 
    end function dragforce
+#endif /* !BALSARA */
 
 !>
 !! \brief interface between sources and fluid_interactions

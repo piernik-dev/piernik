@@ -48,7 +48,6 @@ module dataio
 
    integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
-   logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
    real                     :: dt_res                !< simulation time between successive restart file dumps
@@ -59,9 +58,7 @@ module dataio
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
-#ifdef NBODY
-   character(len=dsetnamelen), dimension(12) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
-#endif /* NBODY */
+   character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
@@ -88,12 +85,12 @@ module dataio
       logical :: dummy
 #ifdef COSM_RAYS
       real :: encr_min, encr_max
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
       real :: cren_min, cren_max                     !< values of cre number density
       real :: cree_min, cree_max                     !< values of cre energy density
       real :: divv_min, divv_max                     !< vel. divergence values
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
 #ifdef RESISTIVE
       real :: etamax
 #endif /* RESISTIVE */
@@ -107,8 +104,8 @@ module dataio
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump,    &
+                              domain_dump, vars, pvars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files, &
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
@@ -153,7 +150,6 @@ contains
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
-!! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
 !! <tr><td>fmax               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmax         </td></tr>
@@ -267,7 +263,6 @@ contains
       use constants,  only: idlen, cbuff_len, INT4
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
-
       implicit none
 
       problem_name  = "nameless"
@@ -295,10 +290,7 @@ contains
 
       domain_dump   = 'phys_domain'
       vars(:)       = ''
-#ifdef NBODY
-      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
-#endif /* NBODY */
-      mag_center    = .false.
+      pvars(:)      = ''
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
@@ -397,7 +389,7 @@ contains
          ibuff(21) = resdel
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
@@ -413,7 +405,6 @@ contains
          lbuff(1)  = vizit
          lbuff(2)  = multiple_h5files
          lbuff(3)  = use_v2_io
-         lbuff(4)  = mag_center
          lbuff(5)  = init_hdf_dump
          lbuff(6)  = init_res_dump
          lbuff(7)  = tsl_with_mom
@@ -422,6 +413,9 @@ contains
          lbuff(10) = gdf_strict
          lbuff(11) = h5_64bit
 
+         cbuff(20) = user_message_file(1:cbuff_len)
+         cbuff(21) = system_message_file(1:cbuff_len)
+
          cbuff(31) = problem_name
          cbuff(32) = run_id
          cbuff(40) = domain_dump
@@ -429,9 +423,9 @@ contains
          do iv = 1, nvarsmx
             cbuff(40+iv) = vars(iv)
          enddo
-
-         cbuff(90) = user_message_file(1:cbuff_len)
-         cbuff(91) = system_message_file(1:cbuff_len)
+         do iv = 1, nvarsmx
+            cbuff(40+nvarsmx+iv) = pvars(iv)
+         enddo
 
       endif
 
@@ -456,7 +450,7 @@ contains
          resdel              = ibuff(21)
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict
 
          nproc_io            = int(ibuff(43), kind=4)
@@ -473,7 +467,6 @@ contains
          vizit               = lbuff(1)
          multiple_h5files    = lbuff(2)
          use_v2_io           = lbuff(3)
-         mag_center          = lbuff(4)
          init_hdf_dump       = lbuff(5)
          init_res_dump       = lbuff(6)
          tsl_with_mom        = lbuff(7)
@@ -482,15 +475,19 @@ contains
          gdf_strict          = lbuff(10)
          h5_64bit            = lbuff(11)
 
+         user_message_file   = trim(cbuff(20))
+         system_message_file = trim(cbuff(21))
+
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
          domain_dump         = trim(cbuff(40))
+
          do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
-
-         user_message_file   = trim(cbuff(90))
-         system_message_file = trim(cbuff(91))
+         do iv = 1, nvarsmx
+            pvars(iv)        = trim(cbuff(40+nvarsmx+iv))
+         enddo
 
       endif
 
@@ -517,7 +514,7 @@ contains
       use global,       only: t, nstep
       use restart_hdf5, only: read_restart_hdf5
 #ifdef NBODY
-      use cg_particles_io, only: init_nbody_hdf5
+      use particles_io, only: init_nbody_hdf5
 #endif /* NBODY */
 #endif /* HDF5 */
 
@@ -525,12 +522,26 @@ contains
 
       logical :: tn
       integer :: i
+      integer, parameter :: fg_len = 5  ! length of "f12.4" or "g14.4"
+      character(len=fg_len) :: fg_fmt
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
-      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+      if (dom%eff_dim == 0) then
+         fmt_loc   = "(2x,a12,a3,'  = ',es16.9,16x,            1x,i4)"
+         fmt_dtloc = "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, 1x,i4)"
+         fmt_vloc  = "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, 1x,i4)"
+      else
+         ! We strongly prefer to use f format where possible. Too bad that the g format is so compiler-dependent and often less smart than it could be.
+         fg_fmt = "f12.4"
+         if (maxval(dom%edge) < 1.) fg_fmt = "f12.9"
+         if ((maxval(dom%edge) > 1e6) .or. (maxval(dom%edge) < 1e-4)) fg_fmt = "e12.5"
+
+         write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+         write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+         write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+      endif
+
 
       if (master) tn = walltime_end%time_left(wend)
 
@@ -646,8 +657,8 @@ contains
             case ('ppp')
                if (abs(umsg_param) < huge(1_4)) then
                   umsg_request = max(1, int(umsg_param))
-                  write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
-                       " step(s)" // trim(merge("s", " ", umsg_request == 1))
+                  write(msg,'(a,i6,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
+                       " step" // trim(merge(" ", "s", umsg_request == 1))
                   if (master) call printinfo(msg)
                else
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
@@ -937,13 +948,11 @@ contains
       use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
       use fluidindex,       only: iarr_all_crn
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-#else /* !COSM_RAY_ELECTRONS */
-      use fluidindex,       only: iarr_all_crs
-#endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+#endif /* CRESP */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
 #endif /* RESISTIVE */
@@ -951,7 +960,7 @@ contains
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
 #ifdef NBODY
-      use particle_utils,   only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
+      use particle_diag,    only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
 #endif /* NBODY */
 
       implicit none
@@ -977,11 +986,11 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
          enumerator :: T_ENCR                                  !< total CR energy
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
          enumerator :: T_CREE                                  !< total CRE (electron component) energy
          enumerator :: T_CREN                                  !< total CRE (electron component) density
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
          enumerator :: T_LAST                                  !< DO NOT place any index behind this one
       end enum
       real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
@@ -1026,12 +1035,12 @@ contains
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
             call pop_vector(tsl_names, field_len, ["encr_tot", "encr_min", "encr_max"])
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
             call pop_vector(tsl_names, field_len, ["cren_tot", "cren_min", "cren_max" ])
             call pop_vector(tsl_names, field_len, ["cree_tot", "cree_min", "cree_max"])
             call pop_vector(tsl_names, field_len, ["divv_min", "divv_max" ])
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
             ! \todo: replicated code, simplify me
             if (has_ion) then
                call pop_vector(tsl_names, field_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max "])
@@ -1102,14 +1111,12 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
                tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap)
+#ifdef CRESP
                tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_cre_n,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_cre_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
-#else /* !COSM_RAY_ELECTRONS */
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* CRESP */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
@@ -1143,14 +1150,12 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+#ifdef CRESP
                   tot_q(T_CREN) = tot_q(T_CREN) + drvol * sum(sum(pu(iarr_cre_n,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   tot_q(T_CREE) = tot_q(T_CREE) + drvol * sum(sum(pu(iarr_cre_e,   ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
-#else /* !COSM_RAY_ELECTRONS */
-                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
-#endif /* !COSM_RAY_ELECTRONS */
+#endif /* CRESP */
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
                enddo
@@ -1197,11 +1202,11 @@ contains
          call pop_vector(tsl_vars, [tot_q(T_ENCR), tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
          call pop_vector(tsl_vars, [tot_q(T_CREN), tsl%cren_min, tsl%cren_max])
          call pop_vector(tsl_vars, [tot_q(T_CREE), tsl%cree_min, tsl%cree_max])
          call pop_vector(tsl_vars, [tsl%divv_min, tsl%divv_max])
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
          do ifl = lbound(flind%all_fluids, 1, kind=4), ubound(flind%all_fluids, 1, kind=4)
             sn => flind%all_fluids(ifl)%fl%snap
@@ -1618,19 +1623,17 @@ contains
       use types,              only: value
 #ifdef COSM_RAYS
       use constants,          only: pMIN
-#ifdef COSM_RAY_ELECTRONS
       use fluidindex,         only: iarr_all_crn
+      use mpisetup,           only: piernik_MPI_Allreduce
+      use timestepcosmicrays, only: dt_crs
+#endif /* COSM_RAYS */
+#ifdef CRESP
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
       use timestep_cresp,     only: dt_cre_adiab, dt_cre_K
 #ifdef MAGNETIC
       use timestep_cresp,     only: dt_cre_synch
 #endif /* MAGNETIC */
-#else /* !COSM_RAY_ELECTRONS */
-      use fluidindex,         only: iarr_all_crs
-#endif /* !COSM_RAY_ELECTRONS */
-      use mpisetup,           only: piernik_MPI_Allreduce
-      use timestepcosmicrays, only: dt_crs
-#endif /* COSM_RAYS */
+#endif /* CRESP */
 #if defined COSM_RAYS || defined MAGNETIC
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
@@ -1674,11 +1677,11 @@ contains
 #ifdef COSM_RAYS
       type(value)                     :: encr_min, encr_max
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       type(value)                     :: cren_min, cren_max !< values of cre density
       type(value)                     :: cree_min, cree_max !< values of cre energy
       type(value)                     :: divv_min, divv_max !< values of div_v
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 #ifdef VARIABLE_GP
       type(value)                     :: gpxmax, gpymax, gpzmax
       integer                         :: var_i
@@ -1710,10 +1713,10 @@ contains
       enddo
       call leaves%get_extremum(qna%wai, MAXL, b_max)
       call leaves%get_extremum(qna%wai, MINL, b_min)
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       b_max%assoc = dt_cre_synch
       call piernik_MPI_Allreduce(b_max%assoc, pMIN)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       if (has_ion) then
          cgl => leaves%first
@@ -1816,11 +1819,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-#ifdef COSM_RAY_ELECTRONS
          cgl%cg%wa = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
-#else /* !COSM_RAY_ELECTRONS */
-         cgl%cg%wa = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
-#endif /* !COSM_RAY_ELECTRONS */
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
@@ -1829,7 +1828,8 @@ contains
       call leaves%get_extremum(qna%wai, MINL, encr_min)
       encr_max%assoc = dt_crs
       call piernik_MPI_Allreduce(encr_max%assoc, pMIN)
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
       cgl => leaves%first
       do while (associated(cgl))
          call cgl%cg%costs%start
@@ -1885,8 +1885,7 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, divv_max)
       divv_max%assoc = dt_cre_adiab
       call piernik_MPI_Allreduce(divv_max%assoc, pMIN)
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
 
       if (has_interactions) then
          cgl => leaves%first
@@ -1916,11 +1915,11 @@ contains
 #ifdef MAGNETIC
             id = "MAG"
             call cmnlog_s(fmt_loc,   'min(|b|)    ', id, b_min)
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             call cmnlog_l(fmt_dtloc, 'max(|b|)    ', id, b_max)
-#else /* !COSM_RAY_ELECTRONS */
+#else /* !CRESP */
             call cmnlog_s(fmt_loc,   'max(|b|)    ', id, b_max)
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
             call cmnlog_s(fmt_loc,   'max(|divb|) ', id, divb_max)
             if (divB_0_method /= DIVB_HDC .or. which_solver /= RIEMANN_SPLIT) id = "N/A"
             call cmnlog_s(fmt_loc, 'max(|c_h|)  ', id, ch_max)
@@ -1929,14 +1928,11 @@ contains
             if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
             if (has_interactions) call cmnlog_l(fmt_dtloc, 'max(drag)   ', "INT", drag)
 #ifdef COSM_RAYS
-#ifdef COSM_RAY_ELECTRONS
             id = "CRN"
-#else /* !COSM_RAY_ELECTRONS */
-            id = "CRS"
-#endif /* COSM_RAY_ELECTRONS */
             call cmnlog_s(fmt_loc,   'min(encr)   ', id, encr_min)
             call cmnlog_l(fmt_dtloc, 'max(encr)   ', id, encr_max)
-#ifdef COSM_RAY_ELECTRONS
+#endif /* COSM_RAYS */
+#ifdef CRESP
             id = "CRE"
             call cmnlog_s(fmt_loc,   'min(cren)    ', id, cren_min)
             call cmnlog_s(fmt_loc,   'max(cren)    ', id, cren_max)
@@ -1944,8 +1940,7 @@ contains
             call cmnlog_l(fmt_dtloc, 'max(cree)    ', id, cree_max)
             call cmnlog_s(fmt_loc,   'min(div_v)   ', id, divv_min)
             call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
-#endif /* COSM_RAY_ELECTRONS */
-#endif /* COSM_RAYS */
+#endif /* CRESP */
 #ifdef RESISTIVE
             if (eta1_active) then
                id = "RES"
@@ -1979,14 +1974,14 @@ contains
             tsl%encr_min = encr_min%val
             tsl%encr_max = encr_max%val
 #endif /* COSM_RAYS */
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
             tsl%cren_min = cren_min%val
             tsl%cren_max = cren_max%val
             tsl%cree_min = cree_min%val
             tsl%cree_max = cree_max%val
             tsl%divv_min = divv_min%val
             tsl%divv_max = divv_max%val
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
 #ifdef RESISTIVE
             if (eta1_active) tsl%etamax = etamax%val

@@ -17,6 +17,12 @@
 #  endif /* !NONMAGNETIC */
 #endif /* IONIZED */
 
+#ifdef CRESP
+#  ifndef COSM_RAYS
+#    define COSM_RAYS
+#  endif /* !COSM_RAYS */
+#endif /* CRESP */
+
 #if !defined(MAGNETIC) && defined(RESISTIVE)
 #define NOMAGNETICNORESIST
 #undef RESISTIVE
@@ -24,7 +30,6 @@
 
 #ifdef NBODY
 #   define NBODY_MULTIGRID
-#   define NBODY_1FILE
 #endif /* NBODY */
 
 #ifdef NBODY_MULTIGRID

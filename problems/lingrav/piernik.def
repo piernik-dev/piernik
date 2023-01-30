@@ -1,14 +1,12 @@
-#define IONIZED
-#undef MAGNETIC
-
-#define ISO
-
-
 #if !defined LOCAL_FR_SPEED
 #  define GLOBAL_FR_SPEED
 #endif
 
+#define ISO
 
+#define IONIZED
+
+#undef MAGNETIC
 #undef RESISTIVE
 
 #define GRAV

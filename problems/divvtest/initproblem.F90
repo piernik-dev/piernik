@@ -36,13 +36,11 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4) :: norm_step
-   real            :: t_sn
-   real            :: d0, p0, r0, beta_cr, amp_cr
+   real                   :: d0, p0, r0, beta_cr, amp_cr
    real, dimension(ndims) :: c_exp, c_rot, b0, sn_pos
 
 
-   namelist /PROBLEM_CONTROL/  d0, p0, b0, sn_pos, r0, beta_cr, amp_cr, norm_step, c_exp, c_rot
+   namelist /PROBLEM_CONTROL/ d0, p0, b0, sn_pos, r0, beta_cr, amp_cr, c_exp, c_rot
 
 contains
 !-----------------------------------------------------------------------------
@@ -57,22 +55,18 @@ contains
       use dataio_pub, only: die, nh
       use domain,     only: dom
       use func,       only: operator(.equals.)
-      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      t_sn = 0.0
+      d0        = 1.0e5     !< density
+      p0        = 1.0       !< pressure
+      b0        = [ 0., 0., 0. ] !< Magnetic field
+      sn_pos    = [ 0., 0., 0. ] !< position of blob
+      r0        = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
 
-      d0           = 1.0e5     !< density
-      p0           = 1.0       !< pressure
-      b0           = [ 0., 0., 0. ] !< Magnetic field
-      sn_pos       = [ 0., 0., 0. ] !< position of blob
-      r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
-
-      beta_cr      = 0.0       !< ambient level
-      amp_cr       = 1.0       !< amplitude of the blob
-
-      norm_step    = 10        !< how often to compute the norm (in steps)
+      beta_cr   = 0.0       !< ambient level
+      amp_cr    = 1.0       !< amplitude of the blob
 
       c_exp = [ 0.0, 0.0, 0.0 ]
       c_rot = [ 0.0, 0.0, 0.0 ]
@@ -105,10 +99,8 @@ contains
          rbuff(12:14) = c_exp
          rbuff(15:17) = c_rot
 
-         ibuff(1) = norm_step
       endif
 
-      call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
@@ -123,7 +115,6 @@ contains
          c_exp        = rbuff(12:14)
          c_rot        = rbuff(15:17)
 
-         norm_step = int(ibuff(1), kind=4)
       endif
 
       if (r0 .equals. 0.0) call die("[initproblem:read_problem_par] r0 == 0")
@@ -135,6 +126,7 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, pi, I_ONE
+      use cr_data,        only: icr_H1, icr_C12, cr_index
       use crhelpers,      only: div_v
       use dataio_pub,     only: warn
       use domain,         only: dom
@@ -142,10 +134,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12, cr_table
-#endif /* COSM_RAYS_SOURCES */
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 
       implicit none
 
@@ -154,10 +143,6 @@ contains
       real                             :: cs_iso, r, r2
       type(cg_list_element),  pointer  :: cgl
       type(grid_container),   pointer  :: cg
-#ifndef COSM_RAYS_SOURCES
-      integer, parameter               :: icr_H1 = 1, icr_C12 = 2
-      integer, parameter, dimension(2) :: cr_table = [1,2]
-#endif /* !COSM_RAYS_SOURCES */
 
       fl => flind%ion
 
@@ -169,10 +154,10 @@ contains
          b0 = 0.0  ! ignore B field in nonexistent direction
       endwhere
 
-      if ((sum(b0**2) .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
-         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
-         K_crn_paral(:) = 0.
-         K_crn_perp(:)  = 0.
+      if ((sum(b0**2) .equals. 0.) .and. (any(K_cr_paral(:) .notequals. 0.) .or. any(K_cr_perp(:) .notequals. 0.))) then
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_cr_* also have to be 0.")
+         K_cr_paral(:) = 0.
+         K_cr_perp(:)  = 0.
       endif
 
       cgl => leaves%first
@@ -180,8 +165,8 @@ contains
          cg => cgl%cg
 
          call cg%set_constant_b_field(b0)
-         cg%u(fl%idn, :, :, :) = d0
-         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+         cg%u(fl%idn,RNG) = d0
+         cg%u(fl%imx:fl%imz,RNG) = 0.0
 
          do k = lbound(cg%u, zdim+I_ONE), ubound(cg%u, zdim+I_ONE)
             do j = lbound(cg%u, ydim+I_ONE), ubound(cg%u, ydim+I_ONE)
@@ -209,7 +194,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = lbound(iarr_crs, 1), ubound(iarr_crs, 1)
-            cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :) / (gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr),RNG) =  beta_cr * fl%cs2 * cg%u(fl%idn,RNG) / gamma_cr_1
          enddo
 
 ! Explosions
@@ -224,12 +209,12 @@ contains
                               r2 = (cg%x(i) - sn_pos(xdim) + real(ipm) * dom%L_(xdim))**2 + &
                                  & (cg%y(j) - sn_pos(ydim) + real(jpm) * dom%L_(ydim))**2 + &
                                  & (cg%z(k) - sn_pos(zdim) + real(kpm) * dom%L_(zdim))**2
-                              if (icr == cr_table(icr_H1)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
-                              elseif (icr == cr_table(icr_C12)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                              if (icr == cr_index(icr_H1)) then
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*exp(-r2/r0**2)
+                              elseif (icr == cr_index(icr_C12)) then
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
-                                 cg%u(iarr_crn(icr), i, j, k) = 0.0
+                                 cg%u(iarr_crn(icr),i,j,k) = 0.0
                               endif
 
                            enddo

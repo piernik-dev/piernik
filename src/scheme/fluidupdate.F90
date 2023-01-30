@@ -98,9 +98,9 @@ contains
       use hdc,            only: update_chspeed
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       use cresp_grid,     only: cresp_update_grid, cresp_clean_grid
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       implicit none
 
@@ -114,9 +114,9 @@ contains
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
       halfstep = .true.
       t = t + dt
@@ -124,9 +124,9 @@ contains
 
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
-#ifdef COSM_RAY_ELECTRONS
+#ifdef CRESP
       call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
-#endif /* COSM_RAY_ELECTRONS */
+#endif /* CRESP */
 
    end subroutine fluid_update_full
 
@@ -156,6 +156,7 @@ contains
 #else /* !MULTIGRID */
       use initcosmicrays,      only: use_CRdiff
 #endif /* !MULTIGRID */
+      use crdiffusion,         only: make_diff_sweeps
 #endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
@@ -188,9 +189,7 @@ contains
 #else /* !MULTIGRID */
       if (use_CRdiff) then
 #endif /* !MULTIGRID */
-         do s = sFRST, sLAST, sCHNG
-            if (.not.skip_sweep(s)) call make_diff_sweep(s)
-         enddo
+         call make_diff_sweeps(forward)
       endif
 #endif /* COSM_RAYS */
 
@@ -282,29 +281,5 @@ contains
 #endif /* DEBUG */
 
    end subroutine make_adv_sweep
-
-#ifdef COSM_RAYS
-!>
-!! \brief Perform single diffusion sweep in forward or backward direction
-!<
-   subroutine make_diff_sweep(dir)
-
-      use crdiffusion,    only: cr_diff
-#ifdef DEBUG
-      use piernikiodebug, only: force_dumps
-#endif /* DEBUG */
-
-      implicit none
-
-      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
-
-      call cr_diff(dir)
-
-#ifdef DEBUG
-      call force_dumps
-#endif /* DEBUG */
-
-   end subroutine make_diff_sweep
-#endif /* COSM_RAYS */
 
 end module fluidupdate

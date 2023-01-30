@@ -389,11 +389,10 @@ contains
       use cg_cost_data, only: I_MULTIPOLE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, PPP_GRAV
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
-      use func,         only: operator(.notequals.)
       use ppp,          only: ppp_main
 
       implicit none
@@ -405,7 +404,7 @@ contains
       character(len=*), parameter :: m2m_label = "multipole_img2mom"
 
       call ppp_main%start(m2m_label, PPP_GRAV)
-      if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(abs(Q%center(xdim:zdim)) > tiny(1.))) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       geofac(:) = 1.
 
@@ -473,11 +472,10 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, zdim, GEO_XYZ, zero, base_level_id, PPP_GRAV
+      use constants,          only: xdim, zdim, GEO_XYZ, base_level_id, PPP_GRAV
       use dataio_pub,         only: die, msg, warn
       use domain,             only: dom
       use grid_cont,          only: grid_container
-      use func,               only: operator(.notequals.)
       use multigridvars,      only: source
       use multipole_array,    only: mpole_level, mpole_level_auto
       use ppp,                only: ppp_main
@@ -492,7 +490,7 @@ contains
 
       call ppp_main%start(d2m_label, PPP_GRAV)
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:domain2moments] Q%center /= 0. not implemented for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(abs(Q%center(xdim:zdim)) > tiny(1.))) call die("[multigridmultipole:domain2moments] Q%center /= 0. not implemented for non-cartesian geometry")
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:domain2moments] Noncartesian geometry haven't been tested. Verify it before use.")
 
       ! scan
@@ -588,7 +586,6 @@ contains
                ! particles may be smooth (with partial mappings allowed) but it must not allow for
                ! particle mappings extending beyond domain boundaries.
                !
-               ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
             ! A "not_mapped" flag set in the mapping routine would fix this issue.
 
             pset => pset%nxt
@@ -614,11 +611,10 @@ contains
       use cg_cost_data, only: I_MULTIPOLE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero, PPP_GRAV
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, PPP_GRAV
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
-      use func,         only: operator(.notequals.)
       use ppp,          only: ppp_main
 
       implicit none
@@ -630,7 +626,7 @@ contains
 
       call ppp_main%start(m2p_label, PPP_GRAV)
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(Q%center(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(abs(Q%center(xdim:zdim)) > tiny(1.))) call die("[multigridmultipole:img_mass2moments] Q%center /= 0. not implemented for non-cartesian geometry")
 
       cgl => leaves%first
       do while (associated(cgl))
