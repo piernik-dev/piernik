@@ -30,8 +30,8 @@ parser = OptionParser(
     "Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
 parser.add_option("-F", "--file", dest="filename",
                   default="None", help=u"File to use", type="str")
-parser.add_option("-v", "--var", dest="var_name", default="e",
-                  help=u"Variable to plot the spectrum (default: e)")
+parser.add_option("-v", "--var", dest="var_name", default="n",
+                  help=u"Variable to plot the spectrum (default: n)")
 parser.add_option("-f", "--field", dest="fieldname", default="",
                   help=u"DS fieldname to image (default:cree_tot)")
 parser.add_option("-z", "--zlim", dest="plot_range", default=("x", "y"),
@@ -102,7 +102,7 @@ spc_e_lab = "cr_" + spc_label + "e" # -> "cr_e-e" default
 if (options.crspecies[0:3] != "cr_"): options.crspecies = "cr_" + options.crspecies
 plot_field = options.fieldname if len(options.fieldname)>1 else options.crspecies + "n_tot" # DEFAULT cr_e-e_tot
 
-plot_var = options.var_name
+#plot_var = options.var_name
 plot_vel = options.plot_vel
 plot_mag = options.plot_mag
 spc_label = options.crspecies
@@ -192,10 +192,10 @@ def BC_ratio(field, data):  # Boron to Carbon
     for ind in range(1,ncrb+1):
         print(ind)
         for element1 in h5ds.field_list:
-                if ("cr_Be9n" + str(ind).zfill(2) == str(element1[1])):
+                if ("cr_B11n" + str(ind).zfill(2) == str(element1[1])):
                         for element2 in h5ds.field_list:
                              if ("cr_C12n" + str(ind).zfill(2) == str(element2[1])):
-                                Bn_data = data["cr_Be9n" + str(ind).zfill(2)]
+                                Bn_data = data["cr_B11n" + str(ind).zfill(2)]
                                 Cn_data = data["cr_C12n" + str(ind).zfill(2)]
                                 BC_ratio.append(Bn_data/Cn_data)
 
@@ -409,12 +409,12 @@ if f_run is True:
         except:
             die("Failed to construct field %s" % plot_field)
 
-    if (plot_field == "cr_Be9n_"):
+    if (plot_field == "cr_B11n_"):
         print('hello ! ')
         #try:
-        print(dsSlice["cr_Be9n01"].units)
+        print(dsSlice["cr_B11n01"].units)
         """
-        if str(dsSlice["cr_Be9n01"].units) == "":  # DEPRECATED
+        if str(dsSlice["cr_B11n01"].units) == "":  # DEPRECATED
             print('case 1 ')
             h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
                            display_name="Ratio B/C in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
@@ -611,20 +611,21 @@ if f_run is True:
         print('Here it comes : ')
         print(plot_field)
 
-        if(plot_field == "cr_Be9n_tot"): #Plot B to C ratio rather than spectra
+        #if(plot_field == "cr_B11n_tot"): #Plot B to C ratio rather than spectra
+        if(plot_field == "cr_B11n_tot"): #Plot B to C ratio rather than spectra
             """
             prtinfo("Value of BC ratio at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
-                    coords[2], position["cr_Be9n" + str(plot_field_click[-2:])] / position["cr_C12n" + str(plot_field_click[-2:])]))
+                    coords[2], position["cr_B11n" + str(plot_field_click[-2:])] / position["cr_C12n" + str(plot_field_click[-2:])]))
             """
             BC_ratio = []
 
             for ind in range(1,ncrb+1):
 
                for element1 in h5ds.field_list:
-                   if ("cr_Be9n" + str(ind).zfill(2) == str(element1[1])):
+                   if ("cr_B11n" + str(ind).zfill(2) == str(element1[1])):
                        for element2 in h5ds.field_list:
                             if ("cr_C12n" + str(ind).zfill(2) == str(element2[1])):
-                                 Bn_data = position["cr_Be9n" + str(ind).zfill(2)]
+                                 Bn_data = position["cr_B11n" + str(ind).zfill(2)]
                                  Cn_data = position["cr_C12n" + str(ind).zfill(2)]
                                  BC_ratio.append(Bn_data/Cn_data)
 
@@ -698,13 +699,15 @@ if f_run is True:
 
                 print(plot_field)
                 """
-                if(plot_field == "cr_Be9n_tot"):
+                if(plot_field == "cr_B11n_tot"):
 
                     fig2, exit_code = crs_plot_ratio(BC_ratio(plot_field, data), plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index])
 
 
                 else:
                 """
+                print('plot var : ')
+                print(plot_var)
                 fig2, exit_code = crs_plot_main(
                     plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 

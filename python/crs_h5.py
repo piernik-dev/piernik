@@ -247,7 +247,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
     s.set_xscale('log')
     s.set_yscale('log')
 
-    plt.xlabel('$p/m_e c$', labelpad=0.2, fontsize=fontsize_axlabels)
+    plt.xlabel('$p/m c$', labelpad=0.2, fontsize=fontsize_axlabels)
     plt.ylabel('d$' + plot_var + ' / $d$p$',
                fontsize=fontsize_axlabels, labelpad=-0.)
     plt.tick_params(axis='both', which='major', labelsize=fontsize_axlabels)
