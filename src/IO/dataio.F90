@@ -1121,6 +1121,10 @@ contains
                tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_crspc_n,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_crspc_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
+               print *, 'tot q CREN : ', tot_q(T_CREN)
+               print *, 'tot q CREE : ', tot_q(T_CREE)
+               print *, 'tot q ENCR : ', tot_q(T_ENCR)
+
 #endif /* CRESP */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
@@ -1633,7 +1637,8 @@ contains
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef CRESP
-      use initcosmicrays,     only: iarr_crspc_e, iarr_crspc_n
+      use cr_data,            only: icr_H1, icr_E
+      use initcosmicrays,     only: iarr_crspc_e, iarr_crspc_n, iarr_crspc2_n, iarr_crspc2_e
       use timestep_cresp,     only: dt_cre_adiab, dt_cre_K
 #ifdef MAGNETIC
       use timestep_cresp,     only: dt_cre_synch
@@ -1696,7 +1701,6 @@ contains
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)            :: id
       character(len=*), parameter     :: log_label = "write_log"
-      real                            :: cr_e_tot, cr_n_tot
 
       call ppp_main%start(log_label, PPP_IO)
 
@@ -1841,8 +1845,6 @@ contains
          call cgl%cg%costs%start
 
          cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_n,:,:,:),1)
-         cr_n_tot = sum(cgl%cg%u(iarr_crspc_n,:,:,:))
-         print *, 'total n density : ', cr_n_tot
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
@@ -1854,10 +1856,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-         cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_e,:,:,:),1)
-
-         cr_e_tot = sum(cgl%cg%u(iarr_crspc_e,:,:,:))
-         print *, 'total e density : ', cr_e_tot
+         cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_e,:,:,:),1)Z
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
