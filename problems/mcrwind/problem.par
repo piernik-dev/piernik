@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 1, 48, 96
+    n_d = 24, 48, 96
     nb           = 4
     bnd_xl       = 'per'
     bnd_xr       = 'per'
@@ -53,6 +53,8 @@
     smalld       = 1.e-5
     smallei      = 1.e-4
     limiter      = 'vanleer'
+    !solver_str = 'riemann'
+    !cflcontrol   = 'auto'
   /
 
  $GRAVITY
