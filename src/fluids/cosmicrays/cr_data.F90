@@ -133,7 +133,7 @@ module cr_data
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
-   real, parameter :: tau_B11 = 1.6 !< Myr
+   real, parameter :: tau_B11 = 0.0 !< Myr
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
