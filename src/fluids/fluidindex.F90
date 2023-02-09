@@ -212,7 +212,9 @@ contains
 
       iarr_all_crn(1:flind%crn%all) = iarr_crn
       iarr_all_crs(1:flind%crs%all) = iarr_crs
+#ifdef CRESP
       iarr_all_crspc(1:flind%crspc%all) = iarr_crspc
+#endif /* CRESP */
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
