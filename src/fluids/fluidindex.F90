@@ -173,7 +173,9 @@ contains
 #ifdef COSM_RAYS
       allocate(iarr_all_crn(flind%crn%all))
       allocate(iarr_all_crs(flind%crs%all))
+#ifdef CRESP
       allocate(iarr_all_crspc(flind%crspc%all))
+#endif /* CRESP */
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_crspc(0))
