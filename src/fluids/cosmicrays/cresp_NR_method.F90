@@ -761,8 +761,8 @@ contains
 
       implicit none
 
-      real, dimension(1:3), intent(inout) :: p3, f3
-      real, dimension(1:3), intent(in)    :: arg
+      real, dimension(1:3), intent(inout) :: p3(:), f3(:)
+      real, dimension(1:3), intent(in)    :: arg(:)
       logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                     :: nsubstep = 100, k
@@ -1210,7 +1210,7 @@ contains
 
       implicit none
 
-      real, dimension(1:2), intent(in) :: fun, arg
+      real, dimension(1:2), intent(in) :: fun(:), arg(:)
       real,                 intent(in) :: arg_out
 
       lin_extrapol_1D = fun(1) + (fun(2) - fun(1)) * (arg_out - arg(1))/(arg(2)-arg(1))
