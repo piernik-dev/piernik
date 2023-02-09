@@ -9,10 +9,10 @@
 #define COSM_RAYS
 
 #define MAGNETIC
-#define RESISTIVE
+#undef RESISTIVE
 
-#define SELF_GRAV
+#define GRAV
 
 #define SN_SRC
 #define RANDOMIZE
-#define MULTIGRID
+#undef MULTIGRID

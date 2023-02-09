@@ -173,9 +173,7 @@ contains
 #ifdef COSM_RAYS
       allocate(iarr_all_crn(flind%crn%all))
       allocate(iarr_all_crs(flind%crs%all))
-#ifdef CRESP
       allocate(iarr_all_crspc(flind%crspc%all))
-#endif /* CRESP */
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_crspc(0))
@@ -205,15 +203,14 @@ contains
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
+      !print *, 'iarr_all_swp : ', iarr_all_swp
       iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
 
       iarr_all_crn(1:flind%crn%all) = iarr_crn
       iarr_all_crs(1:flind%crs%all) = iarr_crs
-#ifdef CRESP
       iarr_all_crspc(1:flind%crspc%all) = iarr_crspc
-#endif /* CRESP */
 #endif /* COSM_RAYS */
 
 #ifdef TRACER

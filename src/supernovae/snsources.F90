@@ -140,8 +140,8 @@ contains
 
 #ifdef COSM_RAYS
       amp_ecr_sn = cr_eff * e_sn * erg * gnorm
-      print *, 'amp_ecr_sn : ', amp_ecr_sn
-      print *, 'cr eff : ', cr_eff
+      !print *, 'amp_ecr_sn : ', amp_ecr_sn
+      !print *, 'cr eff : ', cr_eff
       !print *, 'gaussian integral : ', amp_ecr_sn
       !stop
 #endif /* COSM_RAYS */
@@ -298,7 +298,7 @@ contains
                                                    !cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
                                                    if (icr==icr_H1) cresp_e_sum = cresp_e_sum + sum(cresp%e)
 
-                                                   if (sum(posr) .lt. 1. .and. icr==icr_H1) print *, 'icr : ', icr, ' decr : ', decr, ' cresp decr : ', sum(cresp%e), ' |delta e| / e : ', abs(decr - sum(cresp%e))/decr
+                                                  ! if (sum(posr) .lt. 1. .and. icr==icr_H1) print *, 'icr : ', icr, ' decr : ', decr, ' cresp decr : ', sum(cresp%e), ' |delta e| / e : ', abs(decr - sum(cresp%e))/decr
                                              enddo
 
                                              endif
