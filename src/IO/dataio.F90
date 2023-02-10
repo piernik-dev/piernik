@@ -1851,7 +1851,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-         cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_e,:,:,:),1)Z
+         cgl%cg%wa = sum(cgl%cg%u(iarr_crspc_e,:,:,:),1)
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
