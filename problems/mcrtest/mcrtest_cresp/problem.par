@@ -100,7 +100,7 @@ $BASE_DOMAIN
     eO16= .true., .false., .true., .true.
     eLi7= .true., .false., .true., .false.
     eBe9=.true., .false., .true., .false.
-    eBe10=.true., .false., .true., .false.
+    eB11 =.true., .false., .true., .false.
  /
 
  $SN_SOURCES
