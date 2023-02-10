@@ -70,7 +70,7 @@
  $CR_SPECIES
     eH1   = .true., .true., .false.
     eBe9  = .true., .false., .false.
-    eBe10 = .true., .false., .false.
+    eB11  = .true., .false., .false.
     eC12  = .true., .false., .false.
  /
 
