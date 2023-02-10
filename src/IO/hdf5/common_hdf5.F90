@@ -35,7 +35,6 @@ module common_hdf5
 ! pulled by HDF5
 
    use constants, only: singlechar, ndims, dsetnamelen
-   use cr_data,   only: icr_spc
    use hdf5,      only: HID_T
 
    implicit none
@@ -115,6 +114,7 @@ contains
       use dataio_pub,     only: msg
 #endif /* COSM_RAYS */
 #ifdef CRESP
+      use cr_data,        only: icr_spc
       use initcosmicrays, only: ncrb, nspc
 #endif /* CRESP */
 
