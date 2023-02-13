@@ -84,7 +84,9 @@ $BASE_DOMAIN
     initial_spectrum = 'plpc' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
     cre_active(:)  = 8*1.0
     NR_iter_limit = 50
-    arr_dim = 100
+    arr_dim_a = 200
+    arr_dim_n = 200
+    arr_dim_q = 1000
     adiab_active(:)  = 8*.true.
     !adiab_active(2)  = .false.
     synch_active(:)  = 8*.false.
@@ -100,7 +102,12 @@ $BASE_DOMAIN
     eO16= .true., .false., .true., .true.
     eLi7= .true., .false., .true., .false.
     eBe9=.true., .false., .true., .false.
-    eB11 =.true., .false., .true., .false.
+    eB11=.true., .false., .true., .false.
+ /
+
+ $SHEARING
+    omega        = 0.0      ! angular freq.
+    qshear       = 1.0      ! shearing param. q: vy=q*omega*x
  /
 
  $SN_SOURCES
