@@ -436,9 +436,14 @@ contains
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
+         case ('cr_A000' : 'cr_zz99')
+            do i = 1, size(cr_names)
+               if (var == trim('cr_' // cr_names(i))) exit
+            enddo
+            tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-         case ('cr_A000' : 'cr_zz99')
+         !case ('cr_A000' : 'cr_zz99')
             clast = len(trim(var))
             varn2 = var(clast - 1:clast)
             if (var(clast - 2:clast - 2) == 'e') then
