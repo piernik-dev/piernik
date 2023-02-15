@@ -121,7 +121,7 @@ module cr_data
 
    real, parameter :: sigma_C12_Li7  = 10.   !< mbarn
    real, parameter :: sigma_C12_Be9  = 6.   !< mbarn
-   real, parameter :: sigma_C12_B11 = 30.0 !3.5 !< mbarn
+   real, parameter :: sigma_C12_B11  = 30.0 !3.5 !< mbarn
 
    real, parameter :: sigma_N14_Li7  = 9.5 !< mbarn
 
@@ -137,9 +137,9 @@ module cr_data
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
-   real, parameter :: primary_C12  =  4.5e-3
-   real, parameter :: primary_N14  =  1.0e-3
-   real, parameter :: primary_O16  =  4.0e-3
+   real, parameter :: primary_C12  =  0. !4.5e-3
+   real, parameter :: primary_N14  =  0. !1.0e-3
+   real, parameter :: primary_O16  =  0. !4.0e-3
 
    integer(kind=8), dimension(:), allocatable :: icr_prim, icr_sec
 
