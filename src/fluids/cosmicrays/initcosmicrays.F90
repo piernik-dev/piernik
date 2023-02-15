@@ -315,7 +315,7 @@ contains
       flind%crn%beg = flind%all + I_ONE
       flind%crs%beg = flind%crn%beg
 
-      flind%crn%all   = ncrn
+      flind%crn%all = ncrn
       flind%crs%all = flind%crn%all
 
 #ifdef CRESP
@@ -334,19 +334,32 @@ contains
          iarr_crspc(icr)      = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
+
 #ifdef CRESP
       flind%all = flind%all + flind%crspc%all
 #endif /* CRESP */
+
       flind%crn%end   = flind%crn%beg + flind%crn%all - I_ONE
+      flind%crs%end = flind%crn%end
+
 #ifdef CRESP
+
       flind%crspc%beg = flind%crn%end + I_ONE
       flind%crspc%end = flind%all
       flind%crs%end = flind%crspc%end
       if (flind%crspc%all  /= 0) flind%components = flind%components + I_ONE
       flind%crspc%pos = flind%components
+
 #endif /* CRESP */
+
       if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
       flind%crn%pos = flind%components
+
+      !print *, 'ncrn : ', ncrn
+      !print *, 'nspc : ', nspc
+
+      !print *, 'flind%crn%all', flind%crn%all, 'flind%crn%beg : ', flind%crn%beg, 'flind%crs%end : ',flind%crs%end
+      !print *, 'flind%crs%all', flind%crs%all, 'flind%crs%beg : ', flind%crs%beg, 'flind%crs%end : ',flind%crs%end
 
 
 #ifdef CRESP
@@ -359,7 +372,7 @@ contains
          flind%crspcs(icr)%ebeg = flind%crspcs(icr)%nend
          flind%crspcs(icr)%eend = flind%crspcs(icr)%ebeg + ncrb
 
-         print *, ' initcr : ', icr, flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend, flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend
+         !print *, 'flind%crspc%all', flind%crspc%all, 'flind%crspc%beg : ', flind%crspc%beg, 'flind%crspc%end : ',flind%crspc%end
 
          iarr_crspc2_n(icr, :) = [(jnb, jnb = flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend)]
          iarr_crspc2_e(icr, :) = [(jnb, jnb = flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend)] ! iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
