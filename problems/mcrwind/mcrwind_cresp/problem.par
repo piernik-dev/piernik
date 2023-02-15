@@ -35,9 +35,9 @@
 
  $OUTPUT_CONTROL
     problem_name = 'crwind'
-    run_id       = 'ts1'
+    run_id       = 'ts2'
     dt_hdf       = 1.0e-1
-    dt_res       = 00.0
+    dt_res       = 0.0
     dt_log       = 1.0e-2
     dt_tsl       = 1.0e-3
     vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'cree', 'cren'
@@ -76,8 +76,8 @@
     ncrb          =   8 ! 23 ! number of cr electron spectrum bins (including cutoff bins)
     cfl_cr        =   0.5
     cr_active     =   1.0
-    K_cr_paral = 8*1.e4 ! CRESP electrons
-    K_cr_perp  = 8*1.e1 ! CRESP electrons
+    K_cr_paral    = 8*1.e4 ! CRESP electrons
+    K_cr_perp     = 8*1.e1 ! CRESP electrons
     smallecr      = 0.e-2
  /
 
@@ -100,10 +100,10 @@
     initial_spectrum = 'plpc' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
     cre_active(:)  = 8*1.0
     NR_iter_limit = 50
-    arr_dim_a = 200
-    arr_dim_n = 200
+    arr_dim_a = 50
+    arr_dim_n = 50
     arr_dim_q = 1000
-    adiab_active(:)  = 8*.true.
+    adiab_active(:)  = 8*.false.
     !adiab_active(2)  = .false.
     synch_active(:)  = 8*.false.
     nullify_empty_bins = .false.
@@ -111,14 +111,14 @@
 /
 
  $CR_SPECIES
-    eE  = .true., .false., .true., .true.
-    eH1 = .true., .true., .true., .true.
-    eC12= .true., .false., .true., .true.
-    eN14= .true., .false., .true., .true.
-    eO16= .true., .false., .true., .true.
-    eLi7= .true., .false., .true., .false.
-    eBe9=.true., .false., .true., .false.
-    eB11=.true., .false., .true., .false.
+    eE   = .true., .false., .true., .true.
+    eH1  = .true., .true., .true., .true.
+    eC12 = .true., .false., .true., .true.
+    eN14 = .true., .false., .true., .true.
+    eO16 = .true., .false., .true., .true.
+    eLi7 = .true., .false., .true., .false.
+    eBe9 = .true., .false., .true., .false.
+    eB11 = .true., .false., .true., .false.
  /
 
  $SHEARING
@@ -163,7 +163,7 @@
  /
 
  $PIERNIK_DEBUG
-    constant_dt = 0.0001
+    constant_dt = 0.001
  /
 
  $INTERACTIONS

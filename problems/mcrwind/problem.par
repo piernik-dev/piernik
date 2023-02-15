@@ -35,7 +35,7 @@
 
  $OUTPUT_CONTROL
     problem_name = 'crwind'
-    run_id       = 'tst'
+    run_id       = 'ts2'
     dt_hdf       = 1.0e-1
     dt_res       = 0.0
     dt_log       = 1.0e-2
@@ -133,7 +133,7 @@
  /
 
  $PIERNIK_DEBUG
-    constant_dt = 0.01
+    constant_dt = 0.001
  /
 
  $INTERACTIONS
@@ -149,7 +149,7 @@
      ub_ampl  = 0.0   ! amplitude of synchrotron cooling coefficient with time
      omega_d  = 0.157 ! omega_d parameter for test with periodic adiabatic compression: u_d0 = u_d0 + div_v * cos(omega_d * t)
      omega_b  = 0.0   ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t)
-     dt_ini   = 0.01        ! initial timestep, optional, if absent, initial dt shall be computed. Use value less than dt_max
+     dt_ini   = 0.001        ! initial timestep, optional, if absent, initial dt shall be computed. Use value less than dt_max
      force_dt = .true.      ! < if .true. - dt_ini shall be constant throughout entire simulation
 
  /
