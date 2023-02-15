@@ -95,14 +95,14 @@ $BASE_DOMAIN
  /
 
  $CR_SPECIES
-    eE  = .true., .false., .true., .true.
-    eH1 = .true., .true., .true., .true.
-    eC12= .true., .false., .true., .true.
-    eN14= .true., .false., .true., .true.
-    eO16= .true., .false., .true., .true.
-    eLi7= .true., .false., .true., .false.
-    eBe9=.true., .false., .true., .false.
-    eB11=.true., .false., .true., .false.
+    eE   = .true., .false., .true., .true.
+    eH1  = .true., .true.,  .true., .true.
+    eC12 = .true., .false., .true., .true.
+    eN14 = .true., .false., .true., .true.
+    eO16 = .true., .false., .true., .true.
+    eLi7 = .true., .false., .true., .false.
+    eBe9 = .true., .false., .true., .false.
+    eB11 = .true., .false., .true., .false.
  /
 
  $SHEARING
