@@ -1116,9 +1116,9 @@ contains
                tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_crspc_n,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_crspc_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
-               print *, 'tot q CREN : ', tot_q(T_CREN)
-               print *, 'tot q CREE : ', tot_q(T_CREE)
-               print *, 'tot q ENCR : ', tot_q(T_ENCR)
+               !print *, 'tot q CREN : ', tot_q(T_CREN)
+               !print *, 'tot q CREE : ', tot_q(T_CREE)
+               !print *, 'tot q ENCR : ', tot_q(T_ENCR)
 
 #endif /* CRESP */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
