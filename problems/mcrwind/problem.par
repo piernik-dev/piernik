@@ -29,13 +29,13 @@
  /
 
  $END_CONTROL
-    tend         = 1.0
+    tend         = 100.0
     nend         = 1000000
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'crwind'
-    run_id       = 'ts2'
+    problem_name = 'crwind3d_initexp'
+    run_id       = 'ts1'
     dt_hdf       = 1.0e-1
     dt_res       = 0.0
     dt_log       = 1.0e-2
