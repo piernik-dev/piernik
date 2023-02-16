@@ -7,6 +7,8 @@ fi
 
 H5DUMP=h5dump
 which $H5DUMP > /dev/null 2>&1 || { echo "Cannot find h5dump executable"; exit 2; }
+EPPLOG="${0/.sh/.py}"
+echo "$EPPLOG"
 
 for i in $* ; do
 	if [ -f "$i" ] ; then
@@ -15,7 +17,13 @@ for i in $* ; do
 			echo "$o already exists. Aborting."
 			exit 3
 		fi
-		$H5DUMP -d "problem.par" "$i" |  grep ":" | sed 's/ *([0-9]*): "\(.*\)",*/\1/;s/ *$//' > "$o"
+		if [[ $i == *.log ]]; then
+			$EPPLOG "$i" > "$o"
+		elif [[ $i == *.h5 ]]; then
+			$H5DUMP -d "problem.par" "$i" |  grep ":" | sed 's/ *([0-9]*): "\(.*\)",*/\1/;s/ *$//' > "$o"
+		else
+			echo "Cannot extract from $i (only .log or .h5 files)"
+		fi
 		if [ -s "$o" ]; then
 			echo "Successfully extracted parameters to '$o' file."
 		else
