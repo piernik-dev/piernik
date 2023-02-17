@@ -136,6 +136,7 @@ module constants
    integer(kind=4), parameter :: fmt_len = 128              !< length of format string
    integer(kind=4), parameter :: fnamelen = 128             !< length of output filename
    integer(kind=4), parameter :: cbuff_len = 32             !< length for problem parameters
+   integer(kind=4), parameter :: msg_len = cbuff_len        !< length for message file paths; ToDo restore cwdlen length and handle it properly
    integer(kind=4), parameter :: units_len = 5 * cbuff_len  !< length for unit strings
    integer(kind=4), parameter :: fplen = 24                 !< length of buffer for printed FP or integer number
    integer(kind=4), parameter :: domlen = 16                !< should be <= cbuff_len
