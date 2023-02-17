@@ -1,7 +1,14 @@
 #!/bin/bash
 
+# The .par file extracted from .h5 file matches the problem.par file used for the run
+# but it ignores parameters that were overidden by commandline (provided via '-n' option).
+
+# The .par file extracted from .log file should list the parameters that were altered both
+# by original problem.par and commandline add-ons.
+# It usually differs from the original problem.par due to different sorting of the namelists.
+
 if [ $# -lt 1 ] ; then
-	echo "Usage: $0 Piernik_HDF5_file.h5 [...]"
+	echo "Usage: $0 H5_FILE|LOGFILE [...]"
 	exit 1
 fi
 

@@ -38,7 +38,7 @@ module dataio
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, &
         &                nrestart, problem_name, run_id, multiple_h5files, use_v2_io, &
         &                nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
-   use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
+   use constants,  only: fmt_len, cbuff_len, msg_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
 
    implicit none
@@ -54,8 +54,8 @@ module dataio
    real                     :: wdt_res               !< walltime between successive restart file dumps
    real                     :: dt_tsl                !< time between successive timeslice dumps
    real                     :: dt_log                !< time between successive log dumps
-   character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
-   character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
+   character(len=msg_len)   :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
+   character(len=msg_len)   :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
@@ -413,8 +413,8 @@ contains
          lbuff(10) = gdf_strict
          lbuff(11) = h5_64bit
 
-         cbuff(20) = user_message_file(1:cbuff_len)
-         cbuff(21) = system_message_file(1:cbuff_len)
+         cbuff(20) = user_message_file
+         cbuff(21) = system_message_file
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -2069,12 +2069,15 @@ contains
 !-------------------------------------------------------------------------
 
 !> \todo process multiple commands at once
-      use constants,  only: cwdlen
+      use constants,  only: msg_len
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master
 #if defined(__INTEL_COMPILER)
       use ifposix,    only: pxfstat, pxfstructcreate, pxfintget, pxfstructfree
 #endif /* __INTEL_COMPILER */
+#ifndef __GFORTRAN__
+      use constants,  only: cwdlen
+#endif /* !__GFORTRAN__ */
 
       implicit none
 
@@ -2086,7 +2089,7 @@ contains
       integer                                              :: msg_lun
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
-      character(len=cwdlen), dimension(n_msg_origin), save :: fname
+      character(len=msg_len), dimension(n_msg_origin), save :: fname
       integer                                              :: unlink_stat, io, sz, i
 #ifdef __GFORTRAN__
       integer, dimension(13)                               :: stat_buff
