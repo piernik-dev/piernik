@@ -81,6 +81,9 @@ module initcosmicrays
    real                                :: def_dtcrs    !< default dt limitation due to diffusion
    logical                             :: K_crs_valid  !< condition to use dt_crs
 
+   integer(kind=4)                     :: diff_max_lev !< when set, restrict diffusion to be computed only up to specified level to avoid shortening of timestep
+   integer(kind=4)                     :: diff_prolong !< order of prolongation used to transfer data from diff_max_lev to finer grids
+
 contains
 
 !>
@@ -105,13 +108,15 @@ contains
 !! <tr><td>K_cr_perp   </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_perp  </td></tr>
 !! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>gpcr_ess_user</td><td>.false.</td><td>logical array</td><td>\copydoc initcosmicrays::gpcr_ess_user</td></tr>
+!! <tr><td>diff_max_lev</td><td>huge(1)</td><td>integer   </td><td>\copydoc initcosmicrays::diff_max_lev</td></tr>
+!! <tr><td>diff_prolong</td><td>O_I3   </td><td>integer   </td><td>\copydoc initcosmicrays::diff_prolong</td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big, O_I2
+      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big, O_I2, O_I3, base_level_id
       use cr_data,         only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
@@ -124,7 +129,7 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, ord_cr_prolong, &
-           &                 gamma_cr, K_cr_paral, K_cr_perp, ncr_user, ncrb, gpcr_ess_user
+           &                 gamma_cr, K_cr_paral, K_cr_perp, ncr_user, ncrb, gpcr_ess_user, diff_max_lev, diff_prolong
 
       call init_cr_species
 
@@ -148,6 +153,9 @@ contains
       gpcr_ess_user  = .false.
 
       divv_scheme    = ''
+
+      diff_max_lev = huge(1_4)
+      diff_prolong = O_I3
 
       if (master) then
 
@@ -177,6 +185,8 @@ contains
          ibuff(1) = ncr_user
          ibuff(2) = ncrb
          ibuff(3) = ord_cr_prolong
+         ibuff(4) = diff_max_lev
+         ibuff(5) = diff_prolong
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -219,6 +229,8 @@ contains
          ncr_user       = int(ibuff(1), kind=4)
          ncrb           = int(ibuff(2), kind=4)
          ord_cr_prolong = int(ibuff(3), kind=4)
+         diff_max_lev   = int(ibuff(4), kind=4)
+         diff_prolong   = int(ibuff(5), kind=4)
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
@@ -242,6 +254,8 @@ contains
          endif
 
       endif
+
+      if (diff_max_lev < base_level_id) call die("[initcosmicrays:init_cosmicrays] diff_max_lev < base_level_id")
 
       gamma_cr_1 = gamma_cr - 1.0
 

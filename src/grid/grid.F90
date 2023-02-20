@@ -90,6 +90,7 @@ contains
 
    subroutine cleanup_grid
 
+      use cg_leaves,          only: leaves
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
@@ -103,6 +104,8 @@ contains
       type(cg_level_connected_t), pointer :: curl, aux
 
       call cleanup_flxp
+
+      if (allocated(leaves%up_to_level)) deallocate(leaves%up_to_level)
 
       curl => coarsest%level
       do while (associated(curl))
