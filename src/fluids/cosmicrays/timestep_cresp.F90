@@ -48,13 +48,13 @@ contains
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, half, zero, big, pMIN, I_ONE
+      use constants,        only: xdim, ydim, zdim, half, zero, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: cfl_cr, iarr_cre_e, iarr_cre_n
+      use initcosmicrays,   only: cfl_cr, iarr_cre_e, iarr_cre_n, diff_max_lev
       use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
       use mpisetup,         only: piernik_MPI_Allreduce
 
@@ -67,10 +67,10 @@ contains
       real                           :: K_cre_max_sum, abs_max_ud, dt_aux
       logical                        :: empty_cell
 
-      dt_cre       = big
-      dt_cre_K     = big
-      dt_cre_synch = big
-      dt_cre_adiab = big
+      dt_cre       = huge(1.)
+      dt_cre_K     = huge(1.)
+      dt_cre_synch = huge(1.)
+      dt_cre_adiab = huge(1.)
 
       if (.not. use_cresp_evol) return
 
@@ -115,7 +115,7 @@ contains
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
          do while (associated(cgl))
-            dt_cre_K = min(dt_cre_K, dt_aux * cgl%cg%dxmn2)
+            if (cgl%cg%l%id <= diff_max_lev) dt_cre_K = min(dt_cre_K, dt_aux * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
       endif
@@ -176,20 +176,19 @@ contains
 
    subroutine cresp_timestep_cell(p_loss_terms, dt_cell, empty_cell)
 
-      use initcrspectrum,     only: adiab_active, cresp, synch_active, spec_mod_trms
-      use cresp_crspectrum,   only: cresp_find_prepare_spectrum
-      use constants,          only: big
+      use initcrspectrum,   only: adiab_active, cresp, synch_active, spec_mod_trms
+      use cresp_crspectrum, only: cresp_find_prepare_spectrum
 
       implicit none
 
-      type(spec_mod_trms), intent(in) :: p_loss_terms
-      real,               intent(out) :: dt_cell
-      logical,            intent(out) :: empty_cell
-      integer(kind=4)                 :: i_up_cell
+      type(spec_mod_trms), intent(in)  :: p_loss_terms
+      real,                intent(out) :: dt_cell
+      logical,             intent(out) :: empty_cell
+      integer(kind=4)                  :: i_up_cell
 
-      dt_cell = big
-      dt_cre_adiab = big
-      dt_cre_synch = big
+      dt_cell = huge(1.)
+      dt_cre_adiab = huge(1.)
+      dt_cre_synch = huge(1.)
 
       empty_cell = .false.
 

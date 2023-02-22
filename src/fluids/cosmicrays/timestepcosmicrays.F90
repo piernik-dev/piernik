@@ -50,9 +50,9 @@ contains
 
       use cg_leaves,           only: leaves
       use cg_list,             only: cg_list_element
-      use constants,           only: big, pMIN
+      use constants,           only: pMIN
       use domain,              only: is_multicg
-      use initcosmicrays,      only: def_dtcrs, K_crs_valid
+      use initcosmicrays,      only: def_dtcrs, K_crs_valid, diff_max_lev
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
@@ -79,10 +79,11 @@ contains
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
 
-         dt_crs = big
+         dt_crs = huge(1.)
          cgl => leaves%first
          do while (associated(cgl))
-            dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
+            if (cgl%cg%l%id <= diff_max_lev) &
+                 dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
          call piernik_MPI_Allreduce(dt_crs, pMIN)

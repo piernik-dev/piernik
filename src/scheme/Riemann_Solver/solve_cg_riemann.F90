@@ -167,8 +167,6 @@ contains
       endif
       cs2 => null()
 
-      call eflx%init
-
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
 
@@ -275,8 +273,6 @@ contains
          i_cs_iso2 = -1
       endif
       cs2 => null()
-
-      call eflx%init
 
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)

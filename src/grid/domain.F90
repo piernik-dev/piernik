@@ -321,18 +321,10 @@ contains
 
       call dom%init(nb, n_d, [bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr], edges, geometry, offset)
 
-      where (dom%has_dir(:))
-         minsize(:) = max(minsize(:), dom%nb)
-      elsewhere
-         minsize(:) = 1
-      endwhere
-
       is_uneven = .false.
       is_mpi_noncart = .false.
       is_refined = .false.
       is_multicg = .false.
-
-      where (.not. dom%has_dir(:)) psize(:) = I_ONE
 
    end subroutine init_domain
 
@@ -586,8 +578,11 @@ contains
 
       where (this%has_dir(:))
          this%n_t(:) = this%n_d(:) + I_TWO * this%nb
+         minsize(:) = max(minsize(:), this%nb)
       elsewhere
          this%n_t(:) = 1
+         minsize(:) = 1
+         psize(:) = I_ONE
       endwhere
 
    end subroutine init

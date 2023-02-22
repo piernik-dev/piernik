@@ -243,11 +243,13 @@ contains
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #endif /* SHEAR */
-                     do jpm = auxper(ydim,LO), auxper(ydim,HI)
-                        posr(ydim) = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
-                        ! BEWARE:  for num < -744.6 the exp(num) is the underflow
-                        decr = decr + exp(-sum(posr, mask=dom%has_dir))
-                     enddo
+                     if (dom%eff_dim > 0) then
+                        do jpm = auxper(ydim,LO), auxper(ydim,HI)
+                           posr(ydim) = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
+                           ! BEWARE:  for num < -744.6 the exp(num) is the underflow
+                           decr = decr + exp(-sum(posr, mask=dom%has_dir))
+                        enddo
+                     endif
                   enddo
                   decr = decr * ampl
 
@@ -330,14 +332,14 @@ contains
 
 !  outer boundary
       jremap = jsn - delj
-      jremap = mod(mod(jremap, cg%nyb)+cg%nyb, cg%nyb)
+      jremap = mod(mod(jremap, int(cg%nyb))+cg%nyb, int(cg%nyb))
       if (jremap <= (cg%lh1(ydim,LO))) jremap = jremap + cg%nyb
 
       ysnoi(1) = cg%y(jremap) + epso + dysn
 
 !  inner boundary
       jremap = jsn + delj
-      jremap = mod(jremap, cg%nyb)+cg%nyb
+      jremap = mod(jremap, int(cg%nyb))+cg%nyb
       if (jremap >= (cg%lh1(ydim,HI))) jremap = jremap - cg%nyb
 
       ysnoi(3) = cg%y(jremap) + epsi + dysn

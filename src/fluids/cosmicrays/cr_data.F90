@@ -332,7 +332,7 @@ contains
 
       implicit none
 
-      deallocate(cr_names, cr_table, cr_sigma, cr_tau, cr_primary, cr_mass)
+      deallocate(cr_names, cr_table, cr_index, cr_sigma, cr_tau, cr_primary, cr_mass, cr_spectral, cr_gpess)
 
    end subroutine cleanup_cr_species
 

@@ -40,10 +40,13 @@ module cresp_helpers
    private
    public   :: hdr_io, map_header, n_g_cresp, n_g_smaps, n_a_dims, n_a_esmall, n_a_max_p_r, n_a_clight,     &
       &  n_a_qbig, n_a_amin, n_a_amax, n_a_nmin, n_a_nmax, real_attrs, int_attrs, extension, flen,          &
-      &  bound_name, dset_attrs
+      &  bound_name, dset_attrs, cresp_gname, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, hdr_res,  &
+      &  allocate_smaps, deallocate_smaps
 
-   character(len=*), parameter, dimension(LO:HI)      ::  n_g_smaps = [ "cresp/smaps_LO", "cresp/smaps_UP" ]
-   character(len=*), parameter :: n_g_cresp = "cresp", &
+   real, allocatable, dimension(:,:), target          :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+
+   character(len=*), parameter, dimension(LO:HI)      :: n_g_smaps = [ "cresp/smaps_LO", "cresp/smaps_UP" ]
+   character(len=*), parameter :: n_g_cresp = "cresp", cresp_gname = "/cresp", &
       &  n_a_dims = "dims", n_a_esmall = "e_small", n_a_max_p_r = "max_p_ratio", n_a_clight = "used_clight", &
       &  n_a_qbig = "q_big",  n_a_amin = "a_min", n_a_amax = "a_max", n_a_nmin = "n_min", n_a_nmax = "n_max"
    character(len=cbuff_len), parameter, dimension(8)  :: real_attrs = [ "e_small    ",  &
@@ -75,7 +78,37 @@ module cresp_helpers
       real     :: s_amin, s_amax, s_nmin, s_nmax
    end type map_header
 
-   type(map_header), dimension(LO:HI)  :: hdr_io
+   type(map_header), dimension(LO:HI) :: hdr_io, hdr_res
 
+contains
+
+   subroutine allocate_smaps(dim1, dim2)
+
+      use diagnostics, only: ma2d, my_allocate
+
+      implicit none
+
+      integer(kind=4), intent(in) :: dim1, dim2
+
+      ma2d = [dim1, dim2]
+      if (.not. allocated(p_ratios_lo)) call my_allocate(p_ratios_lo, ma2d )
+      if (.not. allocated(f_ratios_lo)) call my_allocate(f_ratios_lo, ma2d )
+      if (.not. allocated(p_ratios_up)) call my_allocate(p_ratios_up, ma2d )
+      if (.not. allocated(f_ratios_up)) call my_allocate(f_ratios_up, ma2d )
+
+   end subroutine allocate_smaps
+!----------------------------------------------------------------------------------------------------
+   subroutine deallocate_smaps
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      call my_deallocate(p_ratios_lo)
+      call my_deallocate(f_ratios_lo)
+      call my_deallocate(p_ratios_up)
+      call my_deallocate(f_ratios_up)
+
+   end subroutine deallocate_smaps
 
 end module cresp_helpers

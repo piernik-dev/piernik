@@ -19,7 +19,7 @@ for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT NTHR; do
 done
 FLAT_PROBLEM_NAME=${PROBLEM_NAME//\//___}  # handle subproblems safely
 
-RUN_COMMAND="mpirun -np $NTHR"
+RUN_COMMAND="mpirun -np $NTHR --oversubscribe"
 SETUP_PARAMS=$SETUP_PARAMS" -n --copy --linkexe"
 PIERNIK_REPO="http://github.com/piernik-dev/piernik"
 PIERNIK=piernik
@@ -68,7 +68,7 @@ if [ ! -e ${RUN_GOLD_DIR}${OUTPUT} ] ; then
 	git fetch -q $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
 	git checkout -q $GOLD_COMMIT
 	rsync -avxq --delete "${BASE_DIR}"/compilers/ ./compilers
-	python python/piernik_setup_today.py $PROBLEM_NAME $SETUP_PARAMS -o $FLAT_PROBLEM_NAME  # prepares $OBJ in $GOLD_DIR
+	python3 python/piernik_setup_today.py $PROBLEM_NAME $SETUP_PARAMS -o $FLAT_PROBLEM_NAME  # prepares $OBJ in $GOLD_DIR
     )
     cp -a ${GOLD_CLONE}/$OBJ $GOLD_DIR
 
@@ -95,7 +95,7 @@ rm -rf ${TEST_DIR}$OBJ ${TEST_DIR}runs
 mkdir -p $TEST_DIR
 
 # Prepare object from current files (including any uncommited or untracked changes)
-python setup $PROBLEM_NAME $SETUP_PARAMS -o $FLAT_PROBLEM_NAME  # prepares $OBJ in $BASE_DIR
+python3 setup $PROBLEM_NAME $SETUP_PARAMS -o $FLAT_PROBLEM_NAME  # prepares $OBJ in $BASE_DIR
 mv ${OBJ} ${TEST_DIR}
 # OPT: By careful updating ${TEST_DIR}${OBJ} one can achieve some speedups on compilation
 

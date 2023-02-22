@@ -314,7 +314,7 @@ contains
          case ("isolated", "iso")
             grav_bnd = bnd_isolated
          case ("periodic", "per")
-            if (any(dom%bnd(:,:) /= BND_PER)) &
+            if (any(dom%bnd(:,:) /= BND_PER) .and. (dom%eff_dim > 0)) &
                  call die("[multigrid_gravity:multigrid_grav_par] cannot enforce periodic boundaries for gravity on a not fully periodic domain")
             grav_bnd = bnd_periodic
          case ("dirichlet", "dir")
@@ -524,13 +524,12 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use constants,          only: fft_none
       use dataio_pub,         only: die
+      use domain,             only: dom
       use find_lev,           only: find_level
-      use func,               only: operator(.notequals.)
       use grid_cont,          only: grid_container
       use multigridvars,      only: overrelax
 #ifndef NO_FFT
       use constants,          only: fft_rcr, fft_dst, pi, dpi, zero, half, one
-      use domain,             only: dom
 #endif /* !NO_FFT */
 
       implicit none
@@ -543,15 +542,22 @@ contains
 #endif /* !NO_FFT */
 
       ! this should work correctly also when dom%eff_dim < 3
-      cg%mg%r  = overrelax / 2.
-      cg%mg%rx = cg%dvol**2 * cg%idx2
-      cg%mg%ry = cg%dvol**2 * cg%idy2
-      cg%mg%rz = cg%dvol**2 * cg%idz2
-      cg%mg%r  = cg%mg%r / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
-      cg%mg%rx = cg%mg%r * cg%mg%rx
-      cg%mg%ry = cg%mg%r * cg%mg%ry
-      cg%mg%rz = cg%mg%r * cg%mg%rz
-      cg%mg%r  = cg%mg%r * cg%dvol**2
+      if (dom%eff_dim == 0) then  ! disable relaxation at all
+         cg%mg%r  = 1.
+         cg%mg%rx = 0.
+         cg%mg%ry = 0.
+         cg%mg%rz = 0.
+      else
+         cg%mg%r  = overrelax / 2.
+         cg%mg%rx = cg%idx2
+         cg%mg%ry = cg%idy2
+         cg%mg%rz = cg%idz2
+         cg%mg%r  = cg%mg%r / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
+         cg%mg%rx = cg%mg%r * cg%mg%rx
+         cg%mg%ry = cg%mg%r * cg%mg%ry
+         cg%mg%rz = cg%mg%r * cg%mg%rz
+         cg%mg%r  = cg%mg%r
+      endif
 
       ! FFT solver storage and data
       curl => find_level(cg%l%id)
@@ -627,7 +633,7 @@ contains
          ! compute Green's function for 7-point 3D discrete laplacian
          do i = 1, cg%mg%nxc
             do j = 1, cg%nyb
-               where ((kx(i) + ky(j) + kz(:)).notequals.zero)
+               where (abs(kx(i) + ky(j) + kz(:)) >  tiny(1.))
                   cg%mg%Green3D(i,j,:) = half * cg%mg%fft_norm / (kx(i) + ky(j) + kz(:))
                elsewhere
                   cg%mg%Green3D(i,j,:) = zero
