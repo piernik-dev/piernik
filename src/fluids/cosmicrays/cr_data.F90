@@ -323,18 +323,23 @@ contains
       cr_gpess(:)    = .false.
 
       icr = 0 ; jcr = 0; kcr = 0
+      print *, 'icr : ', icr
+      print *, 'cr_table : ', cr_table
+
       do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
+
             icr = icr + 1
-            cr_table(i)      = icr
+            print *, 'icr : ', icr
+            cr_table(icr)      = icr
             cr_names(icr)    = eCRSP_names(i)
             cr_mass(icr)     = eCRSP_mass(i)
             cr_Z(icr)        = eCRSP_Z(i)
             cr_spectral(icr) = eCRSP_spec(i)
             if (eCRSP_spec(i)) then
                kcr = kcr + 1
-               icr_spc(kcr) = cr_table(i)
-               iarr_spc(i)  = kcr
+               icr_spc(kcr) = cr_table(icr)
+               iarr_spc(icr)  = kcr
             endif
             cr_sigma_N(icr)  = (cr_Z(icr))**4/(cr_mass(icr)**2)*(me/mp)**2*sigma_T ! Schlickeiser, Cosmic ray astrophysics (2002), formula p.105
             if (icr == icr_E)  cr_sigma_N(icr) = sigma_T
