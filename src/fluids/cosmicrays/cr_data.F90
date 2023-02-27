@@ -242,8 +242,12 @@ contains
       eCRSP(1:nicr) = [eE(PRES), eH1(PRES), eC12(PRES), eN14(PRES), eO16(PRES), eLi7(PRES), eBe9(PRES), eB11(PRES)]
       ncrsp_auto = count(eCRSP, kind=4)
       ePRIM(1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eB11(PRIM)]
-      ncrsp_prim = count(ePRIM, kind=4)
+      ncrsp_prim = count(ePRIM .and. eCRSP, kind=4)
       ncrsp_sec = ncrsp_auto - ncrsp_prim
+
+      print *, 'ncrsp_auto : ', ncrsp_auto
+      print *, 'ncrsp_prim : ', ncrsp_prim
+      print *, 'ncrsp_sec : ', ncrsp_sec
 
       allocate(icr_prim(ncrsp_prim))
       allocate(icr_sec(ncrsp_sec))
@@ -306,7 +310,7 @@ contains
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC), eBe9(SPEC), eB11(SPEC) ]
       eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eB11(PRIM) ]
 
-      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(nicr), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(nicr), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(nicr))
+      allocate(cr_names(ncrsp), cr_table(ncrsp), cr_index(ncrsp), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp_prim), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
@@ -350,6 +354,20 @@ contains
             endif
          endif
       enddo
+
+      print *, 'cr_names : ', cr_names
+      print *, 'cr_table : ', cr_table
+      print *, 'cr_index : ', cr_index
+      print *, 'cr_sigma : ', cr_sigma
+      print *, 'cr_sigma_N : ', cr_sigma_N
+      print *, 'cr_tau : ', cr_tau
+      print *, 'cr_primary : ', cr_primary
+      print *, 'cr_gpess : ', cr_gpess
+      print *, 'cr_spectral : ', cr_spectral
+      print *, 'cr_mass : ', cr_mass
+      print *, 'cr_Z : ', cr_Z
+      print *, 'iarr_spc: ', iarr_spc
+      print *, 'icr_spc: ', icr_spc
 
       if (ncrsp_auto < ncrsp) then
          cr_gpess(ncrsp_auto+1:ncrsp) = crness
