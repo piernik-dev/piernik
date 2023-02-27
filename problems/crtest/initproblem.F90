@@ -37,13 +37,13 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4)    :: norm_step
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, dtrig
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, dtrig
 #ifdef COSM_RAYS
    character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
    integer, parameter :: icrt = 1 !< Only first CR component is used in this test
 #endif /* COSM_RAYS */
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step, dtrig
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, norm_step, dtrig
 
 contains
 
@@ -101,7 +101,7 @@ contains
       dtrig        = -0.01     !< fraction of top density used to trigger domain expansion
 
       beta_cr      = 0.0       !< ambient level
-      amp_cr       = 1.0       !< amplitude of the blob
+      amp_cr1      = 1.0       !< amplitude of the blob
 
       norm_step    = I_TEN     !< how often to compute the norm (in steps)
 
@@ -137,7 +137,7 @@ contains
          rbuff(8)  = z0
          rbuff(9)  = r0
          rbuff(10) = beta_cr
-         rbuff(11) = amp_cr
+         rbuff(11) = amp_cr1
          rbuff(12) = dtrig
 
          ibuff(1)  = norm_step
@@ -159,7 +159,7 @@ contains
          z0        = rbuff(8)
          r0        = rbuff(9)
          beta_cr   = rbuff(10)
-         amp_cr    = rbuff(11)
+         amp_cr1   = rbuff(11)
          dtrig     = rbuff(12)
 
          norm_step = int(ibuff(1), kind=4)
@@ -243,7 +243,7 @@ contains
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                   if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
-                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
+                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr1*exp(-r2/r0**2)
                enddo
             enddo
          enddo
@@ -344,7 +344,7 @@ contains
 
       if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
-      ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
+      ampt = amp_cr1 * r0**2 / sqrt(r0_par2 * r0_perp2)
 
       cgl => leaves%first
       do while (associated(cgl))
