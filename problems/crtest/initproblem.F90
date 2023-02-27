@@ -40,7 +40,7 @@ module initproblem
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, dtrig
 #ifdef COSM_RAYS
    character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
-   integer, parameter :: icr = 1 !< Only first CR component is used in this test
+   integer, parameter :: icrt = 1 !< Only first CR component is used in this test
 #endif /* COSM_RAYS */
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step, dtrig
@@ -210,8 +210,8 @@ contains
       real                            :: r2
 
       iecr = -1
-      if (ncrsp+ncrb >= icr) then
-         iecr = iarr_crs(icr)
+      if (ncrsp+ncrb >= icrt) then
+         iecr = iarr_crs(icrt)
       else
          call die("[initproblem:problem_initial_conditions] No CR components defined.")
       endif
@@ -290,7 +290,7 @@ contains
               &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
+         cgl%cg%u(iarr_crs(icrt),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
 #endif /* COSM_RAYS */
          end associate
          cgl => cgl%nxt
@@ -315,14 +315,14 @@ contains
 
       integer                        :: i, j, k, iecr
       real                           :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, bxn, byn, bzn
-      integer, parameter             :: icr = 1 !< Only first CR component
+      integer, parameter             :: icrt = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
       iecr = -1
 
-      if (ncrsp+ncrb >= icr) then
-         iecr = iarr_crs(icr)
+      if (ncrsp+ncrb >= icrt) then
+         iecr = iarr_crs(icrt)
       else
          call die("[initproblem:compute_analytic_ecr1] No CR components defined.")
       endif
@@ -338,9 +338,9 @@ contains
          bzn = 0.0
       endif
 
-      r0_perp2 = r0**2 + 4 * K_cr_perp(icr) * t
+      r0_perp2 = r0**2 + 4 * K_cr_perp(icrt) * t
       r0_par2 = r0_perp2
-      if (magb > 0.) r0_par2 = r0_par2 + 4 * K_cr_paral(icr) * t
+      if (magb > 0.) r0_par2 = r0_par2 + 4 * K_cr_paral(icrt) * t
 
       if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
@@ -404,14 +404,14 @@ contains
       integer                        :: i, j, k, iecr
       real, dimension(2)             :: norm, dev
       real                           :: crt
-      integer, parameter             :: icr = 1 !< Only first CR component
+      integer, parameter             :: icrt = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
       iecr = -1
 
-      if (ncrsp+ncrb >= icr) then
-         iecr = iarr_crs(icr)
+      if (ncrsp+ncrb >= icrt) then
+         iecr = iarr_crs(icrt)
       else
          call die("[initproblem:check_norm] No CR components defined.")
       endif
@@ -512,7 +512,7 @@ contains
       cmax = 0.
       cgl => leaves%first
       do while (associated(cgl))
-         cmax = max(cmax, maxval(cgl%cg%u(iarr_crs(icr), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask = cgl%cg%leafmap))
+         cmax = max(cmax, maxval(cgl%cg%u(iarr_crs(icrt), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask = cgl%cg%leafmap))
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(cmax, pMAX)
@@ -525,7 +525,7 @@ contains
             if (dom%has_dir(xdim)) then
                if (cgl%cg%ext_bnd(xdim, LO)) then
                   do i = cgl%cg%is, cgl%cg%ie
-                     if (any(cgl%cg%u(iarr_crs(icr), i, :, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iarr_crs(icrt), i, :, :) > cmax*dtrig)) then
                         ddist(xdim, LO) = min(ddist(xdim, LO), (cgl%cg%x(i) - cgl%cg%fbnd(xdim, LO))/cgl%cg%dx)
                         exit
                      endif
@@ -533,7 +533,7 @@ contains
                endif
                if (cgl%cg%ext_bnd(xdim, HI)) then
                   do i = cgl%cg%ie, cgl%cg%is, -1
-                     if (any(cgl%cg%u(iarr_crs(icr), i, :, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iarr_crs(icrt), i, :, :) > cmax*dtrig)) then
                         ddist(xdim, HI) = min(ddist(xdim, HI), (cgl%cg%fbnd(xdim, HI) - cgl%cg%x(i))/cgl%cg%dx)
                         exit
                      endif
@@ -544,7 +544,7 @@ contains
             if (dom%has_dir(ydim)) then
                if (cgl%cg%ext_bnd(ydim, LO)) then
                   do i = cgl%cg%js, cgl%cg%je
-                     if (any(cgl%cg%u(iarr_crs(icr), :, i, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iarr_crs(icrt), :, i, :) > cmax*dtrig)) then
                         ddist(ydim, LO) = min(ddist(ydim, LO), (cgl%cg%y(i) - cgl%cg%fbnd(ydim, LO))/cgl%cg%dy)
                         exit
                      endif
@@ -552,7 +552,7 @@ contains
                endif
                if (cgl%cg%ext_bnd(ydim, HI)) then
                   do i = cgl%cg%je, cgl%cg%js, -1
-                     if (any(cgl%cg%u(iarr_crs(icr), :, i, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iarr_crs(icrt), :, i, :) > cmax*dtrig)) then
                         ddist(ydim, HI) = min(ddist(ydim, HI), (cgl%cg%fbnd(ydim, HI) - cgl%cg%y(i))/cgl%cg%dy)
                         exit
                      endif
@@ -563,7 +563,7 @@ contains
             if (dom%has_dir(zdim)) then
                if (cgl%cg%ext_bnd(zdim, LO)) then
                   do i = cgl%cg%ks, cgl%cg%ke
-                     if (any(cgl%cg%u(iarr_crs(icr), :, :, i) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iarr_crs(icrt), :, :, i) > cmax*dtrig)) then
                         ddist(zdim, LO) = min(ddist(zdim, LO), (cgl%cg%z(i) - cgl%cg%fbnd(zdim, LO))/cgl%cg%dz)
                         exit
                      endif
@@ -571,7 +571,7 @@ contains
                endif
                if (cgl%cg%ext_bnd(zdim, HI)) then
                   do i = cgl%cg%ke, cgl%cg%ks, -1
-                     if (any(cgl%cg%u(iarr_crs(icr), :, :, i) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iarr_crs(icrt), :, :, i) > cmax*dtrig)) then
                         ddist(zdim, HI) = min(ddist(zdim, HI), (cgl%cg%fbnd(zdim, HI) - cgl%cg%z(i))/cgl%cg%dz)
                         exit
                      endif
