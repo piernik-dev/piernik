@@ -293,21 +293,6 @@ contains
       print *, 'icr_prim : ', icr_prim
       print *, 'icr_sec : ', icr_sec
 
-      allocate(rel_abound(ncrsp_auto))
-
-      rel_abound(:) = 0.
-
-      do icr = 1, ncrsp_auto
-
-         if (icr == icr_H1 .and. eH1(PRIM))  rel_abound(icr) = 1.
-         if (icr == icr_C12 .and. eC12(PRIM)) rel_abound(icr) = primary_C12
-         if (icr == icr_N14 .and. eN14(PRIM)) rel_abound(icr) = primary_N14
-         if (icr == icr_O16 .and. eO16(PRIM)) rel_abound(icr) = primary_O16
-
-      enddo
-
-      print *, 'rel_abound array : ', rel_abound
-
    end subroutine init_cr_species
 
    subroutine cr_species_tables(ncrsp, crness)
@@ -333,7 +318,7 @@ contains
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC), eBe9(SPEC), eB11(SPEC) ]
       eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eB11(PRIM) ]
 
-      allocate(cr_names(ncrsp), cr_table(ncrsp), cr_index(ncrsp), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp_prim), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp), icrs_E, icrs_H1, icrs_C12, icrs_N14, icrs_O16, icrs_Li7, icrs_Be9, icrs_B11 )
+      allocate(cr_names(ncrsp), cr_table(ncrsp), cr_index(ncrsp), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp_prim), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp), icrs_E, icrs_H1, icrs_C12, icrs_N14, icrs_O16, icrs_Li7, icrs_Be9, icrs_B11, rel_abound(ncrsp))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
@@ -344,6 +329,7 @@ contains
       cr_primary(:)  = 0.0
       cr_spectral(:) = .false.
       cr_gpess(:)    = .false.
+      rel_abound(:) = 0.
 
       icrs_E   = 0
       icrs_H1  = 0
@@ -410,6 +396,15 @@ contains
          endif
       enddo
 
+      do icr = 1, ncrsp
+
+         if (icr == icrs_H1 .and. eH1(PRIM))  rel_abound(icr) = 1.
+         if (icr == icrs_C12 .and. eC12(PRIM)) rel_abound(icr) = primary_C12
+         if (icr == icrs_N14 .and. eN14(PRIM)) rel_abound(icr) = primary_N14
+         if (icr == icrs_O16 .and. eO16(PRIM)) rel_abound(icr) = primary_O16
+
+      enddo
+
       print *, 'cr_names : ', cr_names
       print *, 'cr_table : ', cr_table
       print *, 'cr_index : ', cr_index
@@ -423,6 +418,8 @@ contains
       print *, 'cr_Z : ', cr_Z
       print *, 'iarr_spc: ', iarr_spc
       print *, 'icr_spc: ', icr_spc
+
+      print *, 'rel_abound array : ', rel_abound
 
       print *, 'icrs_E : ',  icrs_E
       print *, 'icrs_H1 : ',  icrs_H1
