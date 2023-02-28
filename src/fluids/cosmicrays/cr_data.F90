@@ -97,7 +97,7 @@ module cr_data
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
    integer,                   allocatable, dimension(:)    :: icr_spc            !< table of cr_data indices for spectrally resolved CR species
    integer,                   allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
-   integer,                   allocatable                 :: icrs_E, icrs_H1, icrs_C12, icrs_N14, icrs_O16, icrs_Li7, icrs_Be9, icrs_B11 !new enumerators to treat arbitrary number of present CR species
+   integer,                   allocatable                  :: icrs_E, icrs_H1, icrs_C12, icrs_N14, icrs_O16, icrs_Li7, icrs_Be9, icrs_B11 !new enumerators to treat arbitrary number of present CR species
    integer                                                 :: i, iprim, isec, icr
    real,                      dimension(:), allocatable    :: rel_abound
 !<====Mass number and atomic number of nuclei species====>
@@ -254,28 +254,44 @@ contains
       allocate(icr_sec(ncrsp_sec))
       icr_prim(:) = 0
       icr_sec(:) = 0
+      print *, 'icr_prim : ', icr_prim
+      print *, 'icr_sec : ', icr_sec
       iprim = 1
       isec = 1
 
-      do i = 1, ncrsp_auto
+      do i = 1, nicr
 
       print *, 'ePRIM : ', ePRIM
 
-         if (ePRIM(i)) then
+         if (eCRSP(i) .and. ePRIM(i)) then
 
             print *, 'ePRIM(i) : ', ePRIM(i)
 
-            icr_prim(iprim) = i
+            icr_prim(iprim) = iprim
+
+            print *, 'icr_prim(iprim) : ', icr_prim(iprim)
+
             iprim=iprim+1
 
-         else
 
-            icr_sec(isec) = i
+
+
+         else if (eCRSP(i)) then
+
+            icr_sec(isec) = isec
+
+            print *, 'icr_sec(isec) : ', icr_sec(isec)
+
             isec=isec+1
 
          endif
 
       enddo
+
+      print *, 'iprim : ', iprim
+      print *, 'isec : ', isec
+      print *, 'icr_prim : ', icr_prim
+      print *, 'icr_sec : ', icr_sec
 
       allocate(rel_abound(ncrsp_auto))
 
