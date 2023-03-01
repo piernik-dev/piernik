@@ -243,66 +243,75 @@ contains
       S_ratio_2 = 0.0
 
       do i_prim = 1, ncrsp_prim
+
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
 
-            if (eCRSP(icr_prim(i_prim))) then
-
                do i_sec = 1, ncrsp_sec
-               associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  if (eCRSP(icr_sec(i_sec))) then
+                  !print *, 'i_sec : ', i_sec
+                  !print *, 'icr_sec(i_sec) : ', icr_sec(i_sec)
 
-                     do i_bin = 1, ncrb
+                  associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                        if (p_fix(i_bin) > zero) then
-
-                           if (p_fix(i_bin+1) > zero) then
-
-                              Q_ratio_1(i_bin) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
-                              S_ratio_1(i_bin) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1)) !TODO print values of ratio in the last bin
-
-                              Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
-
-                              S_ratio_2(i_bin) = one - S_ratio_1(i_bin)
-
-                           endif
-
-                        endif
-
-                     enddo
-
-                     dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_n(cr_prim,:))
-                     dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_e(cr_prim,:))
-
-                     dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
-                     dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
-
-                     usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n(:)
-                     usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e(:)
-
-                     do i_bin = 1, ncrb
-
-                        if (i_bin == ncrb) then
-
-                           usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
-                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
-
-                        else
-
-                           usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
-                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
+                  !print *, 'cr_table(',icr_sec(i_sec),') : ', cr_table(icr_sec(i_sec))
 
 
+                     !print *, 'helloow'
+
+                  do i_bin = 1, ncrb
+
+                  !print *, 'i_bin : ', i_bin
+
+                     if (p_fix(i_bin) > zero) then
+
+                        if (p_fix(i_bin+1) > zero) then
+
+                           Q_ratio_1(i_bin) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
+                           S_ratio_1(i_bin) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1)) !TODO print values of ratio in the last bin
+
+                           Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
+
+                           S_ratio_2(i_bin) = one - S_ratio_1(i_bin)
 
                         endif
 
-                     enddo
+                     endif
 
-                  endif
+                  enddo
+
+                  dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_n(cr_prim,:))
+                  dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * clight * u_cell(iarr_crspc2_e(cr_prim,:))
+
+                  dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
+                  dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
+
+                  usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n(:)
+                  usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e(:)
+
+                  do i_bin = 1, ncrb
+
+
+                     !print *, 'dcr_e(',i_bin,') : ', dcr_e(i_bin)
+
+                     if (i_bin == ncrb) then
+
+                        usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
+                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
+
+                     else
+
+                        usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
+                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
+
+
+
+                     endif
+
+                  enddo
+
                end associate
                enddo
 
-            endif
          end associate
       enddo
 
@@ -310,6 +319,8 @@ contains
 
          u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_n(i_spc,:))
          u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_e(i_spc,:))
+
+
 
       enddo
 
