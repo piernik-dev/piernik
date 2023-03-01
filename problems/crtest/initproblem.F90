@@ -89,22 +89,22 @@ contains
 
       implicit none
 
-      d0           = 1.0e5     !< density
-      p0           = 1.0       !< pressure
-      bx0          =   0.      !< Magnetic field component x
-      by0          =   0.      !< Magnetic field component y
-      bz0          =   0.      !< Magnetic field component z
-      x0           = 0.0       !< x-position of the blob
-      y0           = 0.0       !< y-position of the blob
-      z0           = 0.0       !< z-position of the blob
-      r0           = 5.* minval(dom%L_(:)/dom%n_d) !< radius of the blob
-      dtrig        = -0.01     !< fraction of top density used to trigger domain expansion
+      d0             = 1.0e5         !< density
+      p0             = 1.0           !< pressure
+      bx0            =   0.          !< Magnetic field component x
+      by0            =   0.          !< Magnetic field component y
+      bz0            =   0.          !< Magnetic field component z
+      x0             = 0.0           !< x-position of the blob
+      y0             = 0.0           !< y-position of the blob
+      z0             = 0.0           !< z-position of the blob
+      r0             = merge(0., 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)), dom%eff_dim == 0)  !< radius of the blob
+      dtrig          = -0.01         !< fraction of top density used to trigger domain expansion
 
-      beta_cr      = 0.0       !< ambient level
-      amp_cr1      = 1.0       !< amplitude of the blob
+      beta_cr        = 0.0           !< ambient level
+      amp_cr1        = 1.0           !< amplitude of the blob
 
-      norm_step    = I_TEN     !< how often to compute the norm (in steps)
-      icrt         = I_ONE     !< CR component used to be compared to analytical
+      norm_step      = I_TEN         !< how often to compute the norm (in steps)
+      icrt           = I_ONE         !< CR component used to be compared to analytical
 
       if (master) then
 
