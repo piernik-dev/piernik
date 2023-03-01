@@ -278,7 +278,7 @@ contains
 
          else if (eCRSP(i)) then
 
-            icr_sec(isec) = isec
+            icr_sec(isec) = ncrsp_prim + isec
 
             print *, 'icr_sec(isec) : ', icr_sec(isec)
 
