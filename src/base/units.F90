@@ -601,10 +601,10 @@ contains
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_Be10n01" : "cr_Be10n99")
+         case ("cr_B11n01" : "cr_B11n99")
             val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
             write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
-         case ("cr_Be10e01" : "cr_Be10e99")
+         case ("cr_B11e01" : "cr_B11e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
