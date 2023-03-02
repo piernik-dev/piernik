@@ -244,7 +244,12 @@ contains
 
       do i_prim = 1, ncrsp_prim
 
+         !print *, 'i_prim : ', i_prim
+         !print *, 'icr_prim(i_prim) : ', icr_prim(i_prim)
+
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
+
+         !print *, 'cr_table(',icr_prim(i_prim),') : ', cr_table(icr_prim(i_prim))
 
                do i_sec = 1, ncrsp_sec
 
@@ -266,8 +271,8 @@ contains
 
                         if (p_fix(i_bin+1) > zero) then
 
-                           Q_ratio_1(i_bin) = Q_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1))
-                           S_ratio_1(i_bin) = S_ratio(cr_mass(icr_prim(i_prim)), cr_mass(icr_sec(i_sec)),q_spc_all(i_bin,icr_prim(i_prim)),p_fix(i_bin),p_fix(i_bin+1)) !TODO print values of ratio in the last bin
+                           Q_ratio_1(i_bin) = Q_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1))
+                           S_ratio_1(i_bin) = S_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1)) !TODO print values of ratio in the last bin
 
                            Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
 
@@ -296,12 +301,12 @@ contains
                      if (i_bin == ncrb) then
 
                         usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
-                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
+                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
 
                      else
 
                         usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
-                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(icr_sec(i_sec))/cr_mass(icr_prim(i_prim))
+                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
 
 
 
@@ -313,6 +318,8 @@ contains
                enddo
 
          end associate
+
+      !print *, 'q_spc_all (1,:):', q_spc_all(1,:)
       enddo
 
       do i_spc = 1, nspc

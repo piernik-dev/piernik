@@ -266,7 +266,7 @@ contains
 
             print *, 'ePRIM(i) : ', ePRIM(i)
 
-            icr_prim(iprim) = iprim
+            icr_prim(iprim) = i
 
             print *, 'icr_prim(iprim) : ', icr_prim(iprim)
 
@@ -277,7 +277,7 @@ contains
 
          else if (eCRSP(i)) then
 
-            icr_sec(isec) = isec
+            icr_sec(isec) = i
 
             print *, 'icr_sec(isec) : ', icr_sec(isec)
 
