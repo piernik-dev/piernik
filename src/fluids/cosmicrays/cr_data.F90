@@ -97,7 +97,6 @@ module cr_data
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
    integer,                   allocatable, dimension(:)    :: icr_spc            !< table of cr_data indices for spectrally resolved CR species
    integer,                   allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
-   integer,                   allocatable                  :: icrs_E, icrs_H1, icrs_C12, icrs_N14, icrs_O16, icrs_Li7, icrs_Be9, icrs_B11 !new enumerators to treat arbitrary number of present CR species
    integer                                                 :: i, iprim, isec, icr
    real,                      dimension(:), allocatable    :: rel_abound
 !<====Mass number and atomic number of nuclei species====>
@@ -278,7 +277,7 @@ contains
 
          else if (eCRSP(i)) then
 
-            icr_sec(isec) = ncrsp_prim + isec
+            icr_sec(isec) = isec
 
             print *, 'icr_sec(isec) : ', icr_sec(isec)
 
@@ -318,7 +317,7 @@ contains
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC), eBe9(SPEC), eB11(SPEC) ]
       eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eB11(PRIM) ]
 
-      allocate(cr_names(ncrsp), cr_table(ncrsp), cr_index(ncrsp), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp_prim), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp), icrs_E, icrs_H1, icrs_C12, icrs_N14, icrs_O16, icrs_Li7, icrs_Be9, icrs_B11, rel_abound(ncrsp))
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp_prim), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp), rel_abound(ncrsp))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
@@ -331,50 +330,50 @@ contains
       cr_gpess(:)    = .false.
       rel_abound(:) = 0.
 
-      icrs_E   = 0
-      icrs_H1  = 0
-      icrs_C12 = 0
-      icrs_N14 = 0
-      icrs_O16 = 0
-      icrs_Li7 = 0
-      icrs_Be9 = 0
-      icrs_B11 = 0
+
+
+
+
+
+
+
+
 
       icr = 0 ; jcr = 0; kcr = 0
       print *, 'icr : ', icr
       print *, 'cr_table : ', cr_table
-      print *, 'icr_E : ',   icr_E
-      print *, 'icr_H1 : ',  icr_H1
-      print *, 'icr_C12 : ', icr_C12
-      print *, 'icr_N14 : ', icr_N14
-      print *, 'icr_O16 : ', icr_O16
-      print *, 'icr_Li7 : ', icr_Li7
-      print *, 'icr_Be9 : ', icr_Be9
-      print *, 'icr_B11 : ', icr_B11
+
+
+
+
+
+
+
+
 
       do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
 
             icr = icr + 1
             print *, 'icr : ', icr
-            cr_table(icr)      = icr
+            cr_table(i)      = icr
             cr_names(icr)    = eCRSP_names(i)
             cr_mass(icr)     = eCRSP_mass(i)
             cr_Z(icr)        = eCRSP_Z(i)
             cr_spectral(icr) = eCRSP_spec(i)
 
-            if (cr_names(icr)=='e-  ') icrs_E   = icr
-            if (cr_names(icr)=='p+  ') icrs_H1  = icr
-            if (cr_names(icr)=='C12 ') icrs_C12 = icr
-            if (cr_names(icr)=='N14 ') icrs_N14 = icr
-            if (cr_names(icr)=='O16 ') icrs_O16 = icr
-            if (cr_names(icr)=='Li7 ') icrs_Li7 = icr
-            if (cr_names(icr)=='Be9 ') icrs_Be9 = icr
-            if (cr_names(icr)=='B11 ') icrs_B11 = icr
+
+
+
+
+
+
+
+
 
             if (eCRSP_spec(i)) then
                kcr = kcr + 1
-               icr_spc(kcr) = cr_table(icr)
+               icr_spc(kcr) = cr_table(i)
                iarr_spc(icr)  = kcr
             endif
             cr_sigma_N(icr)  = (cr_Z(icr))**4/(cr_mass(icr)**2)*(me/mp)**2*sigma_T ! Schlickeiser, Cosmic ray astrophysics (2002), formula p.105
@@ -398,10 +397,10 @@ contains
 
       do icr = 1, ncrsp
 
-         if (icr == icrs_H1 .and. eH1(PRIM))  rel_abound(icr) = 1.
-         if (icr == icrs_C12 .and. eC12(PRIM)) rel_abound(icr) = primary_C12
-         if (icr == icrs_N14 .and. eN14(PRIM)) rel_abound(icr) = primary_N14
-         if (icr == icrs_O16 .and. eO16(PRIM)) rel_abound(icr) = primary_O16
+         if (icr == cr_table(icr_H1) .and. eH1(PRIM))  rel_abound(icr) = 1.
+         if (icr == cr_table(icr_C12) .and. eC12(PRIM)) rel_abound(icr) = primary_C12
+         if (icr == cr_table(icr_N14) .and. eN14(PRIM)) rel_abound(icr) = primary_N14
+         if (icr == cr_table(icr_O16) .and. eO16(PRIM)) rel_abound(icr) = primary_O16
 
       enddo
 
@@ -421,14 +420,14 @@ contains
 
       print *, 'rel_abound array : ', rel_abound
 
-      print *, 'icrs_E : ',  icrs_E
-      print *, 'icrs_H1 : ',  icrs_H1
-      print *, 'icrs_C12 : ', icrs_C12
-      print *, 'icrs_N14 : ', icrs_N14
-      print *, 'icrs_O16 : ', icrs_O16
-      print *, 'icrs_Li7 : ', icrs_Li7
-      print *, 'icrs_Be9 : ', icrs_Be9
-      print *, 'icrs_B11 : ', icrs_B11
+
+
+
+
+
+
+
+
 
       if (ncrsp_auto < ncrsp) then
          cr_gpess(ncrsp_auto+1:ncrsp) = crness
@@ -446,23 +445,23 @@ contains
       endif
 
       if (eCRSP(icr_C12)) then
-         cr_primary(cr_table(icrs_C12)) = primary_C12
-         if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icrs_C12), cr_table(icrs_Li7 )) = sigma_C12_Li7
-         if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icrs_C12), cr_table(icrs_Be9 )) = sigma_C12_Be9
-         if (eCRSP(icr_B11)) cr_sigma(cr_table(icrs_C12), cr_table(icrs_B11)) = sigma_C12_B11
+         cr_primary(cr_table(icr_C12)) = primary_C12
+         if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icr_C12), cr_table(icr_Li7 )) = sigma_C12_Li7
+         if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icr_C12), cr_table(icr_Be9 )) = sigma_C12_Be9
+         if (eCRSP(icr_B11)) cr_sigma(cr_table(icr_C12), cr_table(icr_B11)) = sigma_C12_B11
       endif
       if (eCRSP(icr_N14)) then
          cr_primary(cr_table(icr_N14)) = primary_N14
-         if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icrs_N14), cr_table(icrs_Li7 )) = sigma_N14_Li7
+         if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icr_N14), cr_table(icr_Li7 )) = sigma_N14_Li7
       endif
       if (eCRSP(icr_O16)) then
          cr_primary(cr_table(icr_O16)) = primary_O16
-         if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icrs_O16), cr_table(icrs_Li7 )) = sigma_O16_Li7
-         if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icrs_O16), cr_table(icrs_Be9 )) = sigma_O16_Be9
-         if (eCRSP(icr_B11)) cr_sigma(cr_table(icrs_O16), cr_table(icrs_B11)) = sigma_O16_B11
+         if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icr_O16), cr_table(icr_Li7 )) = sigma_O16_Li7
+         if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icr_O16), cr_table(icr_Be9 )) = sigma_O16_Be9
+         if (eCRSP(icr_B11)) cr_sigma(cr_table(icr_O16), cr_table(icr_B11)) = sigma_O16_B11
       endif
       cr_sigma = cr_sigma * mbarn
-      if (eCRSP(icr_B11)) cr_tau(cr_table(icrs_B11)) = tau_B11 * myr
+      if (eCRSP(icr_B11)) cr_tau(cr_table(icr_B11)) = tau_B11 * myr
       !print *, 'sigmas : ', cr_sigma
       !print *, shape(cr_sigma)
       !stop
