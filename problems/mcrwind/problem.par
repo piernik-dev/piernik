@@ -30,7 +30,7 @@
 
  $END_CONTROL
     tend         = 100.0
-    nend         = 1000000
+    nend         = 100000
  /
 
  $OUTPUT_CONTROL
@@ -85,10 +85,14 @@
  /
 
  $CR_SPECIES
-    eH1   = .true., .true., .false.
-    eBe9  = .true., .false., .false.
-    eB11  = .true., .false., .false.
-    eC12  = .true., .false., .false.
+    eE   = .false., .false., .false., .true.
+    eH1  = .true., .true.,   .false., .true.
+    eC12 = .true., .false.,  .false., .true.
+    eN14 = .false., .false., .false., .true.
+    eO16 = .false., .false., .false., .true.
+    eLi7 = .false., .false., .false., .false.
+    eBe9 = .false., .false., .false., .false.
+    eB11 = .true., .false.,  .false., .false.
  /
 
  $SHEARING
@@ -99,7 +103,7 @@
  $SN_SOURCES
     r_sn         =  50.0    ! radius of explosion (gauss function)
     h_sn         = 100.0    ! std. dev. for normal distribution of SN i "z" direction
-    f_sn_kpc2    =   0.0    ! surface frequency of SN ( / kpc^2 / Myr )
+    f_sn_kpc2    = 100.0    ! surface frequency of SN ( / kpc^2 / Myr )
  /
 
  $PROBLEM_CONTROL
