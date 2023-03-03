@@ -1,4 +1,4 @@
-#!/usr/bin/python
+##!/usr/bin/python
 from pylab import zeros, sqrt, size
 import matplotlib.pyplot as plt
 from numpy import log10, log, pi, asfarray, array, linspace, sign, around
@@ -248,7 +248,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
     s.set_yscale('log')
 
     plt.xlabel('$p/m c$', labelpad=0.2, fontsize=fontsize_axlabels)
-    plt.ylabel('d$' + plot_var + ' / $d$p$',
+    plt.ylabel('mc² d$' + plot_var + ' / $d$p$',
                fontsize=fontsize_axlabels, labelpad=-0.)
     plt.tick_params(axis='both', which='major', labelsize=fontsize_axlabels)
 
@@ -294,18 +294,18 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
     p_range = linspace(s.get_xlim()[0], s.get_xlim()[1])
     e_smalls = zeros(len(p_range))
     e_smalls[:] = e_small
-    if (plot_var == "e"):
-        plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
-    elif (plot_var == "n"):
-        plt.plot(p_range, e_small / (c * p_range),
-                 color="xkcd:azure", label="$n_{small}$")
+    #if (plot_var == "e"):
+    #    plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
+    #elif (plot_var == "n"):
+    #    plt.plot(p_range, e_small / (c * p_range),
+    #             color="xkcd:azure", label="$n_{small}$")
 
     par_plot_color = set_plot_color(par_plot_color, i_plot, colors)
     # par_plot_linestyle = set_plot_color(par_plot_linestyle, i_plot, linestyles)      ### WARNING temporary trick
 
-    spectrum_label = ("d$%s$(p)/d$p$ %s, \n[%3.1f, %3.1f, %3.1f] kpc " % (
+    spectrum_label = ("mc² d$%s$(p)/d$p$ %s, \n[%3.1f, %3.1f, %3.1f] kpc " % (
         plot_var, par_test_name, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
-    spectrum_label = ("d$%s$(p)/d$p$ [%3.1f, %3.1f, %3.1f] kpc " % (
+    spectrum_label = ("mc² d$%s$(p)/d$p$ [%3.1f, %3.1f, %3.1f] kpc " % (
         plot_var, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
     # spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
     # spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
