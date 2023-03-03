@@ -121,57 +121,59 @@ contains
 #endif /* COSM_RAYS */
 #ifdef CRESP
          case ("cr_e-n01" : "cr_e-n99")
-             f%fu = "1/\rm{cm}^3"
-             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+             f%fu = "\rm{erg}/\rm{cm}^3" ! rest mass energy times number density
+             f%f2cgs = 1.0 / (erg/cm**3)
+             !f%fu = "1/\rm{cm}^3"
+             !f%f2cgs = 1.0 / (1.0/cm**3) ! number density
          case ("cr_e-e01" : "cr_e-e99")
              f%fu = "\rm{erg}/\rm{cm}^3"
              f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_p+n01" : "cr_p+n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_p+e01" : "cr_p+e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_C12n01" : "cr_C12n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_C12e01" : "cr_C12e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_N14n01" : "cr_N14n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_N14e01" : "cr_N14e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_O16n01" : "cr_O16n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_O16e01" : "cr_O16e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_Li7n01" : "cr_Li7n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_Li7e01" : "cr_Li7e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_Be9n01" : "cr_Be9n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_Be9e01" : "cr_Be9e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
          case ("cr_B11n01" : "cr_B11n99")
-            f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
          case ("cr_B11e01" : "cr_B11e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)

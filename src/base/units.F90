@@ -538,72 +538,98 @@ contains
          !      write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
          !   endif
 #ifdef CRESP
-         case ("cr_e-n01" : "cr_e-n99")
-             val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_e-n01" : "cr_e-n99") !< CRESP rest mass times number density
+             if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
+           !  val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
+           !  write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
          case ("cr_e-e01" : "cr_e-e99")
              if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_p+n01" : "cr_p+n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_p+n01" : "cr_p+n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_p+e01" : "cr_p+e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_C12n01" : "cr_C12n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_C12n01" : "cr_C12n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_C12e01" : "cr_C12e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_N14n01" : "cr_N14n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_N14n01" : "cr_N14n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_N14e01" : "cr_N14e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_O16n01" : "cr_O16n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_O16n01" : "cr_O16n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_O16e01" : "cr_O16e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_Li7n01" : "cr_Li7n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_Li7n01" : "cr_Li7n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_Li7e01" : "cr_Li7e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_Be9n01" : "cr_Be9n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_Be9n01" : "cr_Be9n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_Be9e01" : "cr_Be9e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
-         case ("cr_B11n01" : "cr_B11n99")
-            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
-            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cr_B11n01" : "cr_B11n99") !< CRESP rest mass times number density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
          case ("cr_B11e01" : "cr_B11e99")
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
