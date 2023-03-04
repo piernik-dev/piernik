@@ -341,10 +341,10 @@ contains
          print *, 'ampl : ', ampl
          !print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
 #ifdef CRESP
-         print *, 'Total proton energy density (erg) : ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))/erg
-         print *, 'Total proton rest mass energy density (erg) : ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))/erg
+         print *, 'Total proton energy density : ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))
+         print *, 'Total proton rest mass energy density : ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))
 #else /* CRESP */
-         print *, 'Total proton energy density (erg) : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))/erg
+         print *, 'Total proton energy density : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))
 #endif /* CRESP */
          cgl => cgl%nxt
       enddo
