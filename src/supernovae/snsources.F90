@@ -138,6 +138,8 @@ contains
          gnorm = 1. !/(pi*r_sn**2)  ! is this 2D case? Where is 1D?
       endif
 
+      print *, 'gnorm : ', gnorm
+
 #ifdef COSM_RAYS
       amp_ecr_sn = cr_eff * e_sn * erg * gnorm
       !print *, 'amp_ecr_sn : ', amp_ecr_sn
@@ -174,9 +176,14 @@ contains
       if (.not. repeat_step()) nsn_last = nsn
 
       nsn = int(t * f_sn, kind=4)
-      nsn_per_timestep = 1 !nsn - nsn_last
+      print *, 'nsn : ', nsn
+      print *, 'nsn_last : ' , nsn_last
+      nsn_per_timestep = nsn - nsn_last
+      print *, 'nsn_per_timestep : ', nsn_per_timestep
 
       do isn = 1, nsn_per_timestep
+
+         print *, 'Hello ! '
 
          call rand_coords(snpos)
 
@@ -320,20 +327,20 @@ contains
                                  enddo
                               enddo
 
-         !print *, 'total converted SN energy : ', ampl*(sqrt(2*pi)**3*r_sn**3)
-         !print *, 'total converted SN energy (erg) : ', ampl*(sqrt(2*pi)**3*r_sn**3)/erg
-         !print *, 'Gaussian integral : ', cg%dvol*decr_sum/(sqrt(2*pi)**3*r_sn**3)
-         !print *, 'cg dvol : ', cg%dvol
-         !print *, 'decr : ', decr
-         !print *, 'decr_sum : ', decr_sum
-         !print *, 'cresp_e_sum : ', cresp_e_sum
-         !print *, 'ampl : ', ampl
-        ! print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
+         print *, 'total converted SN energy : ', ampl*(sqrt(2*pi)**3*r_sn**3)
+         print *, 'total converted SN energy (erg) : ', ampl*(sqrt(2*pi)**3*r_sn**3)/erg
+         print *, 'Gaussian integral : ', cg%dvol*decr_sum/(sqrt(2*pi)**3*r_sn**3)
+         print *, 'cg dvol : ', cg%dvol
+         print *, 'decr : ', decr
+         print *, 'decr_sum : ', decr_sum
+         print *, 'cresp_e_sum : ', cresp_e_sum
+         print *, 'ampl : ', ampl
+         !print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
 #ifdef CRESP
          !print *, 'Total proton energy density (erg) : ', sum(cgl%cg%u(iarr_crspc2_e(icr_H1,:),:,:,:))/erg
          !print *, 'Total proton density (erg) : ', sum(cgl%cg%u(iarr_crspc2_n(icr_H1,:),:,:,:))/erg
 #else /* CRESP */
-         !print *, 'Total proton energy density (erg) : ', sum(cg%u(iarr_crn(icr_H1),:,:,:))/erg
+         print *, 'Total proton energy density (erg) : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))/erg
 #endif /* CRESP */
          cgl => cgl%nxt
       enddo
@@ -359,16 +366,16 @@ contains
       real, dimension(4)                  :: rand
 
       call random_number(rand)
-      !pos(xdim:ydim) = dom%edge(xdim:ydim, LO)+ dom%L_(xdim:ydim)*rand(xdim:ydim)
-      pos(xdim) = 0.0
-      pos(zdim) = 0.0
-      pos(ydim) = 0.0
+      pos(xdim:ydim) = dom%edge(xdim:ydim, LO)+ dom%L_(xdim:ydim)*rand(xdim:ydim)
+      !pos(xdim) = 0.0
+      !pos(zdim) = 0.0
+      !pos(ydim) = 0.0
 
 
       if (dom%has_dir(zdim)) then
-         !pos(zdim) = h_sn * gasdev(rand(3),rand(4))
+         pos(zdim) = h_sn * gasdev(rand(3),rand(4))
       else
-         !pos(zdim) = 0.0
+         pos(zdim) = 0.0
       endif
 
    end subroutine rand_coords
