@@ -289,7 +289,11 @@ contains
                                                 ! print *, 'test sum n: ', sum(norm_init_spectrum_n(icr,:))/total_init_cree(icr)
                                                 ! print *, 'test sum e: ', sum(norm_init_spectrum_e(icr,:))/total_init_cree(icr)
 
-                                                   if (icr==icr_H1) e_tot_sn =  decr !* cre_eff(icr)
+                                                   if (icr==cr_table(icr_H1)) e_tot_sn =  decr !* cre_eff(icr)
+                                                   !print *, 'icr : ', icr
+                                                   !print *, ' cr_table(icr_H1) : ', cr_table(icr_H1)
+                                                   !print *, 'icr_H1 : ', icr_H1
+
                                                    !if (icr==icr_H1) print *, 'e tot sn : ', e_tot_sn
                                                    if (e_tot_sn > smallcree .and. use_cresp) then
                                                    cresp%n = 0.0
@@ -303,7 +307,7 @@ contains
 
                                                    !cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
                                                    !cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
-                                                   if (icr==icr_H1) cresp_e_sum = cresp_e_sum + sum(cresp%e)
+                                                   if (icr==cr_table(icr_H1)) cresp_e_sum = cresp_e_sum + sum(cresp%e)
 
                                                   ! if (sum(posr) .lt. 1. .and. icr==icr_H1) print *, 'icr : ', icr, ' decr : ', decr, ' cresp decr : ', sum(cresp%e), ' |delta e| / e : ', abs(decr - sum(cresp%e))/decr
                                              enddo
@@ -337,8 +341,8 @@ contains
          print *, 'ampl : ', ampl
          !print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
 #ifdef CRESP
-         !print *, 'Total proton energy density (erg) : ', sum(cgl%cg%u(iarr_crspc2_e(icr_H1,:),:,:,:))/erg
-         !print *, 'Total proton density (erg) : ', sum(cgl%cg%u(iarr_crspc2_n(icr_H1,:),:,:,:))/erg
+         print *, 'Total proton energy density (erg) : ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))/erg
+         print *, 'Total proton rest mass energy density (erg) : ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))/erg
 #else /* CRESP */
          print *, 'Total proton energy density (erg) : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))/erg
 #endif /* CRESP */
