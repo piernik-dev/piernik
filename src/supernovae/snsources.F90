@@ -138,7 +138,7 @@ contains
          gnorm = 1. !/(pi*r_sn**2)  ! is this 2D case? Where is 1D?
       endif
 
-      print *, 'gnorm : ', gnorm
+      !print *, 'gnorm : ', gnorm
 
 #ifdef COSM_RAYS
       amp_ecr_sn = cr_eff * e_sn * erg * gnorm
@@ -176,14 +176,14 @@ contains
       if (.not. repeat_step()) nsn_last = nsn
 
       nsn = int(t * f_sn, kind=4)
-      print *, 'nsn : ', nsn
-      print *, 'nsn_last : ' , nsn_last
+      !print *, 'nsn : ', nsn
+      !print *, 'nsn_last : ' , nsn_last
       nsn_per_timestep = nsn - nsn_last
-      print *, 'nsn_per_timestep : ', nsn_per_timestep
+      !print *, 'nsn_per_timestep : ', nsn_per_timestep
 
       do isn = 1, nsn_per_timestep
 
-         print *, 'Hello ! '
+         !print *, 'Hello ! '
 
          call rand_coords(snpos)
 
@@ -331,20 +331,20 @@ contains
                                  enddo
                               enddo
 
-         print *, 'total converted SN energy : ', ampl*(sqrt(2*pi)**3*r_sn**3)
-         print *, 'total converted SN energy (erg) : ', ampl*(sqrt(2*pi)**3*r_sn**3)/erg
-         print *, 'Gaussian integral : ', cg%dvol*decr_sum/(sqrt(2*pi)**3*r_sn**3)
-         print *, 'cg dvol : ', cg%dvol
-         print *, 'decr : ', decr
-         print *, 'decr_sum : ', decr_sum
-         print *, 'cresp_e_sum : ', cresp_e_sum
-         print *, 'ampl : ', ampl
+         !print *, 'total converted SN energy : ', ampl*(sqrt(2*pi)**3*r_sn**3)
+         !print *, 'total converted SN energy (erg) : ', ampl*(sqrt(2*pi)**3*r_sn**3)/erg
+         !print *, 'Gaussian integral : ', cg%dvol*decr_sum/(sqrt(2*pi)**3*r_sn**3)
+         !print *, 'cg dvol : ', cg%dvol
+         !print *, 'decr : ', decr
+         !print *, 'decr_sum : ', decr_sum
+         !print *, 'cresp_e_sum : ', cresp_e_sum
+         !print *, 'ampl : ', ampl
          !print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
 #ifdef CRESP
-         print *, 'Total proton energy density : ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))
-         print *, 'Total proton rest mass energy density : ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))
+         !print *, 'Total proton energy density : ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))
+         !print *, 'Total proton rest mass energy density : ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))
 #else /* CRESP */
-         print *, 'Total proton energy density : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))
+         !print *, 'Total proton energy density : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))
 #endif /* CRESP */
          cgl => cgl%nxt
       enddo
