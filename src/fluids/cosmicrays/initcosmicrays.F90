@@ -364,6 +364,64 @@ contains
 
    end subroutine cosmicray_index
 
+!>
+!! \brief Function to translate index from array of all CR components (iarr_crs) into CR species number in cr_names
+!<
+   integer(kind=4) function cri_select(icr) result(nm)
+
+      use cr_data, only: cr_spectral
+
+      implicit none
+
+      integer(kind=4), intent(in) :: icr
+      integer(kind=4)             :: ic, i, im
+      logical                     :: spec
+
+      nm = -1
+      spec = (icr > ncrn)
+      ic = icr ; if (spec) ic = ceiling(float(icr-ncrn)/float(ncr2b))
+      im = 0
+      do i = 1, ncrsp
+         if (cr_spectral(i) .eqv. spec) then
+            im = im + 1
+            if (ic == im) nm = i
+         endif
+      enddo
+
+   end function cri_select
+
+!>
+!! \brief Routine to identify CR component given by index from array of all CR components (iarr_crs)
+!! \details Results: index in the u array, index of CR species in cr_names, value to distinguish between number density (1) and energy density (2) and number of the spectral bin
+!<
+   subroutine identify_cr_index(icrt, fsa, fne, iecr, crsp, cr_v, cr_b)
+
+      implicit none
+
+      integer(kind=4), intent(in)  :: icrt !< index of CR component in iarr_crs array
+      integer(kind=4), intent(in)  :: fsa  !< value of flind%crs%all
+      integer(kind=4), intent(in)  :: fne  !< value of flind%crn%end
+      integer(kind=4), intent(out) :: iecr !< index in the u array
+      integer(kind=4), intent(out) :: crsp !< index of CR species in cr_names
+      integer(kind=4), intent(out) :: cr_v !< number density (1) or energy density (2)
+      integer(kind=4), intent(out) :: cr_b !< bin number
+
+      iecr = -1
+      crsp = 0
+      cr_v = 0
+      cr_b = 0
+      if (icrt > 0 .and. fsa >= icrt) then
+         iecr = iarr_crs(icrt)
+         cr_v = 2
+         crsp = cri_select(icrt)
+         if (iecr > fne) then
+            cr_v = ceiling(float(iecr-fne)/float(ncrb))
+            cr_b = mod(iecr-fne, ncrb)
+         endif
+      endif
+
+   end subroutine identify_cr_index
+
    subroutine cleanup_cosmicrays
 
       use diagnostics, only: my_deallocate
