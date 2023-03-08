@@ -135,7 +135,7 @@ contains
       if (all(dom%has_dir)) then
          gnorm = 1./(sqrt(2*pi)**3*r_sn**3) !/(16./9.*pi*r_sn**3) (sqrt(2*pi)**3*r_sn**3)  ! is this 3D case?
       else
-         gnorm = 1. !/(pi*r_sn**2)  ! is this 2D case? Where is 1D?
+         gnorm = 1./(pi*r_sn**2)  ! is this 2D case? Where is 1D?
       endif
 
       !print *, 'gnorm : ', gnorm
