@@ -174,7 +174,7 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -417,7 +417,7 @@ contains
       NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
-      if (use_cresp .and. ncrb <= I_ZERO)  then
+      if (use_cresp .and. (ncrb <= I_ZERO .or. nspc == I_ZERO))  then
          write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncrb   = ', ncrb, '; CR bins NOT initnialized. Switching CRESP module off.'
          if (master) call warn(msg)
          use_cresp      = .false.
