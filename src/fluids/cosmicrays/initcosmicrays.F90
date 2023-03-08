@@ -264,7 +264,7 @@ contains
       nspc = count(cr_spectral, kind=4)
       ncrn = ncrsp - nspc
 
-      ncr2b  = I_TWO * ncrb
+      ncr2b  = I_TWO * ncrb * nspc
       ncrtot = ncr2b + ncrn
 
       if (any([ncrsp, ncrb] > ncr_max) .or. any([ncrsp, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
@@ -293,7 +293,7 @@ contains
       call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncrb) - cre number per bin, (ncrb+1:2*ncrb) - cre energy per bin
 
 #ifdef CRESP
-      ma1d = [ncrb]
+      ma1d = [ncrb * nspc]
       call my_allocate(iarr_cre_e, ma1d)
       call my_allocate(iarr_cre_n, ma1d)
 #endif /* CRESP */
@@ -345,18 +345,18 @@ contains
       flind%cre%beg = flind%crn%end + I_ONE
       flind%cre%end = flind%all
       flind%crs%end = flind%cre%end
-      if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
+      if (flind%crn%all /= 0) flind%components = flind%components + I_ONE
       flind%crn%pos = flind%components
-      if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
+      if (flind%cre%all /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
 
 #ifdef CRESP
       flind%cre%nbeg = flind%crn%end + I_ONE
-      flind%cre%nend = flind%crn%end + ncrb
+      flind%cre%nend = flind%crn%end + ncrb * nspc
       flind%cre%ebeg = flind%cre%nend + I_ONE
-      flind%cre%eend = flind%cre%nend + ncrb
+      flind%cre%eend = flind%cre%nend + ncrb * nspc
 
-      do icr = 1, ncrb
+      do icr = 1, ncrb * nspc
          iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
          iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
       enddo
