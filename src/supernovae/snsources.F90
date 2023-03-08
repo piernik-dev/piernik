@@ -268,68 +268,57 @@ contains
                            ! BEWARE:  for num < -744.6 the exp(num) is the underflow
                            decr = decr + exp(-sum(posr, mask=dom%has_dir))
                            !if (sum(posr) .lt. 1.)print *, 'posr sum : ', sum(posr)
+                        enddo
+                     endif
+                  enddo
 
-                                             decr = decr * ampl
-                                             decr_sum = decr_sum + decr
+                 decr = decr * ampl
+                 decr_sum = decr_sum + decr
 
 #ifdef CRESP
-                                             if (use_cresp) then
+                 if (use_cresp) then
 
-                           !                     e_tot_sn = decr * cre_eff
-                           !                     if (e_tot_sn > smallcree) then!
-                           !                        cresp%n =  0.0;  cresp%e = 0.0
-                           !                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
-                           !                        cg%u(iarr_crspc_n,i,j,k) = cg%u(iarr_crspc_n,i,j,k) + cresp%n   !< update, TODO need to talk to the team if this should be inside if-clause
-                           !                        cg%u(iarr_crspc_e,i,j,k) = cg%u(iarr_crspc_e,i,j,k) + cresp%e   !< if outside, cresp%n and cresp%e needs to be zeroed
-                           !                     endif
-                           !                  endif
+                       do icr = 1, nspc
 
-                                             do icr = 1, nspc
+                          ! print *, 'test sum n: ', sum(norm_init_spectrum_n(icr,:))/total_init_cree(icr)
+                          ! print *, 'test sum e: ', sum(norm_init_spectrum_e(icr,:))/total_init_cree(icr)
 
-                                                ! print *, 'test sum n: ', sum(norm_init_spectrum_n(icr,:))/total_init_cree(icr)
-                                                ! print *, 'test sum e: ', sum(norm_init_spectrum_e(icr,:))/total_init_cree(icr)
+                             if (icr==cr_table(icr_H1)) e_tot_sn =  decr !* cre_eff(icr)
+                             !print *, 'icr : ', icr
+                             !print *, ' cr_table(icr_H1) : ', cr_table(icr_H1)
+                             !print *, 'icr_H1 : ', icr_H1
 
-                                                   if (icr==cr_table(icr_H1)) e_tot_sn =  decr !* cre_eff(icr)
-                                                   !print *, 'icr : ', icr
-                                                   !print *, ' cr_table(icr_H1) : ', cr_table(icr_H1)
-                                                   !print *, 'icr_H1 : ', icr_H1
+                             !if (icr==icr_H1) print *, 'e tot sn : ', e_tot_sn
+                             if (e_tot_sn > smallcree .and. use_cresp) then
+                             cresp%n = 0.0
+                             cresp%e = 0.0
+                                call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn, icr)
 
-                                                   !if (icr==icr_H1) print *, 'e tot sn : ', e_tot_sn
-                                                   if (e_tot_sn > smallcree .and. use_cresp) then
-                                                   cresp%n = 0.0
-                                                   cresp%e = 0.0
-                                                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn, icr)
+                                cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
+                                cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
 
-                                                      cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
-                                                      cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                             endif
 
-                                                   endif
+                             !cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
+                             !cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                             if (icr==cr_table(icr_H1)) cresp_e_sum = cresp_e_sum + sum(cresp%e)
 
-                                                   !cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
-                                                   !cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
-                                                   if (icr==cr_table(icr_H1)) cresp_e_sum = cresp_e_sum + sum(cresp%e)
+                          ! if (sum(posr) .lt. 1. .and. icr==icr_H1) print *, 'icr : ', icr, ' decr : ', decr, ' cresp decr : ', sum(cresp%e), ' |delta e| / e : ', abs(decr - sum(cresp%e))/decr
+                    enddo
 
-                                                  ! if (sum(posr) .lt. 1. .and. icr==icr_H1) print *, 'icr : ', icr, ' decr : ', decr, ' cresp decr : ', sum(cresp%e), ' |delta e| / e : ', abs(decr - sum(cresp%e))/decr
-                                             enddo
-
-                                             endif
+                 endif
 #else /* CRESP */
-                                             if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
-                                             if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
-                                             if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
-                                             if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
+                 if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
+                 if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
+                 if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
+                 if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_index(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16)) * cr_mass(cr_table(icr_O16)) * decr
 #endif /* CRESP */
 
-                                             enddo
-                                          endif
 
 
-
-                                       enddo
-
-                                    enddo
-                                 enddo
-                              enddo
+                 enddo
+              enddo
+           enddo
 
          !print *, 'total converted SN energy : ', ampl*(sqrt(2*pi)**3*r_sn**3)
          !print *, 'total converted SN energy (erg) : ', ampl*(sqrt(2*pi)**3*r_sn**3)/erg
