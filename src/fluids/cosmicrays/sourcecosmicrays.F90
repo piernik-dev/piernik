@@ -108,7 +108,7 @@ contains
 #ifdef CRESP
       if (cr_spectral(cr_table(icr_H1)) .or. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)
          !print *, 'uu array : ', uu(:,iarr_crspc2_e(iarr_spc(icr_H1), 4))
-         call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(icr_H1), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(icr_H1))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
+         call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(cr_table(icr_H1)), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(cr_table(icr_H1)))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
          !print *, 'values :', grad_pcr_cresp
       endif
 #endif /* CRESP */
