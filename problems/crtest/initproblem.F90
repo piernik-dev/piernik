@@ -77,17 +77,24 @@ contains
    subroutine read_problem_par
 
       use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN
-      use dataio_pub,     only: die, nh
+      use cr_data,        only: cr_names
+      use dataio_pub,     only: die, nh, msg, printinfo, warn
       use domain,         only: dom
+      use fluidindex,     only: flind
       use func,           only: operator(.equals.)
       use mpisetup,       only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAYS
       use constants,      only: AT_NO_B
       use cg_list_global, only: all_cg
-      use initcosmicrays, only: iarr_crs, ncrb, ncrsp
+      use initcosmicrays, only: identify_cr_index
 #endif /* COSM_RAYS */
 
       implicit none
+
+#ifdef COSM_RAYS
+      character(len=1), dimension(2), parameter :: ibin = ['n', 'e']
+      integer(kind=4)                           :: cr_b, cr_v, crsp
+#endif /* COSM_RAYS */
 
       d0             = 1.0e5         !< density
       p0             = 1.0           !< pressure
@@ -172,11 +179,15 @@ contains
       if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
 #ifdef COSM_RAYS
-      iecr = -1
-      if (ncrsp + ncrb >= icrt) then
-         iecr = iarr_crs(icrt)
+      if (flind%crs%all == 0) call die("[initproblem:read_problem_par] Cannot set tested component. No CR components defined.")
+      call identify_cr_index(icrt, flind%crs%all, flind%crn%end, iecr, crsp, cr_v, cr_b)
+      if (iecr > 0) then
+         write(msg,'(a,a)') 'Tested CR component is ', trim(cr_names(crsp))
+         if (cr_b > 0) write(msg,'(a,a,a,i2.2)') trim(msg), ' bin ', ibin(cr_v), cr_b
+         call printinfo(msg)
       else
-         call die("[initproblem:read_problem_par] Cannot set tested component. No CR components defined.")
+         write(msg,*) 'Tested CR component of the number ', icrt, ' could not be identified by name'
+         call warn(msg)
       endif
 
       call all_cg%reg_var(aecr1_n, restart_mode = AT_NO_B)
