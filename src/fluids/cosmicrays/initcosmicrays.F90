@@ -379,7 +379,7 @@ contains
 
       nm = -1
       spec = (icr > ncrn)
-      ic = icr ; if (spec) ic = ceiling(float(icr-ncrn)/float(ncr2b))
+      ic = icr ; if (spec) ic = ceiling(real(icr-ncrn)/real(ncr2b), kind=4)
       im = 0
       do i = 1, ncrsp
          if (cr_spectral(i) .eqv. spec) then
@@ -415,7 +415,7 @@ contains
          cr_v = 2
          crsp = cri_select(icrt)
          if (iecr > fne) then
-            cr_v = ceiling(float(iecr-fne)/float(ncrb))
+            cr_v = ceiling(real(iecr-fne)/real(ncrb), kind=4)
             cr_b = mod(iecr-fne, ncrb)
          endif
       endif
