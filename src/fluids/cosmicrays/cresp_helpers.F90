@@ -33,7 +33,7 @@
 module cresp_helpers
 ! pulled by CRESP
 
-   use constants,    only: cbuff_len, LO, HI
+   use constants, only: cbuff_len, LO, HI
 
    implicit none
 
