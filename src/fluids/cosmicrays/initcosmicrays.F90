@@ -369,7 +369,8 @@ contains
 !<
    integer(kind=4) function cri_select(icr) result(nm)
 
-      use cr_data, only: cr_spectral
+      use constants, only: I_ONE
+      use cr_data,   only: cr_spectral
 
       implicit none
 
@@ -383,7 +384,7 @@ contains
       im = 0
       do i = 1, ncrsp
          if (cr_spectral(i) .eqv. spec) then
-            im = im + 1
+            im = im + I_ONE
             if (ic == im) nm = i
          endif
       enddo
