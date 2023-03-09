@@ -76,7 +76,7 @@ contains
 
    subroutine read_problem_par
 
-      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN
+      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN, singlechar
       use cr_data,        only: cr_names
       use dataio_pub,     only: die, nh, msg, printinfo, warn
       use domain,         only: dom
@@ -92,8 +92,8 @@ contains
       implicit none
 
 #ifdef COSM_RAYS
-      character(len=1), dimension(2), parameter :: ibin = ['n', 'e']
-      integer(kind=4)                           :: cr_b, cr_v, crsp
+      character(len=singlechar), dimension(2), parameter :: ibin = ['n', 'e']
+      integer(kind=4)                                    :: cr_b, cr_v, crsp
 #endif /* COSM_RAYS */
 
       d0             = 1.0e5         !< density
@@ -215,7 +215,6 @@ contains
 #endif /* COSM_RAYS || !ISO */
 #ifdef COSM_RAYS
       use constants,      only: HI
-      use dataio_pub,     only: die
       use domain,         only: dom
       use initcosmicrays, only: gamma_cr_1
 #endif /* COSM_RAYS */
