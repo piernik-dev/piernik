@@ -256,6 +256,36 @@ def labellog(sctype, symmin, cmpr0):
     return logname + compare
 
 
+def properlabel(var, varlabel, dolog):
+    left, right = '', ''
+    if dolog != '':
+        left = r'( '
+        right = r' )'
+    if recognize_opt(varlabel, ('0', 'var')):
+        return dolog + var
+    elif recognize_opt(varlabel, ('1', 'describe')):
+        return dolog + left + findvardescription(var) + right
+    elif recognize_opt(varlabel, ('2', 'symbol')):
+        return dolog + left + findvarsymbol(var) + right
+    return dolog + varlabel
+
+
+def findvardescription(var):
+    if var == 'magnetic_field_divergence_c':
+        return 'magnetic field divergence'
+    elif var == 'magnetic_field_divergence_n':
+        return 'normalized magnetic field divergence'
+    return var
+
+
+def findvarsymbol(var):
+    if var == 'magnetic_field_divergence_c':
+        return r'$\mathit{div}B$'
+    elif var == 'magnetic_field_divergence_n':
+        return r'$\frac{\mathit{div}B}{B} \cdot dx$'
+    return var
+
+
 def take_nonempty(lst):
     for it in lst:
         if it != []:

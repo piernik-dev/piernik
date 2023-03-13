@@ -182,7 +182,7 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel = options
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
@@ -242,7 +242,7 @@ def plotcompose(pthfilen, var, output, options):
             if drawd:
                 vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, draw1D, draw2D, extr)
 
-                vlab = pu.labellog(sctype, symmin, cmpr[0]) + var + pu.manage_units(uvar)
+                vlab = pu.properlabel(var, varlabel, pu.labellog(sctype, symmin, cmpr[0])) + pu.manage_units(uvar)
                 field = drawd, vmin, vmax, symmin, cmap, autsc, vlab
 
     zoom = rd.level_zoom(h5f, gridlist, zoom, smin, smax)

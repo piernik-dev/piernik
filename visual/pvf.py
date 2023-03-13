@@ -11,6 +11,7 @@ import plot_utils as pu
 
 exten = ps.f_exten
 plotdir = ps.f_plotdir
+varlabel = ps.cbar_varlabel
 cmap = ps.plot2d_colormap
 sctype = ps.plot2d_sctype
 pstype = ps.hist2d_sctype
@@ -61,6 +62,7 @@ def print_usage():
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \t\tplot only requested grid levels [default: all]')
     print(' -L LEVEL1[,LEVEL2]\t--compare-level LEVEL1[,LEVEL2] \tspecify different grid levels to compare accross files [default: the same levels]')
     print('\t\t\t--linestyle STYLELIST \t\t\tline styles list for different refinement levels in 1D plots [default: %s]' % ps.plot1d_linestyle)
+    print(' -n LABEL, \t\t--varlabel LABEL \t\t\tuse VAR or LABEL as label to describe plotted datafield or translate it (possible values: 0 | var, 1 | describe, 2 | symbol, LABEL (directly)) [default: %s]' % ps.cbar_varlabel)
     print(' -o OUTPUT, \t\t--output OUTPUT \t\t\tdump plot files into OUTPUT directory [default: %s]' % ps.f_plotdir)
     print(' -p,\t\t\t--particles\t\t\t\tscatter particles onto slices [default: switched-off]')
     print(' -P,\t\t\t--particle-color\t\t\tuse color for particles scattering or colormap for particles histogram plot [default: %s or %s]' % (ps.particles_color, ps.hist2d_colormap))
@@ -77,7 +79,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:Cd:D:e:F:g:hl:L:o:pP:r:R:s:t:T:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-adjusted-grids", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:Cd:D:e:F:g:hl:L:n:o:pP:r:R:s:t:T:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-adjusted-grids", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "varlabel=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -167,6 +169,10 @@ def cli_params(argv):
         elif pu.recognize_opt(opt, ("--linestyle",)):
             global linstyl
             linstyl = arg.split(',')
+
+        elif pu.recognize_opt(opt, ("-n", "--varlabel")):
+            global varlabel
+            varlabel = str(arg)
 
         elif pu.recognize_opt(opt, ("-o", "--output")):
             global plotdir
@@ -305,7 +311,7 @@ axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
 compare = cmpr, cmprb, cmprf, cmprd, cmprl, cmprt, False
 
-options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
