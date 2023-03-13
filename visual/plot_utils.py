@@ -271,18 +271,52 @@ def properlabel(var, varlabel, dolog):
 
 
 def findvardescription(var):
+    if var == 'mag_field_x':
+        return 'magnetic field X component'
+    elif var == 'mag_field_y':
+        return 'magnetic field Y component'
+    elif var == 'mag_field_z':
+        return 'magnetic field Z component'
     if var == 'magnetic_field_divergence_c':
         return 'magnetic field divergence'
     elif var == 'magnetic_field_divergence_n':
         return 'normalized magnetic field divergence'
-    return var
+    elif var == 'velocity_x':
+        return 'velocity X component'
+    elif var == 'velocity_y':
+        return 'velocity Y component'
+    elif var == 'velocity_z':
+        return 'velocity Z component'
+    return var.replace('_', ' ')
 
 
 def findvarsymbol(var):
-    if var == 'magnetic_field_divergence_c':
+    if var == 'density':
+        return r'$\rho$'
+    elif var == 'energy_density':
+        return r'$\epsilon$'
+    elif var == 'mag_field_x':
+        return r'$B_x$'
+    elif var == 'mag_field_y':
+        return r'$B_y$'
+    elif var == 'mag_field_z':
+        return r'$B_z$'
+    elif var == 'magnetic_field_divergence_c':
         return r'$\mathit{div}B$'
     elif var == 'magnetic_field_divergence_n':
         return r'$\frac{\mathit{div}B}{B} \cdot dx$'
+    elif var == 'magnetic_field_magnitude':
+        return r'$|\vec{B}|$'
+    elif var == 'pressure':
+        return r'$p$'
+    elif var == 'psi':
+        return r'$\Psi$'
+    elif var == 'velocity_x':
+        return r'$v_x$'
+    elif var == 'velocity_y':
+        return r'$v_y$'
+    elif var == 'velocity_z':
+        return r'$v_z$'
     return var
 
 
