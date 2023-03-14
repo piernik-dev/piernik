@@ -36,7 +36,7 @@ set_as_unexist = 0.
 cbar_hist2d_shift = 0.7
 cbar_plot2d_shift = 0.1
 cbar_hist2d_label_format = '%.1e'
-cbar_plot2d_label_format = '%.1e'
+cbar_plot2d_label_format = '' #'%.1e'
 cbar_label_coords = (-1.5, 0.5)
 cbar_varlabel = 'var'
 

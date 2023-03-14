@@ -163,13 +163,15 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
         pu.color_axes(axg, 'white')
         fr = [ps.cbar_hist2d_shift, ps.cbar_plot2d_shift]
         bar = inset_axes(axg, width='100%', height='100%', bbox_to_anchor=(fr[ic], 0.0, 0.06, 1.0), bbox_transform=axg.transAxes, loc=2, borderpad=0)
-        cbarh = P.colorbar(ab, cax=bar, format=clf, drawedges=False)
     else:
         if cbar_mode == 'each':
             bar = grid.cbar_axes[icb]
         elif cbar_mode == 'single':
             bar = grid.cbar_axes[0]
         bar.axis["right"].toggle(all=True)
+    if clf == '':
+        cbarh = P.colorbar(ab, cax=bar, drawedges=False)
+    else:
         cbarh = P.colorbar(ab, cax=bar, format=clf, drawedges=False)
     cbarh.ax.set_ylabel(clab)
     if cbar_mode == 'none':
