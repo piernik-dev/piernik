@@ -1,6 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+font = {'family' : 'DejaVu Sans', 'weight' : 'normal', 'size'   : 10}
+import matplotlib
+matplotlib.rc('font', **font)
+
 # files
 f_exten = '.png'
 f_plotdir = 'frames'
