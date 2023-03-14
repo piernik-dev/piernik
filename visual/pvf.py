@@ -13,6 +13,7 @@ exten = ps.f_exten
 plotdir = ps.f_plotdir
 varlabel = ps.cbar_varlabel
 cmap = ps.plot2d_colormap
+scnorm = ps.plot2d_scnorm
 sctype = ps.plot2d_sctype
 pstype = ps.hist2d_sctype
 psize = ps.particles_size
@@ -72,6 +73,7 @@ def print_usage():
     print(' -T LOG[,MIN,MAX]\t--particle-h2d-scale LOG[,MIN,MAX]\tscaling particle 2D histogram [default: %s %s %s]' % ps.hist2d_sctype)
     print(' -t SCALETYPE, \t\t--scale SCALETYPE \t\t\tdump use SCALETYPE scale type for displaying data (possible values: 0 | linear, 1 | symlin, 2 | log, 3 | symlog) [default: %s]' % ps.plot2d_sctype)
     print(' -u UNIT, \t\t--units UNIT \t\t\t\tscale plot axes with UNIT [default: dataset units]')
+    print(' -v NORM, \t\t--scalenorm NORM \t\t\t\tscale norm for fluid 2d plot offered by matplotlib imshow routine: linerar, log, symlog, asinh, logit, function, functionlog (proper usage only with SCALETYPE 0 or linear) [default: %s]' % ps.plot2d_scnorm)
     print('\t\t\t--uniform\t\t\t\treconstruct uniform grid to plot [default: True while no AMR refinement level structure exists]')
     print(' -z ZMIN,ZMAX, \t\t--zlim ZMIN,ZMAX \t\t\tlimit colorscale to ZMIN and ZMAX [default: computed data maxima symmetrized]')
     print('\t\t\t--zoom XL,XR,YL,YR,ZL,ZR | LEVEL \tset plot axes ranges or take ranges from LEVEL [default: domain edges | 0]')
@@ -79,7 +81,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:Cd:D:e:F:g:hl:L:n:o:pP:r:R:s:t:T:u:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-adjusted-grids", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "uniform", "units=", "varlabel=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:Cd:D:e:F:g:hl:L:n:o:pP:r:R:s:t:T:u:v:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-adjusted-grids", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "scalenorm=", "uniform", "units=", "varlabel=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -227,6 +229,10 @@ def cli_params(argv):
             global uaxes
             uaxes = str(arg)
 
+        elif pu.recognize_opt(opt, ("-v", "--scalenorm")):
+            global scnorm
+            scnorm = str(arg)
+
         elif pu.recognize_opt(opt, ("-z", "--zlim")):
             global zmin, zmax
             zmin, zmax = arg.split(',')
@@ -311,7 +317,7 @@ axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
 compare = cmpr, cmprb, cmprf, cmprd, cmprl, cmprt, False
 
-options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, scnorm, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
