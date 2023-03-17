@@ -59,7 +59,7 @@ contains
       use fluidtypes,       only: component_fluid
       use global,           only: t, dt
       use grid_cont,        only: grid_container
-      use named_array_list, only: wna, qna
+      use named_array_list, only: qna
       use particle_types,   only: particle
       use particle_utils,   only: is_part_in_cg
       use units,            only: newtong, cm, sek, gram, erg
@@ -77,7 +77,7 @@ contains
       integer                         :: ifl, i, j, k, i1, j1, k1
       integer(kind=4)                 :: pid, ig, ir, n_SN
       real, dimension(ndims)          :: pos, vel, acc
-      real                            :: dens_thr, sf_dens, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, fact, stage, en_SN, en_SN01, en_SN09, mfdv
+      real                            :: dens_thr, sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, fact, stage, en_SN, en_SN01, en_SN09, mfdv
       logical                         :: in, phy, out, fed, kick
 
       if (.not. forward) return
@@ -92,7 +92,7 @@ contains
       en_SN01  = 0.1 * en_SN
       en_SN09  = (1 - 0.1 * cr_active) * en_SN
       c_tau_ff = sqrt(3.*pi/(32.*newtong))
-      sfdf     = eps_sf / c_tau_ff
+      sfdf     = eps_sf / c_tau_ff * 2 * dt
 
       dmass_stars = 0.0
       ig = qna%ind(nbdn_n)
@@ -110,7 +110,8 @@ contains
                         if (cg%q(itemp)%arr(i,j,k) < 10**4) then
 #endif /* THERM */
                            fed = .false.
-                           sf_dens = sfdf * cg%u(pfl%idn,i,j,k)**(3./2.)
+                           sf_dens2dt = sfdf * cg%u(pfl%idn,i,j,k)**(3./2.)
+                           mass    = sf_dens2dt * cg%dvol
                            pset => cg%pset%first
                            do while (associated(pset))
                               if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
@@ -119,14 +120,14 @@ contains
 
                                  if ((pset%pdata%tform >= -10.0) .and. (pset%pdata%mass < mass_SN)) then
                                     stage = aint(pset%pdata%mass/mass_SN)
-                                    frac = sf_dens * 2*dt / cg%u(pfl%idn, i, j, k)
-                                    pset%pdata%vel(1:3) = (pset%pdata%mass *pset%pdata%vel(1:3) + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + sf_dens * cg%dvol * 2*dt)
-                                    pset%pdata%mass     =  pset%pdata%mass + sf_dens * cg%dvol * 2*dt
-                                    dmass_stars = dmass_stars + sf_dens * cg%dvol * 2*dt
-                                    cg%q(ir)%arr(i,j,k)  = cg%q(ir)%arr(i,j,k) + sf_dens * cg%dvol * 2*dt
-                                    cg%u(pfl%ien, i, j, k)          = (1 - frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
-                                    cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                                    cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                                    frac = sf_dens2dt / cg%u(pfl%idn, i, j, k)
+                                    pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
+                                    pset%pdata%mass     =  pset%pdata%mass + mass
+                                    dmass_stars         =  dmass_stars + mass
+                                    cg%q(ir)%arr(i,j,k) = cg%q(ir)%arr(i,j,k) + mass
+                                    cg%u(pfl%ien,i,j,k)         = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
+                                    cg%u(pfl%idn,i,j,k)         = (1 - frac) * cg%u(pfl%idn,i,j,k)
+                                    cg%u(pfl%imx:pfl%imz,i,j,k) = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
                                     if (aint(pset%pdata%mass/mass_SN) > stage) then
                                        if (.not. kick) then
                                           mfdv = (aint(pset%pdata%mass/mass_SN) - stage) / cg%dvol
@@ -134,7 +135,7 @@ contains
                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09 ! adding SN energy
 #endif /* THERM */
 #ifdef COSM_RAYS
-                                          if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
+                                          if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
 #endif /* COSM_RAYS */
                                        endif
                                        pset%pdata%tform = t
@@ -150,19 +151,18 @@ contains
                               pos(1) = cg%coord(CENTER, xdim)%r(i)
                               pos(2) = cg%coord(CENTER, ydim)%r(j)
                               pos(3) = cg%coord(CENTER, zdim)%r(k)
-                              mass   = sf_dens * cg%dvol * 2*dt
                               frac   = mass / cg%u(pfl%idn, i, j, k) / cg%dvol
-                              vel(1) = cg%u(pfl%imx, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                              vel(2) = cg%u(pfl%imy, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
-                              vel(3) = cg%u(pfl%imz, i, j, k) / cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                              vel(1) = cg%u(pfl%imx, i, j, k) / cg%u(pfl%idn,i,j,k)
+                              vel(2) = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn,i,j,k)
+                              vel(3) = cg%u(pfl%imz, i, j, k) / cg%u(pfl%idn,i,j,k)
                               acc(:)=0.0
                               ener = 0.0
-                              tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
+                              tdyn = sqrt(3*pi/(32*newtong*(cg%u(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
                               call is_part_in_cg(cg, pos, .true., in, phy, out)
                               dmass_stars = dmass_stars + mass
-                              cg%q(ir)%arr(i,j,k)  = cg%q(ir)%arr(i,j,k) + sf_dens* cg%dvol * 2*dt
+                              cg%q(ir)%arr(i,j,k)  = cg%q(ir)%arr(i,j,k) + mass
                               cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
-                              cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
+                              cg%u(pfl%idn,i,j,k) = (1 - frac) * cg%u(pfl%idn,i,j,k)
                               cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
                               tbirth = -10
                               if (mass > mass_SN) then
@@ -172,7 +172,7 @@ contains
                                     cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09 ! adding SN energy
 #endif /* THERM */
 #ifdef COSM_RAYS
-                                    if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
+                                    if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
 #endif /* COSM_RAYS */
                                  endif
                                  tbirth = t
@@ -226,7 +226,7 @@ contains
                                              cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09  ! adding SN energy
 #endif /* THERM */
 #ifdef COSM_RAYS
-                                             if (cr_active > 0.0) cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%w(wna%fi)%arr(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
+                                             if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
 #endif /* COSM_RAYS */
                                           endif
                                        endif
