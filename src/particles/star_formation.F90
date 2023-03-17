@@ -44,6 +44,7 @@ module star_formation
    integer(kind=4)                       :: pid_gen, maxpid, dpid
    real                                  :: dmass_stars
    character(len=dsetnamelen), parameter :: sfr_n   = "SFR_n"
+
 contains
 
    subroutine SF(forward)
@@ -51,18 +52,19 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, CENTER, pi, nbdn_n
-#ifdef COSM_RAYS
-      use cr_data,          only: icr_H1, cr_table
-      use initcosmicrays,   only: iarr_crn, cr_active
-#endif /* COSM_RAYS */
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
+      use func,             only: ekin
       use global,           only: t, dt
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_types,   only: particle
       use particle_utils,   only: is_part_in_cg
       use units,            only: newtong, cm, sek, gram, erg
+#ifdef COSM_RAYS
+      use cr_data,          only: icr_H1, cr_table
+      use initcosmicrays,   only: iarr_crn, cr_active
+#endif /* COSM_RAYS */
 #ifdef THERM
       use thermal,          only: itemp
 #endif /* THERM */
@@ -74,14 +76,16 @@ contains
       type(grid_container),  pointer  :: cg
       type(particle), pointer         :: pset
       class(component_fluid), pointer :: pfl
-      integer                         :: ifl, i, j, k, i1, j1, k1, aijk1
       integer(kind=4)                 :: pid, ig, ir, n_SN
-      real, dimension(ndims)          :: pos, vel, acc
-      real                            :: dens_thr, sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, fact, stage, en_SN, en_SN01, en_SN09, mfdv, tinj, fpadd
-      logical                         :: in, phy, out, fed, kick
+      integer                         :: ifl, i, j, k, aijk1
+      integer, dimension(ndims)       :: ijk1
+      real,    dimension(ndims)       :: pos, vel, acc
+      real                            :: dens_thr, sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
+      logical                         :: in, phy, out, fed, kick, tcond1, tcond2
 
       if (.not. forward) return
 
+      tini     = 10.0
       tinj     = 6.5
       fpadd    = 1.8e40 * gram * cm /sek * 2.**0.38 * 2 * dt / tinj / 26  ! see Agertz+2013
       dens_thr = 0.035
@@ -113,15 +117,15 @@ contains
 #endif /* THERM */
                            fed = .false.
                            sf_dens2dt = sfdf * cg%u(pfl%idn,i,j,k)**(3./2.)
-                           mass    = sf_dens2dt * cg%dvol
+                           mass       = sf_dens2dt * cg%dvol
                            pset => cg%pset%first
                            do while (associated(pset))
-                              if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
-                               &  pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
-                               &  pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
+                              if ((pset%pdata%tform + tini >= 0.0) .and. (pset%pdata%mass < mass_SN)) then
+                                 if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
+                                  &  pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
+                                  &  pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
 
-                                 if ((pset%pdata%tform >= -10.0) .and. (pset%pdata%mass < mass_SN)) then
-                                    stage = aint(pset%pdata%mass/mass_SN)
+                                    stage = aint(pset%pdata%mass / mass_SN)
                                     frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
                                     pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
                                     pset%pdata%mass     =  pset%pdata%mass + mass
@@ -189,8 +193,11 @@ contains
          if (kick) then
             pset => cg%pset%first
             do while (associated(pset))
-               if (t < pset%pdata%tform + 10) then
-                  t1 = t - pset%pdata%tform
+               t1 = t - pset%pdata%tform
+               tj = t1 - tinj
+               tcond1 = (tj < 0.0)
+               tcond2 = (abs(tj) < dt)
+               if (t1 < tini .and. (tcond1 .or. tcond2)) then
                   do ifl = 1, flind%fluids
                      pfl => flind%all_fluids(ifl)%fl
                      do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
@@ -199,35 +206,26 @@ contains
                               if ( pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
                                  do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
                                     if ( pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
-                                       i1 = nint((pset%pdata%pos(xdim) - cg%coord(CENTER,xdim)%r(i)) / cg%dx)
-                                       j1 = nint((pset%pdata%pos(ydim) - cg%coord(CENTER,ydim)%r(j)) / cg%dy)
-                                       k1 = nint((pset%pdata%pos(zdim) - cg%coord(CENTER,zdim)%r(k)) / cg%dz)
-                                       aijk1 = abs(i1) + abs(j1) + abs(k1)
-                                       if (t1 < tinj) then
-                                          fact = 0.0
-                                          if (aijk1 > 0.0) fact = 1.0 / sqrt(real(aijk1))
-                                          padd = pset%pdata%mass * fpadd / cg%dvol
+                                       ijk1 = nint((pset%pdata%pos - [cg%coord(CENTER,xdim)%r(i), cg%coord(CENTER,ydim)%r(j), cg%coord(CENTER,zdim)%r(k)]) * cg%idl)
+                                       aijk1 = sum(abs(ijk1))
+                                       if (aijk1 > 0.0 .and. tcond1) then
+                                          padd = pset%pdata%mass * fpadd / cg%dvol / sqrt(real(aijk1))
                                           !else
                                           !   padd = 3.6 * 10**4 * pset%pdata%mass/200 * 2*dt/40.0 / cg%dvol / 26    ! should use initial mass, not current mass
                                           !endif
 
                                           ! Momentum kick
-                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! remove ekin
-                                          cg%u(pfl%imx,i,j,k) = cg%u(pfl%imx,i,j,k) + fact * i1 * padd
-                                          cg%u(pfl%imy,i,j,k) = cg%u(pfl%imy,i,j,k) + fact * j1 * padd
-                                          cg%u(pfl%imz,i,j,k) = cg%u(pfl%imz,i,j,k) + fact * k1 * padd
-                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! add new ekin
-                                       endif
-                                       if (aijk1 == 0) then
-                                          if ((t1 - dt < tinj) .and. (t1 + dt > tinj)) then    ! Instantaneous injection Agertz
-                                             mfdv = aint(pset%pdata%mass/mass_SN) / cg%dvol
+                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
+                                          cg%u(pfl%imx:pfl%imz,i,j,k) = cg%u(pfl%imx:pfl%imz,i,j,k) + ijk1 * padd
+                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
+                                       else if (aijk1 == 0 .and. tcond2) then    ! Instantaneous injection Agertz
+                                          mfdv = aint(pset%pdata%mass/mass_SN) / cg%dvol
 #ifdef THERM
-                                             cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09  ! adding SN energy
+                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09  ! adding SN energy
 #endif /* THERM */
 #ifdef COSM_RAYS
-                                             if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
+                                          if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
 #endif /* COSM_RAYS */
-                                          endif
                                        endif
                                     endif
                                  enddo
