@@ -128,11 +128,7 @@ contains
                                     frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
                                     pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
                                     pset%pdata%mass     =  pset%pdata%mass + mass
-                                    dmass_stars         =  dmass_stars + mass
-                                    cg%q(ir)%arr(i,j,k) = cg%q(ir)%arr(i,j,k) + mass
-                                    cg%u(pfl%ien,i,j,k)         = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
-                                    cg%u(pfl%idn,i,j,k)         = (1 - frac) * cg%u(pfl%idn,i,j,k)
-                                    cg%u(pfl%imx:pfl%imz,i,j,k) = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
+                                    call sf_fed(cg, pfl, i, j, k, ir, mass, 1 - frac)
                                     if (aint(pset%pdata%mass / mass_SN) > stage) then
                                        if (.not. kick) then
                                           mfdv = (aint(pset%pdata%mass / mass_SN) - stage) / cg%dvol
@@ -155,11 +151,7 @@ contains
                               ener = 0.0
                               tdyn = sqrt(3 * pi / (32 * newtong * cg%u(pfl%idn,i,j,k) + cg%q(ig)%arr(i,j,k)))
                               call is_part_in_cg(cg, pos, .true., in, phy, out)
-                              dmass_stars = dmass_stars + mass
-                              cg%q(ir)%arr(i,j,k) = cg%q(ir)%arr(i,j,k) + mass
-                              cg%u(pfl%ien,i,j,k)          = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
-                              cg%u(pfl%idn,i,j,k)          = (1 - frac) * cg%u(pfl%idn,i,j,k)
-                              cg%u(pfl%imx:pfl%imz,i,j,k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
+                              call sf_fed(cg, pfl, i, j, k, ir, mass, 1 - frac)
                               tbirth = -tini
                               if (mass > mass_SN) then
                                  if (.not. kick) then
@@ -227,6 +219,27 @@ contains
       enddo
 
    end subroutine SF
+
+   subroutine sf_fed(cg, pfl, i, j, k, ir, mass, frac1)
+
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      type(grid_container),   pointer :: cg
+      class(component_fluid), pointer :: pfl
+      integer,             intent(in) :: i, j, k
+      integer(kind=4),     intent(in) :: ir
+      real,                intent(in) :: mass, frac1
+
+      dmass_stars                 = dmass_stars         + mass
+      cg%q(ir)%arr(i,j,k)         = cg%q(ir)%arr(i,j,k) + mass
+      cg%u(pfl%ien,i,j,k)         = frac1 * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
+      cg%u(pfl%idn,i,j,k)         = frac1 * cg%u(pfl%idn,i,j,k)
+      cg%u(pfl%imx:pfl%imz,i,j,k) = frac1 * cg%u(pfl%imx:pfl%imz,i,j,k)
+
+   end subroutine sf_fed
 
    subroutine sf_inject(cg, ien, i, j, k, mft, mfcr)
 
