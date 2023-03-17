@@ -32,15 +32,18 @@
 !<
 module star_formation
 ! pulled by NBODY
+
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
    public :: SF, initialize_id, attribute_id, pid_gen, dmass_stars
 
-   integer(kind=4), parameter :: giga = 1000000000
-   integer(kind=4)            :: pid_gen, maxpid, dpid
-   real                       :: dmass_stars
-
+   integer(kind=4), parameter            :: giga = 1000000000
+   integer(kind=4)                       :: pid_gen, maxpid, dpid
+   real                                  :: dmass_stars
+   character(len=dsetnamelen), parameter :: sfr_n   = "SFR_n"
 contains
 
    subroutine SF(forward)
@@ -72,7 +75,7 @@ contains
       type(particle), pointer         :: pset
       class(component_fluid), pointer :: pfl
       integer                         :: ifl, i, j, k, i1, j1, k1
-      integer(kind=4)                 :: pid, ig, n_SN
+      integer(kind=4)                 :: pid, ig, ir, n_SN
       real, dimension(ndims)          :: pos, vel, acc
       real                            :: dens_thr, sf_dens, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, fact, stage, en_SN, en_SN01, en_SN09, mfdv
       logical                         :: in, phy, out, fed, kick
@@ -93,6 +96,7 @@ contains
 
       dmass_stars = 0.0
       ig = qna%ind(nbdn_n)
+      ir = qna%ind(sfr_n)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -119,7 +123,7 @@ contains
                                     pset%pdata%vel(1:3) = (pset%pdata%mass *pset%pdata%vel(1:3) + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + sf_dens * cg%dvol * 2*dt)
                                     pset%pdata%mass     =  pset%pdata%mass + sf_dens * cg%dvol * 2*dt
                                     dmass_stars = dmass_stars + sf_dens * cg%dvol * 2*dt
-                                    cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens * cg%dvol * 2*dt
+                                    cg%q(ir)%arr(i,j,k)  = cg%q(ir)%arr(i,j,k) + sf_dens * cg%dvol * 2*dt
                                     cg%u(pfl%ien, i, j, k)          = (1 - frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
                                     cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                                     cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
@@ -156,7 +160,7 @@ contains
                               tdyn = sqrt(3*pi/(32*newtong*(cg%w(wna%fi)%arr(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
                               call is_part_in_cg(cg, pos, .true., in, phy, out)
                               dmass_stars = dmass_stars + mass
-                              cg%q(qna%ind("SFR_n"))%arr(i,j,k)  = cg%q(qna%ind("SFR_n"))%arr(i,j,k) + sf_dens* cg%dvol * 2*dt
+                              cg%q(ir)%arr(i,j,k)  = cg%q(ir)%arr(i,j,k) + sf_dens* cg%dvol * 2*dt
                               cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
                               cg%w(wna%fi)%arr(pfl%idn,i,j,k) = (1 - frac) * cg%w(wna%fi)%arr(pfl%idn,i,j,k)
                               cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
@@ -192,11 +196,11 @@ contains
                   do ifl = 1, flind%fluids
                      pfl => flind%all_fluids(ifl)%fl
                      do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
-                        if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) ) then
+                        if ( pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) ) then
                            do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
-                              if (pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
+                              if ( pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
                                  do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                                    if (pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
+                                    if ( pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
                                        i1 = nint((pset%pdata%pos(1)-cg%coord(CENTER,xdim)%r(i)) / cg%dx)
                                        j1 = nint((pset%pdata%pos(2)-cg%coord(CENTER,ydim)%r(j)) / cg%dy)
                                        k1 = nint((pset%pdata%pos(3)-cg%coord(CENTER,zdim)%r(k)) / cg%dz)
