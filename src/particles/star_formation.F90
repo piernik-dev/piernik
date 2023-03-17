@@ -62,8 +62,7 @@ contains
       use particle_utils,   only: is_part_in_cg
       use units,            only: newtong, cm, sek, gram, erg
 #ifdef COSM_RAYS
-      use cr_data,          only: icr_H1, cr_table
-      use initcosmicrays,   only: iarr_crn, cr_active
+      use initcosmicrays,   only: cr_active
 #endif /* COSM_RAYS */
 #ifdef THERM
       use thermal,          only: itemp
@@ -134,15 +133,10 @@ contains
                                     cg%u(pfl%ien,i,j,k)         = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
                                     cg%u(pfl%idn,i,j,k)         = (1 - frac) * cg%u(pfl%idn,i,j,k)
                                     cg%u(pfl%imx:pfl%imz,i,j,k) = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
-                                    if (aint(pset%pdata%mass/mass_SN) > stage) then
+                                    if (aint(pset%pdata%mass / mass_SN) > stage) then
                                        if (.not. kick) then
-                                          mfdv = (aint(pset%pdata%mass/mass_SN) - stage) / cg%dvol
-#ifdef THERM
-                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09 ! adding SN energy
-#endif /* THERM */
-#ifdef COSM_RAYS
-                                          if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
-#endif /* COSM_RAYS */
+                                          mfdv = (aint(pset%pdata%mass / mass_SN) - stage) / cg%dvol
+                                          call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
                                        endif
                                        pset%pdata%tform = t
                                     endif
@@ -166,16 +160,11 @@ contains
                               cg%u(pfl%ien,i,j,k)          = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
                               cg%u(pfl%idn,i,j,k)          = (1 - frac) * cg%u(pfl%idn,i,j,k)
                               cg%u(pfl%imx:pfl%imz,i,j,k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
-                              tbirth = -10
+                              tbirth = -tini
                               if (mass > mass_SN) then
                                  if (.not. kick) then
                                     mfdv = aint(mass/mass_SN) / cg%dvol
-#ifdef THERM
-                                    cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09 ! adding SN energy
-#endif /* THERM */
-#ifdef COSM_RAYS
-                                    if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
-#endif /* COSM_RAYS */
+                                    call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
                                  endif
                                  tbirth = t
                               endif
@@ -219,13 +208,8 @@ contains
                                           cg%u(pfl%imx:pfl%imz,i,j,k) = cg%u(pfl%imx:pfl%imz,i,j,k) + ijk1 * padd
                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
                                        else if (aijk1 == 0 .and. tcond2) then    ! Instantaneous injection Agertz
-                                          mfdv = aint(pset%pdata%mass/mass_SN) / cg%dvol
-#ifdef THERM
-                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09  ! adding SN energy
-#endif /* THERM */
-#ifdef COSM_RAYS
-                                          if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfdv * en_SN01  ! adding CR
-#endif /* COSM_RAYS */
+                                          mfdv = aint(pset%pdata%mass / mass_SN) / cg%dvol
+                                          call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
                                        endif
                                     endif
                                  enddo
@@ -243,6 +227,29 @@ contains
       enddo
 
    end subroutine SF
+
+   subroutine sf_inject(cg, ien, i, j, k, mft, mfcr)
+
+      use grid_cont,      only: grid_container
+#ifdef COSM_RAYS
+      use cr_data,        only: icr_H1, cr_table
+      use initcosmicrays, only: iarr_crn, cr_active
+#endif /* COSM_RAYS */
+
+      implicit none
+
+      type(grid_container), pointer :: cg
+      integer(kind=4),   intent(in) :: ien, i, j, k
+      real,              intent(in) :: mft, mfcr
+
+#ifdef THERM
+      cg%u(ien,i,j,k) = cg%u(ien,i,j,k)  + mft  ! adding SN energy
+#endif /* THERM */
+#ifdef COSM_RAYS
+      if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfcr  ! adding CR
+#endif /* COSM_RAYS */
+
+   end subroutine sf_inject
 
    logical function pos_in_1dim(pos, pl, pr) result(isin)
 
