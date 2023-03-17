@@ -74,14 +74,16 @@ contains
       type(grid_container),  pointer  :: cg
       type(particle), pointer         :: pset
       class(component_fluid), pointer :: pfl
-      integer                         :: ifl, i, j, k, i1, j1, k1
+      integer                         :: ifl, i, j, k, i1, j1, k1, aijk1
       integer(kind=4)                 :: pid, ig, ir, n_SN
       real, dimension(ndims)          :: pos, vel, acc
-      real                            :: dens_thr, sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, fact, stage, en_SN, en_SN01, en_SN09, mfdv
+      real                            :: dens_thr, sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, fact, stage, en_SN, en_SN01, en_SN09, mfdv, tinj, fpadd
       logical                         :: in, phy, out, fed, kick
 
       if (.not. forward) return
 
+      tinj     = 6.5
+      fpadd    = 1.8e40 * gram * cm /sek * 2.**0.38 * 2 * dt / tinj / 26  ! see Agertz+2013
       dens_thr = 0.035
       eps_sf   = 0.1
       n_SN     = 1000
@@ -120,12 +122,12 @@ contains
 
                                  if ((pset%pdata%tform >= -10.0) .and. (pset%pdata%mass < mass_SN)) then
                                     stage = aint(pset%pdata%mass/mass_SN)
-                                    frac = sf_dens2dt / cg%u(pfl%idn, i, j, k)
+                                    frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
                                     pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
                                     pset%pdata%mass     =  pset%pdata%mass + mass
                                     dmass_stars         =  dmass_stars + mass
                                     cg%q(ir)%arr(i,j,k) = cg%q(ir)%arr(i,j,k) + mass
-                                    cg%u(pfl%ien,i,j,k)         = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
+                                    cg%u(pfl%ien,i,j,k)         = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
                                     cg%u(pfl%idn,i,j,k)         = (1 - frac) * cg%u(pfl%idn,i,j,k)
                                     cg%u(pfl%imx:pfl%imz,i,j,k) = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
                                     if (aint(pset%pdata%mass/mass_SN) > stage) then
@@ -148,22 +150,18 @@ contains
                            enddo
                            if (.not. fed) then
                               call attribute_id(pid)
-                              pos(1) = cg%coord(CENTER, xdim)%r(i)
-                              pos(2) = cg%coord(CENTER, ydim)%r(j)
-                              pos(3) = cg%coord(CENTER, zdim)%r(k)
-                              frac   = mass / cg%u(pfl%idn, i, j, k) / cg%dvol
-                              vel(1) = cg%u(pfl%imx, i, j, k) / cg%u(pfl%idn,i,j,k)
-                              vel(2) = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn,i,j,k)
-                              vel(3) = cg%u(pfl%imz, i, j, k) / cg%u(pfl%idn,i,j,k)
-                              acc(:)=0.0
+                              pos = [cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(k)]
+                              vel = cg%u(pfl%imx:pfl%imz,i,j,k) / cg%u(pfl%idn,i,j,k)
+                              frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
+                              acc  = 0.0
                               ener = 0.0
-                              tdyn = sqrt(3*pi/(32*newtong*(cg%u(pfl%idn,i,j,k))+cgl%cg%q(ig)%arr(i,j,k)))
+                              tdyn = sqrt(3 * pi / (32 * newtong * cg%u(pfl%idn,i,j,k) + cg%q(ig)%arr(i,j,k)))
                               call is_part_in_cg(cg, pos, .true., in, phy, out)
                               dmass_stars = dmass_stars + mass
-                              cg%q(ir)%arr(i,j,k)  = cg%q(ir)%arr(i,j,k) + mass
-                              cg%u(pfl%ien, i, j, k)          = (1-frac) * cg%u(pfl%ien, i, j, k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn, i, j, k))
-                              cg%u(pfl%idn,i,j,k) = (1 - frac) * cg%u(pfl%idn,i,j,k)
-                              cg%u(pfl%imx:pfl%imz, i, j, k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz, i, j, k)
+                              cg%q(ir)%arr(i,j,k) = cg%q(ir)%arr(i,j,k) + mass
+                              cg%u(pfl%ien,i,j,k)          = (1 - frac) * cg%u(pfl%ien,i,j,k) !- frac * ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
+                              cg%u(pfl%idn,i,j,k)          = (1 - frac) * cg%u(pfl%idn,i,j,k)
+                              cg%u(pfl%imx:pfl%imz,i,j,k)  = (1 - frac) * cg%u(pfl%imx:pfl%imz,i,j,k)
                               tbirth = -10
                               if (mass > mass_SN) then
                                  if (.not. kick) then
@@ -201,13 +199,14 @@ contains
                               if ( pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
                                  do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
                                     if ( pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
-                                       i1 = nint((pset%pdata%pos(1)-cg%coord(CENTER,xdim)%r(i)) / cg%dx)
-                                       j1 = nint((pset%pdata%pos(2)-cg%coord(CENTER,ydim)%r(j)) / cg%dy)
-                                       k1 = nint((pset%pdata%pos(3)-cg%coord(CENTER,zdim)%r(k)) / cg%dz)
-                                       fact = 0.0
-                                       if (abs(i1)+abs(j1)+abs(k1) > 0.0) fact = 1.0 / sqrt(real(abs(i1) + abs(j1) + abs(k1)))
-                                       if (t1 < 6.5) then
-                                          padd = pset%pdata%mass * 1.8 * 10.0**40 *gram * cm /sek * (1/0.5)**0.38 *2*dt/6.5 / cg%dvol / 26  ! see Agertz+2013
+                                       i1 = nint((pset%pdata%pos(xdim) - cg%coord(CENTER,xdim)%r(i)) / cg%dx)
+                                       j1 = nint((pset%pdata%pos(ydim) - cg%coord(CENTER,ydim)%r(j)) / cg%dy)
+                                       k1 = nint((pset%pdata%pos(zdim) - cg%coord(CENTER,zdim)%r(k)) / cg%dz)
+                                       aijk1 = abs(i1) + abs(j1) + abs(k1)
+                                       if (t1 < tinj) then
+                                          fact = 0.0
+                                          if (aijk1 > 0.0) fact = 1.0 / sqrt(real(aijk1))
+                                          padd = pset%pdata%mass * fpadd / cg%dvol
                                           !else
                                           !   padd = 3.6 * 10**4 * pset%pdata%mass/200 * 2*dt/40.0 / cg%dvol / 26    ! should use initial mass, not current mass
                                           !endif
@@ -219,8 +218,8 @@ contains
                                           cg%u(pfl%imz,i,j,k) = cg%u(pfl%imz,i,j,k) + fact * k1 * padd
                                           cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + 0.5*(cg%u(pfl%imx,i,j,k)**2 +cg%u(pfl%imy,i,j,k)**2 + cg%u(pfl%imz,i,j,k)**2)/cg%u(pfl%idn,i,j,k)  ! add new ekin
                                        endif
-                                       if (abs(i1) + abs(j1) + abs(k1) == 0) then
-                                          if ((t1-dt < 6.5) .and. ((t1+dt) > 6.5)) then    ! Instantaneous injection Agertz
+                                       if (aijk1 == 0) then
+                                          if ((t1 - dt < tinj) .and. (t1 + dt > tinj)) then    ! Instantaneous injection Agertz
                                              mfdv = aint(pset%pdata%mass/mass_SN) / cg%dvol
 #ifdef THERM
                                              cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k)  + mfdv * en_SN09  ! adding SN energy
