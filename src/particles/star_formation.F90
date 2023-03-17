@@ -42,7 +42,7 @@ module star_formation
 
    integer(kind=4), parameter            :: giga = 1000000000
    integer(kind=4)                       :: pid_gen, maxpid, dpid
-   real                                  :: dmass_stars
+   real                                  :: dmass_stars, dens_thr
    character(len=dsetnamelen), parameter :: sfr_n   = "SFR_n"
 
 contains
@@ -64,9 +64,6 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays,   only: cr_active
 #endif /* COSM_RAYS */
-#ifdef THERM
-      use thermal,          only: itemp
-#endif /* THERM */
 
       implicit none
 
@@ -79,7 +76,7 @@ contains
       integer                         :: ifl, i, j, k, aijk1
       integer, dimension(ndims)       :: ijk1
       real,    dimension(ndims)       :: pos, vel, acc
-      real                            :: dens_thr, sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
+      real                            :: sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
       logical                         :: in, phy, out, fed, kick, tcond1, tcond2
 
       if (.not. forward) return
@@ -110,61 +107,53 @@ contains
             do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
                do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
                   do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                     if (cg%u(pfl%idn,i,j,k) > dens_thr) then
-#ifdef THERM
-                        if (cg%q(itemp)%arr(i,j,k) < 10**4) then
-#endif /* THERM */
-                           fed = .false.
-                           sf_dens2dt = sfdf * cg%u(pfl%idn,i,j,k)**(3./2.)
-                           mass       = sf_dens2dt * cg%dvol
-                           pset => cg%pset%first
-                           do while (associated(pset))
-                              if ((pset%pdata%tform + tini >= 0.0) .and. (pset%pdata%mass < mass_SN)) then
-                                 if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
-                                  &  pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
-                                  &  pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
-
-                                    stage = aint(pset%pdata%mass / mass_SN)
-                                    frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
-                                    pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
-                                    pset%pdata%mass     =  pset%pdata%mass + mass
-                                    call sf_fed(cg, pfl, i, j, k, ir, mass, 1 - frac)
-                                    if (aint(pset%pdata%mass / mass_SN) > stage) then
-                                       if (.not. kick) then
-                                          mfdv = (aint(pset%pdata%mass / mass_SN) - stage) / cg%dvol
-                                          call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
-                                       endif
-                                       pset%pdata%tform = t
-                                    endif
-                                    fed = .true.
-                                    exit
-                                 endif
-                              endif
-                              pset => pset%nxt
-                           enddo
-                           if (.not. fed) then
-                              call attribute_id(pid)
-                              pos = [cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(k)]
-                              vel = cg%u(pfl%imx:pfl%imz,i,j,k) / cg%u(pfl%idn,i,j,k)
+                     if (.not.check_threshold(cg, pfl%idn, i, j, k)) cycle
+                     fed = .false.
+                     sf_dens2dt = sfdf * cg%u(pfl%idn,i,j,k)**(3./2.)
+                     mass       = sf_dens2dt * cg%dvol
+                     pset => cg%pset%first
+                     do while (associated(pset))
+                        if ((pset%pdata%tform + tini >= 0.0) .and. (pset%pdata%mass < mass_SN)) then
+                           if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
+                            &  pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
+                            &  pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
+                              stage = aint(pset%pdata%mass / mass_SN)
                               frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
-                              acc  = 0.0
-                              ener = 0.0
-                              tdyn = sqrt(3 * pi / (32 * newtong * cg%u(pfl%idn,i,j,k) + cg%q(ig)%arr(i,j,k)))
-                              call is_part_in_cg(cg, pos, .true., in, phy, out)
+                              pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
+                              pset%pdata%mass     =  pset%pdata%mass + mass
                               call sf_fed(cg, pfl, i, j, k, ir, mass, 1 - frac)
-                              tbirth = -tini
-                              if (mass > mass_SN) then
+                              if (aint(pset%pdata%mass / mass_SN) > stage) then
                                  if (.not. kick) then
-                                    mfdv = aint(mass/mass_SN) / cg%dvol
+                                    mfdv = (aint(pset%pdata%mass / mass_SN) - stage) / cg%dvol
                                     call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
                                  endif
-                                 tbirth = t
+                                 pset%pdata%tform = t
                               endif
-                              call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tbirth, tdyn)
+                              fed = .true.
+                              exit
                            endif
-#ifdef THERM
                         endif
-#endif /* THERM */
+                        pset => pset%nxt
+                     enddo
+                     if (.not. fed) then
+                        call attribute_id(pid)
+                        pos = [cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(k)]
+                        vel = cg%u(pfl%imx:pfl%imz,i,j,k) / cg%u(pfl%idn,i,j,k)
+                        frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
+                        acc  = 0.0
+                        ener = 0.0
+                        tdyn = sqrt(3 * pi / (32 * newtong * cg%u(pfl%idn,i,j,k) + cg%q(ig)%arr(i,j,k)))
+                        call is_part_in_cg(cg, pos, .true., in, phy, out)
+                        call sf_fed(cg, pfl, i, j, k, ir, mass, 1 - frac)
+                        tbirth = -tini
+                        if (mass > mass_SN) then
+                           if (.not. kick) then
+                              mfdv = aint(mass/mass_SN) / cg%dvol
+                              call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
+                           endif
+                           tbirth = t
+                        endif
+                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tbirth, tdyn)
                      endif
                   enddo
                enddo
@@ -273,6 +262,25 @@ contains
       isin = (pl < pos .and. pr > pos)
 
    end function pos_in_1dim
+
+   logical function check_threshold(cg, idn, i, j, k) result(thres)
+
+      use grid_cont, only: grid_container
+#ifdef THERM
+      use thermal,   only: itemp
+#endif /* THERM */
+
+      implicit none
+
+      type(grid_container), pointer :: cg
+      integer(kind=4),   intent(in) :: idn, i, j, k
+
+      thres = (cg%u(idn,i,j,k) > dens_thr)
+#ifdef THERM
+      thres = thres .and. (cg%q(itemp)%arr(i,j,k) < 10**4)
+#endif /* THERM */
+
+end function check_threshold
 
    subroutine initialize_id()
 
