@@ -275,8 +275,8 @@ contains
       implicit none
       class(neutral_fluid), intent(in)             :: this
       integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of neutral fluid
-      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for neutral fluid
+      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of neutral fluid
+      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for neutral fluid
       real, dimension(:),   intent(in),    pointer :: vx        !< velocity of neutral fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
@@ -361,12 +361,12 @@ contains
 
       implicit none
 
-      class(neutral_fluid), intent(in)           :: this
-      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for neutral fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      real, dimension(:),   intent(out), pointer :: ps        !< pressure of neutral fluid for current sweep
+      class(neutral_fluid), intent(in)             :: this
+      integer(kind=4),      intent(in)             :: n        !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),    pointer :: uu       !< part of u for neutral fluid
+      real, dimension(:,:), intent(in),    pointer :: bb       !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2  !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(inout), pointer :: ps       !< pressure of neutral fluid for current sweep
 
       ! locals
       integer            :: nm
@@ -376,8 +376,9 @@ contains
       ps(RNG2) = cs_iso2(RNG2) * uu(RNG2, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
 #else /* !ISO */
       if (associated(cs_iso2)) call die("[initneutral:pres_neu] cs_iso2 should not be associated")
-      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*(this%gam_1)
+      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*this%gam_1
       ps(RNG2) = max(ps(RNG2), smallp)
+
 #endif /* !ISO */
 
       return
