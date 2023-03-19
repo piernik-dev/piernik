@@ -627,6 +627,9 @@ contains
       use data_hdf5,    only: write_hdf5
       use restart_hdf5, only: write_restart_hdf5
 #endif /* HDF5 */
+#if defined(__INTEL_COMPILER)
+      use ifport,       only: sleep
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
