@@ -4,7 +4,7 @@
 
 program Allgatherv_bug
 
-   use mpi_f08, only: MPI_Init, MPI_Finalize, MPI_Comm_size, MPI_Allgatherv, &
+   use mpi_f08, only: MPI_Init, MPI_Finalize, MPI_Comm_size, MPI_Allgatherv, MPI_Abort, &
         &             MPI_COMM_WORLD, MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_INTEGER_KIND
 
    implicit none
