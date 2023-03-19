@@ -81,6 +81,9 @@ module initcosmicrays
    real                                :: def_dtcrs    !< default dt limitation due to diffusion
    logical                             :: K_crs_valid  !< condition to use dt_crs
 
+   integer(kind=4)                     :: diff_max_lev !< when set, restrict diffusion to be computed only up to specified level to avoid shortening of timestep
+   integer(kind=4)                     :: diff_prolong !< order of prolongation used to transfer data from diff_max_lev to finer grids
+
 contains
 
 !>
@@ -105,13 +108,15 @@ contains
 !! <tr><td>K_cr_perp   </td><td>0      </td><td>real array</td><td>\copydoc initcosmicrays::k_cr_perp  </td></tr>
 !! <tr><td>divv_scheme </td><td>''     </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! <tr><td>gpcr_ess_user</td><td>.false.</td><td>logical array</td><td>\copydoc initcosmicrays::gpcr_ess_user</td></tr>
+!! <tr><td>diff_max_lev</td><td>huge(1)</td><td>integer   </td><td>\copydoc initcosmicrays::diff_max_lev</td></tr>
+!! <tr><td>diff_prolong</td><td>O_I3   </td><td>integer   </td><td>\copydoc initcosmicrays::diff_prolong</td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big, O_I2
+      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big, O_I2, O_I3, base_level_id
       use cr_data,         only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: die, warn, nh
@@ -124,7 +129,7 @@ contains
       real            :: maxKcrs
 
       namelist /COSMIC_RAYS/ cfl_cr, use_smallecr, smallecr, cr_active, cr_eff, use_CRdiff, use_CRdecay, divv_scheme, ord_cr_prolong, &
-           &                 gamma_cr, K_cr_paral, K_cr_perp, ncr_user, ncrb, gpcr_ess_user
+           &                 gamma_cr, K_cr_paral, K_cr_perp, ncr_user, ncrb, gpcr_ess_user, diff_max_lev, diff_prolong
 
       call init_cr_species
 
@@ -148,6 +153,9 @@ contains
       gpcr_ess_user  = .false.
 
       divv_scheme    = ''
+
+      diff_max_lev = huge(1_4)
+      diff_prolong = O_I3
 
       if (master) then
 
@@ -177,6 +185,8 @@ contains
          ibuff(1) = ncr_user
          ibuff(2) = ncrb
          ibuff(3) = ord_cr_prolong
+         ibuff(4) = diff_max_lev
+         ibuff(5) = diff_prolong
 
          rbuff(1) = cfl_cr
          rbuff(2) = smallecr
@@ -219,6 +229,8 @@ contains
          ncr_user       = int(ibuff(1), kind=4)
          ncrb           = int(ibuff(2), kind=4)
          ord_cr_prolong = int(ibuff(3), kind=4)
+         diff_max_lev   = int(ibuff(4), kind=4)
+         diff_prolong   = int(ibuff(5), kind=4)
 
          cfl_cr       = rbuff(1)
          smallecr     = rbuff(2)
@@ -243,6 +255,8 @@ contains
 
       endif
 
+      if (diff_max_lev < base_level_id) call die("[initcosmicrays:init_cosmicrays] diff_max_lev < base_level_id")
+
       gamma_cr_1 = gamma_cr - 1.0
 
       call cr_species_tables(ncrsp, gpcr_ess_user(1:ncr_user))
@@ -250,7 +264,7 @@ contains
       nspc = count(cr_spectral, kind=4)
       ncrn = ncrsp - nspc
 
-      ncr2b  = I_TWO * ncrb
+      ncr2b  = I_TWO * ncrb * nspc
       ncrtot = ncr2b + ncrn
 
       if (any([ncrsp, ncrb] > ncr_max) .or. any([ncrsp, ncrb] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
@@ -279,7 +293,7 @@ contains
       call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncrb) - cre number per bin, (ncrb+1:2*ncrb) - cre energy per bin
 
 #ifdef CRESP
-      ma1d = [ncrb]
+      ma1d = [ncrb * nspc]
       call my_allocate(iarr_cre_e, ma1d)
       call my_allocate(iarr_cre_n, ma1d)
 #endif /* CRESP */
@@ -331,24 +345,83 @@ contains
       flind%cre%beg = flind%crn%end + I_ONE
       flind%cre%end = flind%all
       flind%crs%end = flind%cre%end
-      if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
+      if (flind%crn%all /= 0) flind%components = flind%components + I_ONE
       flind%crn%pos = flind%components
-      if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
+      if (flind%cre%all /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
 
 #ifdef CRESP
       flind%cre%nbeg = flind%crn%end + I_ONE
-      flind%cre%nend = flind%crn%end + ncrb
+      flind%cre%nend = flind%crn%end + ncrb * nspc
       flind%cre%ebeg = flind%cre%nend + I_ONE
-      flind%cre%eend = flind%cre%nend + ncrb
+      flind%cre%eend = flind%cre%nend + ncrb * nspc
 
-      do icr = 1, ncrb
+      do icr = 1, ncrb * nspc
          iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
          iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
       enddo
 #endif /* CRESP */
 
    end subroutine cosmicray_index
+
+!>
+!! \brief Function to translate index from array of all CR components (iarr_crs) into CR species number in cr_names
+!<
+   integer(kind=4) function cri_select(icr) result(nm)
+
+      use constants, only: I_ONE
+      use cr_data,   only: cr_spectral
+
+      implicit none
+
+      integer(kind=4), intent(in) :: icr
+      integer(kind=4)             :: ic, i, im
+      logical                     :: spec
+
+      nm = -1
+      spec = (icr > ncrn)
+      ic = icr ; if (spec) ic = ceiling(real(icr-ncrn)/real(ncr2b), kind=4)
+      im = 0
+      do i = 1, ncrsp
+         if (cr_spectral(i) .eqv. spec) then
+            im = im + I_ONE
+            if (ic == im) nm = i
+         endif
+      enddo
+
+   end function cri_select
+
+!>
+!! \brief Routine to identify CR component given by index from array of all CR components (iarr_crs)
+!! \details Results: index in the u array, index of CR species in cr_names, value to distinguish between number density (1) and energy density (2) and number of the spectral bin
+!<
+   subroutine identify_cr_index(icrt, fsa, fne, iecr, crsp, cr_v, cr_b)
+
+      implicit none
+
+      integer(kind=4), intent(in)  :: icrt !< index of CR component in iarr_crs array
+      integer(kind=4), intent(in)  :: fsa  !< value of flind%crs%all
+      integer(kind=4), intent(in)  :: fne  !< value of flind%crn%end
+      integer(kind=4), intent(out) :: iecr !< index in the u array
+      integer(kind=4), intent(out) :: crsp !< index of CR species in cr_names
+      integer(kind=4), intent(out) :: cr_v !< number density (1) or energy density (2)
+      integer(kind=4), intent(out) :: cr_b !< bin number
+
+      iecr = -1
+      crsp = 0
+      cr_v = 0
+      cr_b = 0
+      if (icrt > 0 .and. fsa >= icrt) then
+         iecr = iarr_crs(icrt)
+         cr_v = 2
+         crsp = cri_select(icrt)
+         if (iecr > fne) then
+            cr_v = ceiling(real(iecr-fne)/real(ncrb), kind=4)
+            cr_b = mod(iecr-fne, ncrb)
+         endif
+      endif
+
+   end subroutine identify_cr_index
 
    subroutine cleanup_cosmicrays
 

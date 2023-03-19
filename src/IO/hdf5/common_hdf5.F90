@@ -1187,7 +1187,6 @@ contains
 !!
 !! The loop here has to match the loop in get_nth_cg!
 !>
-
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, cg_npart, cg_pid_max, dbuf, otype)
 
       use cg_leaves,      only: leaves

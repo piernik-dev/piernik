@@ -519,6 +519,7 @@ contains
       integer(kind=4), intent(in) :: bound_case
       real, dimension(:), pointer :: pfp, pff
       real, dimension(1:2)        :: x_vec, prev_solution, prev_solution_1, x_step
+      real, dimension(1:3)        :: ntab3
       integer(kind=4)             :: i, j, is, js, jm
       logical                     :: exit_code, new_line
 #ifdef CRESP_VERBOSED
@@ -559,9 +560,10 @@ contains
             if (exit_code) then
                jm = j - I_TWO
                if (check_dimm(jm, arr_dim_n)) then
+                  ntab3 = n_tab(bound_case, j-I_TWO:j)
                   pfp => p_p(i,jm:j)
                   pff => p_f(i,jm:j)
-                  call step_extr(pfp, pff, n_tab(bound_case, jm:j), exit_code)
+                  call step_extr(pfp, pff, ntab3, exit_code)
                endif
                if (j >= 2) then
                   jm = j - I_ONE
