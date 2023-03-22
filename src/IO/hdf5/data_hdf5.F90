@@ -171,6 +171,20 @@ contains
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
 
+         case ("cr_Be10n01" : "cr_Be10n99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
+         case ("cr_Be10e01" : "cr_Be10e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
+         case ("cr_B10n01" : "cr_B10n99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
+         case ("cr_B10e01" : "cr_B10e99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+
          case ("cr_B11n01" : "cr_B11n99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
