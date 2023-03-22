@@ -181,7 +181,7 @@ contains
 
       implicit none
 
-      namelist /CR_SPECIES/ eE, eH1, eLi7, eBe9, eB11, eC12, eN14, eO16
+      namelist /CR_SPECIES/ eE, eH1, eLi7, eBe9, eBe10, eB10, eB11, eC12, eN14, eO16
 
       ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
@@ -326,7 +326,7 @@ contains
       real,                      dimension(nicr) :: eCRSP_mass, eCRSP_Z
 
       eCRSP_names(1:nicr) = ['e-  ', 'p+  ', 'C12 ', 'N14 ', 'O16 ','Li7 ','Be9 ', 'Be10', 'B10 ', 'B11 ']
-      eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,  m_N14, m_O16,  m_Li7 , m_Be9, m_Be10 m_B10, m_B11 ]
+      eCRSP_mass (1:nicr) = [me/mp,  m_H1,   m_C12,  m_N14, m_O16,  m_Li7 , m_Be9, m_Be10, m_B10, m_B11 ]
       eCRSP_Z    (1:nicr) = [   0.,  Z_H1,   Z_C12,  Z_N14, Z_O16,  Z_Li7 , Z_Be9, Z_Be10, Z_B10, Z_B11 ]
       eCRSP_ess  (1:nicr) = [eE(ESS) , eH1(ESS) , eC12(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) , eBe9(ESS) , eBe10(ESS)  , eB10(ESS) , eB11(ESS)  ]
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC), eBe9(SPEC), eBe10(SPEC) , eB10(SPEC), eB11(SPEC) ]
