@@ -111,14 +111,16 @@
 /
 
  $CR_SPECIES
-    eE   = .false., .false., .true., .true.
-    eH1  = .true., .true., .true., .true.
-    eC12 = .true., .false., .true., .true.
-    eN14 = .false., .false., .true., .true.
-    eO16 = .false., .false., .true., .true.
-    eLi7 = .false., .false., .true., .false.
-    eBe9 = .false., .false., .true., .false.
-    eB11 = .true., .false., .true., .false.
+    eE    = .false., .false., .true., .true.
+    eH1   = .true., .true., .true., .true.
+    eC12  = .true., .false., .true., .true.
+    eN14  = .false., .false., .true., .true.
+    eO16  = .false., .false., .true., .true.
+    eLi7  = .false., .false., .true., .false.
+    eBe9  = .false., .false., .true., .false.
+    eBe10 = .true., .false., .true., .false.
+    eB10  = .false., .false., .true., .false.
+    eB11  = .true., .false., .true., .false.
  /
 
  $SHEARING
