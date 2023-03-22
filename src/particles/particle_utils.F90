@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: add_part_in_proper_cg, is_part_in_cg, npf
+   public :: add_part_in_proper_cg, ijk_of_particle, is_part_in_cg, npf
    public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
@@ -80,6 +80,20 @@ contains
       endif
 
    end subroutine is_part_in_cg
+
+   function ijk_of_particle(pos, idl) result (ijk)
+
+      use constants, only: ndims, LO
+      use domain,    only: dom
+
+      implicit none
+
+      real, dimension(ndims), intent(in) :: pos, idl
+      integer(kind=4), dimension(ndims)  :: ijk
+
+      ijk = floor((pos - dom%edge(:,LO)) * idl, kind=4)
+
+   end function ijk_of_particle
 
    logical function outdom_part_in_cg(pos, fbnd, ext_bnd) result (phy)
 

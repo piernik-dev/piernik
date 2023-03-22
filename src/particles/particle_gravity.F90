@@ -141,9 +141,10 @@ contains
 
    subroutine locate_particle_in_cell(cg, pos, cell, dist)
 
-      use constants, only: ndims, xdim, zdim, LO
-      use domain,    only: dom
-      use grid_cont, only: grid_container
+      use constants,      only: ndims, LO
+      use domain,         only: dom
+      use grid_cont,      only: grid_container
+      use particle_utils, only: ijk_of_particle
 
       implicit none
 
@@ -151,12 +152,9 @@ contains
       real,    dimension(ndims), intent(in)    :: pos
       integer, dimension(ndims), intent(out)   :: cell
       real,    dimension(ndims), intent(out)   :: dist
-      integer                                  :: cdim
 
-      do cdim = xdim, zdim
-         cell(cdim) = floor((pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
-         dist(cdim) = pos(cdim) - ( dom%edge(cdim,LO) + cell(cdim) * cg%dl(cdim) )
-      enddo
+      cell = ijk_of_particle(pos, cg%idl)
+      dist = pos - (dom%edge(:,LO) + cell * cg%dl)
 
    end subroutine locate_particle_in_cell
 
@@ -354,9 +352,9 @@ contains
 
       if (is_setacc_int) then
          pset%pdata%acc = update_particle_acc_int(ig, cg, cell, dist)
-      elseif (is_setacc_cic) then
+      else if (is_setacc_cic) then
          pset%pdata%acc = update_particle_acc_cic(ig, cg, pset%pdata%pos, cell)
-      elseif (is_setacc_tsc) then
+      else if (is_setacc_tsc) then
          pset%pdata%acc = update_particle_acc_tsc(ig, cg, pset%pdata%pos)
       endif
 
