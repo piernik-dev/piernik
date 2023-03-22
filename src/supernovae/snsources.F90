@@ -167,6 +167,7 @@ contains
 
       use global,     only: t
       use repeatstep, only: repeat_step
+      use units,          only: erg
 
       implicit none
 
@@ -192,6 +193,9 @@ contains
 #endif /* COSM_RAYS */
 
       enddo
+
+      !print *, 'total sn energy per time step: ', amp_ecr_sn*nsn_per_timestep
+      !print *, 'total sn energy per time step (erg): ', amp_ecr_sn*nsn_per_timestep/erg
 
    end subroutine random_sn
 
@@ -297,6 +301,8 @@ contains
                                 cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
                                 cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
 
+
+
                              endif
 
                              !cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
@@ -328,12 +334,12 @@ contains
          !print *, 'decr_sum : ', decr_sum
          !print *, 'cresp_e_sum : ', cresp_e_sum
          !print *, 'ampl : ', ampl
-         !print *, 'Total energy density : ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
+         !print *, 'Total energy density (non-spectral): ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
 #ifdef CRESP
-         !print *, 'Total proton energy density : ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))
-         !print *, 'Total proton rest mass energy density : ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))
+         !print *, 'Total proton energy density (spectral): ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))
+         !print *, 'Total proton rest mass energy density (spectral): ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))
 #else /* CRESP */
-         !print *, 'Total proton energy density : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))
+         !print *, 'Total proton energy density (non-spectral) : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))
 #endif /* CRESP */
          cgl => cgl%nxt
       enddo
