@@ -1614,7 +1614,7 @@ contains
       use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use constants,          only: idlen, small, MAXL, PPP_IO
+      use constants,          only: idlen, small, MAXL, PPP_IO, half
       use dataio_pub,         only: printinfo
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1644,11 +1644,10 @@ contains
       use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
-      use global,             only: cfl, divB_0_method, which_solver
+      use global,             only: cfl, divB_0_method, which_solver, cc_mag
       use hdc,                only: map_chspeed
       use named_array_list,   only: wna
 #ifndef ISO
-      use constants,          only: half
       use func,               only: ekin
 #endif /* !ISO */
 #endif /* MAGNETIC */
@@ -1760,10 +1759,26 @@ contains
          call cgl%cg%costs%start
 
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
+         if (cc_mag) then
+            p = half*( (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse-dom%D2a(xdim,:,:)))*cgl%cg%dy*cgl%cg%dz &
+                 &    +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse-dom%D2a(ydim,:,:)))*cgl%cg%dx*cgl%cg%dz &
+                 &    +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse-dom%D2a(zdim,:,:)))*cgl%cg%dx*cgl%cg%dy )
+         else
+            p =   (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
+                 +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
+                 +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
+         endif
+
          cgl%cg%wa = abs(cgl%cg%wa)
+
+         ! We may miss some extrema that lie at internal boundary. Apologies for that.
+         ! To get full coverage we would need to make sure that ghost cells are up-to date, which is costly.
+         ! So let's assume that tracking max(div B) isn't the most critical thing and block interior will give us _good enough_ estimate of that.
+         if (cc_mag) then
+            cgl%cg%wa(cgl%cg%is,:,:) = cgl%cg%wa(cgl%cg%is+dom%D_x,:,:)
+            cgl%cg%wa(:,cgl%cg%js,:) = cgl%cg%wa(:,cgl%cg%js+dom%D_y,:)
+            cgl%cg%wa(:,:,cgl%cg%ks) = cgl%cg%wa(:,:,cgl%cg%ks+dom%D_z)
+         endif
 
          cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
          cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
