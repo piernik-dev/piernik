@@ -141,10 +141,10 @@ contains
 
    subroutine locate_particle_in_cell(cg, pos, cell, dist)
 
-      use constants,      only: ndims, LO
-      use domain,         only: dom
-      use grid_cont,      only: grid_container
-      use particle_utils, only: ijk_of_particle
+      use constants,     only: ndims, LO
+      use domain,        only: dom
+      use grid_cont,     only: grid_container
+      use particle_func, only: ijk_of_particle
 
       implicit none
 

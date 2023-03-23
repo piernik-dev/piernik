@@ -91,9 +91,10 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use constants,      only: xdim, ydim, zdim, ndims, LO, GEO_XYZ
       use dataio_pub,     only: die
       use domain,         only: dom
+      use particle_func,  only: ijk_of_particle, in_range
       use particle_types, only: particle
 
       implicit none
@@ -114,9 +115,8 @@ contains
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
 
             if (dom%geometry_type /= GEO_XYZ) call die("[particle_maps:map_ngp] Unsupported geometry")
-            where (dom%has_dir(:)) ijkp(:) = floor((part%pos(:) - cg%fbnd(:, LO)) * cg%idl(:)) + cg%ijkse(:, LO)
-            if (all(ijkp >= cg%ijkse(:,LO)) .and. all(ijkp <= cg%ijkse(:,HI))) &
-                 field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
+            where (dom%has_dir(:)) ijkp(:) = ijk_of_particle(part%pos, dom%edge(:,LO), cg%idl)
+            if (in_range(ijkp, cg%ijkse)) field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
 
             end associate
             pset => pset%nxt
@@ -202,8 +202,8 @@ contains
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half
       use domain,         only: dom
+      use particle_func,  only: ijk_of_particle, l_neighb_part, r_neighb_part
       use particle_types, only: particle
-      use particle_utils, only: ijk_of_particle, l_neighb_part, r_neighb_part
 
       implicit none
 
@@ -221,6 +221,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
+         ijkp(:,IM) = cgl%cg%ijkse(:,LO)
+         ijkp(:,I0) = cgl%cg%ijkse(:,LO)
+         ijkp(:,IP) = cgl%cg%ijkse(:,HI)
          pset => cgl%cg%pset%first
          do while (associated(pset))
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
@@ -232,10 +235,6 @@ contains
                   ijkp(:,I0) = ijk_of_particle(part%pos, dom%edge(:,LO), cg%idl)
                   ijkp(:,IM) = l_neighb_part(ijkp(:,I0), cg%lhn(:,LO))
                   ijkp(:,IP) = r_neighb_part(ijkp(:,I0), cg%lhn(:,HI))
-               elsewhere
-                  ijkp(:,IM) = cg%ijkse(:,LO)
-                  ijkp(:,I0) = cg%ijkse(:,LO)
-                  ijkp(:,IP) = cg%ijkse(:,HI)
                endwhere
 
                do i = ijkp(xdim, IM), ijkp(xdim, IP)

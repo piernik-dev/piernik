@@ -38,7 +38,7 @@ module particle_utils
    implicit none
 
    private
-   public :: add_part_in_proper_cg, ijk_of_particle, is_part_in_cg, l_neighb_part, r_neighb_part, npf
+   public :: add_part_in_proper_cg, is_part_in_cg, npf
    public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
@@ -80,40 +80,6 @@ contains
       endif
 
    end subroutine is_part_in_cg
-
-   elemental integer(kind=4) function ijk_of_particle(pos, edge, idl) result (ijk)
-
-      implicit none
-
-      real, intent(in) :: pos, edge, idl
-
-      ijk = floor((pos - edge) * idl, kind=4)
-
-   end function ijk_of_particle
-
-   elemental integer(kind=4) function l_neighb_part(ind, left_lim) result (lnp)
-
-      use constants, only: I_ONE
-
-      implicit none
-
-      integer(kind=4), intent(in) :: ind, left_lim
-
-      lnp = max(ind - I_ONE, left_lim)
-
-   end function l_neighb_part
-
-   elemental integer(kind=4) function r_neighb_part(ind, right_lim) result (rnp)
-
-      use constants, only: I_ONE
-
-      implicit none
-
-      integer(kind=4), intent(in) :: ind, right_lim
-
-      rnp = min(ind + I_ONE, right_lim)
-
-   end function r_neighb_part
 
    logical function outdom_part_in_cg(pos, fbnd, ext_bnd) result (phy)
 
