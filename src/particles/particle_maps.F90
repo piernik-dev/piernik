@@ -203,19 +203,20 @@ contains
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
       use domain,         only: dom
       use particle_types, only: particle
+      use particle_utils, only: ijk_of_particle
 
       implicit none
 
-      integer(kind=4), intent(in)      :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)      :: factor !< typically fpiG
+      integer(kind=4), intent(in)              :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)              :: factor !< typically fpiG
 
-      type(cg_list_element), pointer   :: cgl
-      type(particle), pointer    :: pset
-      integer(kind=4)                  :: cdim
-      integer                          :: i, j, k
+      type(cg_list_element), pointer           :: cgl
+      type(particle), pointer                  :: pset
+      integer(kind=4)                          :: cdim
+      integer                                  :: i, j, k
       integer(kind=4), dimension(ndims, IM:IP) :: ijkp
-      integer, dimension(ndims)        :: cur_ind
-      real                             :: weight, delta_x, weight_tmp
+      integer, dimension(ndims)                :: cur_ind
+      real                                     :: weight, delta_x, weight_tmp
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -229,7 +230,7 @@ contains
                endif
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = floor((part%pos(cdim) - dom%edge(cdim,LO)) *cg%idl(cdim), kind=4)
+                     ijkp(cdim, I0) = ijk_of_particle(part%pos(cdim), dom%edge(cdim,LO), cg%idl(cdim))
                      ijkp(cdim, IM) = max(ijkp(cdim, I0) - I_ONE, cg%lhn(cdim, LO))
                      ijkp(cdim, IP) = min(ijkp(cdim, I0) + I_ONE, cg%lhn(cdim, HI))
                   else
@@ -248,7 +249,7 @@ contains
                         do cdim = xdim, zdim
                            if (.not.dom%has_dir(cdim)) cycle
                            delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
-                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
+                           if (cur_ind(cdim) /= ijkp(cdim, I0)) then   !!! BEWARE hardcoded magic
                               weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
                            else
                               weight_tmp = 0.75 - delta_x**2

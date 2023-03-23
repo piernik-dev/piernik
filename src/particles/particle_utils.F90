@@ -81,17 +81,13 @@ contains
 
    end subroutine is_part_in_cg
 
-   function ijk_of_particle(pos, idl) result (ijk)
-
-      use constants, only: ndims, LO
-      use domain,    only: dom
+   elemental integer(kind=4) function ijk_of_particle(pos, edge, idl) result (ijk)
 
       implicit none
 
-      real, dimension(ndims), intent(in) :: pos, idl
-      integer(kind=4), dimension(ndims)  :: ijk
+      real, intent(in) :: pos, edge, idl
 
-      ijk = floor((pos - dom%edge(:,LO)) * idl, kind=4)
+      ijk = floor((pos - edge) * idl, kind=4)
 
    end function ijk_of_particle
 

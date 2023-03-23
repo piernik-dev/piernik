@@ -153,7 +153,7 @@ contains
       integer, dimension(ndims), intent(out)   :: cell
       real,    dimension(ndims), intent(out)   :: dist
 
-      cell = ijk_of_particle(pos, cg%idl)
+      cell = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
       dist = pos - (dom%edge(:,LO) + cell * cg%dl)
 
    end subroutine locate_particle_in_cell
