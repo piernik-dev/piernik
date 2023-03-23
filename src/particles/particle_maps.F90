@@ -200,10 +200,10 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half
       use domain,         only: dom
       use particle_types, only: particle
-      use particle_utils, only: ijk_of_particle
+      use particle_utils, only: ijk_of_particle, l_neighb_part, r_neighb_part
 
       implicit none
 
@@ -228,17 +228,15 @@ contains
                   pset => pset%nxt
                   cycle
                endif
-               do cdim = xdim, zdim
-                  if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = ijk_of_particle(part%pos(cdim), dom%edge(cdim,LO), cg%idl(cdim))
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - I_ONE, cg%lhn(cdim, LO))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + I_ONE, cg%lhn(cdim, HI))
-                  else
-                     ijkp(cdim, IM) = cg%ijkse(cdim, LO)
-                     ijkp(cdim, I0) = cg%ijkse(cdim, LO)
-                     ijkp(cdim, IP) = cg%ijkse(cdim, HI)
-                  endif
-               enddo
+               where (dom%has_dir)
+                  ijkp(:,I0) = ijk_of_particle(part%pos, dom%edge(:,LO), cg%idl)
+                  ijkp(:,IM) = l_neighb_part(ijkp(:,I0), cg%lhn(:,LO))
+                  ijkp(:,IP) = r_neighb_part(ijkp(:,I0), cg%lhn(:,HI))
+               elsewhere
+                  ijkp(:,IM) = cg%ijkse(:,LO)
+                  ijkp(:,I0) = cg%ijkse(:,LO)
+                  ijkp(:,IP) = cg%ijkse(:,HI)
+               endwhere
 
                do i = ijkp(xdim, IM), ijkp(xdim, IP)
                   do j = ijkp(ydim, IM), ijkp(ydim, IP)
