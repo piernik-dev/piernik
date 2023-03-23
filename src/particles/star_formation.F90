@@ -80,7 +80,7 @@ contains
       real,    dimension(ndims)       :: pos, vel, acc
       real,    dimension(ndims,LO:HI) :: sector
       real                            :: sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
-      logical                         :: in, phy, out, fed, kick, tcond1, tcond2
+      logical                         :: in, phy, out, fin, fed, kick, tcond1, tcond2
 
       if (.not. forward) return
 
@@ -151,7 +151,7 @@ contains
                         acc  = 0.0
                         ener = 0.0
                         tdyn = sqrt(3 * pi / (32 * newtong * cg%u(pfl%idn,i,j,k) + cg%q(ig)%arr(i,j,k)))
-                        call is_part_in_cg(cg, pos, .true., in, phy, out)
+                        call is_part_in_cg(cg, pos, .true., in, phy, out, fin)
                         call sf_fed(cg, pfl, i, j, k, ir, mass, 1 - frac)
                         tbirth = -tini
                         if (mass > mass_SN) then
@@ -161,7 +161,7 @@ contains
                            endif
                            tbirth = t
                         endif
-                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tbirth, tdyn)
+                        call cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tbirth, tdyn)
                      endif
                   enddo
                enddo

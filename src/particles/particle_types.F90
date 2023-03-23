@@ -44,37 +44,38 @@ module particle_types
    !<
 
    type :: particle_data
-      integer(kind=4)        :: pid        !< particle ID
-      real                   :: mass       !< mass of the particle
-      real                   :: tform      !< formation time of the particle
-      real                   :: tdyn       !< dynamical time for SF
-      real, dimension(ndims) :: pos        !< physical position
-      real, dimension(ndims) :: vel        !< particle velocity
-      real, dimension(ndims) :: acc        !< acceleration of the particle
-      real                   :: energy     !< total energy of particle
-      logical                :: in, phy, out !< Flags to locate particle in the inner part of the domain or the outer part
-      logical                :: outside    !< this flag is true if the particle is outside the domain
+      integer(kind=4)        :: pid            !< particle ID
+      real                   :: mass           !< mass of the particle
+      real                   :: tform          !< formation time of the particle
+      real                   :: tdyn           !< dynamical time for SF
+      real, dimension(ndims) :: pos            !< physical position
+      real, dimension(ndims) :: vel            !< particle velocity
+      real, dimension(ndims) :: acc            !< acceleration of the particle
+      real                   :: energy         !< total energy of particle
+      logical                :: in, phy, out   !< Flags to locate particle in the inner part of the domain or the outer part
+      logical                :: fin            !< this flag is true if the particle is located in a finest level cell
+      logical                :: outside        !< this flag is true if the particle is outside the domain
    contains
-      procedure :: is_outside              !< compute the outside flag
+      procedure :: is_outside                  !< compute the outside flag
    end type particle_data
 
    type :: particle
-      type(particle_data), pointer :: pdata !< list of particle data
-      type(particle), pointer :: prv, nxt !< pointers to previous and next particle
+      type(particle_data), pointer :: pdata    !< list of particle data
+      type(particle),      pointer :: prv, nxt !< pointers to previous and next particle
    end type particle
 
    !> \brief A list of particles and some associated methods
    type :: particle_set
       type(particle), pointer :: first
       type(particle), pointer :: last
-      integer(kind=4) :: cnt                  !< number of chain links
+      integer(kind=4)         :: cnt         !< number of chain links
    contains
-      procedure :: init        !< initialize the list
-      procedure :: print       !< print the list
-      procedure :: cleanup     !< delete the list
-      procedure :: remove      !< remove a particle
-      !procedure :: merge_parts !< merge two particles
-      procedure :: add_part_list   !< add a particle
+      procedure :: init                      !< initialize the list
+      procedure :: print                     !< print the list
+      procedure :: cleanup                   !< delete the list
+      procedure :: remove                    !< remove a particle
+      !procedure :: merge_parts              !< merge two particles
+      procedure :: add_part_list             !< add a particle
       !procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
       !generic, public :: exists => particle_with_id_exists
       generic, public :: add => add_part_list
@@ -201,7 +202,7 @@ contains
 !> \brief Add a particle to the list
 
 
-   subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out, tform, tdyn)
+   subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out, fin, tform, tdyn)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -216,7 +217,7 @@ contains
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: energy
       real,                   intent(in) :: mass, tform, tdyn
-      logical                            :: in,phy,out
+      logical                            :: in, phy, out, fin
 
       allocate(new)
       allocate(part)
@@ -230,6 +231,7 @@ contains
             new%pdata%in = in
             new%pdata%phy = phy
             new%pdata%out = out
+            new%pdata%fin = fin
             new%pdata%outside = .false.
             new%pdata%tform = tform
             new%pdata%tdyn = tdyn

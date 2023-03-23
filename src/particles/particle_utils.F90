@@ -46,19 +46,21 @@ module particle_utils
 
 contains
 
-   subroutine is_part_in_cg(cg, pos, indomain, in, phy, out)
+   subroutine is_part_in_cg(cg, pos, indomain, in, phy, out, fin)
 
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, LEFT, RIGHT
+      use domain,        only: dom
       use grid_cont,     only: grid_container
-      use particle_func, only: particle_in_area
+      use particle_func, only: particle_in_area, ijk_of_particle
 
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
       real, dimension(ndims),        intent(in)  :: pos
       logical,                       intent(in)  :: indomain
-      logical,                       intent(out) :: in, phy, out
+      logical,                       intent(out) :: in, phy, out, fin
       real, dimension(ndims,2)                   :: bnd_in, bnd_out
+      integer(kind=4), dimension(ndims)          :: ijk
 
       !There is probably a better way to write this
       bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)-npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)-npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)-npb)]
@@ -70,6 +72,9 @@ contains
       in  = particle_in_area(pos, bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
       out = particle_in_area(pos, bnd_out)   ! Ghost particle
+
+      ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
+      fin = cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))
 
       if (indomain) return
 
@@ -129,7 +134,7 @@ contains
       real, optional,         intent(in)  :: tdyn
       logical, optional,      intent(out) :: success
       type(cg_list_element), pointer      :: cgl
-      logical                             :: in, phy, out, indomain, cgfound
+      logical                             :: in, phy, out, fin, indomain, cgfound
       real                                :: tform1, tdyn1
 #ifdef NBODY_CHECK_PID
       type(particle), pointer             :: pset
@@ -144,7 +149,7 @@ contains
       indomain = particle_in_area(pos, dom%edge)
       cgl => leaves%first
       do while (associated(cgl))
-         call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out)
+         call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
 #ifdef NBODY_CHECK_PID
          if (phy .or. out) then
             pset => cgl%cg%pset%first
@@ -158,7 +163,7 @@ contains
             enddo
          endif
 #endif /* NBODY_CHECK_PID */
-         if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
+         if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
          cgfound = cgfound .or. (phy .or. out)
          cgl => cgl%nxt
       enddo
