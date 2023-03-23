@@ -74,7 +74,7 @@ contains
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, I_ONE, base_level_id
       use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,       only: MPI_Irecv
+      use MPIFUN,       only: MPI_Irecv, MPI_Comm_dup
       use mpisetup,     only: err_mpi, req, inflate_req
 
       implicit none
@@ -255,6 +255,7 @@ contains
    subroutine finalize_fcflx
 
       use mpisetup, only: err_mpi
+      use MPIFUN,   only: MPI_Comm_free
 
       implicit none
 

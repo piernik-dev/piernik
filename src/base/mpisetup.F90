@@ -151,6 +151,9 @@ contains
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
+#if defined(__INTEL_COMPILER)
+      use ifport,        only: getpid, getcwd, hostnm
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
@@ -161,8 +164,10 @@ contains
       character(len=cwdlen), allocatable, dimension(:) :: cwd_all
       character(len=hnlen) , allocatable, dimension(:) :: host_all
       integer(kind=4)      , allocatable, dimension(:) :: pid_all
+#if !defined(__INTEL_COMPILER)
       integer(kind=1)       :: getcwd, hostnm
       integer(kind=4)       :: getpid
+#endif /* !__INTEL_COMPILER */
       integer :: cwd_status, host_status
       logical :: par_file_exist
       logical :: tmp_log_exist
@@ -349,6 +354,9 @@ contains
       use dataio_pub,      only: printinfo, close_logs
       use MPIF,            only: MPI_COMM_WORLD, MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
       use piernik_mpi_sig, only: sig
+#if defined(__INTEL_COMPILER)
+      use ifport,          only: sleep
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
