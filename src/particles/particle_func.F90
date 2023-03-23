@@ -34,7 +34,7 @@ module particle_func
    implicit none
 
    private
-   public :: particle_in_area, in_range, ijk_of_particle, l_neighb_part, r_neighb_part, check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
+   public :: particle_in_area, in_range, pos_in_sect, ijk_of_particle, l_neighb_part, r_neighb_part, check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
 
    interface
 
@@ -105,6 +105,16 @@ contains
       itis = all(ind >= ijkse(:,LO)) .and. all(ind <= ijkse(:,HI))
 
    end function in_range
+
+   elemental logical function pos_in_sect(pos, pl, pr) result(isin)
+
+      implicit none
+
+      real, intent(in) :: pos, pl, pr
+
+      isin = (pos >= pl .and. pos < pr)
+
+   end function pos_in_sect
 
    elemental integer(kind=4) function ijk_of_particle(pos, edge, idl) result (ijk)
 

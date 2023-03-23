@@ -58,6 +58,7 @@ contains
       use global,           only: t, dt
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_func,    only: pos_in_sect
       use particle_types,   only: particle
       use particle_utils,   only: is_part_in_cg
       use units,            only: newtong, cm, sek, gram, erg
@@ -118,9 +119,9 @@ contains
                      pset => cg%pset%first
                      do while (associated(pset))
                         if ((pset%pdata%tform + tini >= 0.0) .and. (pset%pdata%mass < mass_SN)) then
-                           if (pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
-                            &  pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
-                            &  pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
+                           if (pos_in_sect(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
+                            &  pos_in_sect(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
+                            &  pos_in_sect(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
                               stage = aint(pset%pdata%mass / mass_SN)
                               frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
                               pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
@@ -175,11 +176,11 @@ contains
                   do ifl = 1, flind%fluids
                      pfl => flind%all_fluids(ifl)%fl
                      do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
-                        if ( pos_in_1dim(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) ) then
+                        if ( pos_in_sect(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) ) then
                            do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
-                              if ( pos_in_1dim(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
+                              if ( pos_in_sect(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
                                  do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                                    if ( pos_in_1dim(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
+                                    if ( pos_in_sect(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
                                        ijk1 = nint((pset%pdata%pos - [cg%coord(CENTER,xdim)%r(i), cg%coord(CENTER,ydim)%r(j), cg%coord(CENTER,zdim)%r(k)]) * cg%idl)
                                        aijk1 = sum(abs(ijk1))
                                        if (aijk1 > 0.0 .and. tcond1) then
@@ -259,16 +260,6 @@ contains
       if (cg%u(ien,i,j,k) > mft * mfcr) return ! suppress compiler warnings on unused arguments
 
    end subroutine sf_inject
-
-   logical function pos_in_1dim(pos, pl, pr) result(isin)
-
-      implicit none
-
-      real, intent(in) :: pos, pl, pr
-
-      isin = (pl < pos .and. pr > pos)
-
-   end function pos_in_1dim
 
    logical function check_threshold(cg, idn, i, j, k) result(thres)
 
