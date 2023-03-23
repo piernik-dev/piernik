@@ -92,7 +92,11 @@ contains
       mass_SN  = 100.0 * n_SN
       en_SN    = n_SN * 10.0**51 * erg
       en_SN01  = 0.1 * en_SN
+#ifdef COSM_RAYS
       en_SN09  = (1 - 0.1 * cr_active) * en_SN
+#else /* !COSM_RAYS */
+      en_SN09  = 0.0
+#endif /* !COSM_RAYS */
       c_tau_ff = sqrt(3.*pi/(32.*newtong))
       sfdf     = eps_sf / c_tau_ff * 2 * dt
 
@@ -250,6 +254,9 @@ contains
 #ifdef COSM_RAYS
       if (cr_active > 0.0) cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1)),i,j,k) + mfcr  ! adding CR
 #endif /* COSM_RAYS */
+
+      return
+      if (cg%u(ien,i,j,k) > mft * mfcr) return ! suppress compiler warnings on unused arguments
 
    end subroutine sf_inject
 
