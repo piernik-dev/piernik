@@ -52,13 +52,14 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: ndims, xdim, ydim, zdim, LO, HI, CENTER, pi, nbdn_n
+      use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use func,             only: ekin
       use global,           only: t, dt
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
-      use particle_func,    only: pos_in_sect
+      use particle_func,    only: particle_in_area, ijk_of_particle, l_neighb_part, r_neighb_part
       use particle_types,   only: particle
       use particle_utils,   only: is_part_in_cg
       use units,            only: newtong, cm, sek, gram, erg
@@ -75,8 +76,9 @@ contains
       class(component_fluid), pointer :: pfl
       integer(kind=4)                 :: pid, ig, ir, n_SN
       integer                         :: ifl, i, j, k, aijk1
-      integer, dimension(ndims)       :: ijk1
+      integer, dimension(ndims)       :: ijk1, ijkp, ijkl, ijkr
       real,    dimension(ndims)       :: pos, vel, acc
+      real,    dimension(ndims,LO:HI) :: sector
       real                            :: sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
       logical                         :: in, phy, out, fed, kick, tcond1, tcond2
 
@@ -110,8 +112,11 @@ contains
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
             do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
+               sector(xdim,:) = [cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)]
                do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
+                  sector(ydim,:) = [cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)]
                   do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
+                     sector(zdim,:) = [cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)]
                      if (.not.check_threshold(cg, pfl%idn, i, j, k)) cycle
                      fed = .false.
                      sf_dens2dt = sfdf * cg%u(pfl%idn,i,j,k)**(3./2.)
@@ -119,9 +124,7 @@ contains
                      pset => cg%pset%first
                      do while (associated(pset))
                         if ((pset%pdata%tform + tini >= 0.0) .and. (pset%pdata%mass < mass_SN)) then
-                           if (pos_in_sect(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) .and. &
-                            &  pos_in_sect(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) .and. &
-                            &  pos_in_sect(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
+                           if (particle_in_area(pset%pdata%pos, sector)) then
                               stage = aint(pset%pdata%mass / mass_SN)
                               frac = sf_dens2dt / cg%u(pfl%idn,i,j,k)
                               pset%pdata%vel      = (pset%pdata%mass * pset%pdata%vel + frac * cg%u(pfl%imx:pfl%imz,i,j,k) * cg%dvol) / (pset%pdata%mass + mass)
@@ -173,35 +176,32 @@ contains
                tcond1 = (tj < 0.0)
                tcond2 = (abs(tj) < dt)
                if (t1 < tini .and. (tcond1 .or. tcond2)) then
+                  ijkp = ijk_of_particle(pset%pdata%pos, dom%edge(:,LO), cg%idl)
+                  ijkl = l_neighb_part(ijkp, cg%ijkse(:,LO))
+                  ijkr = r_neighb_part(ijkp, cg%ijkse(:,HI))
                   do ifl = 1, flind%fluids
                      pfl => flind%all_fluids(ifl)%fl
-                     do i = cg%ijkse(xdim,LO), cg%ijkse(xdim,HI)
-                        if ( pos_in_sect(pset%pdata%pos(xdim), cg%coord(LO,xdim)%r(i-1), cg%coord(HI,xdim)%r(i+1)) ) then
-                           do j = cg%ijkse(ydim,LO), cg%ijkse(ydim,HI)
-                              if ( pos_in_sect(pset%pdata%pos(ydim), cg%coord(LO,ydim)%r(j-1), cg%coord(HI,ydim)%r(j+1)) ) then
-                                 do k = cg%ijkse(zdim,LO), cg%ijkse(zdim,HI)
-                                    if ( pos_in_sect(pset%pdata%pos(zdim), cg%coord(LO,zdim)%r(k-1), cg%coord(HI,zdim)%r(k+1)) ) then
-                                       ijk1 = nint((pset%pdata%pos - [cg%coord(CENTER,xdim)%r(i), cg%coord(CENTER,ydim)%r(j), cg%coord(CENTER,zdim)%r(k)]) * cg%idl)
-                                       aijk1 = sum(abs(ijk1))
-                                       if (aijk1 > 0.0 .and. tcond1) then
-                                          padd = pset%pdata%mass * fpadd / cg%dvol / sqrt(real(aijk1))
-                                          !else
-                                          !   padd = 3.6 * 10**4 * pset%pdata%mass/200 * 2*dt/40.0 / cg%dvol / 26    ! should use initial mass, not current mass
-                                          !endif
+                     do i = ijkl(xdim), ijkr(xdim)
+                        do j = ijkl(ydim), ijkr(ydim)
+                           do k = ijkl(zdim), ijkr(zdim)
+                              ijk1 = nint((pset%pdata%pos - [cg%coord(CENTER,xdim)%r(i), cg%coord(CENTER,ydim)%r(j), cg%coord(CENTER,zdim)%r(k)]) * cg%idl)
+                              aijk1 = sum(abs(ijk1))
+                              if (aijk1 > 0.0 .and. tcond1) then
+                                 padd = pset%pdata%mass * fpadd / cg%dvol / sqrt(real(aijk1))
+                              !else
+                              !   padd = 3.6 * 10**4 * pset%pdata%mass/200 * 2*dt/40.0 / cg%dvol / 26    ! should use initial mass, not current mass
+                              !endif
 
-                                          ! Momentum kick
-                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
-                                          cg%u(pfl%imx:pfl%imz,i,j,k) = cg%u(pfl%imx:pfl%imz,i,j,k) + ijk1 * padd
-                                          cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
-                                       else if (aijk1 == 0 .and. tcond2) then    ! Instantaneous injection Agertz
-                                          mfdv = aint(pset%pdata%mass / mass_SN) / cg%dvol
-                                          call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
-                                       endif
-                                    endif
-                                 enddo
+                                 ! Momentum kick
+                                 cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) - ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
+                                 cg%u(pfl%imx:pfl%imz,i,j,k) = cg%u(pfl%imx:pfl%imz,i,j,k) + ijk1 * padd
+                                 cg%u(pfl%ien,i,j,k) = cg%u(pfl%ien,i,j,k) + ekin(cg%u(pfl%imx,i,j,k), cg%u(pfl%imy,i,j,k), cg%u(pfl%imz,i,j,k), cg%u(pfl%idn,i,j,k))
+                              else if (aijk1 == 0 .and. tcond2) then    ! Instantaneous injection Agertz
+                                 mfdv = aint(pset%pdata%mass / mass_SN) / cg%dvol
+                                 call sf_inject(cg, pfl%ien, i, j, k, mfdv * en_SN09, mfdv * en_SN01)
                               endif
                            enddo
-                        endif
+                        enddo
                      enddo
                   enddo
                endif
