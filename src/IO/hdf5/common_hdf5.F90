@@ -188,6 +188,8 @@ contains
                read(vars(i), '(a4,a1)') aux, ord
                write(aux, '(3a)') "divb", fc, ord
                call append_var(aux)
+            case ("divb_diml")
+               call append_var("divb_norm")
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(cr_names)
