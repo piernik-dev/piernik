@@ -192,13 +192,14 @@ contains
       use constants,        only: xdim, ydim, zdim, onet, one, zero
 
       use cresp_crspectrum, only: cresp_update_cell, q
+      use domain,           only: dom
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old, eps, cresp_substep, n_substeps_max, p_fix
       use timestep_cresp,   only: cresp_timestep_cell
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be9, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
+      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be9, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
       use dataio_pub,       only: msg, warn
       use func,             only: emag
       use global,           only: dt
@@ -224,12 +225,14 @@ contains
       real, dimension(flind%all)     :: usrc_cell
       real, dimension(1:ncrb)        :: dcr_n, dcr_e, Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
       !real, dimension(1:ncrb)        :: Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
-      real                           :: dgas
+      real                           :: dgas, gn
       !real                           :: dt_doubled
       real, parameter                :: gamma_lor = 10.0
 
 
       inactive_cell       = .false.
+
+      gn = 1.0 / dom%eff_dim / gamma_lor
 
       dgas = 0.0
       if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
@@ -324,12 +327,21 @@ contains
 
       do i_spc = 1, nspc
 
-         u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_n(i_spc,:))
-         u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_e(i_spc,:))
+         if(i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
 
+            u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - gn * u_cell(iarr_crspc2_n(i_spc,:)) / cr_tau(i_spc))
+            u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - gn * u_cell(iarr_crspc2_e(i_spc,:)) / cr_tau(i_spc))
+
+         else
+
+            u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_n(i_spc,:))
+            u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*usrc_cell(iarr_crspc2_e(i_spc,:))
+
+         endif
 
 
       enddo
+
 
    end subroutine cr_spallation_sources
 
