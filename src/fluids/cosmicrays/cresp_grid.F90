@@ -201,9 +201,9 @@ contains
 #endif /* CRESP_VERBOSED */
                      if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, substeps = nssteps)
                     ! if (i_spc == icr_H1 .and. eH1(PRIM))  q_spc_all(:,i_spc) = q_spc
-                     if (i_spc == icr_C12 .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
-                     if (i_spc == icr_N14 .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
-                     if (i_spc == icr_O16 .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == cr_table(icr_C12) .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == cr_table(icr_N14) .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == cr_table(icr_O16) .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
 
 #ifdef DEBUG
                      call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
