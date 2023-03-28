@@ -493,7 +493,7 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
          case ("divb_norm")
-            tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / sqrt(emag_c) / cg%suminv * dom%eff_dim
+            tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / sqrt(two * emag_c) / cg%suminv * dom%eff_dim
             ! In case of troubles, when emag_c ~= 0. we should use a local max(|emag_c|) over neighbors
             !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
             ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.
