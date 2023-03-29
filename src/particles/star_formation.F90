@@ -75,8 +75,8 @@ contains
       type(particle), pointer         :: pset
       class(component_fluid), pointer :: pfl
       integer(kind=4)                 :: pid, ig, ir, n_SN
-      integer                         :: ifl, i, j, k, aijk1
-      integer, dimension(ndims)       :: ijk1, ijkp, ijkl, ijkr
+      integer(kind=4)                 :: ifl, i, j, k, aijk1
+      integer(kind=4), dimension(ndims) :: ijk1, ijkp, ijkl, ijkr
       real,    dimension(ndims)       :: pos, vel, acc
       real,    dimension(ndims,LO:HI) :: sector
       real                            :: sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
@@ -184,7 +184,7 @@ contains
                      do i = ijkl(xdim), ijkr(xdim)
                         do j = ijkl(ydim), ijkr(ydim)
                            do k = ijkl(zdim), ijkr(zdim)
-                              ijk1 = nint((pset%pdata%pos - [cg%coord(CENTER,xdim)%r(i), cg%coord(CENTER,ydim)%r(j), cg%coord(CENTER,zdim)%r(k)]) * cg%idl)
+                              ijk1 = nint((pset%pdata%pos - [cg%coord(CENTER,xdim)%r(i), cg%coord(CENTER,ydim)%r(j), cg%coord(CENTER,zdim)%r(k)]) * cg%idl, kind=4)
                               aijk1 = sum(abs(ijk1))
                               if (aijk1 > 0.0 .and. tcond1) then
                                  padd = pset%pdata%mass * fpadd / cg%dvol / sqrt(real(aijk1))
@@ -223,7 +223,7 @@ contains
 
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: pfl
-      integer,             intent(in) :: i, j, k
+      integer(kind=4),     intent(in) :: i, j, k
       integer(kind=4),     intent(in) :: ir
       real,                intent(in) :: mass, frac1
 

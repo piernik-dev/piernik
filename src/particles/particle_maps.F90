@@ -99,12 +99,12 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)    :: factor !< typically fpiG
+      integer(kind=4), intent(in)       :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)       :: factor !< typically fpiG
 
-      type(cg_list_element), pointer :: cgl
-      type(particle), pointer        :: pset
-      integer, dimension(ndims)      :: ijkp
+      type(cg_list_element), pointer    :: cgl
+      type(particle), pointer           :: pset
+      integer(kind=4), dimension(ndims) :: ijkp
 
       cgl => leaves%first
       do while (associated(cgl))
