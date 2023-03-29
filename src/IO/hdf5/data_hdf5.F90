@@ -112,6 +112,8 @@ contains
          case ("divbc", "divbf", "divbc4", "divbf4", "divbc6", "divbf6", "divbc8", "divbf8")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
+         case ("divb_norm")
+            f%fu= ""
          case ("magdir")
             f%fu = "\rm{radians}"
 #ifdef COSM_RAYS
@@ -179,6 +181,8 @@ contains
                write(newname, '("magnetic_field_divergence_",A1,"_O(6)")') var(5:5)
             case ("divbc8", "divbf8")
                write(newname, '("magnetic_field_divergence_",A1,"_O(8)")') var(5:5)
+            case ("divb_norm")
+               newname = "normalized_divB"
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
@@ -488,6 +492,12 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .true.)
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
+         case ("divb_norm")
+            tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / sqrt(two * emag_c) / cg%suminv * dom%eff_dim
+            ! In case of troubles, when emag_c ~= 0. we should use a local max(|emag_c|) over neighbors
+            !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
+            ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.
+            ! Alternatively, one can use harmonic mean (cg%dvol**(1./dom%eff_dim)) instead.
 #endif /* MAGNETIC */
          case ("v") ! perhaps this should be expanded to vi, vn or vd, depending on fluids present
             nullify(fl_mach)

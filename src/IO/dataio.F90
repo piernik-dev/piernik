@@ -1641,14 +1641,13 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT
+      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
-      use global,             only: cfl, divB_0_method, which_solver
+      use global,             only: cfl, divB_0_method, which_solver, cc_mag
       use hdc,                only: map_chspeed
       use named_array_list,   only: wna
 #ifndef ISO
-      use constants,          only: half
       use func,               only: ekin
 #endif /* !ISO */
 #endif /* MAGNETIC */
@@ -1755,24 +1754,54 @@ contains
          if (master) cfi_max%assoc = cfl * cfi_max%assoc / (cfi_max%val + small)
       endif
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%costs%start
+      if (b_max%val > 0.) then
 
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
-         cgl%cg%wa = abs(cgl%cg%wa)
+         ! It is still possible that some division by 0. sneaks in, when part of the domain is not magnetized (may be quite unphysical case)
 
-         cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
-         cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
-         cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
+         cgl => leaves%first
+         do while (associated(cgl))
+            call cgl%cg%costs%start
 
-         call cgl%cg%costs%stop(I_OTHER)
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, divb_max)
+            p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+            associate (cg => cgl%cg)
+               if (cc_mag) then
+                  p = half*( (cg%w(wna%bi)%span(xdim,cg%ijkse+dom%D2a(xdim,:,:)) - cg%w(wna%bi)%span(xdim,cg%ijkse-dom%D2a(xdim,:,:)))/cg%dx &
+                       &    +(cg%w(wna%bi)%span(ydim,cg%ijkse+dom%D2a(ydim,:,:)) - cg%w(wna%bi)%span(ydim,cg%ijkse-dom%D2a(ydim,:,:)))/cg%dy &
+                       &    +(cg%w(wna%bi)%span(zdim,cg%ijkse+dom%D2a(zdim,:,:)) - cg%w(wna%bi)%span(zdim,cg%ijkse-dom%D2a(zdim,:,:)))/cg%dz ) / &
+                       sqrt(sq_sum3(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)))
+               else
+                  p = ( (cg%w(wna%bi)%span(xdim,cg%ijkse+dom%D2a(xdim,:,:)) - cg%w(wna%bi)%span(xdim,cg%ijkse))*cg%dx &
+                       +(cg%w(wna%bi)%span(ydim,cg%ijkse+dom%D2a(ydim,:,:)) - cg%w(wna%bi)%span(ydim,cg%ijkse))*cg%dy &
+                       +(cg%w(wna%bi)%span(zdim,cg%ijkse+dom%D2a(zdim,:,:)) - cg%w(wna%bi)%span(zdim,cg%ijkse))*cg%dz ) / &
+                       sqrt(sq_sum3(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                       &            half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                       &            half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))))
+               endif
+
+               cg%wa = abs(cg%wa) / cg%suminv * dom%eff_dim
+
+               ! We may miss some extrema that lie at internal boundary. Apologies for that.
+               ! To get full coverage we would need to make sure that ghost cells are up-to date, which is costly.
+               ! So let's assume that tracking max(div B) isn't the most critical thing and block interior will give us _good enough_ estimate of that.
+               if (cc_mag) then
+                  cg%wa(cg%is,:,:) = cg%wa(cg%is+dom%D_x,:,:)
+                  cg%wa(:,cg%js,:) = cg%wa(:,cg%js+dom%D_y,:)
+                  cg%wa(:,:,cg%ks) = cg%wa(:,:,cg%ks+dom%D_z)
+               endif
+
+               cg%wa(cg%ie,:,:) = cg%wa(cg%ie-dom%D_x,:,:)
+               cg%wa(:,cg%je,:) = cg%wa(:,cg%je-dom%D_y,:)
+               cg%wa(:,:,cg%ke) = cg%wa(:,:,cg%ke-dom%D_z)
+
+            end associate
+
+            call cgl%cg%costs%stop(I_OTHER)
+            cgl => cgl%nxt ; NULLIFY(p)
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, divb_max)
+      else
+         divb_max = b_max
+      endif
 
       call map_chspeed
       call leaves%get_extremum(qna%wai, MAXL, ch_max)
