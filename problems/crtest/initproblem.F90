@@ -36,14 +36,13 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4)    :: norm_step
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, dtrig
+   integer(kind=4)    :: norm_step, icrt, iecr
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, dtrig
 #ifdef COSM_RAYS
    character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
-   integer, parameter :: icr = 1 !< Only first CR component is used in this test
 #endif /* COSM_RAYS */
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step, dtrig
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr1, icrt, norm_step, dtrig
 
 contains
 
@@ -77,33 +76,42 @@ contains
 
    subroutine read_problem_par
 
-      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN
-      use dataio_pub,     only: die, nh
+      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN, singlechar
+      use cr_data,        only: cr_names
+      use dataio_pub,     only: die, nh, msg, printinfo, warn
       use domain,         only: dom
+      use fluidindex,     only: flind
       use func,           only: operator(.equals.)
       use mpisetup,       only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAYS
       use constants,      only: AT_NO_B
       use cg_list_global, only: all_cg
+      use initcosmicrays, only: identify_cr_index
 #endif /* COSM_RAYS */
 
       implicit none
 
-      d0           = 1.0e5     !< density
-      p0           = 1.0       !< pressure
-      bx0          =   0.      !< Magnetic field component x
-      by0          =   0.      !< Magnetic field component y
-      bz0          =   0.      !< Magnetic field component z
-      x0           = 0.0       !< x-position of the blob
-      y0           = 0.0       !< y-position of the blob
-      z0           = 0.0       !< z-position of the blob
-      r0           = 5.* minval(dom%L_(:)/dom%n_d) !< radius of the blob
-      dtrig        = -0.01     !< fraction of top density used to trigger domain expansion
+#ifdef COSM_RAYS
+      character(len=singlechar), dimension(2), parameter :: ibin = ['n', 'e']
+      integer(kind=4)                                    :: cr_b, cr_v, crsp
+#endif /* COSM_RAYS */
 
-      beta_cr      = 0.0       !< ambient level
-      amp_cr       = 1.0       !< amplitude of the blob
+      d0             = 1.0e5         !< density
+      p0             = 1.0           !< pressure
+      bx0            =   0.          !< Magnetic field component x
+      by0            =   0.          !< Magnetic field component y
+      bz0            =   0.          !< Magnetic field component z
+      x0             = 0.0           !< x-position of the blob
+      y0             = 0.0           !< y-position of the blob
+      z0             = 0.0           !< z-position of the blob
+      r0             = merge(0., 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)), dom%eff_dim == 0)  !< radius of the blob
+      dtrig          = -0.01         !< fraction of top density used to trigger domain expansion
 
-      norm_step    = I_TEN     !< how often to compute the norm (in steps)
+      beta_cr        = 0.0           !< ambient level
+      amp_cr1        = 1.0           !< amplitude of the blob
+
+      norm_step      = I_TEN         !< how often to compute the norm (in steps)
+      icrt           = I_ONE         !< CR component used to be compared to analytical
 
       if (master) then
 
@@ -137,10 +145,11 @@ contains
          rbuff(8)  = z0
          rbuff(9)  = r0
          rbuff(10) = beta_cr
-         rbuff(11) = amp_cr
+         rbuff(11) = amp_cr1
          rbuff(12) = dtrig
 
          ibuff(1)  = norm_step
+         ibuff(2)  = icrt
 
       endif
 
@@ -159,16 +168,28 @@ contains
          z0        = rbuff(8)
          r0        = rbuff(9)
          beta_cr   = rbuff(10)
-         amp_cr    = rbuff(11)
+         amp_cr1   = rbuff(11)
          dtrig     = rbuff(12)
 
          norm_step = int(ibuff(1), kind=4)
+         icrt      = int(ibuff(2), kind=4)
 
       endif
 
       if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
 #ifdef COSM_RAYS
+      if (flind%crs%all == 0) call die("[initproblem:read_problem_par] Cannot set tested component. No CR components defined.")
+      call identify_cr_index(icrt, flind%crs%all, flind%crn%end, iecr, crsp, cr_v, cr_b)
+      if (iecr > 0) then
+         write(msg,'(a,a)') 'Tested CR component is ', trim(cr_names(crsp))
+         if (cr_b > 0) write(msg,'(a,a,a,i2.2)') trim(msg), ' bin ', ibin(cr_v), cr_b
+         call printinfo(msg)
+      else
+         write(msg,*) 'Tested CR component of the number ', icrt, ' could not be identified by name'
+         call warn(msg)
+      endif
+
       call all_cg%reg_var(aecr1_n, restart_mode = AT_NO_B)
 #endif /* COSM_RAYS */
 
@@ -194,35 +215,24 @@ contains
 #endif /* COSM_RAYS || !ISO */
 #ifdef COSM_RAYS
       use constants,      only: HI
-      use dataio_pub,     only: die
       use domain,         only: dom
-      use initcosmicrays, only: gamma_cr_1, iarr_crs, ncrsp, ncrb
+      use initcosmicrays, only: gamma_cr_1
 #endif /* COSM_RAYS */
 
       implicit none
 
       class(component_fluid), pointer :: fl
-      !real                            :: cs_iso
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
 #ifdef COSM_RAYS
-      integer                         :: i, j, k, iecr
+      integer                         :: i, j, k
       real                            :: r2
-
-      iecr = -1
-      if (ncrsp+ncrb >= icr) then
-         iecr = iarr_crs(icr)
-      else
-         call die("[initproblem:problem_initial_conditions] No CR components defined.")
-      endif
 #endif /* COSM_RAYS */
 
       fl => flind%ion
 
 ! Uniform equilibrium state
-
-      !cs_iso = sqrt(p0/d0)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -246,7 +256,7 @@ contains
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                   if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
-                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr*exp(-r2/r0**2)
+                       cg%u(iecr,i,j,k)= cg%u(iecr,i,j,k) + amp_cr1*exp(-r2/r0**2)
                enddo
             enddo
          enddo
@@ -274,7 +284,7 @@ contains
       use func,           only: ekin, emag
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_cr_1, iarr_crs
+      use initcosmicrays, only: gamma_cr_1
 #endif /* COSM_RAYS */
 
       implicit none
@@ -293,7 +303,7 @@ contains
               &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
+         cgl%cg%u(iecr,RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
 #endif /* COSM_RAYS */
          end associate
          cgl => cgl%nxt
@@ -311,24 +321,15 @@ contains
       use func,             only: operator(.equals.)
       use global,           only: t
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrsp, ncrb, K_cr_paral, K_cr_perp
+      use initcosmicrays,   only: K_cr_paral, K_cr_perp
       use named_array_list, only: qna
 
       implicit none
 
-      integer                        :: i, j, k, iecr
+      integer                        :: i, j, k
       real                           :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, bxn, byn, bzn
-      integer, parameter             :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-
-      iecr = -1
-
-      if (ncrsp+ncrb >= icr) then
-         iecr = iarr_crs(icr)
-      else
-         call die("[initproblem:compute_analytic_ecr1] No CR components defined.")
-      endif
 
       magb = sqrt(bx0**2 + by0**2 + bz0**2)
       if (magb > 0.) then
@@ -341,13 +342,13 @@ contains
          bzn = 0.0
       endif
 
-      r0_perp2 = r0**2 + 4 * K_cr_perp(icr) * t
+      r0_perp2 = r0**2 + 4 * K_cr_perp(icrt) * t
       r0_par2 = r0_perp2
-      if (magb > 0.) r0_par2 = r0_par2 + 4 * K_cr_paral(icr) * t
+      if (magb > 0.) r0_par2 = r0_par2 + 4 * K_cr_paral(icrt) * t
 
       if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
-      ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
+      ampt = amp_cr1 * r0**2 / sqrt(r0_par2 * r0_perp2)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -398,26 +399,16 @@ contains
       use dataio_pub,       only: msg, die, printinfo
       use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, ncrsp, ncrb
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
 
-      integer                        :: i, j, k, iecr
+      integer                        :: i, j, k
       real, dimension(2)             :: norm, dev
       real                           :: crt
-      integer, parameter             :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-
-      iecr = -1
-
-      if (ncrsp+ncrb >= icr) then
-         iecr = iarr_crs(icr)
-      else
-         call die("[initproblem:check_norm] No CR components defined.")
-      endif
 
       call compute_analytic_ecr1
 
@@ -464,7 +455,6 @@ contains
 
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs
       use named_array_list, only: qna
 
       implicit none
@@ -483,7 +473,7 @@ contains
          case ("acr1")
             tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse), kind(tab))
          case ("err1")
-            tab(:,:,:) = cg%u(iarr_crs(1), RNG) - cg%q(qna%ind(aecr1_n))%span(cg%ijkse)
+            tab(:,:,:) = cg%u(iecr, RNG) - cg%q(qna%ind(aecr1_n))%span(cg%ijkse)
          case default
             ierrh = -1
       end select
@@ -499,7 +489,6 @@ contains
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
       use domain,         only: dom
-      use initcosmicrays, only: iarr_crs
       use mpisetup,       only: piernik_MPI_Allreduce
 
       implicit none
@@ -515,7 +504,7 @@ contains
       cmax = 0.
       cgl => leaves%first
       do while (associated(cgl))
-         cmax = max(cmax, maxval(cgl%cg%u(iarr_crs(icr), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask = cgl%cg%leafmap))
+         cmax = max(cmax, maxval(cgl%cg%u(iecr, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask = cgl%cg%leafmap))
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(cmax, pMAX)
@@ -528,7 +517,7 @@ contains
             if (dom%has_dir(xdim)) then
                if (cgl%cg%ext_bnd(xdim, LO)) then
                   do i = cgl%cg%is, cgl%cg%ie
-                     if (any(cgl%cg%u(iarr_crs(icr), i, :, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iecr, i, :, :) > cmax*dtrig)) then
                         ddist(xdim, LO) = min(ddist(xdim, LO), (cgl%cg%x(i) - cgl%cg%fbnd(xdim, LO))/cgl%cg%dx)
                         exit
                      endif
@@ -536,7 +525,7 @@ contains
                endif
                if (cgl%cg%ext_bnd(xdim, HI)) then
                   do i = cgl%cg%ie, cgl%cg%is, -1
-                     if (any(cgl%cg%u(iarr_crs(icr), i, :, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iecr, i, :, :) > cmax*dtrig)) then
                         ddist(xdim, HI) = min(ddist(xdim, HI), (cgl%cg%fbnd(xdim, HI) - cgl%cg%x(i))/cgl%cg%dx)
                         exit
                      endif
@@ -547,7 +536,7 @@ contains
             if (dom%has_dir(ydim)) then
                if (cgl%cg%ext_bnd(ydim, LO)) then
                   do i = cgl%cg%js, cgl%cg%je
-                     if (any(cgl%cg%u(iarr_crs(icr), :, i, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iecr, :, i, :) > cmax*dtrig)) then
                         ddist(ydim, LO) = min(ddist(ydim, LO), (cgl%cg%y(i) - cgl%cg%fbnd(ydim, LO))/cgl%cg%dy)
                         exit
                      endif
@@ -555,7 +544,7 @@ contains
                endif
                if (cgl%cg%ext_bnd(ydim, HI)) then
                   do i = cgl%cg%je, cgl%cg%js, -1
-                     if (any(cgl%cg%u(iarr_crs(icr), :, i, :) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iecr, :, i, :) > cmax*dtrig)) then
                         ddist(ydim, HI) = min(ddist(ydim, HI), (cgl%cg%fbnd(ydim, HI) - cgl%cg%y(i))/cgl%cg%dy)
                         exit
                      endif
@@ -566,7 +555,7 @@ contains
             if (dom%has_dir(zdim)) then
                if (cgl%cg%ext_bnd(zdim, LO)) then
                   do i = cgl%cg%ks, cgl%cg%ke
-                     if (any(cgl%cg%u(iarr_crs(icr), :, :, i) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iecr, :, :, i) > cmax*dtrig)) then
                         ddist(zdim, LO) = min(ddist(zdim, LO), (cgl%cg%z(i) - cgl%cg%fbnd(zdim, LO))/cgl%cg%dz)
                         exit
                      endif
@@ -574,7 +563,7 @@ contains
                endif
                if (cgl%cg%ext_bnd(zdim, HI)) then
                   do i = cgl%cg%ke, cgl%cg%ks, -1
-                     if (any(cgl%cg%u(iarr_crs(icr), :, :, i) > cmax*dtrig)) then
+                     if (any(cgl%cg%u(iecr, :, :, i) > cmax*dtrig)) then
                         ddist(zdim, HI) = min(ddist(zdim, HI), (cgl%cg%fbnd(zdim, HI) - cgl%cg%z(i))/cgl%cg%dz)
                         exit
                      endif
