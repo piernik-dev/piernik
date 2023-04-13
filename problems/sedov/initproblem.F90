@@ -313,7 +313,7 @@ contains
 
    end subroutine sedov_tsl
 
-!> \brief Find hov close it the shockwave to the external edges and call expansion routine if necessary
+!> \brief Find how close is the shockwave to the external edges and call expansion routine if necessary
 
    subroutine sedov_dist_to_edge
 
