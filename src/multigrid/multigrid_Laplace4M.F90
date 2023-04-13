@@ -192,12 +192,11 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX, zero
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX
       use dataio_pub,         only: die, warn
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use func,               only: operator(.notequals.)
       use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
       use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth, dirty_label
@@ -257,7 +256,7 @@ contains
             Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
             Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
             L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
-            if (L0.notequals.zero) then
+            if (abs(L0) > tiny(1.0)) then
                iL0 = 1. / L0
                Lx = Lx * iL0
                Ly = Ly * iL0

@@ -39,10 +39,10 @@ module initcrspectrum
 
    private
    public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
-           & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active, &
-           & icomp_active, allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio, &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, f_synchIC, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,       &
-           & u_b_max, def_dtsynchIC, def_dtadiab, write_cresp_to_restart, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, redshift, K_cresp_paral, K_cresp_perp
+           & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active,                 &
+           & icomp_active, allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim_a, arr_dim_n, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,           &
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum, cresp, crel, dfpq, f_synchIC, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,     &
+           & u_b_max, def_dtsynchIC, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, redshift
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -106,7 +106,7 @@ module initcrspectrum
    real            :: tol_x                       !< tolerance for x abs. error in NR algorithm
    real            :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
    real            :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
-   integer(kind=4) :: arr_dim, arr_dim_q
+   integer(kind=4) :: arr_dim_a, arr_dim_n, arr_dim_q
    real            :: q_eps                       !< parameter for q tolerance (alpha_to_q)
    real            :: b_max_db, u_b_max           !< parameter limiting maximal value of B and implying maximal MF energy density u_b
 
@@ -177,7 +177,7 @@ contains
       use diagnostics,     only: my_allocate_with_index
       use global,          only: disallow_CRnegatives
       use func,            only: emag
-      use initcosmicrays,  only: ncrb, ncr2b, ncrn, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
+      use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, ncrtot, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
       use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,           only: clight, me, sigma_T
 
@@ -186,13 +186,13 @@ contains
       integer(kind=4) :: i
       real            :: p_br_def, q_br_def
 
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix, &
-      &                         cre_eff, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol,                   &
-      &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,   &
-      &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, icomp_active, arr_dim, arr_dim_q, q_br_init, &
-      &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db, redshift, &
-      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff,&
-      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix,  &
+      &                         cre_eff, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol,                    &
+      &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,    &
+      &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim_a, arr_dim_n, arr_dim_q, q_br_init, &
+      &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,       &
+      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff, &
+      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer, icomp_active, redshift
 
 ! Default values
       use_cresp         = .true.
@@ -239,17 +239,18 @@ contains
       allow_unnatural_transfer     = .false.
       synch_active         = .true.
       adiab_active         = .true.
-      icomp_active         = .true.
+      icomp_active         = .false.
       cre_active           = 0.0
       b_max_db             = 10.  ! default value of B limiter
       redshift             = 0.
 
 ! NR parameters
-      tol_f    = 1.0e-11
-      tol_x    = 1.0e-11
-      tol_f_1D = 1.0e-14
-      tol_x_1D = 1.0e-14
-      arr_dim  = 200
+      tol_f     = 1.0e-11
+      tol_x     = 1.0e-11
+      tol_f_1D  = 1.0e-14
+      tol_x_1D  = 1.0e-14
+      arr_dim_a = 200
+      arr_dim_n = 200
       arr_dim_q = 1000
       q_eps     = 0.001
 
@@ -284,10 +285,11 @@ contains
          ibuff(4)  = e_small_approx_init_cond
 
          ibuff(5)  =  NR_iter_limit
-         ibuff(6)  =  arr_dim
-         ibuff(7)  =  arr_dim_q
+         ibuff(6)  =  arr_dim_a
+         ibuff(7)  =  arr_dim_n
+         ibuff(8)  =  arr_dim_q
 
-         ibuff(8)  =  n_substeps_max
+         ibuff(9)  =  n_substeps_max
 
          lbuff(1)  =  use_cresp
          lbuff(2)  =  use_cresp_evol
@@ -351,17 +353,18 @@ contains
       call piernik_MPI_Bcast(NR_smap_file, fnamelen)
 
       if (slave) then
-         expan_order                 = int(ibuff(1),kind=4)
+         expan_order                 = int(ibuff(1), kind=4)
 
-         e_small_approx_p_lo         = int(ibuff(2),kind=1)
-         e_small_approx_p_up         = int(ibuff(3),kind=1)
-         e_small_approx_init_cond    = int(ibuff(4),kind=1)
+         e_small_approx_p_lo         = int(ibuff(2), kind=1)
+         e_small_approx_p_up         = int(ibuff(3), kind=1)
+         e_small_approx_init_cond    = int(ibuff(4), kind=1)
 
-         NR_iter_limit               = int(ibuff(5),kind=2)
-         arr_dim                     = int(ibuff(6),kind=4)
-         arr_dim_q                   = int(ibuff(7),kind=4)
+         NR_iter_limit               = int(ibuff(5), kind=2)
+         arr_dim_a                   = int(ibuff(6), kind=4)
+         arr_dim_n                   = int(ibuff(7), kind=4)
+         arr_dim_q                   = int(ibuff(8), kind=4)
 
-         n_substeps_max              = int(ibuff(8),kind=4)
+         n_substeps_max              = int(ibuff(9), kind=4)
 
          use_cresp                   = lbuff(1)
          use_cresp_evol              = lbuff(2)
@@ -426,7 +429,7 @@ contains
       NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
-      if (use_cresp .and. ncrb <= I_ZERO)  then
+      if (use_cresp .and. (ncrb <= I_ZERO .or. nspc == I_ZERO))  then
          write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncrb   = ', ncrb, '; CR bins NOT initnialized. Switching CRESP module off.'
          if (master) call warn(msg)
          use_cresp      = .false.
@@ -752,39 +755,6 @@ contains
 
    end subroutine check_if_dump_fpq
 
-!----------------------------------------------------------------------------------------------------
-
-   subroutine write_cresp_to_restart(file_id)
-
-      use hdf5,            only: HID_T, SIZE_T
-      use h5lt,            only: h5ltset_attribute_int_f, h5ltset_attribute_double_f
-      use initcosmicrays,  only: ncrb
-
-      implicit none
-
-      integer(HID_T), intent(in) :: file_id
-      integer(SIZE_T)            :: bufsize
-      integer(kind=4)            :: error
-      integer(kind=4), dimension(1) :: lnsnbuf_i
-      real,    dimension(1)      :: lnsnbuf_r
-
-      bufsize = 1
-      lnsnbuf_i(bufsize) = ncrb
-      call h5ltset_attribute_int_f(file_id,    "/", "ncrb",      lnsnbuf_i, bufsize, error)
-
-      lnsnbuf_r(bufsize) = p_min_fix
-      call h5ltset_attribute_double_f(file_id, "/", "p_min_fix", lnsnbuf_r, bufsize, error)
-
-      lnsnbuf_r(bufsize) = p_max_fix
-      call h5ltset_attribute_double_f(file_id, "/", "p_max_fix", lnsnbuf_r, bufsize, error)
-
-      lnsnbuf_r(bufsize) = q_big
-      call h5ltset_attribute_double_f(file_id, "/", "q_big",     lnsnbuf_r, bufsize, error)
-
-      lnsnbuf_r(bufsize) = e_small
-      call h5ltset_attribute_double_f(file_id, "/", "e_small",   lnsnbuf_r, bufsize, error)
-
-   end subroutine write_cresp_to_restart
 !----------------------------------------------------------------------------------------------------
 
    subroutine cleanup_cresp_work_arrays

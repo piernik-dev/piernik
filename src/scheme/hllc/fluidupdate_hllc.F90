@@ -168,6 +168,12 @@ contains
 
    end function calculate_slope_vanleer
 !---------------------------------------------------------------------------
+#if 0
+
+! An unused function.
+! It is an alternative to calculate_slope_vanleer.
+! It may be worth making an option if we ever bring back the HLLC solver to regular use.
+
    function calculate_slope_moncen(u) result(dq)
 
       use constants, only: half, one
@@ -197,6 +203,7 @@ contains
       dq = sign(1.0, dcen) * min(dlim,abs(dcen))
 
    end function calculate_slope_moncen
+#endif /* 0 */
 !---------------------------------------------------------------------------
    subroutine sweep1d_mh(u,b,cs2,dtodx)
 

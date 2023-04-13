@@ -353,11 +353,10 @@ if f_run is True:
                        display_name=disp_name, dimensions=new_field_dimensions, sampling_type="cell")
         plot_field = new_field
 
+    # WARNING - this makes field_max unitless
     try:
-        # WARNING - this makes field_max unitless
-        field_max = h5ds.find_max("cr01")[0].v
+        field_max = h5ds.find_max("cr_p+")[0].v
     except:
-        # WARNING - this makes field_max unitless
         field_max = h5ds.find_max("cr1")[0].v
 
 # prepare limits for framebuffer

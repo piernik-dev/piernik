@@ -243,6 +243,7 @@ contains
 
    end subroutine internal_sources
 
+#if !defined(BALSARA) || defined(SHEAR) || defined(CORIOLIS) || defined(NON_INERTIAL)
 !/*
 !>
 !! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
@@ -270,6 +271,7 @@ contains
 #endif /* !ISO */
 
    end subroutine get_updates_from_acc
+#endif /* !BALSARA || SHEAR || CORIOLIS || NON_INERTIAL */
 
 !==========================================================================================
 

@@ -38,7 +38,7 @@ module dataio
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, &
         &                nrestart, problem_name, run_id, multiple_h5files, use_v2_io, &
         &                nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
-   use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
+   use constants,  only: fmt_len, cbuff_len, msg_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
 
    implicit none
@@ -48,20 +48,17 @@ module dataio
 
    integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
-   logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
    real                     :: dt_res                !< simulation time between successive restart file dumps
    real                     :: wdt_res               !< walltime between successive restart file dumps
    real                     :: dt_tsl                !< time between successive timeslice dumps
    real                     :: dt_log                !< time between successive log dumps
-   character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
-   character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
+   character(len=msg_len)   :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
+   character(len=msg_len)   :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
-#ifdef NBODY
-   character(len=dsetnamelen), dimension(12) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
-#endif /* NBODY */
+   character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
@@ -107,8 +104,8 @@ module dataio
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump,    &
+                              domain_dump, vars, pvars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files, &
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
@@ -153,7 +150,6 @@ contains
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
-!! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
 !! <tr><td>fmax               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmax         </td></tr>
@@ -267,7 +263,6 @@ contains
       use constants,  only: idlen, cbuff_len, INT4
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
-
       implicit none
 
       problem_name  = "nameless"
@@ -295,10 +290,7 @@ contains
 
       domain_dump   = 'phys_domain'
       vars(:)       = ''
-#ifdef NBODY
-      pvars(:)      = (/ 'ppid', 'mass', 'ener', 'posx', 'posy', 'posz', 'velx', 'vely', 'velz', 'accx', 'accy', 'accz' /)
-#endif /* NBODY */
-      mag_center    = .false.
+      pvars(:)      = ''
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
@@ -397,7 +389,7 @@ contains
          ibuff(21) = resdel
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
@@ -413,7 +405,6 @@ contains
          lbuff(1)  = vizit
          lbuff(2)  = multiple_h5files
          lbuff(3)  = use_v2_io
-         lbuff(4)  = mag_center
          lbuff(5)  = init_hdf_dump
          lbuff(6)  = init_res_dump
          lbuff(7)  = tsl_with_mom
@@ -422,6 +413,9 @@ contains
          lbuff(10) = gdf_strict
          lbuff(11) = h5_64bit
 
+         cbuff(20) = user_message_file
+         cbuff(21) = system_message_file
+
          cbuff(31) = problem_name
          cbuff(32) = run_id
          cbuff(40) = domain_dump
@@ -429,9 +423,9 @@ contains
          do iv = 1, nvarsmx
             cbuff(40+iv) = vars(iv)
          enddo
-
-         cbuff(90) = user_message_file(1:cbuff_len)
-         cbuff(91) = system_message_file(1:cbuff_len)
+         do iv = 1, nvarsmx
+            cbuff(40+nvarsmx+iv) = pvars(iv)
+         enddo
 
       endif
 
@@ -456,7 +450,7 @@ contains
          resdel              = ibuff(21)
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict
 
          nproc_io            = int(ibuff(43), kind=4)
@@ -473,7 +467,6 @@ contains
          vizit               = lbuff(1)
          multiple_h5files    = lbuff(2)
          use_v2_io           = lbuff(3)
-         mag_center          = lbuff(4)
          init_hdf_dump       = lbuff(5)
          init_res_dump       = lbuff(6)
          tsl_with_mom        = lbuff(7)
@@ -482,15 +475,19 @@ contains
          gdf_strict          = lbuff(10)
          h5_64bit            = lbuff(11)
 
+         user_message_file   = trim(cbuff(20))
+         system_message_file = trim(cbuff(21))
+
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
          domain_dump         = trim(cbuff(40))
+
          do iv = 1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo
-
-         user_message_file   = trim(cbuff(90))
-         system_message_file = trim(cbuff(91))
+         do iv = 1, nvarsmx
+            pvars(iv)        = trim(cbuff(40+nvarsmx+iv))
+         enddo
 
       endif
 
@@ -517,7 +514,7 @@ contains
       use global,       only: t, nstep
       use restart_hdf5, only: read_restart_hdf5
 #ifdef NBODY
-      use cg_particles_io, only: init_nbody_hdf5
+      use particles_io, only: init_nbody_hdf5
 #endif /* NBODY */
 #endif /* HDF5 */
 
@@ -525,12 +522,26 @@ contains
 
       logical :: tn
       integer :: i
+      integer, parameter :: fg_len = 5  ! length of "f12.4" or "g14.4"
+      character(len=fg_len) :: fg_fmt
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
-      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+      if (dom%eff_dim == 0) then
+         fmt_loc   = "(2x,a12,a3,'  = ',es16.9,16x,            1x,i4)"
+         fmt_dtloc = "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, 1x,i4)"
+         fmt_vloc  = "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, 1x,i4)"
+      else
+         ! We strongly prefer to use f format where possible. Too bad that the g format is so compiler-dependent and often less smart than it could be.
+         fg_fmt = "f12.4"
+         if (maxval(dom%edge) < 1.) fg_fmt = "f12.9"
+         if ((maxval(dom%edge) > 1e6) .or. (maxval(dom%edge) < 1e-4)) fg_fmt = "e12.5"
+
+         write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+         write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+         write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ", dom%eff_dim+1, "(1x,i4),", dom%eff_dim, "(1x," // fg_fmt // "))"
+      endif
+
 
       if (master) tn = walltime_end%time_left(wend)
 
@@ -616,6 +627,9 @@ contains
       use data_hdf5,    only: write_hdf5
       use restart_hdf5, only: write_restart_hdf5
 #endif /* HDF5 */
+#if defined(__INTEL_COMPILER)
+      use ifport,       only: sleep
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
@@ -646,8 +660,8 @@ contains
             case ('ppp')
                if (abs(umsg_param) < huge(1_4)) then
                   umsg_request = max(1, int(umsg_param))
-                  write(msg,'(a,i10,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
-                       " step(s)" // trim(merge("s", " ", umsg_request == 1))
+                  write(msg,'(a,i6,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
+                       " step" // trim(merge(" ", "s", umsg_request == 1))
                   if (master) call printinfo(msg)
                else
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
@@ -949,7 +963,7 @@ contains
       use constants,        only: ydim, zdim
 #endif /* MAGNETIC */
 #ifdef NBODY
-      use particle_utils,   only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
+      use particle_diag,    only: particle_diagnostics, tot_energy, d_energy, tot_angmom, d_angmom
 #endif /* NBODY */
 
       implicit none
@@ -1627,14 +1641,13 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT
+      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
-      use global,             only: cfl, divB_0_method, which_solver
+      use global,             only: cfl, divB_0_method, which_solver, cc_mag
       use hdc,                only: map_chspeed
       use named_array_list,   only: wna
 #ifndef ISO
-      use constants,          only: half
       use func,               only: ekin
 #endif /* !ISO */
 #endif /* MAGNETIC */
@@ -1741,24 +1754,54 @@ contains
          if (master) cfi_max%assoc = cfl * cfi_max%assoc / (cfi_max%val + small)
       endif
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         call cgl%cg%costs%start
+      if (b_max%val > 0.) then
 
-         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
-         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+dom%D2a(xdim,:,:)) - cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+dom%D2a(ydim,:,:)) - cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+dom%D2a(zdim,:,:)) - cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
-         cgl%cg%wa = abs(cgl%cg%wa)
+         ! It is still possible that some division by 0. sneaks in, when part of the domain is not magnetized (may be quite unphysical case)
 
-         cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
-         cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
-         cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
+         cgl => leaves%first
+         do while (associated(cgl))
+            call cgl%cg%costs%start
 
-         call cgl%cg%costs%stop(I_OTHER)
-         cgl => cgl%nxt ; NULLIFY(p)
-      enddo
-      call leaves%get_extremum(qna%wai, MAXL, divb_max)
+            p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+            associate (cg => cgl%cg)
+               if (cc_mag) then
+                  p = half*( (cg%w(wna%bi)%span(xdim,cg%ijkse+dom%D2a(xdim,:,:)) - cg%w(wna%bi)%span(xdim,cg%ijkse-dom%D2a(xdim,:,:)))/cg%dx &
+                       &    +(cg%w(wna%bi)%span(ydim,cg%ijkse+dom%D2a(ydim,:,:)) - cg%w(wna%bi)%span(ydim,cg%ijkse-dom%D2a(ydim,:,:)))/cg%dy &
+                       &    +(cg%w(wna%bi)%span(zdim,cg%ijkse+dom%D2a(zdim,:,:)) - cg%w(wna%bi)%span(zdim,cg%ijkse-dom%D2a(zdim,:,:)))/cg%dz ) / &
+                       sqrt(sq_sum3(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)))
+               else
+                  p = ( (cg%w(wna%bi)%span(xdim,cg%ijkse+dom%D2a(xdim,:,:)) - cg%w(wna%bi)%span(xdim,cg%ijkse))*cg%dx &
+                       +(cg%w(wna%bi)%span(ydim,cg%ijkse+dom%D2a(ydim,:,:)) - cg%w(wna%bi)%span(ydim,cg%ijkse))*cg%dy &
+                       +(cg%w(wna%bi)%span(zdim,cg%ijkse+dom%D2a(zdim,:,:)) - cg%w(wna%bi)%span(zdim,cg%ijkse))*cg%dz ) / &
+                       sqrt(sq_sum3(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                       &            half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                       &            half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))))
+               endif
+
+               cg%wa = abs(cg%wa) / cg%suminv * dom%eff_dim
+
+               ! We may miss some extrema that lie at internal boundary. Apologies for that.
+               ! To get full coverage we would need to make sure that ghost cells are up-to date, which is costly.
+               ! So let's assume that tracking max(div B) isn't the most critical thing and block interior will give us _good enough_ estimate of that.
+               if (cc_mag) then
+                  cg%wa(cg%is,:,:) = cg%wa(cg%is+dom%D_x,:,:)
+                  cg%wa(:,cg%js,:) = cg%wa(:,cg%js+dom%D_y,:)
+                  cg%wa(:,:,cg%ks) = cg%wa(:,:,cg%ks+dom%D_z)
+               endif
+
+               cg%wa(cg%ie,:,:) = cg%wa(cg%ie-dom%D_x,:,:)
+               cg%wa(:,cg%je,:) = cg%wa(:,cg%je-dom%D_y,:)
+               cg%wa(:,:,cg%ke) = cg%wa(:,:,cg%ke-dom%D_z)
+
+            end associate
+
+            call cgl%cg%costs%stop(I_OTHER)
+            cgl => cgl%nxt ; NULLIFY(p)
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, divb_max)
+      else
+         divb_max = b_max
+      endif
 
       call map_chspeed
       call leaves%get_extremum(qna%wai, MAXL, ch_max)
@@ -2058,12 +2101,15 @@ contains
 !-------------------------------------------------------------------------
 
 !> \todo process multiple commands at once
-      use constants,  only: cwdlen
+      use constants,  only: msg_len
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master
 #if defined(__INTEL_COMPILER)
       use ifposix,    only: pxfstat, pxfstructcreate, pxfintget, pxfstructfree
 #endif /* __INTEL_COMPILER */
+#ifndef __GFORTRAN__
+      use constants,  only: cwdlen
+#endif /* !__GFORTRAN__ */
 
       implicit none
 
@@ -2075,7 +2121,7 @@ contains
       integer                                              :: msg_lun
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
-      character(len=cwdlen), dimension(n_msg_origin), save :: fname
+      character(len=msg_len), dimension(n_msg_origin), save :: fname
       integer                                              :: unlink_stat, io, sz, i
 #ifdef __GFORTRAN__
       integer, dimension(13)                               :: stat_buff

@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import matplotlib
+
+font = {'family': 'DejaVu Sans', 'weight': 'normal', 'size': 10}
+matplotlib.rc('font', **font)
+
 # files
 f_exten = '.png'
 f_plotdir = 'frames'
@@ -13,6 +18,7 @@ plot1d_linestyle = ['-', '--', ':']
 # 2D plots
 plot2d_colormap = 'viridis'
 plot2d_sctype = 'linear'
+plot2d_scnorm = ''
 plot2d_comparetype = 1
 plot2d_axes_pad = 0.2
 
@@ -26,12 +32,18 @@ centertick_length = 6.
 # scaletypes
 fineqv = 1.0
 
+# units
+# dimensionless_print = b'dimensionless'
+dimensionless_print = ''
+set_as_unexist = 0.
+
 # colorbars
 cbar_hist2d_shift = 0.7
 cbar_plot2d_shift = 0.1
 cbar_hist2d_label_format = '%.1e'
-cbar_plot2d_label_format = '%.1e'
+cbar_plot2d_label_format = ''  # '%.1e'
 cbar_label_coords = (-1.5, 0.5)
+cbar_varlabel = 'var'
 
 # particles
 particles_output = 'part'
@@ -43,3 +55,4 @@ particles_size = 0
 hist2d_colormap = 'viridis'
 hist2d_alpha = 1.0
 hist2d_facecolor = 'xkcd:black'
+hist2d_sctype = True, 'auto', 'auto'
