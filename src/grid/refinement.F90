@@ -134,8 +134,10 @@ contains
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
 
-      if (1 + 9*nshapes +3*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
-      if (2*n_ref_auto_param > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (2*n_ref_auto_param              > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (10+3*nshapes                    > ubound(ibuff, dim=1)) call die("[refinement:init_refinement] increase ibuff size")
+      if (2+15*nshapes+2*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size")
+
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -197,9 +199,6 @@ contains
 
          rbuff(3+15*nshapes                   :2+15*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
          rbuff(3+15*nshapes+  n_ref_auto_param:2+15*nshapes+2*n_ref_auto_param) = refine_vars(:)%aux
-
-         if (2+15*nshapes+2*n_ref_auto_param > ubound(rbuff, dim=1)) &
-              call die("[refinement:init_refinement] run out of buffer_dim")
 
       endif
 
