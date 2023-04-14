@@ -181,7 +181,7 @@ contains
 
    subroutine cresp_timestep_cell(p_loss_terms, dt_cell, empty_cell)
 
-      use initcrspectrum,   only: adiab_active, cresp, icomp_active, synch_active, spec_mod_trms
+      use initcrspectrum,   only: adiab_active, cresp, synch_active, spec_mod_trms
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
 
       implicit none
