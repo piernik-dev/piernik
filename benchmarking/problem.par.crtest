@@ -97,4 +97,5 @@
  /
 
  $AMR
+    auto_bsize = .false.
  /
