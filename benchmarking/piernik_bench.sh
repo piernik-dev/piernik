@@ -174,7 +174,7 @@ for p in $B_PROBLEM_LIST ; do
 			    wait
 			    sleep 1
 			    for j in $( seq $i ) ; do
-				grep "C1-cycles" $j/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$i', $5, $8)}'
+				grep "C01cycles" $j/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$i', $5, $8)}'
 				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
 			    done
 			else
@@ -184,7 +184,7 @@ for p in $B_PROBLEM_LIST ; do
 				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
 				strong)
 				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
-			    esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+			    esac | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
 			    awk '/Spent/ { printf("%s ",$5) }' *log
 			fi
 			echo ;;
@@ -206,7 +206,7 @@ for p in $B_PROBLEM_LIST ; do
 			    wait
 			    sleep 1
 			    [ $SKIP == 0 ] && for j in $( seq $i ) ; do
-				grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
+				grep cycles $j/_stdout_ | tail -n 2 | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
 				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
 			    done
 			else
@@ -216,7 +216,7 @@ for p in $B_PROBLEM_LIST ; do
 				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
 				    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00072)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
-					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | tail -n 2 | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
 					SKIP=1
 				    fi ;;
@@ -224,7 +224,7 @@ for p in $B_PROBLEM_LIST ; do
 				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
 				    REQMEM=$( echo $NX | awk '{print int($1^3 * 0.00060)}' )
 				    if [ $MEMM -gt $REQMEM ] ; then
-					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | tail -n 2 | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 				    else
 					SKIP=1
 				    fi ;;
