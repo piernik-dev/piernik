@@ -805,10 +805,10 @@ contains
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   endif
                enddo
