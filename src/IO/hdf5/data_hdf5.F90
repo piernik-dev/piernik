@@ -497,7 +497,7 @@ contains
             where (tab(:,:,:) <= 0.)
                tab(:,:,:) = 0.
             elsewhere
-               tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / sqrt(tab(:,:,:)) / cg%suminv * dom%eff_dim
+               tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / (sqrt(two) * sqrt(tab(:,:,:))) / cg%suminv * dom%eff_dim
             endwhere
             !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
             ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.

@@ -1643,7 +1643,7 @@ contains
 #ifdef MAGNETIC
       use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half
       use dataio_pub,         only: msg
-      use func,               only: sq_sum3, emag
+      use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver, cc_mag
       use hdc,                only: map_chspeed
       use named_array_list,   only: wna
@@ -1768,14 +1768,14 @@ contains
                   p = half*( (cg%w(wna%bi)%span(xdim,cg%ijkse+dom%D2a(xdim,:,:)) - cg%w(wna%bi)%span(xdim,cg%ijkse-dom%D2a(xdim,:,:)))/cg%dx &
                        &    +(cg%w(wna%bi)%span(ydim,cg%ijkse+dom%D2a(ydim,:,:)) - cg%w(wna%bi)%span(ydim,cg%ijkse-dom%D2a(ydim,:,:)))/cg%dy &
                        &    +(cg%w(wna%bi)%span(zdim,cg%ijkse+dom%D2a(zdim,:,:)) - cg%w(wna%bi)%span(zdim,cg%ijkse-dom%D2a(zdim,:,:)))/cg%dz ) / &
-                       emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG))
+                       sqrt(sq_sum3(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)))
                else
                   p = ( (cg%w(wna%bi)%span(xdim,cg%ijkse+dom%D2a(xdim,:,:)) - cg%w(wna%bi)%span(xdim,cg%ijkse))*cg%dx &
                        +(cg%w(wna%bi)%span(ydim,cg%ijkse+dom%D2a(ydim,:,:)) - cg%w(wna%bi)%span(ydim,cg%ijkse))*cg%dy &
                        +(cg%w(wna%bi)%span(zdim,cg%ijkse+dom%D2a(zdim,:,:)) - cg%w(wna%bi)%span(zdim,cg%ijkse))*cg%dz ) / &
-                       emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-                       &    half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-                       &    half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
+                       sqrt(sq_sum3(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                       &            half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                       &            half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))))
                endif
 
                cg%wa = abs(cg%wa) / cg%suminv * dom%eff_dim
