@@ -265,16 +265,17 @@ contains
 
    subroutine cr_late_init
 
-      use cg_list,        only: cg_list_element
-      use cg_list_dataop, only: expanded_domain
-      use dataio_pub,     only: die
-      use fluidindex,     only: flind
+      use cg_list,          only: cg_list_element
+      use cg_list_dataop,   only: expanded_domain
+      use constants,        only: psi_n
+      use fluidindex,       only: flind
+      use named_array_list, only: qna
 #ifndef ISO
-      use constants,      only: xdim, ydim, zdim
-      use func,           only: ekin, emag
+      use constants,        only: xdim, ydim, zdim
+      use func,             only: ekin, emag
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_cr_1, iarr_crs
+      use initcosmicrays,   only: gamma_cr_1, iarr_crs
 #endif /* COSM_RAYS */
 
       implicit none
@@ -283,21 +284,25 @@ contains
 
       cgl => expanded_domain%first
       do while (associated(cgl))
-         if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
-         associate (fl => flind%ion, cg => cgl%cg)
-         call cgl%cg%set_constant_b_field([bx0, by0, bz0])
-         cgl%cg%u(fl%idn,RNG) = d0
-         cgl%cg%u(fl%imx:fl%imz,RNG) = 0.0
+         if (.not. cgl%cg%is_old) then
+            associate (fl => flind%ion, cg => cgl%cg)
+               call cgl%cg%set_constant_b_field([bx0, by0, bz0])
+               cgl%cg%u(fl%idn,RNG) = d0
+               cgl%cg%u(fl%imx:fl%imz,RNG) = 0.0
 #ifndef ISO
-         cgl%cg%u(fl%ien,RNG) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,RNG), cgl%cg%b(ydim,RNG), cgl%cg%b(zdim,RNG)) + &
-              &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
+               cgl%cg%u(fl%ien,RNG) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,RNG), cgl%cg%b(ydim,RNG), cgl%cg%b(zdim,RNG)) + &
+                    &                 ekin(cgl%cg%u(fl%imx,RNG), cgl%cg%u(fl%imy,RNG), cgl%cg%u(fl%imz,RNG), cgl%cg%u(fl%idn,RNG))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cgl%cg%u(iarr_crs(icr),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
+               cgl%cg%u(iarr_crs(icr),RNG) = beta_cr * fl%cs2 * cgl%cg%u(fl%idn,RNG) / gamma_cr_1
 #endif /* COSM_RAYS */
-         end associate
+            end associate
+         endif
          cgl => cgl%nxt
       enddo
+
+      ! ToDo: move this call to some other place where it would be automagically called
+      if (qna%exists(psi_n)) call expanded_domain%set_q_value(qna%ind(psi_n), 0.)
 
    end subroutine cr_late_init
 

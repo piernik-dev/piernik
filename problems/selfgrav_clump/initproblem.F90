@@ -748,16 +748,16 @@ contains
 
    end function hRho
 
-!> \brief Performa late initialization of the cg added after domain expansion
+!> \brief Perform a late initialization of the cg added after domain expansion
 
    subroutine sg_late_init
 
       use cg_list,        only: cg_list_element
       use cg_list_dataop, only: expanded_domain
       use constants,      only: xdim, ydim, zdim
-      use dataio_pub,     only: die
       use func,           only: ekin, emag
       use global,         only: smalld, smallei
+      use multigrid_gravity, only: initialize_oldsoln_expanded
 
       implicit none
 
@@ -769,26 +769,30 @@ contains
 
       cgl => expanded_domain%first
       do while (associated(cgl))
-         if (cgl%cg%is_old) call die("[initproblem:sg_late_init] Old piece on a new list")
-         cgl%cg%u(fl%idn, :, :, :) = smalld
-         cgl%cg%u(fl%imx, :, :, :) = clump_vel(xdim) * cgl%cg%u(fl%idn,:,:,:)
-         cgl%cg%u(fl%imy, :, :, :) = clump_vel(ydim) * cgl%cg%u(fl%idn,:,:,:)
-         cgl%cg%u(fl%imz, :, :, :) = clump_vel(zdim) * cgl%cg%u(fl%idn,:,:,:)
-         if (associated(cgl%cg%b)) cgl%cg%b = 0.
-         ! cgl%cg%sgp ?
-         do k = cgl%cg%ks, cgl%cg%ke
-            do j = cgl%cg%js, cgl%cg%je
-               do i = cgl%cg%is, cgl%cg%ie
-                  cgl%cg%u(fl%ien, i, j, k) = presrho(cgl%cg%u(fl%idn, i, j, k)) / fl%gam_1 + &
-                       &                      ekin(cgl%cg%u(fl%imx,i,j,k), cgl%cg%u(fl%imy,i,j,k), cgl%cg%u(fl%imz,i,j,k), cgl%cg%u(fl%idn,i,j,k))
-                  if (associated(cgl%cg%b)) cgl%cg%u(fl%ien, i, j, k) = cgl%cg%u(fl%ien, i, j, k) + &
-                       &                      emag(cgl%cg%b(xdim,i,j,k), cgl%cg%b(ydim,i,j,k), cgl%cg%b(zdim,i,j,k))
-                  cgl%cg%u(fl%ien, i, j, k) = max(smallei, cgl%cg%u(fl%ien, i, j, k))
+         if (.not. cgl%cg%is_old) then
+            cgl%cg%u(fl%idn, :, :, :) = smalld
+            cgl%cg%u(fl%imx, :, :, :) = clump_vel(xdim) * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imy, :, :, :) = clump_vel(ydim) * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imz, :, :, :) = clump_vel(zdim) * cgl%cg%u(fl%idn,:,:,:)
+            if (associated(cgl%cg%b)) cgl%cg%b = 0.
+            ! cgl%cg%sgp ?
+            do k = cgl%cg%ks, cgl%cg%ke
+               do j = cgl%cg%js, cgl%cg%je
+                  do i = cgl%cg%is, cgl%cg%ie
+                     cgl%cg%u(fl%ien, i, j, k) = presrho(cgl%cg%u(fl%idn, i, j, k)) / fl%gam_1 + &
+                          &                      ekin(cgl%cg%u(fl%imx,i,j,k), cgl%cg%u(fl%imy,i,j,k), cgl%cg%u(fl%imz,i,j,k), cgl%cg%u(fl%idn,i,j,k))
+                     if (associated(cgl%cg%b)) cgl%cg%u(fl%ien, i, j, k) = cgl%cg%u(fl%ien, i, j, k) + &
+                          &                      emag(cgl%cg%b(xdim,i,j,k), cgl%cg%b(ydim,i,j,k), cgl%cg%b(zdim,i,j,k))
+                     cgl%cg%u(fl%ien, i, j, k) = max(smallei, cgl%cg%u(fl%ien, i, j, k))
+                  enddo
                enddo
             enddo
-         enddo
+         endif
          cgl => cgl%nxt
       enddo
+
+      ! ToDo: move this call to some other place where it would be automagically called
+      call initialize_oldsoln_expanded
 
    end subroutine sg_late_init
 
