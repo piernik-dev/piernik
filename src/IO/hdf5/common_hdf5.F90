@@ -304,7 +304,7 @@ contains
 
          character(len=dsetnamelen), allocatable, dimension(:) :: tmp
 
-         if (len_trim(n) <= 1) then
+         if (len_trim(n) < 1) then
             if (master) call warn("[common_hdf5:init_hdf5:append_var] empty name")
             return
          endif

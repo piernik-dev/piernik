@@ -44,6 +44,7 @@ module refinement
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
    integer(kind=4), protected :: level_max           !< Maximum allowed refinement, if set > 0 then AMR is requested (don't need to be reached if not necessary)
    integer(kind=4), dimension(ndims), protected :: bsize  !< The size of cg for multiblock decomposition, if not set explicitly, then a heuristic values will be used, if possible.
+   logical,         protected :: auto_bsize          !< Allows to compute bsize automatically when bsize is not explicitly provided
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
@@ -82,7 +83,7 @@ module refinement
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
+   namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
         &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot
 
 contains
@@ -94,6 +95,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td> bsize(3)            </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::bsize               </td></tr>
+!!   <tr><td> auto_bsize          </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::auto_bsize          </td></tr>
 !!   <tr><td> level_min           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_min           </td></tr>
 !!   <tr><td> level_max           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_max           </td></tr>
 !!   <tr><td> n_updAMR            </td><td> HUGE    </td><td> integer          </td><td> \copydoc refinement::n_updAMR            </td></tr>
@@ -102,6 +104,8 @@ contains
 !!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
 !!   <tr><td> refine_zcyls(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_zcyls        </td></tr>
 !!   <tr><td> refine_vars(10)     </td><td> none    </td><td> 2*string, 3*real </td><td> \copydoc refinement::refine_vars         </td></tr>
+!!   <tr><td> jeans_ref           </td><td> 0.      </td><td> real             </td><td> \copydoc refinement::jeans_ref           </td></tr>
+!!   <tr><td> jeans_plot          </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::jeans_plot          </td></tr>
 !!   <tr><td> prefer_n_bruteforce </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::prefer_n_bruteforce </td></tr>
 !! </table>
 !! \n \n
@@ -112,6 +116,7 @@ contains
       use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use user_hooks, only: problem_domain_update
 
       implicit none
 
@@ -124,6 +129,7 @@ contains
       level_min = base_level_id
       level_max = level_min
       bsize(:)  = I_ZERO
+      auto_bsize = associated(problem_domain_update)  ! allow by default for problems with domain expansion configured
       n_updAMR  = huge(I_ONE)
       prefer_n_bruteforce = .false.
       oop_thr = 0.1
@@ -134,8 +140,10 @@ contains
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
 
-      if (1 + 9*nshapes +3*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
-      if (2*n_ref_auto_param > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (2*n_ref_auto_param              > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (10+3*nshapes                    > ubound(ibuff, dim=1)) call die("[refinement:init_refinement] increase ibuff size")
+      if (2+15*nshapes+2*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size")
+
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -173,7 +181,8 @@ contains
 
          lbuff(1) = jeans_plot
          lbuff(2) = prefer_n_bruteforce
-         lbuff(3:2+n_ref_auto_param) = refine_vars(:)%plotfield
+         lbuff(3) = auto_bsize
+         lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
 
          rbuff(1) = oop_thr
          rbuff(2) = jeans_ref
@@ -198,9 +207,6 @@ contains
          rbuff(3+15*nshapes                   :2+15*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
          rbuff(3+15*nshapes+  n_ref_auto_param:2+15*nshapes+2*n_ref_auto_param) = refine_vars(:)%aux
 
-         if (2+15*nshapes+2*n_ref_auto_param > ubound(rbuff, dim=1)) &
-              call die("[refinement:init_refinement] run out of buffer_dim")
-
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -223,7 +229,8 @@ contains
 
          jeans_plot               = lbuff(1)
          prefer_n_bruteforce      = lbuff(2)
-         refine_vars(:)%plotfield = lbuff(3:2+n_ref_auto_param)
+         auto_bsize               = lbuff(3)
+         refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
 
          oop_thr   = rbuff(1)
          jeans_ref = rbuff(2)
@@ -254,7 +261,7 @@ contains
 
       do_refine = (level_max > base_level_id) .or. all((bsize /= I_ZERO) .or. .not. dom%has_dir)
 
-      if (do_refine .and. all(bsize == I_ZERO)) call automagic_bsize
+      if ((do_refine .or. auto_bsize) .and. all(bsize == I_ZERO)) call automagic_bsize
 
       where (.not. dom%has_dir) bsize = I_ONE
 
@@ -264,7 +271,7 @@ contains
             if (bsize(d) < dom%nb) then
                if (do_refine .and. master) then
                   if (bsize(d) > 1) then
-                     call die("[refinement:init_refinement] Refinements disabled (bsize small)er than nb")
+                     call die("[refinement:init_refinement] Refinements disabled bsize smaller than nb")
                   else
                      call warn("[refinement:init_refinement] any(bsize == 1) disables refinement")
                   endif
@@ -309,7 +316,7 @@ contains
          if (master) call warn(msg)
       endif
 
-      if (.not. do_refine) bsize = I_ZERO
+      if (.not. do_refine .and. .not. auto_bsize) bsize = I_ZERO
 
       if (do_refine) then
          write(msg, '(a)')"[refinement]"
@@ -319,6 +326,7 @@ contains
       else
          if (level_max > base_level_id .and. master) call warn("[refinement] refinements were requested but are disabled by sanity checks")
          msg = "[refinement] No static or adaptive refinement"
+         if (any(bsize(:) > 0)) write(msg(len_trim(msg)+1:), '(a,3i5,a)')", block size = [", bsize, "]"
          ! switch off refinement options
          level_min = base_level_id
          level_max = base_level_id

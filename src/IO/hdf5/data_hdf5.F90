@@ -493,8 +493,12 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
          case ("divb_norm")
-            tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / sqrt(two * emag_c) / cg%suminv * dom%eff_dim
-            ! In case of troubles, when emag_c ~= 0. we should use a local max(|emag_c|) over neighbors
+            tab(:,:,:) = emag_c
+            where (tab(:,:,:) <= 0.)
+               tab(:,:,:) = 0.
+            elsewhere
+               tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / (sqrt(two) * sqrt(tab(:,:,:))) / cg%suminv * dom%eff_dim
+            endwhere
             !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
             ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.
             ! Alternatively, one can use harmonic mean (cg%dvol**(1./dom%eff_dim)) instead.
@@ -805,10 +809,10 @@ contains
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   endif
                enddo

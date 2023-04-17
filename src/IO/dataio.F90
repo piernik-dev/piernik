@@ -46,7 +46,7 @@ module dataio
    private
    public :: check_log, check_tsl, dump, write_data, write_crashed, cleanup_dataio, init_dataio, init_dataio_parameters, user_msg_handler, vars
 
-   integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
+   integer, parameter       :: nvarsmx = 50          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
    integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
