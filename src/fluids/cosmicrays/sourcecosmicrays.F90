@@ -227,12 +227,12 @@ contains
       !real, dimension(1:ncrb)        :: Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
       real                           :: dgas, gn
       !real                           :: dt_doubled
-      real, parameter                :: gamma_lor = 10.0
+      !real, parameter                :: gamma_lor = 10.0
 
 
       inactive_cell       = .false.
 
-      gn = 1.0 / dom%eff_dim / gamma_lor
+      !gn = 1.0 / dom%eff_dim / gamma_lor
 
       dgas = 0.0
       if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
@@ -329,8 +329,8 @@ contains
 
          if(i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
 
-            u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - gn * u_cell(iarr_crspc2_n(i_spc,:)) / cr_tau(i_spc))
-            u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - gn * u_cell(iarr_crspc2_e(i_spc,:)) / cr_tau(i_spc))
+            u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - u_cell(iarr_crspc2_n(i_spc,:)) / (sqrt(1+p_fix**2)*cr_tau(i_spc)))
+            u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+p_fix**2)*cr_tau(i_spc)))
 
          else
 
