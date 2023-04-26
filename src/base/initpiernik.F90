@@ -288,11 +288,6 @@ contains
          if (master) call printinfo(msg)
          call ppp_main%stop(iter_label // "0", PPP_PROB)
 
-#ifdef NBODY
-         call update_particle_gravpot_and_acc
-         call update_particle_kinetic_energy
-#endif /* NBODY */
-
          call costs_maintenance
 
          do while (.not. finished)
@@ -300,9 +295,14 @@ contains
             call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
+#ifdef NBODY
+            call update_particle_gravpot_and_acc  ! calls source_terms_grav
+            call update_particle_kinetic_energy
+#else /* !NBODY */
 #ifdef GRAV
             call source_terms_grav
 #endif /* GRAV */
+#endif /* !NBODY */
 
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
