@@ -57,7 +57,7 @@ awkfor() {
 }
 
 # some cleanup
-PROBLEM_LIST="maclaurin advection_test crtest jeans tearing sedov otvortex 3body"
+PROBLEM_LIST="maclaurin advection_test crtest jeans tearing sedov otvortex 2body"
 
 if [ $DO_MAKE == 1 ] ; then
     touch Makefile
@@ -130,7 +130,11 @@ for p in $B_PROBLEM_LIST ; do
 		maclaurin) echo "#Threads MG_prepare MG_i-cycle MG_multipole MG_o-cycle Total_MG";;
 	    esac
 	    for i in $N_PROC_LIST ; do
-		rm *log 2> /dev/null
+                MPIRUN="mpirun"
+                mpirun -np $i echo > /dev/null 2>&1 || MPIRUN="mpirun --use-hwthread-cpus"
+                # OpenMPI refuses to run more jobs than CPU cores but with --use-hwthread-cpus its performance is poor on 2 threads
+                max_mem=$( echo $MEMM $i | awk '{print int(0.95*$1*1024/$2)}' )
+                rm *log 2> /dev/null
 		for j in $( seq $i ) ; do
 		    if [ ! -d $j ] ; then
 			mkdir $j
@@ -150,15 +154,15 @@ for p in $B_PROBLEM_LIST ; do
 			    wait
 			    sleep 1
 			    for j in $( seq $i ) ; do
-				grep "dWallClock" $j/_stdout_ | awk 'BEGIN {t=0; n=0; printf("%3d",'$i');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f\n", t/n)}'
+				( grep "dWallClock" $j/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$i');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f\n", t/n)}'
 			    done
 			else
 			    echo -n $i
 			    case $t in
 				weak)
-				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
+				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
 				strong)
-				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
+				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
 			    esac | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f ", t/n)}'
 			fi
 			echo ;;
@@ -181,9 +185,9 @@ for p in $B_PROBLEM_LIST ; do
 			    echo -n $i
 			    case $t in
 				weak)
-				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
+				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
 				strong)
-				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
+				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
 			    esac | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
 			    awk '/Spent/ { printf("%s ",$5) }' *log
 			fi
@@ -192,21 +196,18 @@ for p in $B_PROBLEM_LIST ; do
 			SKIP=0
 			if [ $t == flood ] ; then
 			    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-			    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00060)}' )
 			    for j in $( seq $i ) ; do
-				cd $j
-				rm *log 2> /dev/null
-				if [ $MEMM -gt $REQMEM ] ; then
-				    ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' > _stdout_ 2> /dev/null &
-				else
-				    SKIP=1
-				fi
-				cd - > /dev/null
+				{
+				    cd $j
+				    rm *log 2> /dev/null
+				    ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MEMORY max_mem = '$max_mem'/' > _stdout_ ;
+			        } 2> /dev/null &
 			    done
 			    wait
 			    sleep 1
 			    [ $SKIP == 0 ] && for j in $( seq $i ) ; do
-				grep cycles $j/_stdout_ | tail -n 2 | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
+				grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
+				grep -q cycles $j/_stdout_ || echo ""
 				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
 			    done
 			else
@@ -214,24 +215,13 @@ for p in $B_PROBLEM_LIST ; do
 			    case $t in
 				weak)
 				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-				    REQMEM=$( echo $NX $i | awk '{print int($1^3 * $2 * 0.00072)}' )
-				    if [ $MEMM -gt $REQMEM ] ; then
-					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | tail -n 2 | awk '{printf("%7.3f %7.3f ", $5, $8)}'
-				    else
-					SKIP=1
-				    fi ;;
+			            $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MEMORY max_mem = '$max_mem'/' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}' ;;
 				strong)
 				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
-				    REQMEM=$( echo $NX | awk '{print int($1^3 * 0.00060)}' )
-				    if [ $MEMM -gt $REQMEM ] ; then
-					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &AMR bsize = 3*32 /' 2> /dev/null | grep cycles | tail -n 2 | awk '{printf("%7.3f %7.3f ", $5, $8)}'
-				    else
-					SKIP=1
-				    fi ;;
+				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MEMORY max_mem = '$max_mem'/' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}' ;;
 			    esac
 			    [ $SKIP == 0 ] && awk '/Spent/ { printf("%s ", $5) }' *log
 			fi
-			[ $SKIP != 0 ] && echo " skipped $t : (RAM) $MEMM < $REQMEM ##"
 			echo ;;
 	        esac
 	    done
@@ -239,5 +229,3 @@ for p in $B_PROBLEM_LIST ; do
 	echo
     done
 done
-
-# ToDo: fine tune the constant 0.00060 needed for $REQMEM for border cases on multicore machines

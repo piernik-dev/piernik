@@ -4,7 +4,7 @@
 #
 
 PROG     = piernik
-F90      = h5pfc
+F90      = h5pfc  -I/usr/lib64/gfortran/modules/openmpi/
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays -w
 LDFLAGS   = -Wl,--as-needed -Wl,-O1

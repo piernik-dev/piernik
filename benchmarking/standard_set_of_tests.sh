@@ -15,7 +15,7 @@ if [ ! -d $1 ] ; then
 	exit 2
 fi
 
-N=$( ( echo 0 ; \ls -1 $1 ) | grep ^[0-9]*$ | sort -n | tail -n 1 )
+N=$( ( echo 0 ; \ls -1 $1 ) | grep ^[0-9]*$ | sort -n | tail -n 1 | awk '{print 1*$1}' )
 
 NN=0
 while [ $NN == 0 ] ; do
@@ -24,13 +24,15 @@ while [ $NN == 0 ] ; do
 		echo "Too busy directory"
 		exit 3
 	fi
-	[ ! -e $1/$N -a ! -e $1/${N}_big2 ] && NN=$N
+	N3=$( printf "%03d" $N )
+	[ ! -e $1/$N3 -a ! -e $1/${N3}_big2 ] && NN=$N3
 done
 
-echo "starting from $N"
+echo "starting from $NN"
 
 for i in $( seq $N $(( $N + 2 )) ) ; do
-  ./benchmarking/piernik_bench.sh | tee $1/${i}
+  ./benchmarking/piernik_bench.sh | tee $1/$( printf "%03d" $i )
 done
-BIG=1.5 ./benchmarking/piernik_bench.sh | tee $1/${N}_big1.5
-BIG=2 ./benchmarking/piernik_bench.sh | tee $1/${N}_big2
+for b in 1.5 2 ; do
+  BIG=$b ./benchmarking/piernik_bench.sh | tee $1/$( printf "%03d" $N )_big$b
+done

@@ -52,6 +52,7 @@
     cfl    = 0.7
     smalld = 1.e-3
     smallei= 1.e-5
+    cflcontrol = "auto"
  /
 
  $GRAVITY
