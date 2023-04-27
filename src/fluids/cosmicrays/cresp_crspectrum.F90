@@ -69,6 +69,8 @@ module cresp_crspectrum
 
    real, allocatable, dimension(:) :: r                                   !> r term for energy losses (Miniati 2001, eqn. 25)
    real, allocatable, dimension(:) :: q                                   !> power-law exponent array
+   real, allocatable, dimension(:) :: s, three_ps, four_ps                !> power-law exponent arrays for transrelativistic limit
+   real, allocatable, dimension(:) :: g                                   !> kinetic energy
 
 ! power-law
    real,    dimension(LO:HI)       :: p_cut_next, p_cut
@@ -140,6 +142,8 @@ contains
       r = zero
       f = zero
       q = zero
+      s = zero
+      g = zero
 
       if (present(substeps)) then
          n_substep = substeps
@@ -153,7 +157,7 @@ contains
       else
          p_cut = zero
          if (dfpq%any_dump) then
-            crel%p = zero
+            p = zero
             crel%f = zero
             crel%q = zero
             crel%e = zero
@@ -256,6 +260,7 @@ contains
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
+         call compute_gs(p, active_bins)
          call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
@@ -368,7 +373,7 @@ contains
       !stop
 ! --- saving the data to output arrays
       !if (dfpq%any_dump) then
-      !  crel%p = p
+      !  p = p
       !crel%f = f
          crel%q = q ! Temporary fix for passing the q value to cresp_update_grid
       !crel%e = e
@@ -1055,13 +1060,13 @@ contains
                 allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
                 active_bins = pack(cresp_all_bins, is_active_bin)
 
-                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins) ! once again we must count n and e
+                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), active_bins) ! once again we must count n and e
                 n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
             endif
         endif
 
         if (dfpq%any_dump) then
-            crel%p = p
+            p = p
             crel%f = f
             crel%q = q
             crel%e = e
@@ -1132,7 +1137,7 @@ contains
       f(act_edges) = f_init(i_spc) * (p_range_add(act_edges)/p_init(LO, i_spc))**(-q_init(i_spc))
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
       call my_deallocate(act_edges)
@@ -1208,8 +1213,12 @@ contains
          q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
+      call compute_gs(p_fix, act_bins)
+
+      print *, 'g : ', g
+
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
       !print *, 'n : ', n
@@ -1236,7 +1245,7 @@ contains
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpg_spectrum
@@ -1259,7 +1268,7 @@ contains
       i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
       q(:i_br) = q_br_init(i_spc) ; q(i_br+1:) = q_init(i_spc)
       f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init(i_spc))
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpl_spectrum
@@ -1288,7 +1297,7 @@ contains
 
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) - I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_symf_spectrum
@@ -1314,7 +1323,7 @@ contains
       enddo
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_syme_spectrum
@@ -1339,7 +1348,7 @@ contains
       do i = 1, ncrb
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_bump_spectrum
@@ -1388,27 +1397,27 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   function fq_to_e(p_l, p_r, f_l, q, bins)
+   function fq_to_e(p_l, p_r, f_l, g_l, q, bins)
 
-      use constants,       only: zero, one, four
+      use constants,       only: zero, one, three, four
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
       use initcrspectrum,  only: eps
 
       implicit none
 
-      real,            dimension(:), intent(in) :: p_l, p_r, f_l, q
+      real,            dimension(:), intent(in) :: p_l, p_r, f_l, q, g_l
       integer(kind=4), dimension(:), intent(in) :: bins
       real,    dimension(size(bins))    :: e_bins
       real,    dimension(1:ncrb)        :: fq_to_e
 
       fq_to_e = zero
-      e_bins = fpcc * f_l(bins) * p_l(bins)**4
-      where (abs(q(bins) - four) > eps)
-         e_bins = e_bins * ((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
+      e_bins = fpcc * f_l(bins) * g_l(bins) * p_l(bins)**three
+      where(q(bins) .ne. three_ps(bins))
+         e_bins = e_bins*((p_r(bins)/p_l(bins))**(three_ps(bins) - q(bins)) - one)/(three_ps(bins) - q(bins))
       elsewhere
-         e_bins = e_bins * log(p_r(bins)/p_l(bins))
-      endwhere
+         e_bins = e_bins*log(p_r(bins)/p_l(bins))
+      end where
 
       fq_to_e(bins) = e_bins
 
@@ -1533,7 +1542,7 @@ contains
       implicit none
 
       integer(kind=4), dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
-      real,    dimension(1:ncrb-1)      :: pimh, pimth, fimh,fimth  ! *imh = i_minus_half, *imth = i_minus_third
+      real,    dimension(1:ncrb-1)      :: pimh, pimth, fimh, fimth, gimh, gimth  ! *imh = i_minus_half, *imth = i_minus_third
       real,    dimension(1:ncrb-1)      :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
 
       pimh(1:ncrb-1) = p(1:ncrb-1)
@@ -1541,6 +1550,9 @@ contains
 
       fimh(1:ncrb-1) = f(1:ncrb-1)
       fimth(1:ncrb-1) = f(0:ncrb-2)
+
+      gimh(1:ncrb-1)  = g(1:ncrb-1)
+      gimth(1:ncrb-1) = g(0:ncrb-2)
 
       qi(1:ncrb-1)  = q(2:ncrb)
       qim1(1:ncrb-1) = q(1:ncrb-1)
@@ -1558,9 +1570,9 @@ contains
       endwhere
       nflux(ce) = - dn_upw(ce)
 
-      de_upw(ce) = fpcc * fimh(ce) * pimh(ce)**4
-      where (abs(qi(ce) - four) > eps)
-         de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
+      de_upw(ce) = fpcc * fimh(ce) *gimh(ce)*pimh(ce)**three
+      where(qi(ce+1) .ne. three_ps(ce+1))
+         de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(three_ps(ce+1)-qi(ce+1)) - one)/(three_ps(ce+1) - qi(ce+1))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
       endwhere
@@ -1586,9 +1598,9 @@ contains
          del_i(HI) = -1
       endif
 
-      dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
-      where (abs(qim1(he) - three) > eps)
-         dn_upw(he) = dn_upw(he)*((pimh(he)/p_upw(he))**(three-qim1(he)) - one)/(three - qim1(he))
+      dn_upw(he) = fpi*fimth(he)*gimth(he)*p_upw(he)**three*(pimth(he)/p_upw(he))**(qi(he)-s(he))
+      where(qi(he) .ne. three_ps(he))
+         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three_ps(he)-qi(he)) - one)/(three_ps(he) - qi(he))
       elsewhere
          dn_upw(he) = dn_upw(he)*log((pimh(he)/p_upw(he)))
       endwhere
@@ -1618,7 +1630,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_r(u_b, u_d, p, bins)
 
-      use constants,      only: zero, four, five
+      use constants,      only: zero, one, four, five
       use initcosmicrays, only: ncrb
       use initcrspectrum, only: eps
 
@@ -1636,15 +1648,15 @@ contains
       ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
       ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
 
-      where (abs(q(bins) - five) > eps)
-         r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
+      where(q(bins) .ne. four_ps(bins))
+         r_num = p(bins-1)*((p(bins)/p(bins-1))**(four_ps(bins)-q(bins)) - one)/(four_ps(bins)-q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
       endwhere
 
-      where (abs(q(bins) - four) > eps)
-         r_den = (p(bins)**(four-q(bins)) - p(bins-1)**(four-q(bins)))/(four - q(bins))
-      else where
+      where(q(bins) .ne. three_ps(bins) )
+         r_den = ((p(bins)/p(bins-1))**(three_ps(bins)-q(bins))-one)/(three_ps(bins)-q(bins))
+      elsewhere
          r_den = log(p(bins)/p(bins-1))
       endwhere
 
@@ -1653,6 +1665,51 @@ contains
       endwhere                                                                  !< range of values ofr_num and r_den is very wide
 
    end subroutine cresp_compute_r
+
+   subroutine compute_gs(p, bins)
+
+      use cresp_variables, only: clight_cresp
+      use cr_data,         only: transrelativistic
+      use constants,       only: zero, three, four
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(in) :: p
+      integer, dimension(:), intent(in)     :: bins
+      real(kind=8), dimension(bins(1):bins(size(bins))) :: r_num, r_den, rn_den
+
+      s = zero
+      three_ps = zero
+      four_ps = zero
+
+      print *, 'compute_gs'
+      print *, '   p =', p
+      print *, 'bins =', bins
+
+      if(transrelativistic) then
+         g = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
+      else
+         g = clight_cresp*p
+      endif
+
+      print *, p(bins)
+      print *, p(bins-1)
+      print *, g(bins)
+      print *, g(bins-1)
+      print *, 'g =', g
+      print *, 'bins =', bins, ',   size(bins)=', size(bins)
+      print *, log10( g(bins(1:size(bins)))/g(bins(1:size(bins))-1))
+      print *, log10(p(bins)/p(bins-1))
+
+      s(bins) = log10(     g(bins(1:size(bins)))/     g(bins(1:size(bins))-1)) &
+               /log10(p(bins(1:size(bins)))/p(bins(1:size(bins))-1))
+
+      print *, 's =', s
+      three_ps = three + s
+      four_ps  = four + s
+
+   end subroutine compute_gs
+
 
 !-------------------------------------------------------------------------------------------------
 !
@@ -1676,6 +1733,7 @@ contains
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer                                    :: i, i_active
       real                                       :: alpha_in
+      real(kind=8)                               :: three_psi
       logical                                    :: exit_code
 
       q = zero
@@ -1688,7 +1746,7 @@ contains
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
-            alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
+            alpha_in = e(i)/(n(i)*g(i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
             else
@@ -1977,9 +2035,13 @@ contains
       call my_allocate_with_index(e_amplitudes_r,ma1d, I_ONE)
       call my_allocate_with_index(r,ma1d, I_ONE)
       call my_allocate_with_index(q,ma1d, I_ONE)
+      call my_allocate_with_index(s,ma1d, I_ONE)
+      call my_allocate_with_index(three_ps,ma1d, I_ONE)
+      call my_allocate_with_index(four_ps,ma1d, I_ONE)
 
       call my_allocate_with_index(f,ma1d, I_ZERO)
       call my_allocate_with_index(p,ma1d, I_ZERO)
+      call my_allocate_with_index(g,ma1d, I_ZERO)
 
       call my_allocate_with_index(edt,ma1d, I_ONE)
       call my_allocate_with_index(ndt,ma1d, I_ONE)
