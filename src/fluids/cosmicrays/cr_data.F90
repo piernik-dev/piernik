@@ -87,6 +87,7 @@ module cr_data
    logical, dimension(PRES:PRIM)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    logical,                                dimension(nicr) :: ePRIM              !< table of all PRIMARY presences
+   logical, parameter                                      :: transrelativistic = .true. !< Logical for transrelativistic limit of momentum in CRESP
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
    integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
