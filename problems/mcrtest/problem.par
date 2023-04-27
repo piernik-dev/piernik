@@ -56,22 +56,28 @@
  /
 
  $COSMIC_RAYS
-    cfl_cr        = 0.9
+    cfl_cr        = 0.3
     cr_active     = 1.0
     K_cr_paral(1) = 10000.0 ! anisotropic
     K_cr_paral(2) = 10000.0
-    K_cr_paral(3) = 0.0
-    K_cr_perp(1)  = 0     ! isotropic
-    K_cr_perp(2)  = 0
-    K_cr_perp(3)  = 0
+    !K_cr_paral(3) = 100.0
+    K_cr_perp(1)  = 100     ! isotropic
+    K_cr_perp(2)  = 100
+    !K_cr_perp(3)  = 0
     use_CRdecay   = .true.
  /
 
  $CR_SPECIES
-    eH1   = .true., .true., .false.
-    eBe9  = .true., .false., .false.
-    eB11  = .true., .false., .false.
-    eC12  = .true., .false., .false.
+   eE    = .false., .false., .false., .true.
+    eH1   = .true., .true., .false., .true.
+    eC12  = .true., .false., .false., .true.
+    eN14  = .false., .false., .false., .true.
+    eO16  = .false., .false., .false., .true.
+    eLi7  = .false., .false., .false., .false.
+    eBe9  = .false., .false., .false., .false.
+    eBe10 = .false., .false., .false., .false.
+    eB10  = .false., .false., .false., .false.
+    eB11  = .false., .false., .false., .false.
  /
 
  $MULTIGRID_SOLVER
