@@ -164,8 +164,12 @@ contains
 
       usrc(:,:) = 0.0
 
-      i = cr_table(icr_Be10) ; j = iarr_crn(i)
-      if (eCRSP(icr_Be10)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
+      if (eCRSP(icr_Be10)) then
+
+         i = cr_table(icr_Be10) ; j = iarr_crn(i)
+         usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
+
+      endif
 
       do i = lbound(icr_prim, 1), ubound(icr_prim, 1)
          associate( cr_prim => cr_table(icr_prim(i)) )
