@@ -478,7 +478,7 @@ contains
             write(log_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-n', '--namelist')
-            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(get_next_arg(i+1, arg))
+            write(cmdl_nml(len_trim(cmdl_nml)+1:), '(2A)') " ", trim(get_next_arg(i+1, arg))
             skip_next = .true.
          case ('-h', '--help')
             call print_help()
