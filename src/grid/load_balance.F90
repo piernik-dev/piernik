@@ -227,9 +227,9 @@ contains
       if (master) then
          if (any(cost_mask) .and. (balance_cg > 0. .or. balance_host > 0.)) then
             write(msg, '(a)')"[load_balance] Auto-balance enabled: "
-            if (balance_host > 0.) write(msg, '(2a,f5.2,a)') &
-                 trim(msg), " balance_host = ", balance_host, " (" // trim(merge("thread", "host  ", balance_thread)) // "-based)"
-            if (balance_cg > 0.) write(msg, '(2a,f5.2)') trim(msg), " balance_cg = ", balance_cg
+            if (balance_host > 0.) write(msg(len_trim(msg)+1:), '(a,f5.2,a)') &
+                 " balance_host = ", balance_host, " (" // trim(merge("thread", "host  ", balance_thread)) // "-based)"
+            if (balance_cg > 0.) write(msg(len_trim(msg)+1:), '(a,f5.2)') " balance_cg = ", balance_cg
             call printinfo(msg)
          endif
          if (watch_ind /= INVALID .and. enable_exclusion) then

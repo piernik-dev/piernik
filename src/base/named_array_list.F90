@@ -270,12 +270,12 @@ contains
             if (any(this%lst(i)%position /= 0)) then
                ! theoretically we can print even about (len(msg) - len_trim(msg))/2 ~= 452 entries for position
                if (size(this%lst(i)%position) <= 400) then  ! hardcoded integer here and in the formats below
-                  write(msg, '(a,400i2)') trim(msg), this%lst(i)%position(:)
+                  write(msg(len_trim(msg)+1:), '(400i2)') this%lst(i)%position(:)
                else
-                  write(msg, '(a,400i2,a)') trim(msg), this%lst(i)%position(:400), " ... ??? ..."
+                  write(msg(len_trim(msg)+1:), '(400i2,a)') this%lst(i)%position(:400), " ... ??? ..."
                endif
             else
-               write(msg, '(2a,i4,a)') trim(msg), "[ ", size(this%lst(i)%position), " * 0 ]"
+               write(msg(len_trim(msg)+1:), '(a,i4,a)') "[ ", size(this%lst(i)%position), " * 0 ]"
             endif
          endif
          call printinfo(msg, to_stdout)

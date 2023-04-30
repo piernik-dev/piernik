@@ -492,8 +492,8 @@ contains
          end select
       enddo
 
-      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr,'(a,a1)') trim(wd_wr),'/'
-      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd,'(a,a1)') trim(wd_rd),'/'
+      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr(len_trim(wd_wr)+1:),'(a1)') '/'
+      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd(len_trim(wd_rd)+1:),'(a1)') '/'
 
       ! Print the date and, optionally, the time
       call date_and_time(DATE=date, TIME=time, ZONE=zone)
