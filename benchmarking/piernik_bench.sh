@@ -29,7 +29,7 @@ echo "## Memory : $MEMG GB"
 # create list of thread count to be tested
 if [ $# -lt 1 ] ; then
     N=$( awk 'BEGIN {c=0} /processor/ {if ($NF > c) c=$NF} END {print c+1}' /proc/cpuinfo )
-    N_PROC_LIST=$( seq $N ) 
+    N_PROC_LIST=$( seq $N )
 else
     N_PROC_LIST=$( echo $* | awk '{for (i=1; i<=NF; i++) printf("%d ",1*$i); print ""}' )
 fi

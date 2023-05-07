@@ -14,20 +14,8 @@
     zmax   =  2.
  /
 
- $MPI_BLOCKS
-    allow_uneven = .true.
-    allow_noncart = .true.
-    dd_unif_quality = 1.1
-    dd_rect_quality = 1.1
- /
-
  $UNITS
     units_set = "cgs"
- /
-
- $RESTART_CONTROL
-    restart  = 'none'
-    nrestart = 0
  /
 
  $END_CONTROL
@@ -37,12 +25,11 @@
 
  $OUTPUT_CONTROL
     problem_name ='maclaurin'
-    run_id =  'sph'
+    run_id =  'ben'
     dt_hdf  = 0.0
     dt_res  = 0.0
     dt_log  = 0.0
     dt_tsl  = 0.0
-    vars(1:) = 'dens', 'gpot', 'apot', 'errp'
  /
 
  $FLUID_DUST
@@ -57,9 +44,6 @@
  /
 
  $GRAVITY
- /
-
- $RESISTIVITY
  /
 
  $PROBLEM_CONTROL
@@ -79,9 +63,6 @@
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "isolated"
     lmax = 64
- /
-
- $INTERACTIONS
  /
 
  $AMR
