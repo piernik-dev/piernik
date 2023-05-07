@@ -129,7 +129,7 @@ contains
 ! this function is not used anywhere
 
 !>
-!! \brief Calculate first 4 terms of taylor expansion of cosh
+!! \brief Calculate first 4 terms of Taylor expansion of cosh
 !!
 !! We often need to calculate cosh for very large numbers, which may lead to FPEs. Most of the time, we are
 !! not actually interested in the exact values, but rather the approximate shape of the function.
@@ -155,7 +155,7 @@ contains
          x2 = x2**2
       enddo
    end function crude_cosh
-#endif
+#endif /* 0 */
 
 !>
 !! \brief Returns the file descriptor associated with a specified unit.
@@ -177,7 +177,7 @@ contains
 #endif /* !__INTEL_COMPILER */
    end function piernik_fnum
 
-!> \brief Expand given integer array by one and store the value i ni the last cell
+!> \brief Expand given integer array by one and store the value i in the last cell
 
    subroutine append_int_to_array(arr, i)
 
@@ -199,6 +199,13 @@ contains
 
    end subroutine append_int_to_array
 
+!>
+!! \brief An operator for avoiding direct comparision with floats (like 0.), because gfortran is complaining about that.
+!!
+!! Warning: use carefully as epsilon(<any double precision>) == 2.2204460492503131E-016.
+!! This may cause improper evaluation of the comparison when the difference of compared values is <= epsilon(0.)
+!<
+
    pure elemental function float_equals(x1, x2) result (tf)
 
       implicit none
@@ -206,9 +213,11 @@ contains
       real, intent(in) :: x1, x2
       logical :: tf
 
-      tf = abs(x1 - x2) <= epsilon(x1)
+      tf = abs(x1 - x2) <= epsilon(0.)
 
    end function float_equals
+
+!> \brief a complementary operator to .equals.
 
    pure elemental function float_notequals(x1, x2) result (tf)
 
@@ -217,7 +226,7 @@ contains
       real, intent(in) :: x1, x2
       logical :: tf
 
-      tf = .not.(x1.equals.x2)
+      tf = .not. (x1 .equals. x2)
 
    end function float_notequals
 

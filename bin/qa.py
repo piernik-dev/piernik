@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import re
 import sys
 import hashlib
@@ -79,6 +79,7 @@ class bcolors:
         self.FAIL = ''
         self.ENDC = ''
 
+
 b = bcolors()
 
 
@@ -100,13 +101,13 @@ def select_sources(files):
 
 
 def wtf(lines, line, rname, fname):
-    if(isinstance(lines, np.ndarray)):
+    if (isinstance(lines, np.ndarray)):
         linenum = line_num(lines, line)
     else:
         linenum = lines
 
     line = line.split("!")[0]    # Strip comments
-    if(rname == ''):
+    if (rname == ''):
         return " [%s]@L%i => %s" % (fname, linenum, line.strip())
     else:
         return " [%s:%s]@L%i => %s" % (fname, rname, linenum, line.strip())
@@ -239,16 +240,20 @@ def qa_checks(files, options):
             #            for f in part: print f
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
-            if(obj['type'] == b'mod'):
-                # module body is always last, remove lines that've been
-                # already checked
-                part = np.delete(part, np.array(clean_ind) - obj['beg'])
+            if (obj['type'] == b'mod'):
+                # check whether already checked lines are accounted to module lines range
+                ci = np.array(clean_ind)
+                eitc = np.where(np.logical_or(ci < obj['beg'], ci > obj['end']))
+                ind_tbr = np.delete(ci, eitc)
+                # module body is always last, remove lines that've been already checked
+                if (ind_tbr.size > 0):
+                    part = np.delete(part, ind_tbr - obj['beg'])
                 qa_have_priv_pub(part, obj['name'], warns, f)
             else:
                 clean_ind += range(obj['beg'], obj['end'] + 1)
 
             qa_depreciated_syntax(part, obj['name'], warns, f)
-            if(obj['type'] != b'type'):
+            if (obj['type'] != b'type'):
                 qa_have_implicit(part, obj['name'], errors, f)
                 qa_implicit_saves(part, obj['name'], errors, f)
 
@@ -269,18 +274,15 @@ def qa_checks(files, options):
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
-    if(not filter(have_privpub.search, lines)):
-        warns.append(give_warn("QA:  ") +
-                     "module [%s:%s] lacks public/private keywords." %
+    if (len(list(filter(have_privpub.search, lines))) < 1):
+        warns.append(give_warn("QA:  ") + "module [%s:%s] lacks public/private keywords." %
                      (fname, name))
     else:
         if (list(filter(remove_warn.match, filter(have_priv.search, lines)))):
-            warns.append(give_warn("QA:  ") +
-                         "module [%s:%s] have selective private." %
+            warns.append(give_warn("QA:  ") + "module [%s:%s] have selective private." %
                          (fname, name))
         if (list(filter(remove_warn.match, filter(have_global_public.search, lines)))):
-            warns.append(give_warn("QA:  ") +
-                         "module [%s:%s] is completely public." %
+            warns.append(give_warn("QA:  ") + "module [%s:%s] is completely public." %
                          (fname, name))
 
 
@@ -293,27 +295,25 @@ def qa_crude_write(lines, rname, store, fname):
 def qa_magic_integers(lines, rname, store, fname):
     for f in filter(remove_warn.match, filter(magic_integer.search, lines)):
         hits = np.where(lines == f)[0]
-        if(len(hits) > 1):
+        if (len(hits) > 1):
             for i in hits:
                 warn = give_warn("magic integer") + wtf(i, f, rname, fname)
-                if(warn not in store):
+                if (warn not in store):
                     store.append(warn)
         else:
             warn = give_warn("magic integer") + wtf(lines, f, rname, fname)
-            if(warn not in store):
+            if (warn not in store):
                 store.append(warn)
 
 
 def qa_nonconforming_tabs(lines, rname, store, fname):
     for f in filter(tab_char.search, lines):
-        store.append(give_err("non conforming tab detected ") +
-                     wtf(lines, f, rname, fname))
+        store.append(give_err("non conforming tab detected ") + wtf(lines, f, rname, fname))
 
 
 def qa_labels(lines, rname, store, fname):
     for f in filter(have_label.search, lines):
-        store.append(give_err("label detected              ") +
-                     wtf(lines, f, rname, fname))
+        store.append(give_err("label detected              ") + wtf(lines, f, rname, fname))
 
 
 def qa_depreciated_syntax(lines, rname, store, fname):
@@ -330,22 +330,21 @@ def qa_depreciated_syntax(lines, rname, store, fname):
 
 
 def qa_have_implicit(lines, name, store, fname):
-    if(not filter(have_implicit.search, lines)):
-        store.append(give_err("missing 'implicit none'      ") +
-                     "[%s:%s]" % (fname, name))
+    if (len(list(filter(have_implicit.search, lines))) < 1):
+        store.append(give_err("missing 'implicit none'      ") + "[%s:%s]" % (fname, name))
 
 
 def remove_amp(lines, strip):
     buf = ''
     temp = []
     for line in lines:
-        if(len(buf)):
+        if (len(buf)):
             line = buf + line.lstrip()
             buf = ''
-        if(continuation.search(line)):
+        if (continuation.search(line)):
             buf = re.sub('&', '', line.split("!")[0])
         else:
-            if(strip):
+            if (strip):
                 temp.append(line.split("!")[0])  # kills QA_WARN
             else:
                 temp.append(line)
@@ -357,9 +356,13 @@ def qa_false_refs(lines, name, store, fname):
     uses = list(filter(has_use.search, temp))
 
     for item in uses:
-        to_check = [f.strip() for f in item.split("only:")[1].split(',')]
-        to_check = [re.sub('&', '', f).lstrip(
-        ) for f in to_check]     # additional sanitization
+        try:
+            to_check = [f.strip() for f in item.split("only:")[1].split(',')]
+        except IndexError:
+            to_check = []
+            store.append(give_warn("QA:  ") + "'" + item + "' without ONLY clause in [%s:%s]" %
+                         (fname, name))
+        to_check = [re.sub('&', '', f).lstrip() for f in to_check]  # additional sanitization
         # remove operator keyword from import
         for ino, item in enumerate(to_check):
             try:
@@ -370,9 +373,8 @@ def qa_false_refs(lines, name, store, fname):
         for func in to_check:
             pattern = re.compile(func, re.IGNORECASE)
             # stupid but seems to work
-            if(len(list(filter(pattern.search, temp))) < 2):
-                store.append(give_warn("QA:  ") + "'" + func +
-                             "' grabbed but not used in [%s:%s]" %
+            if (len(list(filter(pattern.search, temp))) < 2):
+                store.append(give_warn("QA:  ") + "'" + func + "' grabbed but not used in [%s:%s]" %
                              (fname, name))
 
 
@@ -381,11 +383,11 @@ def qa_implicit_saves(lines, name, store, fname):
     impl = list(filter(not_param_nor_save.match,
                        filter(implicit_save.search,
                               remove_amp(filter(remove_warn.match, lines), True))))
-    if(len(impl)):
-        store.append(give_err("implicit saves detected in   ") +
-                     "[%s:%s]" % (fname, name))
+    if (len(impl)):
+        store.append(give_err("implicit saves detected in   ") + "[%s:%s]" % (fname, name))
     for line in impl:
         store.append(line.strip())
+
 
 if __name__ == "__main__":
     from optparse import OptionParser

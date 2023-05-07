@@ -47,11 +47,10 @@ contains
 
    subroutine init_non_inertial
 
-      use dataio_pub, only: nh    ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
-      use dataio_pub, only: die, code_progress
+      use dataio_pub, only: die, code_progress, nh
       use domain,     only: dom
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 #ifdef VERBOSE
       use dataio_pub, only: printinfo
 #endif /* VERBOSE */
@@ -105,7 +104,7 @@ contains
 !>
 !! \brief Compute the non-inertial acceleration for a given row of cells.
 !!
-!! The equtions for the non-inertial acceleration in the x and y directions are given by:
+!! The equations for the non-inertial acceleration in the x and y directions are given by:
 !! \f{equation}
 !! acc_x = 2 * \Omega * v_y + \Omega^2 * x
 !! acc_y =  -2 * \Omega * v_x + \Omega^2 * y

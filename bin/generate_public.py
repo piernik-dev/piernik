@@ -27,15 +27,16 @@ def pretty_format(list, col):
     print "   public :: &"
     str = "        & "
     for item in list:
-        if(len(str) + len(item) + 2 > int(col)):
+        if (len(str) + len(item) + 2 > int(col)):
             print str + "&"
             str = "        & "
         str = str + item + ", "
     print str.rstrip(", ")
 
+
 if __name__ == "__main__":
     from optparse import OptionParser
-    usage = "usage: %prog module_name line_lenght FILES\n\nExample: bin/generate_public.py grid 140 $(find . -name \"*F90\")"
+    usage = "usage: %prog module_name line_length FILES\n\nExample: bin/generate_public.py grid 140 $(find . -name \"*F90\")"
     parser = OptionParser(usage=usage)
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="verbose", default=False,

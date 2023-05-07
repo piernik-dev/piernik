@@ -36,12 +36,11 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: n_sn
-   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, dt_sn, r, t_sn, dtrig
+   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, dt_sn, r, dtrig
    real :: ref_thr   !< refinement threshold
-   real :: deref_thr !< derefinement threshold
    real :: ref_eps   !< smoother filter
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, n_sn, dt_sn, ref_thr, deref_thr, ref_eps, dtrig
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, smooth, n_sn, dt_sn, ref_thr, ref_eps, dtrig
 
 contains
 
@@ -64,20 +63,18 @@ contains
 
    subroutine read_problem_par
 
-      use constants,            only: DST
-      use dataio_pub,           only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,           only: msg, printinfo, die
-      use domain,               only: dom
-      use fluidindex,           only: flind
-      use mpisetup,             only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
-      use named_array_list,     only: wna
+      use constants,             only: DST
+      use dataio_pub,            only: msg, printinfo, die, nh
+      use domain,                only: dom
+      use fluidindex,            only: flind
+      use mpisetup,              only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use named_array_list,      only: wna
       use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: problem_domain_update
 
       implicit none
 
       integer :: p, id
-
-      t_sn = 0.0
 
       d0      = 1.0
       dtrig   = -1.5
@@ -94,7 +91,6 @@ contains
       n_sn    = 1
       dt_sn   = 0.0
       ref_thr   = 0.5 ! Lower this value if you want to track the shock wave as it gets weaker
-      deref_thr = 0.1
       ref_eps   = 0.01
 
       if (master) then
@@ -127,7 +123,6 @@ contains
          rbuff(10)= r0
          rbuff(11)= dt_sn
          rbuff(12)= ref_thr
-         rbuff(13)= deref_thr
          rbuff(14)= dtrig
          rbuff(15)= smooth
          rbuff(16)= ref_eps
@@ -153,7 +148,6 @@ contains
          r0           = rbuff(10)
          dt_sn        = rbuff(11)
          ref_thr      = rbuff(12)
-         deref_thr    = rbuff(13)
          dtrig        = rbuff(14)
          smooth       = rbuff(15)
          ref_eps      = rbuff(16)
@@ -169,22 +163,28 @@ contains
          if (master) call printinfo(msg)
       enddo
 
-      do id = 1, flind%energ
-         call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
-      enddo
+      if (ref_thr > 0.) then
+         do id = 1, flind%energ
+            call urc_list%add_user_urcv(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, ref_eps, "Loechner", .true.)
+         enddo
+      else
+         if (master) call printinfo("[initproblem:problem_initial_conditions] automatic refinement disabled by negative ref_thr")
+      endif
 
+      if (dtrig < 0.) nullify(problem_domain_update)
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use func,       only: operator(.notequals.)
-      use grid_cont,  only: grid_container
+      use cg_cost_data, only: I_IC
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
+      use domain,       only: dom
+      use fluidindex,   only: flind
+      use func,         only: operator(.notequals.)
+      use grid_cont,    only: grid_container
 
       implicit none
 
@@ -206,6 +206,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            call cg%costs%start
 
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -265,10 +266,12 @@ contains
                enddo
             endif
 
+            call cg%costs%stop(I_IC)
             cgl => cgl%nxt
          enddo
 
 #ifdef TRACER
+#error Check this code and move into loop over cg above
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
@@ -310,16 +313,16 @@ contains
 
    end subroutine sedov_tsl
 
-!> \brief Find hov close it the shockwave to the external edges and call expansion routine if necessary
+!> \brief Find how close is the shockwave to the external edges and call expansion routine if necessary
 
    subroutine sedov_dist_to_edge
 
-      use cg_leaves,     only: leaves
-      use cg_level_base, only: base
-      use cg_list,       only: cg_list_element
-      use constants,     only: xdim, ydim, zdim, LO, HI
-      use domain,        only: dom
-      use fluidindex,    only: iarr_all_dn
+      use cg_leaves,      only: leaves
+      use cg_expand_base, only: expand_base
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn
 
       implicit none
 
@@ -395,7 +398,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call base%expand(ddist(:,:) < iprox)
+      call expand_base(ddist(:,:) < iprox)
 
    end subroutine sedov_dist_to_edge
 
@@ -403,12 +406,12 @@ contains
 
    subroutine sedov_late_init
 
-      use cg_list,        only: cg_list_element
-      use cg_list_dataop, only: expanded_domain
-      use constants,      only: xdim, ydim, zdim, ION
-      use dataio_pub,     only: die
-      use fluidindex,     only: flind
-      use func,           only: ekin, emag
+      use cg_list,          only: cg_list_element
+      use cg_list_dataop,   only: expanded_domain
+      use constants,        only: xdim, ydim, zdim, ION, psi_n
+      use fluidindex,       only: flind
+      use func,             only: ekin, emag
+      use named_array_list, only: qna
 
       implicit none
 
@@ -418,22 +421,26 @@ contains
 
       cgl => expanded_domain%first
       do while (associated(cgl))
-         if (cgl%cg%is_old) call die("[initproblem:sedov_late_init] Old piece on a new list")
-         do p = 1, flind%energ
-            associate (fl => flind%all_fluids(p)%fl)
-            cgl%cg%u(fl%idn, :, :, :) = d0
-            cgl%cg%u(fl%imx, :, :, :) = 0.
-            cgl%cg%u(fl%imy, :, :, :) = 0.
-            cgl%cg%u(fl%imz, :, :, :) = 0.
-            cgl%cg%u(fl%ien, :, :, :) = p0/(fl%gam_1) + ekin(cgl%cg%u(fl%imx, :, :, :), cgl%cg%u(fl%imy, :, :, :), cgl%cg%u(fl%imz, :, :, :), cgl%cg%u(fl%idn, :, :, :))
-            if (fl%tag == ION) then
-               call cgl%cg%set_constant_b_field([bx0, by0, bz0])
-               cgl%cg%u(fl%ien, :, :, :) = cgl%cg%u(fl%ien, :, :, :) + emag(cgl%cg%b(xdim, :, :, :), cgl%cg%b(ydim, :, :, :), cgl%cg%b(zdim, :, :, :)**2)
-            endif
-            end associate
-         enddo
+         if (.not. cgl%cg%is_old) then
+            do p = 1, flind%energ
+               associate (fl => flind%all_fluids(p)%fl)
+                  cgl%cg%u(fl%idn, :, :, :) = d0
+                  cgl%cg%u(fl%imx, :, :, :) = 0.
+                  cgl%cg%u(fl%imy, :, :, :) = 0.
+                  cgl%cg%u(fl%imz, :, :, :) = 0.
+                  cgl%cg%u(fl%ien, :, :, :) = p0/(fl%gam_1) + ekin(cgl%cg%u(fl%imx, :, :, :), cgl%cg%u(fl%imy, :, :, :), cgl%cg%u(fl%imz, :, :, :), cgl%cg%u(fl%idn, :, :, :))
+                  if (fl%tag == ION) then
+                     call cgl%cg%set_constant_b_field([bx0, by0, bz0])
+                     cgl%cg%u(fl%ien, :, :, :) = cgl%cg%u(fl%ien, :, :, :) + emag(cgl%cg%b(xdim, :, :, :), cgl%cg%b(ydim, :, :, :), cgl%cg%b(zdim, :, :, :)**2)
+                  endif
+               end associate
+            enddo
+         endif
          cgl => cgl%nxt
       enddo
+
+      ! ToDo: move this call to some other place where it would be automagically called
+      if (qna%exists(psi_n)) call expanded_domain%set_q_value(qna%ind(psi_n), 0.)
 
    end subroutine sedov_late_init
 

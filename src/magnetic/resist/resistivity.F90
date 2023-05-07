@@ -83,8 +83,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
-      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, code_progress
+      use dataio_pub,       only: die, code_progress, nh
       use domain,           only: dom
       use func,             only: operator(.equals.)
       use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
@@ -192,6 +191,7 @@ contains
 
    subroutine compute_resist
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, zero, oneq, LO, HI, GEO_XYZ
@@ -213,6 +213,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          eta => cg%q(qna%ind(eta_n))%arr
          dbx => cg%q(qna%ind(dbx_n))%arr
@@ -284,6 +285,7 @@ contains
 
          where (eta > eta_0) eta = eh
 
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
@@ -293,6 +295,7 @@ contains
 
    subroutine timestep_resist(dt)
 
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: big, zero, pMIN, MAXL
@@ -300,6 +303,7 @@ contains
       use func,             only: operator(.notequals.)
       use mpisetup,         only: piernik_MPI_Allreduce, piernik_MPI_Bcast
       use named_array_list, only: qna
+      use types,            only: value
 #ifndef ISO
       use constants,        only: MINL
 #ifdef IONIZED
@@ -325,14 +329,20 @@ contains
       call compute_resist
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call piernik_MPI_Bcast(etamax%val)
-      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      if (eta1_active) then
+         call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      else
+         cu2max = value(0., 0., [0., 0., 0.], [0, 0, 0], 0_4)
+      endif
       call piernik_MPI_Bcast(cu2max%val)
 
       if (etamax%val .notequals. zero) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            dt_eta = min(dt_eta, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
+            call cg%costs%start
+
+            dt_eta = min(dt_eta, cfl_resist * cg%dxmn2 / (2. * etamax%val))
 #ifndef ISO
 #ifdef IONIZED
             eta => cg%q(qna%ind(eta_n))%span(cg%ijkse)
@@ -345,6 +355,8 @@ contains
             dt_eint = min(dt_eint, deint_max * abs(minval(eh)))
 #endif /* IONIZED */
 #endif /* !ISO */
+
+            call cg%costs%stop(I_OTHER)
             cgl => cgl%nxt
          enddo
       endif
@@ -422,6 +434,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, INT4, LO, HI
@@ -450,6 +463,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          wcu_i = qna%ind(wcu_n)
          eta_i = qna%ind(eta_n)
 
@@ -466,15 +481,20 @@ contains
             enddo
          enddo
 
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cg%costs%start
+
          do dir = xdim, zdim
             emf = idm(etadir,dir) + 2_INT4
             if (dom%has_dir(dir)) call bnd_emf(wcu_i, emf, dir, cgl%cg)
          enddo
+
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 

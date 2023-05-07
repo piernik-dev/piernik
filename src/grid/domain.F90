@@ -50,7 +50,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_ints_to_bnds, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
-        &    psize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality! temporary export
+        &    psize, minsize, allow_noncart, allow_uneven, vel_outd, dd_unif_quality, dd_rect_quality! temporary export
 
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
@@ -75,13 +75,14 @@ module domain
       integer(kind=4) :: D_x                    !< set to 1 when x-direction exists, 0 otherwise
       integer(kind=4) :: D_y                    !< set to 1 when y-direction exists, 0 otherwise.
       integer(kind=4) :: D_z                    !< set to 1 when z-direction exists, 0 otherwise.
-      integer(kind=4), dimension(ndims) :: D_   !< == [D_x, D_y, D_z], Useful for dimensionally-safe indices for difference operators on arrays,
+      integer(kind=4), dimension(ndims) :: D_   !< == [D_x, D_y, D_z], Useful for dimensionally-safe indices for difference operators on arrays
+      integer(kind=4), dimension(ndims, ndims, HI) :: D2a !< auxiliary variant of D_
 
       logical, dimension(ndims) :: has_dir      !< .true. when direction exists (domain has >1 cell there)
       integer                   :: eff_dim      !< effective dimensionality of the simulation (count(has_dir))
       integer(kind=8), dimension(ndims) :: off  !< offset of the base level
 
-    contains
+   contains
 
       procedure :: translate_bnds_to_ints     !< Convert strings to integer-coded boundary types
       procedure :: print_me                   !< Print computational domain details
@@ -109,6 +110,7 @@ module domain
    logical :: allow_noncart                       !< allows more than one neighbour on a boundary
    real    :: dd_unif_quality                     !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found), nonuniform cartesian decomposition is then tried
    real    :: dd_rect_quality                     !< rectilinear domain decomposition may be rejected it its quality is below this threshold, noncartesian decomposition is then tried (it still may find cartesian decomposition as optimum)
+   real    :: vel_outd                            !< velocity minimum used in OUTD boundary conditions
    !! \todo Implement maximum size of a cg (in cells) for use with GPGPU kernels. The minimum size id nb**dom%eff_dim
 
    namelist /MPI_BLOCKS/ psize, minsize, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality
@@ -134,7 +136,7 @@ module domain
    ! testing and debugging
    integer(kind=8), dimension(ndims) :: offset            !< offset of the base level
 
-   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry, offset
+   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry, offset, vel_outd
 
 contains
 
@@ -181,13 +183,12 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID
-      use dataio_pub, only: die, warn, code_progress
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
-      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast, have_mpi
+      use dataio_pub, only: die,  code_progress, nh
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      real, dimension(ndims, LO:HI)     :: edges
+      real, dimension(ndims, LO:HI) :: edges
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[domain:init_domain] MPI not initialized.")
 
@@ -216,6 +217,7 @@ contains
 
       dd_unif_quality = 0.9
       dd_rect_quality = 0.9
+      vel_outd        = 0.0
 
       if (master) then
          if (.not. nh%initialized) call nh%init()
@@ -272,6 +274,7 @@ contains
          rbuff(6) = zmax
          rbuff(7) = dd_unif_quality
          rbuff(8) = dd_rect_quality
+         rbuff(9) = vel_outd
 
          lbuff(1) = allow_uneven
          lbuff(2) = allow_noncart
@@ -296,6 +299,7 @@ contains
          zmax            = rbuff(6)
          dd_unif_quality = rbuff(7)
          dd_rect_quality = rbuff(8)
+         vel_outd        = rbuff(9)
 
          bnd_xl     = cbuff(1)
          bnd_xr     = cbuff(2)
@@ -317,22 +321,10 @@ contains
 
       call dom%init(nb, n_d, [bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr], edges, geometry, offset)
 
-      where (dom%has_dir(:))
-         minsize(:) = max(minsize(:), dom%nb)
-      elsewhere
-         minsize(:) = 1
-      endwhere
-
-      if (have_mpi .and. master) then
-         if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
-         if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is experimental.")
-      endif
       is_uneven = .false.
       is_mpi_noncart = .false.
       is_refined = .false.
       is_multicg = .false.
-
-      where (.not. dom%has_dir(:)) psize(:) = I_ONE
 
    end subroutine init_domain
 
@@ -459,7 +451,7 @@ contains
 
    subroutine init(this, nb, n_d, bnds, edges, geometry, off)
 
-      use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
+      use constants,  only: idm, ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
       use dataio_pub, only: die, warn, msg
       use func,       only: operator(.notequals.)
       use mpisetup,   only: master
@@ -493,6 +485,7 @@ contains
       this%D_x = this%D_(xdim)
       this%D_y = this%D_(ydim)
       this%D_z = this%D_(zdim)
+      this%D2a = spread(reshape([this%D_*idm(xdim,:), this%D_*idm(ydim,:), this%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
 
       this%total_ncells = product(int(this%n_d(:), kind=8))
       if (any(this%total_ncells < this%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")
@@ -585,8 +578,11 @@ contains
 
       where (this%has_dir(:))
          this%n_t(:) = this%n_d(:) + I_TWO * this%nb
+         minsize(:) = max(minsize(:), this%nb)
       elsewhere
          this%n_t(:) = 1
+         minsize(:) = 1
+         psize(:) = I_ONE
       endwhere
 
    end subroutine init

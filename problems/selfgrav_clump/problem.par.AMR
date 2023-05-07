@@ -96,7 +96,7 @@
    level_max = 3
    bsize = 3*8
    n_updAMR = 3
-   refine_vars(1) = "dens", "Loechner", 0.15, 0.03, 0.01, .true.
+   refine_vars(1) = "dens", "Loechner", 0.15, 0.01, .true.
    ! the refinement criterion here refines also minima and saddles
    ! ToDo: replace it by Jeans length or something
  /

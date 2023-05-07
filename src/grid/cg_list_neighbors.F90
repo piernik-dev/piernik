@@ -31,7 +31,7 @@
 
 module cg_list_neighbors
 
-   use cg_list_rebalance, only: cg_list_rebalance_t
+   use cg_list_balance, only: cg_list_balance_t
 
    implicit none
 
@@ -63,7 +63,7 @@ module cg_list_neighbors
    !! searching grid pieces covering specified position.
    !<
 
-   type, extends(cg_list_rebalance_t), abstract :: cg_list_neighbors_t
+   type, extends(cg_list_balance_t), abstract :: cg_list_neighbors_t
    contains
       procedure          :: find_neighbors                 !< Choose between more general and fast routine for neighbor searching.
       procedure, private :: find_neighbors_SFC             !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
@@ -111,28 +111,33 @@ contains
 !!   Isend Z-faces, Irecv Z-faces, Irecv Other_corners, Waitall.
 !!
 !! Any upgrades of these procedures must correctly cover the following cases
-!! * single block on single process with partial or full periodic boundaaries
+!! * single block on single process with partial or full periodic boundaries
 !! * noncartesian base-level decomposition
 !! * cartesian decompositions (both equal and non-equal sizes)
 !! * AMR "blocky" decompositions with complex patterns of refinement, including
 !!     * concave fine/coarse boundary,
-!!     * fine blocks touching each othes only at the corner or edge
+!!     * fine blocks touching each other only at the corner or edge
 !!     * the above cases happening through any periodic boundary
 !! Non-convex domains aren't perhaps difficult but we never needed or tested them.
 !<
 
    subroutine find_neighbors(this)
 
+      use constants,  only: PPP_AMR
       use dataio_pub, only: warn, msg
       use global,     only: do_external_corners
       use refinement, only: prefer_n_bruteforce
       use mpisetup,   only: master
+      use ppp,        only: ppp_main
 
       implicit none
 
       class(cg_list_neighbors_t), intent(inout) :: this !< object invoking type bound procedure
 
       logical, save :: firstcall = .true.
+      character(len=*), parameter :: fn_label = "find_neighbors"
+
+      call ppp_main%start(fn_label, PPP_AMR)
 
       if (do_external_corners) then
          write(msg, '(3a)') "[cg_list_neighbors:find_neighbors] do_external_corners implemented experimentally (", trim(merge("SFC       ", "bruteforce", this%dot%is_blocky .and. .not. prefer_n_bruteforce)), ")"
@@ -152,9 +157,11 @@ contains
          ! covers the domain in at least one direction.
       endif
 
+      call ppp_main%stop(fn_label, PPP_AMR)
+
 #ifdef DEBUG
-      call this%print_bnd_list
-#endif
+!      call this%print_bnd_list
+#endif /* DEBUG */
 
    end subroutine find_neighbors
 
@@ -246,7 +253,7 @@ contains
       integer                           :: lh
       integer(kind=8), dimension(ndims) :: n_off     !< neighbor's offset
       integer(kind=8)                   :: n_id      !< neighbor's id
-      integer                           :: n_p       !< neighbor's process
+      integer(kind=4)                   :: n_p       !< neighbor's process
       integer                           :: n_grid_id !< neighbor's grid_id on n_p
       integer                           :: n_dd      !< neighbor's direction
       integer(kind=4)                   :: tag
@@ -329,7 +336,7 @@ contains
       !! \details If we put a constraint that a grid piece can not be smaller
       !! than dom%nb, then total number of neighbours that affect local
       !! guardcells is exactly 3 for AMR, cartesian decomposition with
-      !! equal-size blocks. Thus, in each direction we can describe realtive
+      !! equal-size blocks. Thus, in each direction we can describe relative
       !! position as one of three cases:
       !! * LEFT, RIGHT - corner neighbours
       !! * FACE        - face neighbour
@@ -401,7 +408,8 @@ contains
 
       type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer                  :: cgl
-      integer                                         :: j, b, id, ix, iy, iz
+      integer                                         :: b, id, ix, iy, iz
+      integer(kind=4)                                 :: j
       integer(kind=8)                                 :: n_lbnd_face_cells
       integer(kind=4)                                 :: d, dd, hl, lh, tag
       integer(kind=8), dimension(xdim:zdim)           :: per
@@ -598,7 +606,7 @@ contains
 !! \details The chunks here could be find by find_neighbors_bruteforce as well
 !! but that would complicate an already not-too-clear routine.
 !!
-!! This is O(n^2)-class algorithm but in a massively parralel runs we don't
+!! This is O(n^2)-class algorithm but in a massively parallel runs we don't
 !! expect significant cost here because:
 !! * either only small subset of base level may be touching external boundary
 !!   or base level is split to just few blocks
@@ -615,7 +623,7 @@ contains
       use dataio_pub, only: die
       use gcpa,       only: gcpa_t
       use global,     only: do_external_corners
-      use mpisetup,   only: FIRST, LAST, proc
+      use mpisetup,   only: FIRST, LAST, proc, tag_ub
       use overlap,    only: is_overlap
 
       implicit none
@@ -624,7 +632,8 @@ contains
 
       type(cg_list_element), pointer           :: cgl
       integer(kind=8), dimension(xdim:zdim)    :: per
-      integer                                  :: j, b, ix, iy, iz
+      integer(kind=4)                          :: j
+      integer                                  :: b, ix, iy, iz
       integer(kind=8), dimension(ndims, LO:HI) :: box, box_narrow, e_guard, e_guard_wide, whole_level, poff, aux
       integer(kind=4)                          :: d, hl, lh, m_tag
       type(gcpa_t)                             :: l_pse
@@ -634,6 +643,7 @@ contains
       call l_pse%init(this)
 
       m_tag = max_tag(this)
+      if (m_tag > tag_ub) call die("[cg_list_neighbors:find_ext_neighbors_bruteforce] this MPI implementation has too low MPI_TAG_UB attribute")
 
       whole_level(:, LO) = this%l%off
       whole_level(:, HI) = this%l%off + this%l%n_d - I_ONE
@@ -786,7 +796,7 @@ contains
    !! * more   for AMR with consolidated blocks (unimplemented yet, not
    !!          compatible with current approach)
    !!
-   !! Thus, in each direction we can describe realtive position as one of
+   !! Thus, in each direction we can describe relative position as one of
    !! four cases, or a bit easier one of five cases:
    !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or
    !!                         a bit further away
@@ -794,7 +804,7 @@ contains
    !! * FACE                - face neighbour (may cover also some corners)
    !!
    !! This version can correctly handle noncartesian decompositions and should
-   !! also be correct on cartesia and blocy decompositions.
+   !! also be correct on cartesian and blocky decompositions.
    !<
 
    pure function uniq_tag(se, nb_se, grid_id)

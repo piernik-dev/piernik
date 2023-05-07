@@ -80,7 +80,7 @@ module named_array_list
       integer(kind=4) :: wai = INVALID                           !< auxiliary array : cg%q(qna%wai)
    end type na_var_list_q
 
-   !> \brief the most commonly used 4D named arraya are u and b, thus we add shortcuts here
+   !> \brief the most commonly used 4D named arrays are u and b, thus we add shortcuts here
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi = INVALID                            !< fluid           : cg%w(wna%fi)
       integer(kind=4) :: bi = INVALID                            !< magnetic field  : cg%w(wna%bi)
@@ -270,12 +270,12 @@ contains
             if (any(this%lst(i)%position /= 0)) then
                ! theoretically we can print even about (len(msg) - len_trim(msg))/2 ~= 452 entries for position
                if (size(this%lst(i)%position) <= 400) then  ! hardcoded integer here and in the formats below
-                  write(msg, '(a,400i2)') trim(msg), this%lst(i)%position(:)
+                  write(msg(len_trim(msg)+1:), '(400i2)') this%lst(i)%position(:)
                else
-                  write(msg, '(a,400i2,a)') trim(msg), this%lst(i)%position(:400), " ... ??? ..."
+                  write(msg(len_trim(msg)+1:), '(400i2,a)') this%lst(i)%position(:400), " ... ??? ..."
                endif
             else
-               write(msg, '(2a,i4,a)') trim(msg), "[ ", size(this%lst(i)%position), " * 0 ]"
+               write(msg(len_trim(msg)+1:), '(a,i4,a)') "[ ", size(this%lst(i)%position), " * 0 ]"
             endif
          endif
          call printinfo(msg, to_stdout)

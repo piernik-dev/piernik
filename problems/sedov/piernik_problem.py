@@ -13,6 +13,7 @@ def visualize(files):
             output.append(slc.save(fn.replace('.h5', '_%s.png' % field))[0])
     return output
 
+
 if __name__ == "__main__":
     import sys
     print visualize(sys.argv[1:])

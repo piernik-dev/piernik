@@ -60,7 +60,6 @@
     cfl    = 0.5
     smalld = 1.e-6
     smallei= 1.e-4
-    integration_order = 2
     limiter= 'vanleer'
     dt_initial = 1.e-4
     dt_max_grow = 1.25
@@ -82,5 +81,5 @@
    level_max = 3
    bsize = 2*32
    n_updAMR = 5
-   refine_vars(1) = "dens", "Loechner", 0.9, 0.2, 0.001, .true.
+   refine_vars(1) = "dens", "Loechner", 0.9, 0.001, .true.
  /

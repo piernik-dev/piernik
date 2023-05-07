@@ -1,13 +1,10 @@
+#define LOCAL_FR_SPEED
+#undef  GLOBAL_FR_SPEED
+
 #undef ISO
 
 #define NEUTRAL
 #define TRACER
-
-
-#if !defined GLOBAL_FR_SPEED
-#  define LOCAL_FR_SPEED
-#endif
-#undef  GLOBAL_FR_SPEED
 
 #undef RESIST
 

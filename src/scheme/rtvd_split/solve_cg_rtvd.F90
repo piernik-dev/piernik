@@ -50,18 +50,19 @@ contains
    subroutine solve_cg_rtvd(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
-      use cg_level_connected, only: cg_level_connected_t, find_level
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef
+      use cg_level_connected, only: cg_level_connected_t
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
       use dataio_pub,         only: die
       use domain,             only: dom
+      use find_lev,           only: find_level
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,          only: ext_fluxes
-      use global,             only: dt, use_fargo
+      use global,             only: dt, use_fargo, integration_order
       use grid_cont,          only: grid_container
       use gridgeometry,       only: set_geo_coeffs
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-      use sources,            only: all_sources, care_for_positives
+      use sources,            only: internal_sources, care_for_positives
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -93,7 +94,6 @@ contains
       else
          i_cs_iso2 = -1
       endif
-      call eflx%init
       allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
       !OPT for AMR it may be worthwhile to move it to global scope
 
@@ -121,6 +121,10 @@ contains
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
             u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
+
+            if (istep == first_stage(integration_order)) pu0 = pu
+            ! such copy is a bit faster than whole copy of u and we don't have to modify all the source routines
+
             u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
             if (use_fargo .and. cdim == ydim) then
                if (fargo_vel == VEL_RES) then
@@ -153,14 +157,13 @@ contains
             call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk_coef(istep) * dt / cg%dl(cdim), eflx)
             ! RTVD needs istep only to do something in 2nd stage of RK2
 ! Source terms -------------------------------------
-            if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk_coef(istep) * dt, vx)
+            if (apply_sources) call internal_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk_coef(istep) * dt, vx)
             ! istep is important only for balsara and selfgravity
 
             call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)
-            u(:,:) = u1(:,:)
             call cg%save_outfluxes(cdim, i1, i2, eflx)
 
-            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
+            pu(:,:) = transpose(u1(:, iarr_all_swp(cdim,:)))
             nullify(pu,pu0,cs2)
          enddo
       enddo

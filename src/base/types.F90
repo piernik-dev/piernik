@@ -44,7 +44,7 @@ module types
       real                      :: assoc
       real,    dimension(ndims) :: coords
       integer, dimension(ndims) :: loc
-      integer                   :: proc
+      integer(kind=4)           :: proc
    end type value
 
 end module types

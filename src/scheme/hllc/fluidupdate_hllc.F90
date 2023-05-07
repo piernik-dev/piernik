@@ -33,9 +33,9 @@
 module fluidupdate_hllc   ! SPLIT MUSCL HANCOCK
 ! pulled by ANY
 
-  implicit none
-  private
-  public :: fluid_update_simple
+   implicit none
+   private
+   public :: fluid_update_simple
 
 contains
 
@@ -59,7 +59,7 @@ contains
       if (is_multicg) call die("[fluidupdate_hllc:fluid_update_simple] something here is not compatible with multiple blocks per process yet")
 #ifdef MAGNETIC
       call die("[fluidupdate_hllc:fluid_update_simple] Magnetic field is not compatible with HLLC")
-#endif
+#endif /* MAGNETIC */
 
       halfstep = .false.
       if (first_run) then
@@ -168,6 +168,12 @@ contains
 
    end function calculate_slope_vanleer
 !---------------------------------------------------------------------------
+#if 0
+
+! An unused function.
+! It is an alternative to calculate_slope_vanleer.
+! It may be worth making an option if we ever bring back the HLLC solver to regular use.
+
    function calculate_slope_moncen(u) result(dq)
 
       use constants, only: half, one
@@ -197,6 +203,7 @@ contains
       dq = sign(1.0, dcen) * min(dlim,abs(dcen))
 
    end function calculate_slope_moncen
+#endif /* 0 */
 !---------------------------------------------------------------------------
    subroutine sweep1d_mh(u,b,cs2,dtodx)
 
@@ -420,12 +427,12 @@ contains
       ! strange FPExceptions here with gfortran 4.8.3 20140911 (Red Hat 4.8.3-7) when gamma*Pl/rl = -1.e-9 and there is -O3 (switching to -O2 fixes it)
       cfastl=sqrt(max(gamma*Pl/rl,smallc**2))
       cfastr=sqrt(max(gamma*Pr/rr,smallc**2))
-#else
+#else /* !0 */
       cfastl=max(gamma*Pl/rl,smallc**2)
       cfastl=sqrt(cfastl)
       cfastr=max(gamma*Pr/rr,smallc**2)
       cfastr=sqrt(cfastr)
-#endif
+#endif /* !0 */
 
       ! Compute HLL wave speed
       SL=min(ul,ur)-max(cfastl,cfastr)
@@ -456,25 +463,25 @@ contains
 
       ! Sample the solution at x/t=0
       where (SL>zero)
-        ro=rl
-        uo=ul
-        Ptoto=Ptotl
-        etoto=etotl
+         ro=rl
+         uo=ul
+         Ptoto=Ptotl
+         etoto=etotl
       elsewhere (ustar>zero)
-        ro=rstarl
-        uo=ustar
-        Ptoto=Ptotstar
-        etoto=etotstarl
+         ro=rstarl
+         uo=ustar
+         Ptoto=Ptotstar
+         etoto=etotstarl
       elsewhere (SR>zero)
-        ro=rstarr
-        uo=ustar
-        Ptoto=Ptotstar
-        etoto=etotstarr
+         ro=rstarr
+         uo=ustar
+         Ptoto=Ptotstar
+         etoto=etotstarr
       elsewhere
-        ro=rr
-        uo=ur
-        Ptoto=Ptotr
-        etoto=etotr
+         ro=rr
+         uo=ur
+         Ptoto=Ptotr
+         etoto=etotr
       endwhere
 
       ! Compute the Godunov flux
@@ -488,19 +495,19 @@ contains
 
       ! BEWARE the version with WHERE had huge, unexplained memory leaks when compiled with some Intel compilers
 #ifndef __INTEL_COMPILER
-          where (fgdnv(idn,:)>zero)
-             fgdnv(ivar,:) = fgdnv(idn,:)*qleft (ivar,:)
-          elsewhere
-             fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
-          endwhere
+         where (fgdnv(idn,:)>zero)
+            fgdnv(ivar,:) = fgdnv(idn,:)*qleft (ivar,:)
+         elsewhere
+            fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
+         endwhere
 #else /* !__INTEL_COMPILER */
-          do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
-             if (fgdnv(idn,i)>zero) then
-                fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
-             else
-                fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)
-             endif
-          enddo
+         do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
+            if (fgdnv(idn,i)>zero) then
+               fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
+            else
+               fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)
+            endif
+         enddo
 #endif /* !__INTEL_COMPILER */
       enddo
       return

@@ -45,12 +45,11 @@ module initproblem
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
    real :: ref_thr   !< refinement threshold
-   real :: deref_thr !< derefinement threshold
    real :: ref_eps   !< smoother filter
    integer(kind=4) :: nsub !< subsampling on the grid
    logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, ref_eps, nsub, analytical_ext_pot
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, ref_eps, nsub, analytical_ext_pot
 
    ! private data
    real :: d1 !< ambient density
@@ -87,20 +86,21 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global,   only: all_cg
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: die, warn, msg, printinfo
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn
-      use global,           only: smalld
-      use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,    only: ord_prolong
-      use named_array_list, only: wna
-      use particle_pub,     only: pset
-      use user_hooks,       only: ext_bnd_potential
+      use cg_list_global,        only: all_cg
+      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,            only: die, warn, msg, printinfo, nh
+      use domain,                only: dom
+      use fluidindex,            only: iarr_all_dn
+      use global,                only: smalld
+      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,         only: ord_prolong
+      use named_array_list,      only: wna
       use unified_ref_crit_list, only: urc_list
+      use user_hooks,            only: ext_bnd_potential
+#ifdef NBODY
+      use constants,             only: I_ONE
+      use particle_utils,        only: add_part_in_proper_cg
+#endif /* NBODY */
 
       implicit none
 
@@ -119,7 +119,6 @@ contains
       nsub         = 3                   !< Subsampling factor
 
       ref_thr      = 0.3    !< Refine if density difference is greater than this value
-      deref_thr    = 0.01   !< Derefine if density difference is smaller than this value
       ref_eps      = 0.01   !< refinement smoothing factor
 
       analytical_ext_pot = .false.
@@ -149,7 +148,6 @@ contains
          rbuff(5) = a1
          rbuff(6) = e
          rbuff(7) = ref_thr
-         rbuff(8) = deref_thr
          rbuff(9) = ref_eps
 
          ibuff(1) = nsub
@@ -171,7 +169,6 @@ contains
          a1           = rbuff(5)
          e            = rbuff(6)
          ref_thr      = rbuff(7)
-         deref_thr    = rbuff(8)
          ref_eps      = rbuff(9)
 
          nsub         = ibuff(1)
@@ -205,9 +202,9 @@ contains
          nsub = maxsub
       endif
 
-      if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
-
-      if (a1 .equals. 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
+#ifdef NBODY
+      if (abs(a1) < tiny(1.)) call add_part_in_proper_cg(I_ONE, d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+#endif /* NBODY */
 
       if (master) then
          if (a1 > 0.) then
@@ -236,8 +233,8 @@ contains
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad", .true.)
-         call urc_list%add_user_urcv(wna%fi, id, ref_thr, deref_thr, ref_eps, "Loechner", .true.)
+!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, 0., "grad", .true.)
+         call urc_list%add_user_urcv(wna%fi, id, ref_thr, ref_eps, "Loechner", .true.)
 
       enddo
 
@@ -247,13 +244,13 @@ contains
 
    subroutine problem_initial_conditions
 
+      use cg_cost_data,      only: I_IC
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
       use constants,         only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, LO, HI
       use dataio_pub,        only: die, msg, printinfo
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use func,              only: operator(.notequals.)
       use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
@@ -264,7 +261,7 @@ contains
       implicit none
 
       integer                        :: i, j, k, ii, jj, kk
-      real                           :: xx, yy, zz, rr, dm
+      real                           :: xx, yy, zz, rr, dm, n_res
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
@@ -273,6 +270,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          if (a1 > 0.) then
             do k = cg%ks, cg%ke
@@ -317,17 +315,18 @@ contains
                enddo
             enddo
          else
-            cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+            cg%u(iarr_all_dn, RNG) = 0.0
          endif
 
-         cg%u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
-         cg%u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
-         cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(iarr_all_mx, RNG) = 0.0
+         cg%u(iarr_all_my, RNG) = 0.0
+         cg%u(iarr_all_mz, RNG) = 0.0
 
 #ifdef MAGNETIC
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* MAGNETIC */
 
+         call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
 
@@ -336,12 +335,12 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          if (dirty_debug .and. .not. no_dirty_checks) then
-            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%wa(RNG) = cg%q(qna%ind(apot_n))%arr(RNG)
             cg%q(qna%ind(apot_n))%arr = huge(1.)
-            cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%q(qna%ind(apot_n))%arr(RNG) = cg%wa(RNG)
             cg%q(qna%ind(asrc_n))%arr = huge(1.)
          endif
-         cg%q(qna%ind(asrc_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+         cg%q(qna%ind(asrc_n))%arr(RNG) = fpiG * sum(cg%u(iarr_all_dn, RNG), dim=1)
          cgl => cgl%nxt
       enddo
 
@@ -379,11 +378,13 @@ contains
       enddo
 
       dm = leaves%norm_sq(qna%ind(asrc_n))
-      if (dm .notequals. 0.) then
-         write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/dm
+      n_res = leaves%norm_sq(qna%ind(ares_n))
+      if (abs(dm) > tiny(1.)) then  ! An FP overflow will occur when n_res > dm/tiny(1.)
+         write(msg, '(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ", n_res/dm
          if (master) call printinfo(msg)
       else
-         write(msg,'(2(a,f13.10))')"[initproblem:problem_initial_conditions] Analytical norm residual= ",leaves%norm_sq(qna%ind(ares_n)), " point mass= ", d0
+         write(msg, '(2(a,g14.6))')"[initproblem:problem_initial_conditions] Analytical norm residual= ", n_res, " point mass= ", d0
+         ! Is n_res ~ sqrt(cg%dvol) ?
          if (master) call printinfo(msg)
       endif
 
@@ -391,6 +392,7 @@ contains
 
 !> \brief Provides parameters useful for python/maclaurin.py in .h5 files
 
+#ifdef HDF5
    subroutine problem_initial_conditions_attrs(file_id)
 
       use hdf5,  only: HID_T, SIZE_T
@@ -413,6 +415,7 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize, error)
 
    end subroutine problem_initial_conditions_attrs
+#endif /* HDF5 */
 
 !>
 !! \brief Calculate analytical potential for given spheroid.
@@ -425,13 +428,13 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pi, GEO_XYZ, GEO_RPZ
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ, PPP_PROB
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use func,             only: operator(.equals.), operator(.notequals.)
       use mpisetup,         only: master
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
       use units,            only: newtong
 
       implicit none
@@ -442,6 +445,9 @@ contains
       real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=*), parameter :: cmp_label = "compute_maclaurin_potential"
+
+      call ppp_main%start(cmp_label, PPP_PROB)
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -470,7 +476,7 @@ contains
             z02 = (cg%z(k)-z0)**2
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  if (a12 .notequals. 0.) then
+                  if (abs(a12) > tiny(1.)) then
                      select case (dom%geometry_type)
                         case (GEO_XYZ)
                            y02 = (cg%y(j)-y0)**2
@@ -516,13 +522,12 @@ contains
                              &      (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
                              &      (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                      else
-                        if (a1 .equals. 0.) then
-                           if (rr .notequals. 0.) then
+                        if (abs(a1) < tiny(1.)) then
+                           if (abs(rr) > sum(cg%dl**2)/8.) then  ! Warning: may need some small factor for better smoothness
                               potential = - 1. / (pi * sqrt(rr)) ! A bit dirty: we interpret d0 as a mass for point-like sources
                            else
-                              potential = - sqrt(sum(cg%idl2))*0.5
-                              ! The factor of 0.5 was guessed. It gives small departures of potential in the cell containing the particle for 4th order Laplacian.
-                              ! For 2nd order Laplacian (default) 0.58 looks a bit better because it compensates 4th order errors of the operator.
+                              potential = - 8. / (pi * sqrt(sum(cg%dl**2))) *.85
+                              ! The factor of 0.85 was guessed via minimizing L2 error norm for point-like setups
                            endif
                         else
                            potential = - 4./3. * a1**3 / sqrt(rr)
@@ -543,6 +548,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call ppp_main%stop(cmp_label, PPP_PROB)
+
    end subroutine compute_maclaurin_potential
 
 !> \brief Compute the L2 error norm of the error of computed potential with respect to the analytical solution
@@ -551,7 +558,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX
+      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -565,6 +572,7 @@ contains
       real                           :: potential, fac
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      character(len=idlen)           :: ffmt
 
       fac = 1.
       norm(:) = 0.
@@ -603,7 +611,9 @@ contains
       call piernik_MPI_Allreduce(dev(2), pMAX)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         ffmt = "f12"
+         if (any(abs(dev) > 1e6) .or. any(abs(dev) < 1e-4)) ffmt = "g14"
+         write(msg,'(a,' // ffmt // '.6,a,2' // ffmt // '.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
       endif
 
@@ -623,10 +633,9 @@ contains
    end subroutine compute_mpole
 
 !>
-!! \brief This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
+!! \brief This routine provides the "errp", "errm", "relerr" and "relerrm" values to be dumped to the .h5 file
 !!
 !! \details
-!! * "apot"    is the analytical potential solution for cell centers
 !! * "errp"    is the difference between analytical potential and computed potential
 !! * "relerr"  is the relative difference between analytical potential and multigrid solution
 !! * "errm"    is the difference between analytical potential and multipole solution
@@ -635,13 +644,15 @@ contains
 !! For "errm" and "relerr" use '$MULTIGRID_GRAVITY mpole_solver = "3D" /'
 !! for realistic 3D potential evaluation in whole computational domain.
 !! The default mpole_solver = "img_mass" will give only the "outer potential" correction.
+!!
+!! The values are calculated for nonperiodic, isolated case.
+!! Any other configuration of boundary conditions will show large inaccuracies.
 !<
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
-      use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 
       implicit none
@@ -656,17 +667,17 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(RNG)
          case ("relerr")
-            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
+            where (abs(cg%q(qna%ind(apot_n))%span(cg%ijkse)) > tiny(1.))  ! An FP overflow may occur when sgp > apot / tiny()
+               tab(:,:,:) = cg%sgp(RNG)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere
          case ("errm")
             tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(mpole_n))%span(cg%ijkse)
          case ("relerrm")
-            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
+            where (abs(cg%q(qna%ind(apot_n))%span(cg%ijkse)) > tiny(1.))  ! An FP overflow may occur when mpole > apot / tiny()
                tab(:,:,:) = cg%q(qna%ind(mpole_n))%span(cg%ijkse)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.

@@ -52,6 +52,7 @@ def receive_string_from_slave(comm, status):
     comm.Recv([string, MPI.CHAR], MPI.ANY_SOURCE, MPI.ANY_TAG, status)
     return string.tostring().strip()
 
+
 if __name__ == "__main__":
     if have_argparse:
         parser = argparse.ArgumentParser(

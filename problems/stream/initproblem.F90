@@ -55,7 +55,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, cbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -301,6 +301,9 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 
+#if 0
+! Currently unused
+
    subroutine compare
 
       use constants,  only: dpi, xdim, zdim
@@ -337,5 +340,6 @@ contains
       kz = dpi/dom%L_(zdim)
 
    end subroutine compare
+#endif /* 0 */
 
 end module initproblem

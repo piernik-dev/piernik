@@ -45,7 +45,6 @@
  $PROBLEM_CONTROL
     maxiter = 10000
 !    smooth_map = .false.
-    deref_thr = 0.
  /
 
  $INTERACTIONS

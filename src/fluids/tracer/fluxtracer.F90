@@ -25,7 +25,7 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:nm
+
 !/*
 !>
 !! \brief Computation of %fluxes for the tracer fluid
@@ -59,20 +59,23 @@ module fluxtracer
 contains
 !==========================================================================================
 
-   subroutine flux_tracer(fluxt,uut,vx)
+#define RNG2 2:nm
+   subroutine flux_tracer(fluxt, uut, vx)
 
       implicit none
-      real, dimension(:), intent(out), pointer  :: fluxt   !< flux for tracer
-      real, dimension(:), intent(in),  pointer  :: uut     !< part of u for tracer
-      real, dimension(:), intent(in),  pointer  :: vx      !< velocity field of fluid for current sweep
+
+      real, dimension(:), intent(out), pointer  :: fluxt  !< flux for tracer
+      real, dimension(:), intent(in),  pointer  :: uut    !< part of u for tracer
+      real, dimension(:), intent(in),  pointer  :: vx     !< velocity field of fluid for current sweep
 
       integer :: n, nm
 
-      n  = size(fluxt,1); nm = n-1
+      n = size(fluxt,1); nm = n-1
 
-      fluxt(RNG) = uut(RNG)*vx(RNG)
-      fluxt(1)   = fluxt(2); fluxt(n) = fluxt(nm)
-      return
+      fluxt(RNG2) = uut(RNG2) * vx(RNG2)
+      fluxt(1)    = fluxt(2); fluxt(n) = fluxt(nm)
+
    end subroutine flux_tracer
+#undef RNG2
 
 end module fluxtracer

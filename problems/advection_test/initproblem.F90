@@ -46,7 +46,6 @@ module initproblem
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
    real                   :: ref_thr     !< refinement threshold
-   real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
    real, dimension(ndims) :: B_const     !<  constant-B component strength
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
@@ -56,7 +55,7 @@ module initproblem
    real                   :: divBb_r0    !< divergence defect spatial scaling factor
    integer(kind=4), dimension(ndims) :: divB_k   !< wave numbers for creating initial field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, usedust, &
         &                      divB0_amp, divBc_amp, divBs_amp, divBb_amp, divB_k, B_const, divBb_r0
 
    ! other private data
@@ -71,14 +70,18 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5
       use user_hooks,  only: finalize_problem, problem_customize_solution
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5
+#endif /* HDF5 */
 
       implicit none
 
       finalize_problem           => calculate_error_norm
-      user_vars_hdf5             => inid_var_hdf5
       problem_customize_solution => calculate_error_norm_wrapper
+#ifdef HDF5
+      user_vars_hdf5             => inid_var_hdf5
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -87,8 +90,7 @@ contains
    subroutine read_problem_par
 
       use constants,        only: I_ONE, xdim, zdim
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: warn, die
+      use dataio_pub,       only: warn, die, nh
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn
       use func,             only: operator(.notequals.)
@@ -115,7 +117,6 @@ contains
       norm_step     = 5
       nflip         = 0
       ref_thr       = 0.1
-      deref_thr     = 0.01
       flipratio     = 1.
       usedust       = .false.
       divB0_amp     = 0.                   !< should be safe to set non-0
@@ -146,7 +147,6 @@ contains
 
          rbuff(1)   = pulse_amp
          rbuff(2)   = ref_thr
-         rbuff(3)   = deref_thr
          rbuff(4)   = flipratio
          rbuff(5)   = divB0_amp
          rbuff(6)   = divBc_amp
@@ -175,7 +175,6 @@ contains
 
          pulse_amp  = rbuff(1)
          ref_thr    = rbuff(2)
-         deref_thr  = rbuff(3)
          flipratio  = rbuff(4)
          divB0_amp  = rbuff(5)
          divBc_amp  = rbuff(6)
@@ -239,7 +238,7 @@ contains
       else
          ! Automatic refinement criteria
          do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
-            call urc_list%add_user_urcv(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad", .true.)
+            call urc_list%add_user_urcv(wna%fi, id, ref_thr*pulse_amp, 0., "grad", .true.)
          enddo
       endif
 
@@ -281,7 +280,7 @@ contains
       use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
       use dataio_pub,       only: warn
       use div_B,            only: print_divB_norm
-      use global,           only: force_cc_mag
+      use global,           only: cc_mag
       use mpisetup,         only: master
 #endif /* MAGNETIC */
 
@@ -302,7 +301,7 @@ contains
       kk = 0.
       where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
       right_face = 1
-      if (force_cc_mag) right_face = 0
+      if (cc_mag) right_face = 0
       r02 = divBb_r0**2
 #endif /* MAGNETIC */
 
@@ -346,7 +345,7 @@ contains
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
-                           if (force_cc_mag) then
+                           if (cc_mag) then
                               if (dom%D_x == 1) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
                               else if (dom%D_y == 1) then
@@ -367,7 +366,7 @@ contains
                            ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
                            ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
                            ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
-                           if (force_cc_mag) then
+                           if (cc_mag) then
                               if (dom%D_z == 0) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
                                       divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
@@ -399,7 +398,7 @@ contains
                         case (I_THREE)
                            ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) should produce div(B) == 0, but see the notes for 2D case.
                            ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
-                           if (force_cc_mag) then
+                           if (cc_mag) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
                                    kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
@@ -423,7 +422,7 @@ contains
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* !MAGNETIC */
 
-         cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(fl%idn, :, :, :) = cg%q(qna%ind(inid_n))%arr(:, :, :)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -457,16 +456,16 @@ contains
          end select
 
          ! Set up the internal energy
-         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,RNG) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,RNG)**2,1) / cg%u(fl%idn,RNG))
 
 #if defined MAGNETIC && defined IONIZED
-         if (force_cc_mag) then
-            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
+         if (cc_mag) then
+            cg%u(fl%ien,RNG) = cg%u(fl%ien,RNG) + emag(cg%b(xdim,RNG), cg%b(ydim,RNG), cg%b(zdim,RNG))
          else
-            cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
-                 emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-                 &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-                 &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
+            cg%u(fl%ien, RNG) = cg%u(fl%ien, RNG) + &
+                 emag(half*(cg%b(xdim, RNG) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(ydim, RNG) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(zdim, RNG) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
          endif
 #endif  /* MAGNETIC && IONIZED */
 
@@ -532,11 +531,15 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine calculate_error_norm_wrapper(forward)
+
+      use global, only: nstep
+
       implicit none
+
       logical, intent(in) :: forward
-      call calculate_error_norm
-      return
-      if (.false. .and. forward) pulse_size = 0.0 ! suppress compiler warnings on unused arguments
+
+      if (forward .and. mod(nstep, norm_step) == 0) call calculate_error_norm
+
    end subroutine calculate_error_norm_wrapper
 
 !-----------------------------------------------------------------------------
@@ -545,11 +548,11 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
-      use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
+      use constants,        only: pSUM, pMIN, pMAX, idlen
+      use dataio_pub,       only: msg, printinfo, warn
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
-      use global,           only: t, nstep
+      use global,           only: t
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
@@ -573,8 +576,6 @@ contains
       integer                           :: i, j
       character(len=idlen)              :: descr
 
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
-
       norm = 0.
       neg_err = huge(1.0)
       pos_err = -neg_err
@@ -591,18 +592,18 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(RNG) = inid(RNG) - cg%u(fl%idn, RNG)
+         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( RNG)**2, mask=cg%leafmap)
+         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(RNG), mask=cg%leafmap))
+         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(RNG), mask=cg%leafmap))
 
          if (associated(flind%dst)) then
-            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-            norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-            neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+            cg%wa(RNG) = inid(RNG) - cg%u(flind%dst%idn, RNG)
+            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+            norm(N_2, DST) = norm(N_2, DST) + sum(inid( RNG)**2, mask=cg%leafmap)
+            neg_err(DST) = min(neg_err(DST), minval(cg%wa(RNG), mask=cg%leafmap))
+            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(RNG), mask=cg%leafmap))
          endif
 
          cgl => cgl%nxt
@@ -686,6 +687,8 @@ contains
             return
          endif
 
+         inid(:,:,:) = pulse_low_density  ! workaround for use of uninitialized values in problem_initial_conditions
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -757,12 +760,12 @@ contains
          cgl => curl%first
          i = 0
          do while (associated(cgl))
-            cgl%cg%refine_flags%refine   = .false.
-            cgl%cg%refine_flags%derefine = .false.
+            call cgl%cg%flag%clear
+            cgl%cg%flag%derefine = .false.
             if (real(i)/curl%cnt <= flipratio) then
                if (mod(nstep, nflip) == 0) then
-                  cgl%cg%refine_flags%refine   = (mod(nstep, I_TWO*nflip) /= 0)
-                  cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
+                  if (mod(nstep, I_TWO*nflip) /= 0) call cgl%cg%flag%set
+                  cgl%cg%flag%derefine = .not. cgl%cg%flag%get()
                endif
             endif
             i = i + 1

@@ -35,7 +35,7 @@ module crhelpers
    implicit none
 
    private
-   public :: div_v, set_div_v1d, divv_n
+   public :: div_v, set_div_v1d, divv_i, divv_n
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
@@ -52,6 +52,7 @@ module crhelpers
    end interface
 
    character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
+   integer(kind=4)                       :: divv_i
 
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
@@ -106,9 +107,7 @@ contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
-      use dataio_pub,       only: die
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -117,21 +116,21 @@ contains
       real, dimension(:),   pointer, intent(inout) :: p
       type(grid_container), pointer, intent(in)    :: cg
 
-      if (.not. qna%exists(divv_n)) call die("[crhelpers:set_div_v1d] cannot get divvel")
-      p => cg%q(qna%ind(divv_n))%get_sweep(dir, i1, i2)
+      p => cg%q(divv_i)%get_sweep(dir, i1, i2)
 
    end subroutine set_div_v1d
 
 !>
 !! \brief Compute divergence of velocity
 !!
-!! \details This routine requires a single layer of valid guardcells in cg%u arrays
+!! \details This routine requires four layers of valid guardcells in cg%u arrays.
+!! The computed value is valid in one layer of guardcells.
 !!
 !! The divergence of velocity computed with the aid of 6-th order finite
-!! differencing based on the Lagendre Polynomial interpolation.
+!! differencing based on the Legendre Polynomial interpolation.
 !!
 !! \todo Should be moved to a dedicated module containing general purpose interpolation
-!! and derivation routines, and placed together with the other useful scheems described
+!! and derivation routines, and placed together with the other useful schemes described
 !! in particular in http://turbulence.pha.jhu.edu/Database-functions.pdf
 !<
    subroutine div_v_6th_lp(ifluid, cg)
@@ -140,7 +139,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna, wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -151,13 +150,13 @@ contains
       integer                                      :: i2, i3
       real, parameter                              :: p3_4 = 3./4., m3_20 = -3./20., p1_60 = 1./60.
 
-      cg%q(qna%ind(divv_n))%arr(:,:,:) = 0.0
+      cg%q(divv_i)%arr(:,:,:) = 0.0
 
       do dir = xdim, zdim
          if (.not. dom%has_dir(dir)) cycle
          do i2 = cg%lhn(pdims(dir, ORTHO1), LO), cg%lhn(pdims(dir, ORTHO1), HI)
             do i3 = cg%lhn(pdims(dir, ORTHO2), LO), cg%lhn(pdims(dir, ORTHO2), HI)
-               divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
+               divvel => cg%q(divv_i)%get_sweep(dir, i2, i3)
                mom  => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid) + dir, i2, i3)
                dens => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)      , i2, i3)
                associate( &
@@ -187,7 +186,8 @@ contains
 !>
 !! \brief Compute divergence of velocity
 !!
-!! \details This routine requires a single layer of valid guardcells uin cg%u arrays
+!! \details This routine requires at least a single layer of valid guardcells in cg%u arrays and sane values in other layers.
+!! The computed value is valid in one less layers of guardcells.
 !<
 
    subroutine div_v_1st(ifluid, cg)
@@ -196,7 +196,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna, wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -206,13 +206,13 @@ contains
       integer(kind=4)                              :: dir
       integer                                      :: i2, i3
 
-      cg%q(qna%ind(divv_n))%arr(:,:,:) = 0.0
+      cg%q(divv_i)%arr(:,:,:) = 0.0
 
       do dir = xdim, zdim
          if (.not.dom%has_dir(dir)) cycle
          do i2 = cg%lhn(pdims(dir, ORTHO1), LO), cg%lhn(pdims(dir, ORTHO1), HI)
             do i3 = cg%lhn(pdims(dir, ORTHO2), LO), cg%lhn(pdims(dir, ORTHO2), HI)
-               divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
+               divvel => cg%q(divv_i)%get_sweep(dir, i2, i3)
                mom    => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
                dn     => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
                associate( &

@@ -1,11 +1,14 @@
+mystory.txt
 obj*/
 runs/
 *~
 .lastsetup
+.DS_Store
 *.pyc
 .setuprc
 html/
 dep.png
 *.ignore
-jenkins/goldexec/
+jenkins/workspace/
 doc/latex/
+results/

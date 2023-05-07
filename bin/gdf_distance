@@ -1,113 +1,102 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+import h5py as h5
+import numpy as np
 
 sp_key = 'simulation_parameters'
+pkeys = [['position_x', 'position_y', 'position_z'],
+         ['velocity_x', 'velocity_y', 'velocity_z'],
+         ['acceleration_x', 'acceleration_y', 'acceleration_z'],
+         ['energy'],
+         ['mass'],
+         ['dynamical_time'],
+         ['formation_time']]
+pkeys_flat = set()  # to be made from pkeys[]
+auto_vectors = True
 
 
 def is_comparable(fname1, fname2):
-    import h5py
     status = True
 
     # open
     try:
-        h5f1 = h5py.File(fname1, "r")
+        h5f1 = h5.File(fname1, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname1))
-    try:
-        h5f2 = h5py.File(fname2, "r")
-    except IOError:
-        status = False
-        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname2))
-
-    if status is False:
+        print("IOError: %s" % sys.exc_info()[1])
         return status
 
-    # piernik versions
+    try:
+        h5f2 = h5.File(fname2, "r")
+    except IOError:
+        status = False
+        print("IOError: %s" % sys.exc_info()[1])
+        return status
+
     v_key = 'piernik'
-    try:
-        v1 = h5f1.attrs[v_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, v_key))
-    try:
-        v2 = h5f2.attrs[v_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, v_key))
+    ver = {}
 
-    if status is False:
+    dim_key = 'dimensionality'
+    dim = {}
+
+    geo_key = 'geometry'  # geo_CART = 0, geo_POLAR = 1
+    geo = {}
+
+    for f in (h5f1, h5f2):
+        # piernik versions
+        ver[f.filename] = f.attrs[v_key][0]
+        if int(ver[f.filename]) != 2:
+            status = False
+            print("Only Piernik v2 HDF (GDF) files are supported, not %g." % ver[f.filename])
+
+        # dimensionality, assume v2 naming conventions
+        dim[f.filename] = f[sp_key].attrs[dim_key][0]
+
+        # geometry, assume v2 naming conventions
+        geo[f.filename] = f[sp_key].attrs[geo_key][0]
+
+        # Check for some refinement constraints
+        levl = set(f["grid_level"])
+        if 0 not in levl:
+            status = False
+            print("Cannot find base level in '%s'." % f.filename)
+            return status
+        if set(range(max(levl) + 1)) != levl:
+            status = False
+            print("Missing levels in '%s'." % f.filename)
+            return status
+        if len(levl) > 1:
+            refine_by = 2  # the only supported factor
+            if f[sp_key].attrs["refine_by"][0] != refine_by:
+                status = False
+                print("Only refine factor of %d is supported. Cannot interpret '%s'." % (refine_by, f.filename))
+                return status
+
+    if len(set(map(int, map(float, ver.values())))) > 1:
+        status = False
+        print("Cannot compare different major file format revisions: ", list(ver.values()))
         return status
 
-    if (int(v1) != int(v2)):
-        status = False
-        print("Cannot compare different major file format revisions (%d and %d)." %
-              (int(v1), int(v2)))
-        return status
-
-    if (int(v1) == 1 or int(v2) == 1):
-        status = False
-        print("Piernik v1 HDF files aren't supported now and perhaps will never be. (%.2f and/or %.2f)." %
-              (v1, v2))
-        return status
-
-    if (v1 != v2):
+    if len(set(ver.values())) > 1:
         print("Warning: different revisions of Piernik HDF format. Expect troubles.")
 
-    # dimensionality, assume v2 naming conventions
-    dim_key = 'dimensionality'
-    try:
-        d1 = h5f1[sp_key].attrs[dim_key][0]
-    except KeyError:
+    if len(set(dim.values())) > 1:
         status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, dim_key))
-    try:
-        d2 = h5f2[sp_key].attrs[dim_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, dim_key))
-
-    if status is False:
+        print("Cannot compare files with different dimensionality: ", list(dim.values()))
         return status
 
-    if (d1 != d2):
+    if len(set(geo.values())) > 1:
         status = False
-        print("Cannot compare files with different dimensionality (%d != %d)." %
-              (d1, d2))
-        return status
-
-    # geometry, assume v2 naming conventions
-    geo_key = 'geometry'
-    # geo_CART = 0
-    # geo_POLAR = 1
-    try:
-        g1 = h5f1[sp_key].attrs[geo_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, geo_key))
-    try:
-        g2 = h5f2[sp_key].attrs[geo_key][0]
-    except KeyError:
-        status = False
-        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, geo_key))
-
-    if status is False:
-        return status
-
-    if (g1 != g2):
-        status = False
-        print("Cannot compare files with different geometries yet (%d != %d)." %
-              (g1, g2))
+        print("Cannot compare files with different geometries yet: ", list(geo.values()))
         print("It is an interesting idea for future :-)")
-
         return status
 
-    h5f1.close()
-    h5f2.close()
-    return status  # for safety, in case more checks will be added
+    for f in (h5f1, h5f2):
+        f.close()
+
+    return status
 
 
 def compare_domains(h5f1, h5f2):
-    import numpy
     dle_key = 'domain_left_edge'
     dre_key = 'domain_right_edge'
     failed = False
@@ -127,17 +116,17 @@ def compare_domains(h5f1, h5f2):
         exit(10)
 
     # find overlapped area
-    dlo = numpy.maximum(dl1, dl2)
-    dro = numpy.minimum(dr1, dr2)
+    dlo = np.maximum(dl1, dl2)
+    dro = np.minimum(dr1, dr2)
 
-    for i in numpy.subtract(dro, dlo):
+    for i in np.subtract(dro, dlo):
         if (i < 0.):
             print("Domains don't overlap.")
             return 1., [0., 0., 0.], [0., 0., 0.]
 
-    vol_1 = numpy.product(numpy.subtract(dr1, dl1))
-    vol_2 = numpy.product(numpy.subtract(dr2, dl2))
-    vol_o = numpy.product(numpy.subtract(dro, dlo))
+    vol_1 = np.product(np.subtract(dr1, dl1))
+    vol_2 = np.product(np.subtract(dr2, dl2))
+    vol_o = np.product(np.subtract(dro, dlo))
     if (vol_1 == 0. and vol_2 == 0.):
         print("Both domains have no volume!")
         exit(11)
@@ -162,24 +151,19 @@ def compare_resolution(h5f1, h5f2):
 
 
 def compare_dlists(h5f1, h5f2):
+    import re
+
     d_key = '/data'
-    g0_key = 'grid_0000000000'
+    g0_key = 'grid_0000000000'  # trick: GDF has to contain this grid id
     failed = False
 
-    try:
-        f1 = h5f1[d_key][g0_key].keys()
-    except KeyError:
-        failed = True
-        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f1.filename, d_key, g0_key))
-    try:
-        f2 = h5f2[d_key][g0_key].keys()
-    except KeyError:
-        failed = True
-        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f2.filename, d_key, g0_key))
-    # trick: GDF has to contain this grid id
-    # if anything changes dramatically, we may change it to yt.load(fname).field_list
-    if failed:
-        exit(20)
+    f1 = list(h5f1[d_key][g0_key].keys())
+    f2 = list(h5f2[d_key][g0_key].keys())
+
+    # Particles should be handled separately
+    for f in (f1, f2):
+        if "particles" in f:
+            f.remove("particles")
 
     fc = list(set(f1) & set(f2))
     if (len(fc) != len(f1)):
@@ -187,7 +171,56 @@ def compare_dlists(h5f1, h5f2):
     if (len(fc) != len(f2)):
         print("Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc)))
 
-    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
+    v0 = []
+    for f in fc:
+        if (f[-1] == 'x') or (f[-2] == 'x') or (f[-2:] == '01'):
+            v0.append(f)
+
+    vec = []
+    for v in v0:
+        vv = []
+        if v[-1] == 'x':
+            vv = [v]
+            for f in fc:
+                for i in ('y', 'z'):
+                    if f == v[:-1] + i:
+                        vv.append(f)
+        elif v[-2] == 'x':
+            vv = [v]
+            for f in fc:
+                for i in ('y', 'z'):
+                    if f == v[:-2] + i + v[-1]:
+                        vv.append(f)
+        elif v[-2:] == '01':
+            digit2 = re.compile(v[:-2].replace("+", "\+") + "[0-9][0-9]").search
+            for f in fc:
+                if bool(digit2(f)):
+                    vv.append(f)
+        else:
+            print("Unsupported case ", v)
+            exit(40)
+
+        if len(vv) > 1:
+            vec.append(vv)
+
+    b = []
+    for v in vec:
+        b += v
+    if len(vec) > 0:
+        print("Possible vectors:")
+        for v in vec:
+            print("    ", sorted(v))
+        print("Remaining fields:\n    ", list(set(fc) ^ set(b)))
+
+    if auto_vectors:
+        for v in list(set(fc) ^ set(b)):
+            vec.append([v])
+    else:
+        vec = []
+        for v in fc:
+            vec.append([v])
+
+    return 0. if (len(f1) == len(fc)) and (len(f2) == len(fc)) else 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), vec  # correct also for empty sets
 
 
 def compare_time(h5f1, h5f2):
@@ -203,19 +236,18 @@ def compare_time(h5f1, h5f2):
             return 1.
 
 
-def compare_data(ds1, ds2, f):
-    import numpy
-
+def compare_data(ds1, ds2):
     # This norm is:
     #   0. when n1 == n2
     #   1. when one field is non-0. and the other is 0.
     #   1. when one field is proportional to the other but with negative coefficient
     #   epsilon/2 when difference between fields is epsilon
 
-    n1 = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v)
-    n2 = numpy.linalg.norm(ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
-    nd = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v -
-                           ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+    # When np.shape(ds1)[0] > 1 (the data is vector, not scalar), the formula doesn't change because we use the default, Frobenius norm.
+
+    n1 = np.linalg.norm(ds1)
+    n2 = np.linalg.norm(ds2)
+    nd = np.linalg.norm(ds1 - ds2)
 
     if (n1 + n2 != 0.):
         return nd / (n1 + n2)
@@ -223,14 +255,119 @@ def compare_data(ds1, ds2, f):
         return 0.
 
 
-def piernik_gdf_compare(fname1, fname2):
-    import h5py
-    norms = {}
-    h5f1 = h5py.File(fname1, "r")
-    h5f2 = h5py.File(fname2, "r")
-    # No error checking here, fail in ugly way when is_comparable does not
-    # prevent attempt to open these files.
+def collect_dataset(h5f, dset_name, level):
+    attrs = h5f['domains']['base'].attrs
+    nd = [i * 2**level for i in attrs['n_d']]
+    dset = np.zeros((len(dset_name), nd[0], nd[1], nd[2]))
 
+    levelmet = False
+    for ig in range(int(h5f['data'].attrs['cg_count'])):
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if h5g.attrs['level'] == level:
+            levelmet = True
+            off = h5g.attrs['off']
+            ngb = h5g.attrs['n_b']
+            n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
+            ce = n_b + off
+            for i in range(len(dset_name)):
+                dset[i, off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name[i]][:, :, :].swapaxes(0, 2)
+
+    return dset, nd, levelmet
+
+
+def get_particles(h5f):
+    plist = {}
+    if "grid_particle_count" not in h5f:
+        return plist
+    n = sum(h5f['grid_particle_count'])
+    nf = 0
+    for ig in range(h5f['grid_dimensions'].shape[0]):
+        h5g = h5f['data']['grid_' + str(ig).zfill(10)]
+        if "particles" in h5g:
+            if "stars" in h5g["particles"]:
+                h5gps = h5g["particles"]["stars"]
+                nf += h5gps.attrs['n_part'][0]
+                for v in h5gps.keys():
+                    if v not in plist:
+                        plist[v] = []
+                    plist[v] = np.append(plist[v], h5gps[v])
+    if nf != n:
+        print("Warning: read %d particles from '%s', %d expected." % (nf, h5f.filename, n))
+    for v in plist:
+        if len(plist[v]) != n:
+            print("Warning: incomplete list for particle quantity '%s' in '%s': read %d out of %d." % (v, h5f.filename, len(plist[v]), n))
+    for i in pkeys:
+        for j in i:
+            pkeys_flat.add(j)
+    if not auto_vectors:
+        pkeys.clear()
+        for i in pkeys_flat:
+            pkeys.append([i])
+    if "id" in plist.keys():
+        if set(plist.keys()) != (set(pkeys_flat) ^ set(['id'])):
+            print("Non-standard set of particle quantities detected in '%s':" % h5f.filename, set(plist.keys()))
+    return plist
+
+
+def convert_particles(p):
+    pp = {}
+    for i in range(len(p["id"])):
+        id = int(p["id"][i])
+        if id in pp:
+            print("Duplicated id %d" % id)
+        pp[id] = {}
+        for k in pkeys_flat:
+            pp[id][k] = p[k][i]
+    return pp
+
+
+# I'm afraid this might be quite slow on large particle sets
+def compare_particles(h5f1, h5f2):
+    pn = {}
+    p1 = get_particles(h5f1)
+    p2 = get_particles(h5f2)
+    if "id" not in p1 and "id" not in p2:
+        return pn
+    if len(p1["id"]) == 0 and len(p2["id"]) == 0:
+        return pn
+    try:
+        if len(p1["id"]) != len(p2["id"]):
+            pn["particles count"] = abs(len(p1["id"]) - len(p2["id"])) / (len(p1["id"]) + len(p2["id"]))
+    except KeyError:  # only one contains "id"
+        pn["particles exists"] = 1
+        return pn
+
+    pp1 = convert_particles(p1)
+    pp2 = convert_particles(p2)
+
+    n_comm_p = len(set(pp1.keys()) & set(pp2.keys()))
+    pn["particles id"] = 1. - 2 * n_comm_p / (len(pp1.keys()) + len(pp2.keys()))
+
+    for id in pp1.keys():
+        if id not in pp2:
+            del pp1[id]
+
+    tot_datanorm = 0.
+    for kv in pkeys:
+        ds1 = np.zeros((n_comm_p * len(kv)))
+        ds2 = np.zeros((n_comm_p * len(kv)))
+        i = 0
+        for id in pp1:  # we've already removed particles that were unique to pp1
+            for k in kv:
+                ds1[i] = pp1[id][k]
+                ds2[i] = pp2[id][k]
+                i += 1
+        norm = compare_data(ds1, ds2)
+        # Assumed that the only vectors for particles are the XYZ-vectors
+        pn["particles `" + (kv[0] if len(kv) == 1 else kv[0][:-2] + "_[x..z]") + "'"] = norm
+        tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
+    print("All particles difference: %g" % tot_datanorm)
+
+    return pn
+
+
+def base_compare(h5f1, h5f2):
+    norms = {}
     # compate time
     norms["time"] = compare_time(h5f1, h5f2)
 
@@ -246,65 +383,151 @@ def piernik_gdf_compare(fname1, fname2):
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
-    h5f1.close()
-    h5f2.close()
+    # compare particles
+    norms.update(compare_particles(h5f1, h5f2))
 
     if (norms["domains"] < 1.):
-        try:
-            import yt
-        except:
-            print("You must make yt available somehow!")
-            exit(30)
-        # For AMR domains it is way easier to make YT do the dirty work
-
-        print("yt.load(`%s')" % fname1)
-        ds1 = yt.load(fname1)
-        print("yt.load(`%s')" % fname2)
-        ds2 = yt.load(fname2)
-
-        if (ds1.index.level_stats['numgrids'][1] != 0 or ds2.index.level_stats['numgrids'][1] != 0):
-            print("Warning: refinement levels are not compared yet.")
-
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
         norms["AMR (not checked)"] = 0.
 
-        # compare data in common datafields
+    if not (norms["domains"] == 0 and norms["resolution"] == 0):
+        print("Comparing domains of different size or resolution is not implemented yet")
+        exit(31)
 
-        if (norms["domains"] == 0 and norms["resolution"] == 0):
-            tot_datanorm = 0.
-            for f in common_fields:
-                norm = compare_data(ds1, ds2, f)
-                norms["datafield `" + f + "'"] = norm
-                tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
-            print("All datafield difference: %g" % tot_datanorm)
+    return norms, common_fields
+
+
+def compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname2, print_fname):
+    lnorm = {}
+    # No error checking here, fail in ugly way when is_comparable does not
+    # prevent attempt to open these files.
+
+    tot_datanorm = 0.
+    for f in common_fields:
+        ds1, nd1, levok1 = collect_dataset(h5f1, f, levels[0])
+        ds2, nd2, levok2 = collect_dataset(h5f2, f, levels[1])
+        if not levok1:
+            print('Level %s not met in %s.' % (levels[0], fname1))
+            exit(51)
+        if not levok2:
+            print('Level %s not met in %s.' % (levels[1], fname2))
+            exit(52)
+        if nd1[0] != nd2[0] or nd1[1] != nd2[1] or nd1[2] != nd2[2]:
+            print('Domain shape for %s level %s: %s' % (fname1, levels[0], nd1))
+            print('Domain shape for %s level %s: %s' % (fname2, levels[1], nd2))
+            print('Arrays cannot be compered.')
+            exit(53)
+        norm = compare_data(ds1, ds2)
+        if len(f) == 1:
+            fld_name = f[0]
         else:
-            print("Comparing domains of different size or resolution is not implemented yet")
-            exit(31)
+            if sorted(f)[0][-1] == 'x':
+                fld_name = sorted(f)[0][:-1] + '[x..' + sorted(f)[-1][-1] + ']'
+            elif sorted(f)[0][-2] == 'x':
+                fld_name = sorted(f)[0][:-2] + '[x..' + sorted(f)[-1][-2] + ']' + sorted(f)[0][-1]
+            elif sorted(f)[0][-2:] == '01':
+                fld_name = sorted(f)[0][:-2] + '[01..' + sorted(f)[-1][-2:] + ']'
+            else:
+                fld_name = '[' + sorted(f)[0] + ".." + sorted(f)[-1] + ']'
+        lnorm["datafield `" + fld_name + "'"] = norm
+        tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
+    if levels[0] == levels[1]:
+        lev = str(levels[0])
+    else:
+        lev = str(levels[0]) + ' vs. ' + str(levels[1])
+    print("All datafield difference%s on grid level %s: %g" % (
+        (" between '%s' and '%s'" % (fname1, fname2)) if print_fname else "",
+        lev, tot_datanorm))
 
-    return norms
+    return lnorm
+
+
+def piernik_gdf_compare(fname1, fname2, levels, print_fname=False):
+    h5f1 = h5.File(fname1, "r")
+    h5f2 = h5.File(fname2, "r")
+
+    normsl = []
+    norms, common_fields = base_compare(h5f1, h5f2)
+    if levels == []:
+        maxlev1 = max(h5f1['grid_level'])
+        maxlev2 = max(h5f2['grid_level'])
+        nlev = range(min(maxlev1, maxlev2) + 1)
+        for lev in nlev:
+            normsl.append(compare_datafields_by_level(h5f1, h5f2, (lev, lev), common_fields, fname1, fname2, print_fname))
+    else:
+        normsl.append(compare_datafields_by_level(h5f1, h5f2, levels, common_fields, fname1, fname2, print_fname))
+        nlev = range(1)
+
+    h5f1.close()
+    h5f2.close()
+    return norms, normsl, nlev
+
+
+def n_reduce(args):
+    norms, normsl, nlev = args
+    n = {}
+    for i in sorted(norms.keys()):
+        n[i] = norms[i]
+    for i in sorted(normsl[0].keys()):
+        for lev in nlev:
+            if i in n:
+                n[i] += (1. - n[i]) * normsl[lev][i]
+            else:
+                n[i] = normsl[lev][i]
+
+    return n
 
 
 if __name__ == "__main__":
     import sys
+
+    # Ugly. ToDo: rewrite and use argparse.
+    novec = "--novec"
+    if novec in sys.argv:
+        sys.argv.remove(novec)
+        auto_vectors = False
+        sys.stderr.write("Switched to nondetection of vectors\n")
     if (len(sys.argv) < 3):
         sys.stderr.write("Error: too few arguments.\nUsage: " +
-                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n")
+                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 [piernik_data_hdf_file3]\n" + "or     " +
+                         sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2 level1 level2\n")
         exit(1)
 
-    if (len(sys.argv) == 3):
+    if (len(sys.argv) == 3) or (len(sys.argv) == 5):
         if (is_comparable(sys.argv[1], sys.argv[2])):
-            norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
+            if (len(sys.argv) == 5):
+                levels = [int(sys.argv[3]), int(sys.argv[4])]
+            else:
+                levels = []
+            norms, normsl, nlev = piernik_gdf_compare(sys.argv[1], sys.argv[2], levels)
             tot_norm = 0.
             failed = False
-            longestkey = len(max(norms, key=len))
+            longestkey = max(len(max(norms, key=len)), len(max(normsl[0], key=len))) if len(norms) != 0 else 0
             for i in sorted(norms.keys()):
-                if (norms[i] >= 0. and norms[i] <= 1.):
-                    print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
-                    tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                toprint = "Difference of %-*s:" % (longestkey + 1, i)
+                if (norms[i] >= 0. and norms[i] <= 1. + 1e-12):
+                    toprint = toprint + "   %14g" % norms[i]
+                    # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                    tot_norm += (1. - tot_norm) * norms[i]
                 else:
                     print("Difference measure `%s` out of [0,1] range: %g" %
                           (i, norms[i]))
                     failed = True
+                if not failed:
+                    print(toprint)
+            for i in sorted(normsl[0].keys()):
+                toprint = "Difference of %-*s:" % (longestkey + 1, i)
+                for lev in nlev:
+                    if (normsl[lev][i] >= 0. and normsl[lev][i] <= 1. + 1e-12):
+                        toprint = toprint + "   %14g" % normsl[lev][i]
+                        # tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+                        tot_norm += (1. - tot_norm) * normsl[lev][i]
+                    else:
+                        print("Difference measure `%s` out of [0,1] range: %g" %
+                              (i, normsl[lev][i]))
+                        failed = True
+                if not failed:
+                    print(toprint)
             if (failed):
                 print("Comparison of `%s' and `%s' failed" %
                       (sys.argv[1], sys.argv[2]))
@@ -316,33 +539,42 @@ if __name__ == "__main__":
             print("Cannot compare files `%s' and `%s'" %
                   (sys.argv[1], sys.argv[2]))
             exit(2)
-    elif (len(sys.argv) == 4):
+    elif (len(sys.argv) == 4) or (len(sys.argv) == 7):
         if (is_comparable(sys.argv[1], sys.argv[2]) and is_comparable(sys.argv[1], sys.argv[3])):
-            norms12 = piernik_gdf_compare(sys.argv[1], sys.argv[2])
-            norms13 = piernik_gdf_compare(sys.argv[1], sys.argv[3])
-            norms23 = piernik_gdf_compare(sys.argv[2], sys.argv[3])
-            norms = dict(norms12)
-            norms.update(norms13)
-            norms.update(norms23)
+            if (len(sys.argv) == 7):
+                l12 = [int(sys.argv[4]), int(sys.argv[5])]
+                l13 = [int(sys.argv[4]), int(sys.argv[6])]
+                l23 = [int(sys.argv[5]), int(sys.argv[6])]
+            else:
+                l12, l13, l23 = [], [], []
+            n12 = n_reduce(piernik_gdf_compare(sys.argv[1], sys.argv[2], l12, print_fname=True))
+            print("")
+            n13 = n_reduce(piernik_gdf_compare(sys.argv[1], sys.argv[3], l13, print_fname=True))
+            print("")
+            n23 = n_reduce(piernik_gdf_compare(sys.argv[2], sys.argv[3], l23, print_fname=True))
+            print("")
+            norms = dict(n12)
+            norms.update(n13)
+            norms.update(n23)
             longestkey = len(max(norms, key=len))
-            print("\nFiles:")
+            print("Files:")
             for i in (1, 2, 3):
                 print("  %d - %s" % (i, sys.argv[i]))
-            print("%-*s: %-14s %-14s %-14s" % (longestkey + len("Difference of ") + 1, "distance type", " 1-2", " 1-3", " 2-3"))
+            print("\n%-*s: %-14s %-14s %-14s" % (longestkey + len("Difference of ") + 1, "distance type (all levels)", " 1-2", " 1-3", " 2-3"))
             c_red = '\033[91m'
             c_green = '\033[92m'
             c_reset = '\033[0m'
             c_gray = '\033[90m'
-            for i in sorted(norms.keys()):
+            for i in norms.keys():
                 line = "Difference of %-*s: " % (longestkey + 1, i)
                 comment = ""
                 curnorm = []
-                for nn in (norms12, norms13, norms23):
+                for nn in (n12, n13, n23):
                     if (i in nn):
                         curnorm.append(nn[i])
                 lmin = min(curnorm)
                 lmax = max(curnorm)
-                for nn in (norms12, norms13, norms23):
+                for nn in (n12, n13, n23):
                     try:
                         color = ""
                         if (lmax > lmin):

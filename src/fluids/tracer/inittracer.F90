@@ -28,8 +28,6 @@
 !>
 !! \brief Initialization of the tracer fluid
 !!
-!!
-!!
 !! In this module following namelist of parameters is specified:
 !! \copydetails inittracer::init_tracer
 !<
@@ -64,8 +62,7 @@ contains
    subroutine init_tracer
 
       use constants,  only: INT4
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn
+      use dataio_pub, only: warn, nh
       use mpisetup,   only: master, slave, ibuff, piernik_MPI_Bcast
 
       implicit none

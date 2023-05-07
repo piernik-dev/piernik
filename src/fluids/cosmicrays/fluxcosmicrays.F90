@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
 
 !>
 !! \brief Computation of advection %fluxes of Cosmic Rays
@@ -42,24 +41,25 @@ module fluxcosmicrays
 
 contains
 
+#define RNG2 2:n-1
    subroutine flux_crs(fluxc, vion, uuc, n)
 
       use fluidindex, only: flind
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: n
+      integer(kind=4),      intent(in)             :: n
       real, dimension(n),   intent(in)             :: vion
       real, dimension(:,:), intent(in),    pointer :: uuc
       real, dimension(:,:), intent(inout), pointer :: fluxc
       integer :: i
 
-      fluxc   = 0.0
+      fluxc = 0.0
 
       do i = 1, flind%crs%all
-         fluxc(RNG, i) = uuc(RNG, i)*vion(RNG)
+         fluxc(RNG2, i) = uuc(RNG2, i) * vion(RNG2)
       enddo
 
    end subroutine flux_crs
-
+#undef RNG2
 end module fluxcosmicrays

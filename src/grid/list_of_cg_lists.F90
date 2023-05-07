@@ -30,7 +30,7 @@
 
 module list_of_cg_lists
 
-   use cg_list,   only: cg_list_t
+   use cg_list, only: cg_list_t
 
    implicit none
 
@@ -44,11 +44,11 @@ module list_of_cg_lists
    type :: all_cg_lists
       type(cg_list_pointer), dimension(:), allocatable :: entries
    contains
-      procedure :: print      !< Print all cg lists for diagnostic purposes
-      procedure :: register   !< Reset (initialize) the given list and add it to the table if unique
-      procedure :: unregister !< Remove given list
-      procedure :: forget     !< Erase given cg from all known lists
-      procedure :: delete     !< Delete all lists
+      procedure :: print       !< Print all cg lists for diagnostic purposes
+      procedure :: register    !< Reset (initialize) the given list and add it to the table if unique
+      procedure :: unregister  !< Remove given list
+      procedure :: forget      !< Erase given cg from all known lists
+      procedure :: delete      !< Delete all lists
    end type all_cg_lists
 
    type(all_cg_lists) :: all_lists
@@ -78,7 +78,7 @@ contains
          if (master) call printinfo("[list_of_cg_lists:print] All known cg_lists:", to_stdout)
          do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
             if (associated(this%entries(i)%lp)) then
-               !> \todo Call MPI_Allgather and print detailed distribution of grid pieces across procesors
+               !> \todo Call MPI_Allgather and print detailed distribution of grid pieces across processors
                g_cnt = this%entries(i)%lp%cnt
                call piernik_MPI_Allreduce(g_cnt, pSUM)
                write(msg, '(3a,i7,a)') "'", this%entries(i)%lp%label, "' : ", g_cnt, " element(s)"
@@ -143,7 +143,7 @@ contains
       found = .false.
       do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
          if (associated(cgl, this%entries(i)%lp)) then
-            if (found) call die("[list_of_cg_lists:unregister] Double occurence")
+            if (found) call die("[list_of_cg_lists:unregister] Double occurrence")
             found = .true.
          else
             j = i
@@ -153,11 +153,17 @@ contains
       enddo
       call move_alloc(from=new_list, to=this%entries)
 
-      if (.not. found) call die("[list_of_cg_lists:unregister] No occurence")
+      if (.not. found) call die("[list_of_cg_lists:unregister] No occurrence")
 
    end subroutine unregister
 
-!> \brief Erase given cg from all known lists
+!>
+!! \brief Erase given cg from all known lists
+!!
+!! \warning This routine becomes very expensive when there are thousands of cg on one process.
+!! It is called mostly from cleanup_piernik -> cleanup_grid -> delete_all .
+!! Consider implicit freeing or add a list of pointers to entries in lists for faster processing
+!<
 
    subroutine forget(this, cg)
 
@@ -181,7 +187,7 @@ contains
                aux => cgl
                cgl => cgl%nxt
                if (associated(cg,aux%cg)) call this%entries(i)%lp%delete(aux)
-               ! do not call exit here because it is safer to not assume single occurence on a list
+               ! do not call exit here because it is safer to not assume single occurrence on a list
             enddo
          endif
       enddo

@@ -33,7 +33,7 @@ module sources
    implicit none
 
    private
-   public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
+   public :: external_sources, internal_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
 
 contains
 
@@ -87,7 +87,33 @@ contains
       call init_thermal
 #endif /* THERM */
 
-   end subroutine init_sources
+    end subroutine init_sources
+
+!/*
+!>
+!! \brief Subroutine to add sources out of used scheme integration
+!! \details By default double timestep dt and forward condition should be used here
+!<
+!*/
+   subroutine external_sources(forward)
+
+#ifdef THERM
+      use global,  only: dt
+      use thermal, only: thermal_sources
+#endif /* THERM */
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      if (forward) then
+#ifdef THERM
+         call thermal_sources(2*dt)
+#endif /* THERM */
+         return
+      endif
+
+   end subroutine external_sources
 
 !/*
 !>
@@ -111,7 +137,7 @@ contains
 #if defined(COSM_RAYS) && defined(IONIZED)
       call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS && IONIZED */
-      if (.false. .and. cg%is_old) return ! to supress compiler warnings
+      if (.false. .and. cg%is_old) return ! to suppress compiler warnings
 
    end subroutine prepare_sources
 
@@ -122,7 +148,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
+   subroutine internal_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
 
       use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
@@ -136,10 +162,11 @@ contains
       use gravity,          only: grav_src_exec
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use sourcecosmicrays, only: src_gpcr_exec
-#ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays, only: src_crn_exec
-#endif /* COSM_RAYS_SOURCES */
+      use initcosmicrays,   only: use_CRdecay
+      use sourcecosmicrays, only: src_cr_spallation_and_decay
+#ifdef IONIZED
+      use sourcecosmicrays, only: src_gpcr
+#endif /* IONIZED */
 #endif /* COSM_RAYS */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
@@ -150,9 +177,6 @@ contains
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
-#ifdef THERM
-      use thermal,          only: src_thermal_exec
-#endif /* THERM */
 
       implicit none
 
@@ -172,7 +196,7 @@ contains
       real, dimension(n, flind%all)                           :: usrc, newsrc       !< u array update from sources
       real, dimension(:,:), pointer                           :: vx
 
-      vx   => vel_sweep
+      vx => vel_sweep
 
       usrc = 0.0
 
@@ -199,28 +223,27 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* !GRAV */
 
-#if defined COSM_RAYS && defined IONIZED
-      call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
+#ifdef COSM_RAYS
+#ifdef IONIZED
+      call src_gpcr(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#ifdef COSM_RAYS_SOURCES
-      call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS && IONIZED */
-#ifdef THERM
-      call src_thermal_exec(u, n, bb, newsrc)
-      usrc(:,:) = usrc(:,:) + newsrc(:,:)
-#endif /* THERM */
+#endif /* IONIZED */
+      if (use_CRdecay) then
+         call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe
+         usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      endif
+#endif /* COSM_RAYS */
 
 ! --------------------------------------------------
 
       u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
 
       return
-      if (.false.) write(0,*) bb, istep
+      if (.false.) write(0,*) istep
 
-   end subroutine all_sources
+   end subroutine internal_sources
 
+#if !defined(BALSARA) || defined(SHEAR) || defined(CORIOLIS) || defined(NON_INERTIAL)
 !/*
 !>
 !! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
@@ -248,6 +271,7 @@ contains
 #endif /* !ISO */
 
    end subroutine get_updates_from_acc
+#endif /* !BALSARA || SHEAR || CORIOLIS || NON_INERTIAL */
 
 !==========================================================================================
 
@@ -261,9 +285,6 @@ contains
 #ifndef BALSARA
       use timestepinteractions, only: timestep_interactions
 #endif /* !BALSARA */
-#ifdef THERM
-      use timestepthermal,      only: timestep_thermal
-#endif /* THERM */
 
       implicit none
 
@@ -272,9 +293,6 @@ contains
 #ifndef BALSARA
          dt = min(dt, timestep_interactions())
 #endif /* !BALSARA */
-#ifdef THERM
-         dt = min(dt, timestep_thermal())
-#endif /* THERM */
 
       return
       if (.false. .and. dt < 0) return
@@ -426,7 +444,11 @@ contains
       use constants,      only: zero
       use fluidindex,     only: flind
       use global,         only: cr_negative, disallow_CRnegatives
-      use initcosmicrays, only: iarr_crs, smallecr, use_smallecr
+      use initcosmicrays, only: iarr_crs, iarr_crn, smallecr, use_smallecr
+#ifdef CRESP
+      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
+      use initcrspectrum, only: smallcree, smallcren
+#endif /* CRESP */
 
       implicit none
 
@@ -434,7 +456,13 @@ contains
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
       if (disallow_CRnegatives) cr_negative = cr_negative .or. (any(u1(:, iarr_crs(:)) < zero))
-      if (use_smallecr) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+      if (use_smallecr) then
+#ifdef CRESP
+         u1(:, iarr_cre_n(:)) = max(smallcren, u1(:, iarr_cre_n(:)))        !< \deprecated BEWARE - this line refers to CRESP number density component
+         u1(:, iarr_cre_e(:)) = max(smallcree, u1(:, iarr_cre_e(:)))
+#endif /* CRESP */
+         u1(:, iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
+      endif
 
    end subroutine limit_minimal_ecr
 #endif /* COSM_RAYS */

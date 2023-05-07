@@ -26,6 +26,7 @@
 !! \copydetails multigrid::init_multigrid
 !! \copydetails multigrid_diffusion::init_multigrid_diff
 !! \copydetails multigrid_gravity::init_multigrid_grav
+!! \copydetails ppp::init_profiling
 !!
 !! @n @n
 !! There is a list of precompiler directives to choose unit system used in simulation:

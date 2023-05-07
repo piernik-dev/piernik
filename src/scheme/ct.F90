@@ -183,7 +183,7 @@ contains
          if (dwm * dwp > 0.0) dw = 2.0 * dwm * dwp / (dwm + dwp)
          vibj(i) = (w + dw) * dt
       enddo
-      return
+
    end subroutine tvdb
 
 !-------------------------------------------------------------------------------------------------------------------
@@ -192,7 +192,7 @@ contains
 
       use constants,   only: ndims, I_ONE
       use dataio_pub,  only: die
-      use global,      only: force_cc_mag
+      use global,      only: cc_mag
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
@@ -203,7 +203,7 @@ contains
 
       integer(kind=4)             :: bdir, dstep
 
-      if (force_cc_mag) call die("[ct:magfield] forcing cell-centered magnetic field is not allowed for constrained transport")
+      if (cc_mag) call die("[ct:magfield] cell-centered magnetic field is not allowed for constrained transport")
 
       do dstep = 0, 1
          bdir  = I_ONE + mod(dir+dstep,ndims)
@@ -236,8 +236,9 @@ contains
 !! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
 !<
 
-  subroutine advectb(bdir, vdir)
+   subroutine advectb(bdir, vdir)
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, ndims, INT4
@@ -280,6 +281,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          if (any([allocated(vv), allocated(vv0)])) call die("[ct:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
@@ -315,6 +317,7 @@ contains
 
          deallocate(vv, vv0)
 
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
       NULLIFY(i1, i1m, i2, i2m)
@@ -327,10 +330,11 @@ contains
 #if defined(IONIZED) || defined(RESISTIVE)
    subroutine mag_add(dim1, dim2)
 
+      use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
-      use global,           only: force_cc_mag
+      use global,           only: cc_mag
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
@@ -351,11 +355,13 @@ contains
       real, dimension(:,:,:), pointer :: wcu
 #endif /* RESISTIVE */
 
-      if (force_cc_mag) call die("[ct:mag_add] forcing cell-centered magnetic field is not allowed for constrained transport")
+      if (cc_mag) call die("[ct:mag_add] cell-centered magnetic field is not allowed for constrained transport")
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
          wcu => cg%q(qna%ind(wcu_n))%arr
@@ -376,6 +382,8 @@ contains
          cg%wa = pshift(cg%wa,dim2)
          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + cg%wa*cg%idl(dim2)
 #endif /* IONIZED */
+
+         call cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
 
@@ -424,7 +432,6 @@ contains
          call warn('[ct:pshift]: Dim ill defined in pshift!')
       endif
 
-      return
    end function pshift
 
 !>
@@ -465,7 +472,6 @@ contains
          call warn('[ct:mshift]: Dim ill defined in mshift!')
       endif
 
-      return
    end function mshift
 
 end module ct

@@ -53,59 +53,59 @@ module initproblem
 !                 CAMBRIDGE TEXTS IN APPLIED MATHEMATICS, CAMBRIDGE UNIVERSITY PRESS.
 ! ----------------------------------------------------------------------------------------------------------------------------
 
-  implicit none
+   implicit none
 
-  private
-  public :: read_problem_par, problem_initial_conditions, problem_pointers
+   private
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-  real :: den_pp, p_pp, velx_pp, vely_pp, den_mp, p_mp, velx_mp, vely_mp, den_mm, p_mm, velx_mm, vely_mm, den_pm, p_pm, velx_pm, vely_pm
+   real :: den_pp, p_pp, velx_pp, vely_pp, den_mp, p_mp, velx_mp, vely_mp, den_mm, p_mm, velx_mm, vely_mm, den_pm, p_pm, velx_pm, vely_pm
 
-  namelist /PROBLEM_CONTROL/ den_pp, p_pp, velx_pp, vely_pp, den_mp, p_mp, velx_mp, vely_mp, den_mm, p_mm, velx_mm, vely_mm, den_pm, p_pm, velx_pm, vely_pm
+   namelist /PROBLEM_CONTROL/ den_pp, p_pp, velx_pp, vely_pp, den_mp, p_mp, velx_mp, vely_mp, den_mm, p_mm, velx_mm, vely_mm, den_pm, p_pm, velx_pm, vely_pm
 
 contains
 
 !----------------------------------------------------------------------------------------------------
 
-  subroutine problem_pointers
+   subroutine problem_pointers
 
-    implicit none
+      implicit none
 
-  end subroutine problem_pointers
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------------------------------
 
-  subroutine read_problem_par
+   subroutine read_problem_par
 
-    use dataio_pub, only: nh
-    use mpisetup, only: rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: nh
+      use mpisetup, only: rbuff, master, slave, piernik_MPI_Bcast
 
-    implicit none
+      implicit none
 
-    !top right state
-    den_pp  = 1.5
-    p_pp    = 1.5
-    velx_pp = 0.0
-    vely_pp = 0.0
+      !top right state
+      den_pp  = 1.5
+      p_pp    = 1.5
+      velx_pp = 0.0
+      vely_pp = 0.0
 
-    !top left state
-    den_mp  = 0.5323
-    p_mp    = 0.3
-    velx_mp = 1.206
-    vely_mp = 0.0
+      !top left state
+      den_mp  = 0.5323
+      p_mp    = 0.3
+      velx_mp = 1.206
+      vely_mp = 0.0
 
-    !bottom left state
-    den_mm  = 0.138
-    p_mm    = 0.029
-    velx_mm = 1.206
-    vely_mm = 1.206
+      !bottom left state
+      den_mm  = 0.138
+      p_mm    = 0.029
+      velx_mm = 1.206
+      vely_mm = 1.206
 
-    !bottom right state
-    den_pm  = 0.5323
-    p_pm    = 0.3
-    velx_pm = 0.0
-    vely_pm = 1.206
+      !bottom right state
+      den_pm  = 0.5323
+      p_pm    = 0.3
+      velx_pm = 0.0
+      vely_pm = 1.206
 
-    if (master) then
+      if (master) then
 
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -165,71 +165,68 @@ contains
 
       endif
 
-
-
-  end subroutine read_problem_par
+   end subroutine read_problem_par
 
 !------------------------------------------------------------------------------------------------------
 
-  subroutine problem_initial_conditions
+   subroutine problem_initial_conditions
 
-    use cg_list,    only: cg_list_element
-    use cg_leaves,  only: leaves
-    use fluidindex, only: flind, iarr_all_mz
-    use fluidtypes, only: component_fluid
-    use grid_cont,  only: grid_container
+      use cg_list,    only: cg_list_element
+      use cg_leaves,  only: leaves
+      use fluidindex, only: flind, iarr_all_mz
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
 
-    implicit none
+      implicit none
 
-    type(cg_list_element), pointer :: cgl
-    type(grid_container),  pointer :: cg
-    class(component_fluid), pointer :: fl
-    integer :: i, j, k, f
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer :: i, j, k, f
 
-    cgl => leaves%first
-    do while (associated(cgl))
-       cg => cgl%cg
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-       do k = cg%ks, cg%ke
-          do j = cg%js, cg%je
-             do i = cg%is, cg%ie
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
 
-                do f = 1, flind%fluids
-                   fl  => flind%all_fluids(f)%fl
-                   if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
-                      cg%u(fl%idn, i, j, k) = den_pp
-                      cg%u(fl%imx, i, j, k) = den_pp*velx_pp
-                      cg%u(fl%imy, i, j, k) = den_pp*vely_pp
-                      cg%u(fl%ien, i, j, k) = p_pp / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
-                   else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
-                      cg%u(fl%idn, i, j, k) = den_mp
-                      cg%u(fl%imx, i, j, k) = den_mp*velx_mp
-                      cg%u(fl%imy, i, j, k) = den_mp*vely_mp
-                      cg%u(fl%ien, i, j, k) = p_mp / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
-                   else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
-                      cg%u(fl%idn, i, j, k) = den_mm
-                      cg%u(fl%imx, i, j, k) = den_mm*velx_mm
-                      cg%u(fl%imy, i, j, k) = den_mm*vely_mm
-                      cg%u(fl%ien, i, j, k) = p_mm / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
-                   else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
-                      cg%u(fl%idn, i, j, k) = den_pm
-                      cg%u(fl%imx, i, j, k) = den_pm*velx_pm
-                      cg%u(fl%imy, i, j, k) = den_pm*vely_pm
-                      cg%u(fl%ien, i, j, k) = p_pm / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
-                   endif
-                enddo
+                  do f = 1, flind%fluids
+                     fl  => flind%all_fluids(f)%fl
+                     if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
+                        cg%u(fl%idn, i, j, k) = den_pp
+                        cg%u(fl%imx, i, j, k) = den_pp*velx_pp
+                        cg%u(fl%imy, i, j, k) = den_pp*vely_pp
+                        cg%u(fl%ien, i, j, k) = p_pp / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                     else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
+                        cg%u(fl%idn, i, j, k) = den_mp
+                        cg%u(fl%imx, i, j, k) = den_mp*velx_mp
+                        cg%u(fl%imy, i, j, k) = den_mp*vely_mp
+                        cg%u(fl%ien, i, j, k) = p_mp / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                     else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
+                        cg%u(fl%idn, i, j, k) = den_mm
+                        cg%u(fl%imx, i, j, k) = den_mm*velx_mm
+                        cg%u(fl%imy, i, j, k) = den_mm*vely_mm
+                        cg%u(fl%ien, i, j, k) = p_mm / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                     else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
+                        cg%u(fl%idn, i, j, k) = den_pm
+                        cg%u(fl%imx, i, j, k) = den_pm*velx_pm
+                        cg%u(fl%imy, i, j, k) = den_pm*vely_pm
+                        cg%u(fl%ien, i, j, k) = p_pm / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                     endif
+                  enddo
 
-             enddo
-          enddo
-       enddo
+               enddo
+            enddo
+         enddo
 
-       call cg%set_constant_b_field([0., 0., 0.])
-       cg%u(iarr_all_mz, :, :, :) = 0.
+         call cg%set_constant_b_field([0., 0., 0.])
+         cg%u(iarr_all_mz, :, :, :) = 0.
 
-       cgl => cgl%nxt
-    enddo
+         cgl => cgl%nxt
+      enddo
 
-  end subroutine problem_initial_conditions
-
+   end subroutine problem_initial_conditions
 
 end module initproblem

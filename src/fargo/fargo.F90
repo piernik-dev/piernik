@@ -70,7 +70,7 @@ contains
       implicit none
    end subroutine cleanup_fargo
 
-!> \brief Check for azimuthar refinement steps and die if any have been detected
+!> \brief Check for azimuthal refinement steps and die if any have been detected
 
    subroutine check_yref
 
@@ -96,7 +96,7 @@ contains
                  call die("[fargo:check_yref] Refinement steps are not allowed in azimuthal direction")
             cgl => cgl%nxt
          enddo
-        curl => curl%finer
+         curl => curl%finer
       enddo
 
    end subroutine check_yref

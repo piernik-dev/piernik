@@ -68,8 +68,7 @@ contains
    subroutine init_shear
 
       use constants,      only: PIERNIK_INIT_GRID
-      use dataio_pub,     only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,     only: printinfo, die, code_progress
+      use dataio_pub,     only: printinfo, die, code_progress, nh
       use fluidindex,     only: flind
       use mpisetup,       only: master, slave, rbuff, piernik_MPI_Bcast
 
@@ -214,7 +213,7 @@ contains
 #endif /* FFTW */
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[shear:yshift] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[shear:yshift] multiple grid pieces per processor not implemented yet") !nontrivial
 
       ddly  = dts * qshear*omega*dom%L_(xdim)
       dely  = ts  * qshear*omega*dom%L_(xdim)
@@ -259,7 +258,7 @@ contains
       type(grid_container), pointer              :: cg
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[shear:unshear_fft] multiple grid pieces per processor not implemented yet") !nontrivial
 
       St = - ddy * cg%idy / dom%L_(xdim)
       if (.not.present(inv)) St = -St
@@ -327,7 +326,7 @@ contains
       nz = size(qty,3)
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[shear:unshear] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[shear:unshear] multiple grid pieces per processor not implemented yet") !nontrivial
 
       my = 3*cg%nyb+2*dom%nb
 
@@ -371,6 +370,8 @@ contains
    end function unshear
 !--------------------------------------------------------------------------------------------------
 #ifdef SHEAR_BND
+#if 0
+! Currently unused
    subroutine bnd_shear_u(dir, cg)
 
       use dataio_pub, only: die
@@ -386,5 +387,7 @@ contains
       if (.false.) cg%is_old = cg%is_old .or. (dir == -1) ! suppress compiler warnings
 
    end subroutine bnd_shear_u
+#endif /* 0 */
 #endif /* SHEAR_BND */
+
 end module shear

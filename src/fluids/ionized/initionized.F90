@@ -49,21 +49,24 @@ module initionized
    logical :: selfgrav    !< true if ionized gas is selfgravitating
 
    type, extends(component_fluid) :: ion_fluid
-      contains
-         procedure, nopass :: get_tag
-         procedure, pass   :: get_cs => ion_cs
-         procedure, pass   :: get_mach => ion_mach
-         procedure, pass   :: compute_flux => flux_ion
-         procedure, pass   :: compute_pres => pres_ion
-         procedure, pass   :: initialize_indices => initialize_ion_indices
+   contains
+      procedure, nopass :: get_tag
+      procedure, pass   :: get_cs => ion_cs
+      procedure, pass   :: get_mach => ion_mach
+      procedure, pass   :: compute_flux => flux_ion
+      procedure, pass   :: compute_pres => pres_ion
+      procedure, pass   :: initialize_indices => initialize_ion_indices
    end type ion_fluid
 
 contains
 
    subroutine initialize_ion_indices(this, flind)
+
       use constants,  only: ION
       use fluidtypes, only: var_numbers
+
       implicit none
+
       class(ion_fluid),     intent(inout) :: this
       type(var_numbers),    intent(inout) :: flind
 
@@ -84,6 +87,7 @@ contains
    end subroutine initialize_ion_indices
 
    real function ion_cs(this, i, j, k, u, b, cs_iso2)
+
       use constants, only: two
 #ifndef ISO
       use func,      only: ekin
@@ -92,12 +96,13 @@ contains
       use constants, only: xdim, ydim, zdim, half
       use domain,    only: dom
       use func,      only: emag
-      use global,    only: force_cc_mag
+      use global,    only: cc_mag
 #else /* !MAGNETIC */
       use constants, only: zero
 #endif /* !MAGNETIC */
 
       implicit none
+
       class(ion_fluid),                  intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
@@ -110,7 +115,7 @@ contains
       real :: pmag, p, ps
 
 #ifdef MAGNETIC
-      if (force_cc_mag) then
+      if (cc_mag) then
          pmag = emag(b(xdim,i,j,k), b(ydim,i,j,k), b(zdim,i,j,k))
       else
          bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
@@ -136,6 +141,7 @@ contains
       ion_cs = sqrt(abs((two * pmag + this%gam * p) / u(this%idn, i, j, k)))
 #endif /* !ISO */
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+
    end function ion_cs
 
 !>
@@ -147,22 +153,31 @@ contains
 !<
 
    real function ion_mach(this, i, j, k, u, b, cs_iso2)
+
       use func, only: sq_sum3
+
       implicit none
+
       class(ion_fluid),                  intent(in) :: this
       integer,                           intent(in) :: i, j, k
       real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
       real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
       real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+
       ion_mach = sqrt(sq_sum3(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k)))/u(this%idn, i, j, k) / this%get_cs(i, j, k, u, b, cs_iso2)
+
    end function ion_mach
 
    function get_tag() result(tag)
+
       use constants, only: idlen
+
       implicit none
+
       character(len=idlen) :: tag
 
       tag = "ION"
+
    end function get_tag
 
 !>
@@ -182,7 +197,7 @@ contains
 !<
    subroutine init_ionized
 
-      use dataio_pub, only: nh ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -211,10 +226,10 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         lbuff(1)  = selfgrav
+         lbuff(1) = selfgrav
 
-         rbuff(1)  = gamma
-         rbuff(2)  = cs_iso
+         rbuff(1) = gamma
+         rbuff(2) = cs_iso
 
       endif
 
@@ -276,7 +291,7 @@ contains
 !!while \f$e_{th}\f$ is thermal energy density and  \f$e_{mag} = B^2/2\f$ is the magnetic energy density.
 !<
 !*/
-#define RNG 2:nm
+#define RNG2 2:nm
    subroutine flux_ion(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants, only: idn, imx, imy, imz
@@ -295,8 +310,8 @@ contains
 
       class(ion_fluid),     intent(in)             :: this
       integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of ionized fluid
-      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for ionized fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
       real, dimension(:),   intent(in),    pointer :: vx        !< velocity of ionized fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
@@ -319,21 +334,21 @@ contains
       pps => ps
       call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, pps)
 
-      flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
+      flux(RNG2, idn) = uu(RNG2, idn) * vx(RNG2)
 #ifdef MAGNETIC
-      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG) - bb(RNG, xdim)**2
-      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)-bb(RNG, ydim)*bb(RNG, xdim)
-      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)-bb(RNG, zdim)*bb(RNG, xdim)
+      flux(RNG2, imx) = uu(RNG2, imx) * vx(RNG2) + ps(RNG2) - bb(RNG2, xdim)**2
+      flux(RNG2, imy) = uu(RNG2, imy) * vx(RNG2) - bb(RNG2, ydim) * bb(RNG2, xdim)
+      flux(RNG2, imz) = uu(RNG2, imz) * vx(RNG2) - bb(RNG2, zdim) * bb(RNG2, xdim)
 #ifndef ISO
-      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)-bb(RNG, xdim)*(bb(RNG, xdim)*uu(RNG, imx) &
-                +bb(RNG, ydim)*uu(RNG, imy)+bb(RNG, zdim)*uu(RNG, imz))/uu(RNG, idn)
+      flux(RNG2, ien) = (uu(RNG2, ien) + ps(RNG2)) * vx(RNG2) - bb(RNG2, xdim) * (bb(RNG2, xdim) * uu(RNG2, imx) &
+                                               + bb(RNG2, ydim) * uu(RNG2, imy) + bb(RNG2, zdim) * uu(RNG2, imz)) / uu(RNG2, idn)
 #endif /* !ISO */
 #else /* !MAGNETIC */
-      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
-      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
-      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
+      flux(RNG2, imx) = uu(RNG2, imx) * vx(RNG2) + ps(RNG2)
+      flux(RNG2, imy) = uu(RNG2, imy) * vx(RNG2)
+      flux(RNG2, imz) = uu(RNG2, imz) * vx(RNG2)
 #ifndef ISO
-      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)
+      flux(RNG2, ien) = (uu(RNG2, ien) + ps(RNG2)) * vx(RNG2)
 #endif /* !ISO */
 #endif /* !MAGNETIC */
       flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
@@ -343,13 +358,13 @@ contains
       ! The freezing speed is now computed locally (in each cell)
       !  as in Trac & Pen (2003). This ensures much sharper shocks,
       !  but sometimes may lead to numerical instabilities
-      minvx = minval(vx(RNG))
-      maxvx = maxval(vx(RNG))
-      amp   = half*(maxvx-minvx)
+      minvx = minval(vx(RNG2))
+      maxvx = maxval(vx(RNG2))
+      amp   = half * (maxvx - minvx)
 #ifdef ISO
-      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +          p(RNG))/uu(RNG, idn)),small)
+      cfr(RNG2, 1) = sqrt(vx(RNG2)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG2) +          p(RNG2))/uu(RNG2, idn)),small)
 #else /* !ISO */
-      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + this%gam*p(RNG))/uu(RNG, idn)),small)
+      cfr(RNG2, 1) = sqrt(vx(RNG2)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG2) + this%gam*p(RNG2))/uu(RNG2, idn)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -390,33 +405,32 @@ contains
 
       implicit none
 
-      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
-      real, dimension(:),   intent(out)          :: p         !< thermal pressure of ionized fluid
-      real, dimension(:),   intent(out)          :: pmag      !< pressure of magnetic field
-      real,                 intent(in)           :: gam, gam1
+      integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:),   intent(inout)          :: p         !< thermal pressure of ionized fluid
+      real, dimension(:),   intent(inout)          :: pmag      !< pressure of magnetic field
+      real,                 intent(in)             :: gam, gam1
 
       ! locals
       integer :: nm
 
-      nm = n-1
+      nm = n - 1
 #ifdef MAGNETIC
-      pmag(RNG)= emag(bb(RNG, xdim), bb(RNG, ydim), bb(RNG, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+      pmag(RNG2) = emag(bb(RNG2, xdim), bb(RNG2, ydim), bb(RNG2, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
 
 #ifdef ISO
-      p(RNG)  = cs_iso2(RNG) * uu(RNG, idn)
-      ps(RNG) = p(RNG) + pmag(RNG)
+      p(RNG2)  = cs_iso2(RNG2) * uu(RNG2, idn)
+      ps(RNG2) = p(RNG2) + pmag(RNG2)
 #else /* !ISO */
       if (associated(cs_iso2)) call die("[initionized:all_pres_ion] cs_iso2 should not be associated")
-      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(gam1) &
-           & + (2.0 - gam)*pmag(RNG)
-      p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
+      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*gam1 + (2.0 - gam)*pmag(RNG2)
+      p(RNG2) = ps(RNG2) - pmag(RNG2); p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
       ps(1) = ps(2); ps(n) = ps(nm)
 
@@ -429,17 +443,18 @@ contains
 #endif /* ISO */
 
    end subroutine all_pres_ion
+#undef RNG2
 
    subroutine pres_ion(this, n, uu, bb, cs_iso2, ps)
 
       implicit none
 
-      class(ion_fluid),     intent(in)           :: this
-      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
+      class(ion_fluid),     intent(in)             :: this
+      integer(kind=4),      intent(in)             :: n        !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),    pointer :: uu       !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: bb       !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2  !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(inout), pointer :: ps       !< pressure of ionized fluid for current sweep
 
       ! locals
       real, dimension(n) :: p           !< thermal pressure of ionized fluid

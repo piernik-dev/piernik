@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# Make definitions for lothlorien (Fedora 25)
+# Make definitions for lothlorien (Fedora 25..32)
 #
 # Do not modify if you aren't me :-)
 # Feel free to make your own copy if you like something here.
@@ -8,16 +8,27 @@
 
 PROG     = piernik
 
-F90      = mpif90
-ifeq ($(MPI_SUFFIX),_mpich)
-  F90 += -I/usr/lib64/gfortran/modules/mpich
-endif
+F90      = h5pfc
+
+F90 += -I/usr/lib64/gfortran/modules/$(subst _,,$(MPI_SUFFIX))
 
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
-F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -pedantic -fmodule-private
+F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -fmodule-private
 F90FLAGS += -fbacktrace -ggdb
-F90FLAGS += -fcheck=all
+F90FLAGS += -fcheck=all,no-array-temps
+
+# For gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
+F90FLAGS += -pedantic
+
+# Hack for old MPI interface when gfortran >= 10.
+ifneq (filter("-DNO_MPIF08_AVAILABLE",$(CPPFLAGS)),)
+F90FLAGS := $(filter-out -pedantic -pedantic-errors, $(F90FLAGS)) -fallow-argument-mismatch
+endif
+
+# For gfortran 10.x some optimisations implied by -O2 are known to lead to
+# wrong evaluation of the code
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre
 
 ifdef I64
   F90FLAGS += -fdefault-integer-8

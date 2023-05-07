@@ -58,9 +58,10 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
-      use constants,          only: BND_NEGREF, fft_none
+      use constants,          only: BND_NEGREF, fft_none, PPP_MG
       use multigridvars,      only: nsmool
       use multigrid_Laplace,  only: approximate_solution_relax
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -69,11 +70,14 @@ contains
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
       integer(kind=4) :: nsmoo
+      character(len=*), parameter :: as_label = "grav_MG_approx_soln_"
 
       call curl%check_dirty(src, "approx_soln src-")
 
       if (associated(curl, coarsest%level) .and. curl%fft_type /= fft_none) then
+         call ppp_main%start(as_label // "FFT", PPP_MG)
          call fft_solve_level(curl, src, soln)
+         call ppp_main%stop(as_label // "FFT", PPP_MG)
       else
          if (associated(curl, coarsest%level)) then
             !> \todo Implement alternative bottom-solvers
@@ -81,11 +85,14 @@ contains
             call coarsest%level%set_q_value(soln, 0.)
          else
             nsmoo = nsmool
-            call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
+            call curl%coarser%prolong_1var(soln, bnd_type = BND_NEGREF)
             !> \warning when this is incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
          endif
 
+         call ppp_main%start(as_label // "relax", PPP_MG)
          call approximate_solution_relax(curl, src, soln, nsmoo)
+         call ppp_main%stop(as_label // "relax", PPP_MG)
+
       endif
 
       call curl%check_dirty(soln, "approx_soln soln+")
@@ -96,6 +103,7 @@ contains
 
    subroutine fft_solve_level(curl, src, soln)
 
+      use cg_cost_data,        only: I_MULTIGRID
       use cg_level_connected,  only: cg_level_connected_t
       use dataio_pub,          only: die
 #ifndef NO_FFT
@@ -130,6 +138,7 @@ contains
       cgl => curl%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          p3 => cg%q(src)%span(cg%ijkse)
          cg%mg%src(:, :, :) = p3
@@ -151,6 +160,7 @@ contains
          p3 => cg%q(soln)%span(cg%ijkse)
          p3 = cg%mg%src(:, :, :)
 
+         call cg%costs%stop(I_MULTIGRID)
          cgl => cgl%nxt
       enddo
 #endif /* !NO_FFT */

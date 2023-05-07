@@ -8,7 +8,7 @@ import sys
 def read_all_gdf_data(fname):
     h5f = h5.File(fname, 'r')
     n_d = h5f['simulation_parameters'].attrs['domain_dimensions'][:]
-    fields = h5f['/data']['grid_0000000000'].keys()
+    fields = list(h5f['/data']['grid_0000000000'].keys())
 
     output = {}
 
@@ -25,9 +25,9 @@ def read_all_gdf_data(fname):
 data1 = read_all_gdf_data(sys.argv[1])
 data2 = read_all_gdf_data(sys.argv[2])
 
-for key in data1.keys():
+for key in list(data1.keys()):
     if key in data2:
-        print "L2 norm for field %s = %f" \
-            % (key, np.linalg.norm(data1[key] - data2[key]))
+        print("L2 norm for field %s = %f" \
+            % (key, np.linalg.norm(data1[key] - data2[key])))
     else:
-        print "Field %s is not present in 2nd file" % key
+        print("Field %s is not present in 2nd file" % key)

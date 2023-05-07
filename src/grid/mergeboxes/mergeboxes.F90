@@ -29,21 +29,23 @@
 !>
 !! \brief A library that converts a 3D logical map into a set of boxes
 !!
-!! \details We want to produce as small set of non overlapping boxes that covers a given map.
+!! \details We want to produce as small as possible set of non overlapping boxes that covers a given map.
 !! The map can be e.g a list of grid regions that is covered by intra-level communication. Then the boxes are the part that need to be prolonged from the coarse grid.
 !! Finding best (optimal) solution can be computationally expensive, so we  are satisfied by "good enough" solutions.
 !! In our approach we first look for all corners that are convex as some those for sure should belong to the biggest boxes that fit into the map.
 !! Then we arbitrarily decide that the most important are the boxes that have corners near Center of Mass, which often, but not always tends to be true.
-!! Next, look for a biggest box with that corner by "growing" it like a grain of salt.
+!! Next, look for a biggest box with that corner by "growing" it.
 !! Iterate until all flags get covered by boxes.
 !!
 !! Alternative approaches:
 !! * Find all the boxes possible at any time (note that even if a box connect a set of corners, another box can be found for the other corners),
 !! then pick up the biggest one and iterate. This is much more costly, especially for complicated maps with a lot of corners (like plotted by concentric spheres).
-!! * Coarsen the map as long as there exist at least one coarse cell that is fully covered by flags. Pic it as a fine box and try to grow. Iterate as in other approaches.
+!! * Coarsen the map as long as there exist at least one coarse cell that is fully covered by flags. Pick it as a fine box and try to grow. Iterate as in other approaches.
 !! Coarsening may be done in directionally-split fashion for better flexibility
 !!
 !! \todo Use it to merge smaller grids into larger ones.
+!!
+!! \todo Eliminate this module as it seems to be too sophisticated for blocky AMR, even with merged blocks.
 !<
 
 module mergebox
@@ -59,13 +61,13 @@ module mergebox
 
    type :: wmap
       logical, allocatable, dimension(:,:,:) :: map !< Logical map to be processed
-      type(corner_list_t) :: clist                  !< List of convec corners
+      type(corner_list_t) :: clist                  !< List of convex corners
       type(box_list_t) :: blist                     !< List of boxes
       real, dimension(ndims) :: CoM                 !< Center of Mass
    contains
       procedure :: init          !< Initialize
       procedure :: print         !< Print the map
-      procedure :: make_clist    !< Create convect corner list
+      procedure :: make_clist    !< Create convex corner list
       procedure :: grow_cuboids  !< Pick up which box to grow
       procedure :: cleanup       !< Free the memory
       procedure :: calcCoM       !< Compute Center of Mass
@@ -164,7 +166,7 @@ contains
 
    end subroutine print
 
-!> \brief Create convect corner list and set their vectors
+!> \brief Create convex corner list and set their vectors
 
    subroutine make_clist(this)
 

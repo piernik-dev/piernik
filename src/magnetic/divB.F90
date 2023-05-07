@@ -93,12 +93,16 @@ contains
 
       integer(kind=4) :: i
 
+#ifndef MAGNETIC
+      return
+#endif /* !MAGNETIC */
+
       write(msg,'(a)')"[divB:print_divB_norm]"
       do i = I_TWO, I_TWO*min(max_c, dom%nb), I_TWO  ! only even-order norms;  tricky: I_TWO*max_c
          call divB(i)
-         write(msg,'(2a,i1,a,g12.5)')trim(msg), " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
+         write(msg(len_trim(msg)+1:), '(a,i1,a,g12.5)') " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
-      if (qna%exists(psi_n)) write(msg,'(2a,g12.5)') trim(msg), " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
+      if (qna%exists(psi_n)) write(msg(len_trim(msg)+1:), '(a,g12.5)') " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
       if (master) call printinfo(msg)
 
    end subroutine print_divB_norm
@@ -117,6 +121,10 @@ contains
       use named_array_list, only: qna
 
       implicit none
+
+#ifndef MAGNETIC
+      return
+#endif /* !MAGNETIC */
 
       if (qna%exists(divB_n)) then
          if (idivB /= qna%ind(divB_n)) call die ("[divB:divB_init] qna%exists(divB_n) .and. idivB /= qna%ind(divB_n)")
@@ -140,7 +148,7 @@ contains
       use constants,  only: GEO_XYZ
       use dataio_pub, only: msg, die, warn
       use domain,     only: dom
-      use global,     only: force_cc_mag
+      use global,     only: cc_mag
 
       implicit none
 
@@ -150,6 +158,11 @@ contains
       integer(kind=4) :: ord
       logical         :: ccB
       integer, parameter :: max_ord = 8
+
+#ifndef MAGNETIC
+      call warn("[[divB:divB] No magnetic field!")
+      return
+#endif /* !MAGNETIC */
 
       if (dom%geometry_type /= GEO_XYZ) call die("[divB:divB] non-cartesian geometry not implemented yet.")
 
@@ -175,7 +188,7 @@ contains
          if (dom%nb < ord/2) call die("[divB:divB] Not enough guardcells for requested approximation order")  ! assumed stencils on uniform grid
       endif
 
-      ccB = force_cc_mag
+      ccB = cc_mag
       if (present(cell_centered)) ccB = cell_centered
 
       call divB_init  ! it should be BOTH safe and cheap to call it multiple times
@@ -194,11 +207,12 @@ contains
 
    subroutine divB_c(ord, ccB)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: I_ONE, I_TWO
-      use dataio_pub, only: die
-      use func,       only: operator(.notequals.)
+      use cg_cost_data, only: I_OTHER
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: I_ONE, I_TWO
+      use dataio_pub,   only: die
+      use func,         only: operator(.notequals.)
 
       implicit none
 
@@ -220,11 +234,15 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
+
          cgl%cg%q(idivB)%arr(                                cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = sixpoint(cgl%cg, coeff(I_ONE), I_ONE, ccB)
          do i = I_TWO, max_c
             if (coeff(i) .notequals. 0.) cgl%cg%q(idivB)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
                  &                       cgl%cg%q(idivB)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) + sixpoint(cgl%cg, coeff(i),     i,     ccB)
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
 
@@ -249,10 +267,9 @@ contains
       integer(kind=4),               intent(in) :: ord
       logical,                       intent(in) :: cell_centered
 
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: divB_c_IO
-
-      integer(kind=4) :: o, i
-      real, dimension(max_c) :: coeff
+      real, dimension(RNG)                      :: divB_c_IO
+      integer(kind=4)                           :: o, i
+      real, dimension(max_c)                    :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
       if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB:divB_c] cannot find coefficient") ! no odd order allowed here just in case
@@ -271,7 +288,7 @@ contains
    end function divB_c_IO
 
 !>
-!! \brief Return estimate of derivative taken at given span (in cells) nad multiplied by given coefficient for a given grid container.
+!! \brief Return estimate of derivative taken at given span (in cells) and multiplied by given coefficient for a given grid container.
 !! This is a basic piece useful to construct various order derivatives and takes the advantage of stencil symmetry on an uniform grid.
 !!
 !! OPT: this may not be the best approach performance-wise but it is compact and we don't expect to evaluate it foo often.
@@ -292,10 +309,12 @@ contains
       integer(kind=4),               intent(in) :: span
       logical,                       intent(in) :: cell_centered
 
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: sixpoint
-      integer :: spm1
+      real, dimension(RNG)                      :: sixpoint
+      integer                                   :: spm1
 
       if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB:sixpoint] coeff == 0. or unacceptable span")
+
+      if (.not. associated(cg%b)) call die("[divB:sixpoint] no cg%b")
 
       if (cell_centered) then
          sixpoint = coeff * ( &

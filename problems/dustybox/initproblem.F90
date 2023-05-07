@@ -35,9 +35,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real      :: rhog, rhod, vxg0, vyg0, vzg0, vxd0, vyd0, vzd0
+   real :: rhog, rhod, vxg0, vyg0, vzg0, vxd0, vyd0, vzd0
 
-   namelist /PROBLEM_CONTROL/  rhog, rhod, vxg0, vyg0, vzg0, vxd0, vyd0, vzd0
+   namelist /PROBLEM_CONTROL/ rhog, rhod, vxg0, vyg0, vzg0, vxd0, vyd0, vzd0
 
 contains
 
@@ -50,19 +50,19 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub,    only: nh     ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: nh
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      rhog         = 1.0
-      rhod         = 0.01
-      vxd0         = sqrt(1./3.)
-      vyd0         = sqrt(1./3.)
-      vzd0         = sqrt(1./3.)
-      vxg0         = -sqrt(1./3.)
-      vyg0         = -sqrt(1./3.)
-      vzg0         = -sqrt(1./3.)
+      rhog = 1.0
+      rhod = 0.01
+      vxd0 = sqrt(1./3.)
+      vyd0 = sqrt(1./3.)
+      vzd0 = sqrt(1./3.)
+      vxg0 = -sqrt(1./3.)
+      vyg0 = -sqrt(1./3.)
+      vzg0 = -sqrt(1./3.)
 
       if (master) then
 
@@ -97,14 +97,14 @@ contains
 
       if (slave) then
 
-         rhog         = rbuff(1)
-         rhod         = rbuff(2)
-         vxg0         = rbuff(3)
-         vyg0         = rbuff(4)
-         vzg0         = rbuff(5)
-         vxd0         = rbuff(6)
-         vyd0         = rbuff(7)
-         vzd0         = rbuff(8)
+         rhog = rbuff(1)
+         rhod = rbuff(2)
+         vxg0 = rbuff(3)
+         vyg0 = rbuff(4)
+         vzg0 = rbuff(5)
+         vxd0 = rbuff(6)
+         vyd0 = rbuff(7)
+         vzd0 = rbuff(8)
 
       endif
 
@@ -112,34 +112,33 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
+      use fluidindex, only: flind
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u(flind%neu%idn,:,:,:) = rhog
-         cg%u(flind%neu%imx,:,:,:) = rhog*vxg0
-         cg%u(flind%neu%imy,:,:,:) = rhog*vyg0
-         cg%u(flind%neu%imz,:,:,:) = rhog*vzg0
+         cg%u(flind%neu%idn,RNG) = rhog
+         cg%u(flind%neu%imx,RNG) = rhog*vxg0
+         cg%u(flind%neu%imy,RNG) = rhog*vyg0
+         cg%u(flind%neu%imz,RNG) = rhog*vzg0
 
-         cg%u(flind%dst%idn,:,:,:) =  rhod
-         cg%u(flind%dst%imx,:,:,:) = -rhod*vxd0
-         cg%u(flind%dst%imy,:,:,:) = -rhod*vyd0
-         cg%u(flind%dst%imz,:,:,:) = -rhod*vzd0
+         cg%u(flind%dst%idn,RNG) =  rhod
+         cg%u(flind%dst%imx,RNG) = -rhod*vxd0
+         cg%u(flind%dst%imy,RNG) = -rhod*vyd0
+         cg%u(flind%dst%imz,RNG) = -rhod*vzd0
 
          cgl => cgl%nxt
       enddo
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
 !-----------------------------------------------------------------------------
 end module initproblem

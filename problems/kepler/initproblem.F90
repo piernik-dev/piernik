@@ -53,8 +53,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,              only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: nh
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -149,7 +149,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per processor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
@@ -220,4 +220,3 @@ contains
    end subroutine problem_initial_conditions
 
 end module initproblem
-! vim: set tw=120:

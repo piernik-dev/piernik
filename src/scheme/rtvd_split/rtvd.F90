@@ -170,7 +170,7 @@ contains
          ! * Set fl or fr to 0 (depending on side)
          ! or
          ! * Set f0 to 0 only when it would produce incoming flux.
-         ! I don't remember which approach was already (unsuccesfully) tested
+         ! I don't remember which approach was already (unsuccessfully) tested
          ! \todo remove transpositions by changing index order in eflx
          if (associated(eflx%li)) fu(eflx%li%index, :) = eflx%li%uflx
          if (associated(eflx%ri)) fu(eflx%ri%index, :) = eflx%ri%uflx

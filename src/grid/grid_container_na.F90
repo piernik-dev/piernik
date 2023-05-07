@@ -54,6 +54,14 @@ module grid_cont_na
       real, dimension(:,:,:), pointer :: sgpm    => null()  !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
       real, dimension(:,:,:), pointer :: cs_iso2 => null()  !< Array for sound speed for isothermal EOS (not associated for gamma EOS)
       real, dimension(:,:,:), pointer :: wa      => null()  !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+#ifdef NBODY
+      real, dimension(:,:,:), pointer :: prth    => null()  !< Array for histogram of particles
+      real, dimension(:,:,:), pointer :: nbdn    => null()  !< Array of density from particles
+      real, dimension(:,:,:), pointer :: gp1b    => null()  !< Array of gravitational potential from particles
+#ifdef NBODY_GRIDDIRECT
+      real, dimension(:,:,:), pointer :: nbgp    => null()  !< Array of gravitational potential from particles
+#endif /* NBODY_GRIDDIRECT */
+#endif /* NBODY */
 
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components
@@ -62,7 +70,7 @@ module grid_cont_na
    contains
 
       procedure :: cleanup_na            !< Deallocate all internals
-      procedure :: add_all_na            !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+      procedure :: add_all_na            !< Register all known named arrays for this cg, set up shortcuts to the crucial fields
       procedure :: set_constant_b_field  !< set constant magnetic field on whole block
 
       ! These should be private procedures but we need them in cg_list_global:reg_var
@@ -99,11 +107,12 @@ contains
 
    end subroutine cleanup_na
 
-!> \brief Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+!> \brief Register all known named arrays for this cg, set up shortcuts to the crucial fields
 
    subroutine add_all_na(this)
 
       use constants,        only: INVALID
+      use memory_usage,     only: check_mem_usage
       use named_array_list, only: qna, wna
 #ifdef ISO
       use constants,        only: cs_i2_n
@@ -121,11 +130,13 @@ contains
             call this%add_na(qna%lst(i)%multigrid)
          enddo
       endif
+
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             call this%add_na_4d(wna%lst(i)%dim4)
          enddo
       endif
+      call check_mem_usage
 
       ! shortcuts
       if (wna%fi > INVALID)  this%u  => this%w(wna%fi)%arr

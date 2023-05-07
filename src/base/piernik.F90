@@ -34,21 +34,23 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
-   use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI
+   use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump, cleanup_dataio
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use div_B,             only: print_divB_norm
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
-   use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB, repeat_step
+   use global,            only: t, nstep, dt, dtm, print_divB, tstep_attempt
    use initpiernik,       only: init_piernik
+   use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
-   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
+   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
+   use ppp,               only: cleanup_profiling, update_profiling, ppp_main
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
+   use repeatstep,        only: repeat_step
    use timer,             only: walltime_end
    use timestep,          only: time_step, check_cfl_violation
    use user_hooks,        only: finalize_problem, problem_domain_update
@@ -56,18 +58,25 @@ program piernik
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
-#if defined DEBUG && defined GRAV
-   use particle_pub,      only: pset
-#endif /* DEBUG && GRAV */
+#if defined DEBUG && defined GRAV && defined NBODY
+   use particle_diag,     only: print_all_particles
+#endif /* DEBUG && GRAV && NBODY */
+#ifdef MAGNETIC
+   use all_boundaries,    only: all_mag_boundaries
+#endif /* MAGNETIC */
 
    implicit none
 
    logical              :: end_sim             !< Used in main loop, to test whether to stop simulation or not
    logical, save        :: tleft = .true.      !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
-   logical, save        :: first_step = .true.
+   logical, save        :: first_step = .true., just_expanded
    real                 :: tlast
-   logical              :: try_rebalance
+   logical              :: try_rebalance, rs
+
+   ! ppp-related
+   character(len=cbuff_len)    :: label, buf
+   character(len=*), parameter :: f_label = "finalize"
 
    try_rebalance = .false.
    tlast = 0.0
@@ -78,9 +87,9 @@ program piernik
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
-#if defined DEBUG && defined GRAV
-   call pset%print
-#endif /* DEBUG && GRAV */
+#if defined DEBUG && defined GRAV && defined NBODY
+   call print_all_particles
+#endif /* DEBUG && GRAV && NBODY */
 
    call piernik_MPI_Barrier
 !-------------------------------- MAIN LOOP ----------------------------------
@@ -108,23 +117,38 @@ program piernik
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. (cfl_violated .and. repeat_step)) ! main loop
+   rs = repeat_step()  ! enforce function call
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .or. rs) ! main loop
+
+      write(buf, '(i10)') nstep
+      label = "step " // adjustl(trim(buf))
+      if (tstep_attempt /= 0) then
+         write(buf, '(i3)') tstep_attempt
+         label = "repeated_" // trim(label) // "." // adjustl(trim(buf))
+      endif
+      call ppp_main%start(label)
 
       dump(:) = .false.
       if (associated(problem_domain_update)) then
          call problem_domain_update
          if (emergency_fix) try_rebalance = .true.
+         just_expanded = emergency_fix
          call update_refinement(refinement_fixup_only=.true.)
-         ! Full refinement here called rebalancing, which sometimes caused problems with initialization of expanded parts of the computational domain
+#ifdef MAGNETIC
+         ! Cheap and dirty fix: an extra update of exteral magnetic boundaries was sometimes needed after expanding magnetized domain.
+         ! This is intended to cure insane div B appearing ar fine-coarse boundary touching the external boundary.
+         ! The real cause is perhaps due to some data dependencies not fully met.
+         if (just_expanded) call all_mag_boundaries
+#endif /* MAGNETIC */
       endif
 
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
-      call time_step(dt, flind)
-      call grace_period
+      if (.not. repeat_step()) then
+         call time_step(dt, flind, .true.)
+         call grace_period
 
-      if (.not.cfl_violated) then
          dtm = dt
 
          call check_log
@@ -136,14 +160,18 @@ program piernik
       call fluid_update
       nstep = nstep + I_ONE
       call print_progress(nstep)
-      call check_cfl_violation(dt, flind)
+      call check_cfl_violation(flind)
 
-      if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
+      rs = repeat_step()  ! enforce function call
+      if ((t - tlast < tiny(1.0)) .and. .not. first_step .and. .not. rs) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
+      call costs_maintenance
 
-      if (.not.cfl_violated) then
+      if (.not. repeat_step()) then
+         call ppp_main%start('write_data', PPP_IO)
          call write_data(output=CHK)
+         call ppp_main%stop('write_data', PPP_IO)
 
          call user_msg_handler(end_sim)
          call update_refinement
@@ -164,20 +192,26 @@ program piernik
       endif
 
       if (master) tleft = walltime_end%time_left()
+      call ppp_main%start('MPI_Bcast', PPP_MPI)
       call piernik_MPI_Bcast(tleft)
-
+      call ppp_main%stop('MPI_Bcast', PPP_MPI)
       if (.not.tleft) end_sim = .true.
 
       first_step = .false.
+
+      call ppp_main%stop(label)
+      call update_profiling
+      rs = repeat_step()  ! enforce function call
+
    enddo ! main loop
 
    if (print_divB > 0) then
       if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
    endif
 
-
    code_progress = PIERNIK_FINISHED
 
+   call ppp_main%start(f_label)
    if (master) then
       write(tstr, '(g14.6)') t
       write(nstr, '(i7)') nstep
@@ -224,8 +258,17 @@ program piernik
 
    code_progress = PIERNIK_CLEANUP
 
-   if (master) write(stdout, '(a)', advance='no') "Finishing "
+   if (master) write(stdout, '(a)', advance='no') "Finishing #"
+
    call cleanup_piernik
+
+   call ppp_main%stop(f_label)
+   call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call cleanup_profiling
+   call cleanup_mpi
+   call cleanup_dataio
+
+   if (master) write(stdout,'(a)')"#"
 
 contains
 

@@ -1,5 +1,6 @@
- $BASE_DOMAIN
-    n_d = 64, 64, 1
+
+$BASE_DOMAIN
+    n_d = 32, 32, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -22,21 +23,22 @@
  /
 
  $RESTART_CONTROL
+    restart = 'last'
  /
 
  $END_CONTROL
-    tend   = 1.0e0
+    tend   = 0.1
  /
 
  $OUTPUT_CONTROL
     colormode = .false.
     problem_name = 'thermal'
-    run_id =  'tst'
+    run_id =  't00'
     dt_hdf  = 1.0e-1
     dt_res  = 0.0
-    dt_log  = 1.0e-4
-    dt_tsl  = 1.0e-4
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'temp'
+    dt_log  = 1.0e-5
+    dt_tsl  = 1.0e-5
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', 'temn'
  /
 
  $FLUID_IONIZED
@@ -48,33 +50,41 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.8
-    smalld = 1.e-3
+    cfl    = 0.5
+    smallp= 1.e-8
+    smalld = 1.e-5
     smallei= 1.e-5
+    limiter= 'vanleer'
+    disallow_negatives = .false.
+    solver_str = "riemann"
  /
 
  $GRAVITY
  /
  $THERMAL
     thermal_active = .TRUE.
-    cool_model     = 'power_law'
+    cool_model     = 'piecewise_power_law'
+    cool_curve     = 'power_law'
+    cool_file      = ''
     heat_model     = 'G012'
-    alpha_cool     = 1.0
-    Teql           = 1000.0
-    Lambda0        = 1.0e-25
-    G0             = 1.0e-24
-    G1             = 1.0e-25
-    G2             = 1.0e-27
+    scheme         = 'EIS'
+    alpha_cool     = 1.5
+    Teq            = 1000.0
+    Lambda_0       = 1.0e-25
+    G0             = 1.0e-25
+    G1             = 0.0e-25 !40.44e-25
+    G2             = 0.0e-27
     x_ion          = 1.0
-    cfl_coolheat   = 0.1
+    cfl_coolheat   = 0.000001
+    isochoric      = 1
  /
  $PROBLEM_CONTROL
     d0     = 1.0
-    T0     = 1.0
+    T0     = 20000.0
     bx0    = 0.0
     by0    = 0.0
     bz0    = 0.0
-    pertamp = 1.0e-2
+    pertamp = 0.0e-3
  /
 
  $MULTIGRID_SOLVER

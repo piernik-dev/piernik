@@ -24,6 +24,5 @@ rm -rf ${RUNDIR} compare.log ${RUNDIR}/compare.log 2> /dev/null
     echo "Finish:  t = 2.0"
 ) 2> ${RUNDIR}/ts.err
 
-[ ! -z $YT ] && source $YT
 ./bin/gdf_distance ${RUNDIR}/moving_pulse_ts{1,2}_0002.h5 | tee ${RUNDIR}/compare.log
 [ $( grep "^Total difference between" ${RUNDIR}/compare.log | awk '{print $NF}' ) == 0 ] || exit 1

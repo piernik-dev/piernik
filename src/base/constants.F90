@@ -39,7 +39,7 @@ module constants
    public                                                ! QA_WARN no secrets are kept here
 
    ! precision
-   integer, parameter :: FP_REAL   = selected_real_kind(5)   ! this should be 32-bit single presicion
+   integer, parameter :: FP_REAL   = selected_real_kind(5)   ! this should be 32-bit single precision
    integer, parameter :: FP_DOUBLE = selected_real_kind(12)  ! this should be 64-bit double precision
    integer, parameter :: FP_EXT    = selected_real_kind(17)  ! this should be 80-bit extended precision
    integer, parameter :: FP_QUAD   = selected_real_kind(30)  ! this should be 128-bit quad precision (don't expect hardware support in CPU)
@@ -56,8 +56,11 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real, parameter :: three      = 3.0                   !< three
    real, parameter :: four       = 4.0                   !< four
+   real, parameter :: five       = 5.0
    real, parameter :: eight      = 8.0                   !< eight
+   real, parameter :: ten        = 10.0
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
@@ -65,6 +68,7 @@ module constants
    real, parameter :: thrq       = 3./4.                 !< three fourths
    real, parameter :: onesth     = 1./6.                 !< one sixth
    real, parameter :: oneeig     = 1./8.                 !< one eighth
+   real, parameter :: logten     = log(ten)              !< natural logarithm of ten
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -76,7 +80,7 @@ module constants
 
    ! enumerator for length/mass/time/velocity/magnetic field units
    enum, bind(C)
-      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_ENER
+      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_TEMP, U_ENER
    end enum
 
    ! irrational number approximations
@@ -86,7 +90,12 @@ module constants
    real, parameter :: e          = 2.718281828459045235  !< Napier's constant (base of Natural logarithm)
 
    ! some numerical representation extrema
-   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
+   !> Warning: the valuses of big and small should be used only when exceeding the range od single precision is not desired
+   !! e.g. when when using the default, 32-bit data output in .h5 files.
+   !! In most cases it should be much safer to use tiny(1.) and huge(1.) (either directly or slightly scaled).
+   !! Careless relying on SP huge and tiny may result in incorrect calculations when the involved values exceed single precision range.
+   !! Such incorrect calculation may happen e.g. for extremely big or small cell sizes, extreme timestep length etc.
+   real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number.
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
    real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
    real, parameter :: dirtyH1    = 10.**int(log10(big))  !< this "round" dirty value makes it easier to detect which call contaminated the data
@@ -94,6 +103,12 @@ module constants
    real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
+
+   !! Expected values of tiny, huge and epsilon for various lengths of real type (obtained from gfortran)
+   !! x=          0._4 (SP)        0._8 (DP, the default)    0._10 (ext precision)          0._16 (quad precision, software implementation)
+   !! tiny(x)     1.17549435E-38   2.2250738585072014E-308   3.36210314311209350626E-4932   3.36210314311209350626267781732175260E-4932
+   !! huge(x)     3.40282347E+38   1.7976931348623157E+308   1.18973149535723176502E+4932   1.18973149535723176508575932662800702E+4932
+   !! epsilon(x)  1.19209290E-07   2.2204460492503131E-016   1.08420217248550443401E-0019   1.92592994438723585305597794258492732E-0034
 
    ! dimensions
    enum, bind(C)
@@ -106,8 +121,8 @@ module constants
    !<
    enum, bind(C)
       enumerator :: NORMAL = 1    ! Normal direction
-      enumerator :: ORTHO1        ! First othogonal to the NORMAL (x -> y -> z -> x cycle)
-      enumerator :: ORTHO2        ! Second othogonal to the NORMAL
+      enumerator :: ORTHO1        ! First orthogonal to the NORMAL (x -> y -> z -> x cycle)
+      enumerator :: ORTHO2        ! Second orthogonal to the NORMAL
    end enum
    integer(kind=4), dimension(xdim:zdim, NORMAL:ORTHO2) :: pdims = &
       reshape([xdim, ydim, zdim, ydim, zdim, xdim, zdim, xdim, ydim], [ndims, ndims])
@@ -117,16 +132,17 @@ module constants
    end enum
 
    ! string lengths
-   integer, parameter :: cwdlen = 512                    !< allow for quite long CWD
-   integer, parameter :: fmt_len = 128                   !< length of format string
-   integer, parameter :: fnamelen = 128                  !< length of output filename
-   integer, parameter :: cbuff_len = 32                  !< length for problem parameters
-   integer, parameter :: units_len = 5 * cbuff_len       !< length for unit strings
-   integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
-   integer, parameter :: domlen = 16                     !< should be <= cbuff_len
-   integer, parameter :: dsetnamelen = cbuff_len         !< length of dataset name and state variable names in hdf files
-   integer, parameter :: idlen = 3                       !< COMMENT ME
-   integer, parameter :: singlechar = 1                  !< a single character
+   integer(kind=4), parameter :: cwdlen = 512               !< allow for quite long CWD
+   integer(kind=4), parameter :: fmt_len = 128              !< length of format string
+   integer(kind=4), parameter :: fnamelen = 128             !< length of output filename
+   integer(kind=4), parameter :: cbuff_len = 32             !< length for problem parameters
+   integer(kind=4), parameter :: msg_len = cbuff_len        !< length for message file paths; ToDo restore cwdlen length and handle it properly
+   integer(kind=4), parameter :: units_len = 5 * cbuff_len  !< length for unit strings
+   integer(kind=4), parameter :: fplen = 24                 !< length of buffer for printed FP or integer number
+   integer(kind=4), parameter :: domlen = 16                !< should be <= cbuff_len
+   integer(kind=4), parameter :: dsetnamelen = cbuff_len    !< length of dataset name and state variable names in hdf files
+   integer(kind=4), parameter :: idlen = 3                  !< COMMENT ME
+   integer(kind=4), parameter :: singlechar = 1             !< a single character
 
    ! simulation state
    enum, bind(C)
@@ -145,8 +161,8 @@ module constants
 
    ! grid geometry type
    enum, bind(C)
-       enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
-       enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
+      enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
+      enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
    end enum
 
    ! boundary conditions type
@@ -205,6 +221,14 @@ module constants
    character(len=dsetnamelen), parameter :: sgpm_n  = "sgpm"    !< previous field from self-gravity
    character(len=dsetnamelen), parameter :: gpot_n  = "gpot"    !< current sum of fields
    character(len=dsetnamelen), parameter :: hgpot_n = "hgpot"   !< sum of fields for half-step values
+#ifdef NBODY
+#ifdef NBODY_GRIDDIRECT
+   character(len=dsetnamelen), parameter :: nbgp_n  = "nbgp"    !< current gravity field from nbody
+#endif /* NBODY_GRIDDIRECT */
+   character(len=dsetnamelen), parameter :: gp1b_n  = "gp1b"    !< current gravity field from 1 body
+   character(len=dsetnamelen), parameter :: nbdn_n  = "nbdn"    !< density from particles
+   character(len=dsetnamelen), parameter :: prth_n  = "prth"    !< histogram of particles on the grid
+#endif /* NBODY */
    ! misc
    character(len=dsetnamelen), parameter :: wcu_n   = "wcu"     !< (resistivity) COMMENT ME
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
@@ -214,10 +238,11 @@ module constants
    character(len=dsetnamelen), parameter :: psih_n  = "psih"    !< auxiliary 3D array for divergence cleaning for half-step values
 
    ! timer names
-   character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
-   character(len=*), parameter :: tmr_hdf = "hdf_dump"       !< timer for I/O operations
-   character(len=*), parameter :: tmr_mg  = "multigrid"      !< timer for gravity multigrid solver
-   character(len=*), parameter :: tmr_mgd = "multigrid_diff" !< timer for gravityCR diffusion multigrid solver
+   character(len=*), parameter :: tmr_fu  = "fluid_update"       !< main timer used to measure fluid_update step
+   character(len=*), parameter :: tmr_hdf = "hdf_dump"           !< timer for I/O operations
+   character(len=*), parameter :: tmr_mg  = "multigrid"          !< timer for gravity multigrid solver
+   character(len=*), parameter :: tmr_mgd = "multigrid_diff"     !< timer for CR diffusion multigrid solver
+   character(len=*), parameter :: tmr_amr = "refinement_update"  !< timer for refinement updates
 
    ! Handling boundary cells in the output (AT stands for Area Type)
    enum, bind(C)
@@ -332,5 +357,30 @@ module constants
    integer(kind=4), dimension(ndims,ndims),       parameter :: idm  = reshape(int([ [1,0,0], [0,1,0], [0,0,1] ], kind=4),[ndims,ndims])   !< identity matrix 3x3
    integer(kind=4), dimension(ndims,ndims,LO:HI), parameter :: idm2 = reshape([idm,idm],[ndims,ndims,2_INT4])                             !< auxiliary matrix 3x3x2 based on identity matrix
    integer(kind=4), dimension(ndims),             parameter :: uv   = int([1,1,1], kind=4)                                                !< unity vector
+
+   ! PPP timer categories
+   enum, bind(C)                                      ! Event related to:
+      !enumerator :: PPP_MAIN  = int(B"000000000000", kind=4)  ! general, unmasked, always enabled
+      enumerator :: PPP_IO    = int(B"000000000001", kind=4)  ! I/O
+      enumerator :: PPP_MG    = int(B"000000000010", kind=4)  ! multigrid
+      enumerator :: PPP_GRAV  = int(B"000000000100", kind=4)  ! gravity
+      enumerator :: PPP_CR    = int(B"000000001000", kind=4)  ! cosmic rays
+      enumerator :: PPP_PART  = int(B"000000010000", kind=4)  ! particles
+      enumerator :: PPP_MPI   = int(B"000000100000", kind=4)  ! MPI
+      enumerator :: PPP_AMR   = int(B"000001000000", kind=4)  ! refinement
+      enumerator :: PPP_CG    = int(B"000010000000", kind=4)  ! single cg
+      enumerator :: PPP_MAG   = int(B"000100000000", kind=4)  ! magnetic field
+      enumerator :: PPP_PROB  = int(B"001000000000", kind=4)  ! problem
+      enumerator :: PPP_DEBUG = int(B"010000000000", kind=4)  ! debug
+      enumerator :: PPP_AUX   = int(B"100000000000", kind=4)  ! auxiliary (unused by default)
+   end enum
+
+   ! OS type
+   enum, bind(C)
+      enumerator :: LINUX
+      enumerator :: APPLE
+      !enumerator :: ANDROID
+      !enumerator :: WINDOWS
+   end enum
 
 end module constants

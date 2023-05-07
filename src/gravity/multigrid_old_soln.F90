@@ -46,18 +46,19 @@ module multigrid_old_soln
    type :: soln_history                       !< container for a set of several old potential solutions
       type(os_list_undef_t) :: invalid        !< a list of invalid slots ready to use
       type(os_list_t) :: old                  !< indices and time points of stored solutions
-    contains
+   contains
       procedure :: init_history               !< Allocate arrays, register fields
       procedure :: cleanup_history            !< Deallocate arrays
       procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.
       procedure :: store_solution             !< Manage old copies of potential for recycling.
       procedure :: sanitize                   !< Invalidate some stored solutions from the future i.e. when there was timestep retry
+      procedure :: sanitize_expanded          !< If the domain was recently expanded, initialize all history with zeroes
       procedure :: print                      !< Print the state of old solution list
       procedure :: unmark                     !< Reset restart flag of old soln
 #ifdef HDF5
       procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
       procedure :: read_os_attribute          !< Read old solutions identifiers, their times, and initialize history
-#endif
+#endif /* HDF5 */
    end type soln_history
 
    ! Namelist parameter
@@ -83,8 +84,6 @@ contains
 
       integer :: i
       character(len=dsetnamelen) :: hname
-
-      if (nold <= 0) return
 
       if (associated(this%old%latest) .or. associated(this%invalid%latest)) then
          write(msg, '(3a)') "[multigrid_old_soln:init_history] ", prefix," already initialized."
@@ -171,7 +170,6 @@ contains
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
-            if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
          case (O_INJ)
             call leaves%check_dirty(this%old%latest%i_hist, "history0")
             call leaves%q_copy(this%old%latest%i_hist, solution)
@@ -291,6 +289,26 @@ contains
 
    end subroutine sanitize
 
+!> \brief If the domain was recently expanded, initialize history with zeroes
+
+   subroutine sanitize_expanded(this)
+
+      use cg_list_dataop, only: expanded_domain
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be sanitized after domain expansion
+
+      type(old_soln), pointer :: os
+
+      os => this%old%latest
+      do while (associated(os))
+         call expanded_domain%set_q_value(os%i_hist, 0.)
+         os => os%earlier
+      enddo
+
+   end subroutine sanitize_expanded
+
 !> \brief Print the state of old solution list
 
    subroutine print(this)
@@ -340,7 +358,7 @@ contains
 !<
    subroutine mark_and_create_attribute(this, file_id)
 
-      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len, I_ONE
+      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len, I_ONE, I_TWO
       use hdf5,               only: HID_T
       use named_array_list,   only: qna
       use mpisetup,           only: master
@@ -352,19 +370,18 @@ contains
       class(soln_history), intent(in) :: this !< potential history to be registered for restarts
       integer(HID_T),      intent(in) :: file_id  !< File identifier
 
-      integer(kind=4) :: n, i, b
+      integer(kind=4) :: n, i, b, found
       type(old_soln), pointer :: os
       character(len=cbuff_len), allocatable, dimension(:) :: namelist
       real, allocatable, dimension(:) :: timelist
 
-      n = min(this%old%cnt(), ord_time_extrap + I_ONE)
-
-      if (n <= 0) return
+      n = max(min(this%old%cnt(), ord_time_extrap + I_ONE), I_TWO)  ! try to save at least 2 points to recover also sgpm
 
       allocate(namelist(n), timelist(n))
 
       ! set the flags to mark which fields should go to the restart
       i = 1
+      found = 0
       os => this%old%latest
       do while (associated(os))
          b = AT_IGNORE
@@ -372,15 +389,16 @@ contains
             b = AT_NO_B
             namelist(i) = qna%lst(os%i_hist)%name
             timelist(i) = os%time
+            found = found + I_ONE
          endif
          qna%lst(os%i_hist)%restart_mode = b
          i = i + I_ONE
          os => os%earlier
       enddo
 
-      if (master) then
-         call set_attr(file_id, trim(this%old%label) // "_names", namelist)
-         call set_attr(file_id, trim(this%old%label) // "_times", timelist)
+      if (master .and. found > 0) then
+         call set_attr(file_id, trim(this%old%label) // "_names", namelist(:found))
+         call set_attr(file_id, trim(this%old%label) // "_times", timelist(:found))
       endif
 
       deallocate(namelist)
@@ -458,7 +476,7 @@ contains
       call get_attr(file_id, trim(this%old%label) // "_times", timelist)
 
       if (associated(this%old%latest)) call die("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // "nonempty")
-      do i = ubound(namelist, 1), lbound(namelist, 1), -1  ! it is stored with most recent entriest first
+      do i = ubound(namelist, 1), lbound(namelist, 1), -1  ! it is stored with most recent entries first
          if (qna%exists(trim(namelist(i)))) then
             os => this%invalid%pick(qna%ind(namelist(i)))
             if (associated(os)) then

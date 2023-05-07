@@ -27,7 +27,7 @@
 #include "piernik.h"
 
 !>
-!! \brief This module contains list of grid containers that belong to a single level level.
+!! \brief This module contains list of grid containers that belong to a single level.
 !! Everything that relies on connection between levels is placed in cg_level_connected module.
 !<
 
@@ -75,7 +75,7 @@ module cg_level
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
       procedure          :: deallocate_patches                                   !< Throw out patches list
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
-      procedure          :: balance_old                                          !< Wrapper for rebalance_old
+      procedure          :: check_update_all                                     !< Check if it is necessary to call update_everything
       procedure          :: refresh_SFC_id                                       !< Recalculate SFC_id for grids, useful after domain expansion
 
    end type cg_level_t
@@ -229,9 +229,16 @@ contains
 
    subroutine update_everything(this)
 
+      use constants, only: PPP_AMR
+      use ppp,       only: ppp_main
+
       implicit none
 
       class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
+
+      character(len=*), parameter :: lue_label = "level_update_everything"
+
+      call ppp_main%start(lue_label, PPP_AMR)
 
       call this%update_decomposition_properties
       call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
@@ -240,6 +247,8 @@ contains
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
       call this%print_segments
+
+      call ppp_main%stop(lue_label, PPP_AMR)
 
    end subroutine update_everything
 
@@ -255,10 +264,12 @@ contains
    subroutine create(this)
 
       use cg_list_global,     only: all_cg
+      use constants,          only: PPP_AMR
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use dataio_pub,         only: die
       use mpisetup,           only: proc
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -267,12 +278,14 @@ contains
       integer                       :: i, p, ep
       integer(kind=8)               :: s
       type(grid_container), pointer :: cg
+      character(len=*), parameter   :: gc_label = "init_gc"
 
       ! Find how many pieces are to be added and recreate local gse and make room for new pieces in the gse array
       call this%dot%update_local(this%first, int(this%cnt + this%plist%p_count(), kind=4))
 
       call this%dot%is_consitent(this%first) ! check local consistency
 
+      call ppp_main%start(gc_label, PPP_AMR)
       ! create the new grid pieces
       i = this%cnt
       if (allocated(this%plist%patches)) then
@@ -292,6 +305,7 @@ contains
          enddo
          call this%plist%p_deallocate
       endif
+      call ppp_main%stop(gc_label, PPP_AMR)
 
       call this%sort_SFC
 
@@ -302,13 +316,10 @@ contains
    subroutine update_decomposition_properties(this)
 
       use constants,  only: base_level_id, pLOR
-      use dataio_pub, only: warn
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpisetup,   only: proc, master, piernik_MPI_Allreduce, proc
+      use mpisetup,   only: proc, piernik_MPI_Allreduce, proc
 
       implicit none
-
-      logical, save :: warned = .false.
 
       class(cg_level_t), intent(inout) :: this   !< object invoking type bound procedure
 
@@ -317,10 +328,6 @@ contains
       if (is_refined) then
          is_mpi_noncart = .true.
          is_multicg = .true.
-         if (master .and. .not. warned) then
-            call warn("[cg_level:update_decomposition_properties] Refinements are experimental")
-            warned = .true.
-         endif
       endif
       if (is_mpi_noncart) is_uneven = .true.
 
@@ -371,9 +378,9 @@ contains
 
    end subroutine add_patch_detailed
 
-!> \brief Wrapper for cg_list_rebalance%balance_old
+!> \brief Check if it is necessary to call update_everything
 
-   subroutine balance_old(this)
+   subroutine check_update_all(this)
 
       use constants, only: pLOR
       use mpisetup,  only: piernik_MPI_Allreduce
@@ -382,12 +389,11 @@ contains
 
       class(cg_level_t), intent(inout) :: this
 
-      call this%rebalance_old
       ! OPT: call this%update_gse inside this%update_everything can be quite long to complete
       call piernik_MPI_Allreduce(this%recently_changed, pLOR)
       if (this%recently_changed) call this%update_everything
 
-   end subroutine balance_old
+   end subroutine check_update_all
 
 !> \brief Recalculate SFC_id for grids, useful after domain expansion
 

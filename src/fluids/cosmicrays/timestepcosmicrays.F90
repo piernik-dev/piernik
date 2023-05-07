@@ -50,48 +50,51 @@ contains
 
       use cg_leaves,           only: leaves
       use cg_list,             only: cg_list_element
-      use constants,           only: big, pMIN
+      use constants,           only: pMIN
       use domain,              only: is_multicg
-      use grid_cont,           only: grid_container
-      use initcosmicrays,      only: def_dtcrs, K_crs_valid
+      use initcosmicrays,      only: def_dtcrs, K_crs_valid, diff_max_lev
       use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
-      use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
+#ifdef CRESP
+      use timestep_cresp,      only: dt_cre, cresp_timestep
+#endif /* CRESP */
 
       implicit none
 
       real, intent(inout)            :: dt
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
       logical, save                  :: frun = .true.
-      real                           :: dt_thiscg
 
-      if (.not.K_crs_valid) return
+#ifdef CRESP
+      call cresp_timestep
+      dt = min(dt, dt_cre)
+#endif /* CRESP */
+
+      if (.not. K_crs_valid) return
 
       if ((is_multicg .or. frun)) then
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
 
-         dt_crs = big
+         dt_crs = huge(1.)
          cgl => leaves%first
          do while (associated(cgl))
-            cg => cgl%cg
-
-            dt_thiscg = def_dtcrs
-            if (cg%dxmn * def_dtcrs < sqrt(big)) dt_thiscg = def_dtcrs * cg%dxmn**2
-            dt_crs = min(dt_crs, dt_thiscg)
-
+            if (cgl%cg%l%id <= diff_max_lev) &
+                 dt_crs = min(dt_crs, def_dtcrs * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
+         call piernik_MPI_Allreduce(dt_crs, pMIN)
 
 #ifdef MULTIGRID
          diff_dt_crs_orig = dt_crs
-         if (.not. (use_CRsplit .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+#ifdef CRESP
+         diff_dt_crs_orig = min(dt_crs, dt_cre)
+#endif /* CRESP */
+         if (.not. diff_explicit) dt_crs = diff_dt_crs_orig * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
-         call piernik_MPI_Allreduce(dt_crs, pMIN)
          frun = .false.
       endif
 

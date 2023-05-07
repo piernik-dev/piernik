@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import re
@@ -33,36 +33,6 @@ have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
 cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
 
-desc = '''
-EXAMPLE:
-> cd obj
-> ./newcompiler <settingsname>
-> make
-then copy files to your run directory (optional), e.g.
-> cp {piernik,problem.par} ../runs/<problem>
-> cd ../runs/<problem>
-
-to run PIERNIK:
-edit problem.par as appropriate, e.g.
-* add var names for visualisation => var(<number>)='<name>'
-* change domain dimensions/resolution => DOMAIN_SIZES
-* change domain divisions for parallel processing => MPI_BLOCKS
-* change frequency of data dumps => dt_* entries
-* etc.
-execute
-> ./piernik
-or for <np> parallel processes
-> mpirun -n <np> ./piernik
-
-HEALTH WARNINGS:
-* the contents of \'./obj\' and \'./runs/<problem>\' are overwritten
-  each time setup <problem>\' is run, unless you specify -obj <postfix>
-  in which case the contents of runs/<problem>_<postfix> will be only updated
-* by default PIERNIK will read the configuration file \'problem.par\' from the
-working directory, to use alternative configurations execute
-\'./piernik <directory with an alternative problem.par>\'
-Enjoy your work with the Piernik Code!
-'''
 
 head_block1 = '''ifneq (,$(findstring h5pfc, $(F90)))
 LIBS += ${STATIC} -lz ${DYNAMIC}
@@ -98,15 +68,25 @@ define ECHO_CC
 endef
 endif
 
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) -c $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_allgatherv_bug.F90 && $(F90) $(LDFLAGS) -o mpi_allgatherv_bug mpi_allgatherv_bug.o $(LIBS) && ./mpi_allgatherv_bug || echo -DFORBID_F08)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -DNO_ALL_MPI_FUNCTIONS_AVAILABLE)
+
 all: env.dat print_setup $(PROG)
 
-$(PROG): $(OBJS)
+check_mpi:
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90
+\t@$(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90
+
+$(PROG): $(OBJS) check_mpi
 ifeq ("$(SILENT)","1")
 \t@$(ECHO) $(PNAME)FC = $(F90) $(CPPFLAGS) $(F90FLAGS) -c
 \t@$(ECHO) $(PNAME)CC = $(CC) $(CPPFLAGS) $(CFLAGS) -c
 endif
 \t@$(ECHO) $(F90) $(LDFLAGS) -o $@ '*.o' $(LIBS)
 \t@$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+\t@touch mpi_f08.o mpi.o a.out mpi_allgatherv_bug mpi_allgatherv_bug.o
+\t@$(RM) mpi_f08.o mpi.o a.out mpi_allgatherv_bug mpi_allgatherv_bug.o
 \t@AO1=`mktemp _ao_XXXXXX`;\\
 \tAO2=`mktemp _ao_XXXXXX`;\\
 \t$(ECHO) $(OBJS) | tr ' ' '\\n' | sort > $$AO1;\\
@@ -129,12 +109,28 @@ head_block2 = '''
 \t@$(ECHO) "Recent history:" >> env.dat
 \t@git log -5 --decorate --graph 2> /dev/null | sed -e 's/"//g' >> env.dat
 
+os_detect.F90:
+\t@( OS=INVALID; \\
+\tgrep -q LINUX constants.F90 && gcc -dM -E - </dev/null | grep -q  __linux__ && OS=LINUX; \\
+\tgrep -q APPLE constants.F90 && gcc -dM -E - </dev/null | grep -q  __APPLE__ && OS=APPLE; \\
+\t$(ECHO) "module os_detect"; \\
+\t$(ECHO) "   implicit none"; \\
+\t$(ECHO) "   public"; \\
+\t$(ECHO) "contains"; \\
+\t$(ECHO) "   integer function which_os()"; \\
+\t$(ECHO) "      use constants, only: "$$OS; \\
+\t$(ECHO) "      implicit none"; \\
+\t$(ECHO) "      which_os = "$$OS; \\
+\t$(ECHO) "   end function which_os"; \\
+\t$(ECHO) "end module os_detect" ) > os_detect.F90; \\
+\t$(ECHO) 'generated os_detect.F90'
+
 version.F90: env.dat
 \t@( $(ECHO) "module version"; \\
 \t$(ECHO) "   implicit none"; \\
 \t$(ECHO) "   public"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
-\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
+\tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s+10"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
 \tawk '{printf("      env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
 \t$(ECHO) "   end subroutine init_version"; \\
 \t$(ECHO) "end module version" ) > version_.F90; \\
@@ -168,18 +164,18 @@ dep.png: dep.dot
 '''
 
 
-def striplist(l):
-    return([x.strip() for x in l])
+def striplist(ll):
+    return ([x.strip() for x in ll])
 
 
-def strip_leading_path(l):
-    return([x.split('/')[-1] for x in l])
-#  return([x.rpartition('/')[2] for x in l])
+def strip_leading_path(ll):
+    return ([x.split('/')[-1] for x in ll])
+#  return ([x.rpartition('/')[2] for x in ll])
 
 
-def remove_suf(l):
-    return([x.split('.')[0] for x in l])
-#  return([x.partition('.')[0] for x in l])
+def remove_suf(ll):
+    return ([x.split('.')[0] for x in ll])
+#  return ([x.partition('.')[0] for x in ll])
 
 
 def pretty_format(fname, list, col):
@@ -187,14 +183,14 @@ def pretty_format(fname, list, col):
     sl = True
     str = fname
     for item in list:
-        if(len(str) + len(item) + 2 > int(col)):
+        if (len(str) + len(item) + 2 > int(col)):
             out += str + "\\\n"
             str = "\t"
             sl = False
         str = str + item + " "
-    if(str != "\t"):
+    if (str != "\t"):
         out += str
-    if(sl):
+    if (sl):
         return str.rstrip("\\\n") + "\n"
     else:
         return out.rstrip("\\\n") + "\n"
@@ -204,11 +200,11 @@ def pretty_format_suf(fname, list, suf, col):
     out = fname + '\n'
     str = "\t"
     for item in list:
-        if(len(str) + len(item) + len(suf) + 2 > int(col)):
+        if (len(str) + len(item) + len(suf) + 2 > int(col)):
             out += str + "\\\n"
             str = "\t"
         str = str + item + suf + " "
-    if(str != "\t"):
+    if (str != "\t"):
         out += str
     return out.rstrip("\\\n") + "\n"
 
@@ -230,8 +226,8 @@ def list_info(dir, indent):
     try:
         file = open(dir + "/info", "r")
         il = 0
-        for l in file:
-            tab.append([name if (il == 0) else "", l.strip()])
+        for ll in file:
+            tab.append([name if (il == 0) else "", ll.strip()])
             il += 1
         if (il == 0):
             tab.append([name, '\033[93m' + "empty info" + '\033[0m'])
@@ -247,9 +243,9 @@ def list_info(dir, indent):
 
 def setup_piernik(data=None):
     options, args, all_args, sys_args = piernik_parse_args(data)
-    if(options.recycle_cmd):
-        if(pickle_avail):
-            if(os.path.isfile('.lastsetup')):
+    if (options.recycle_cmd):
+        if (pickle_avail):
+            if (os.path.isfile('.lastsetup')):
                 output = open('.lastsetup', 'rb')
                 options = pickle.load(output)
                 args = pickle.load(output)
@@ -259,19 +255,19 @@ def setup_piernik(data=None):
         else:
             print("Can't read last setup. No Pickle available!")
     else:
-        if(pickle_avail):
+        if (pickle_avail):
             output = open('.lastsetup', 'wb')
             pickle.dump(options, output)
             pickle.dump(args, output, -1)
             output.close()
 
-    if(options.verbose):
+    if (options.verbose):
         print("Setup options:")
         print(options)
         print("Setup arguments:")
         print(args)
 
-    if(options.show_problems):
+    if (options.show_problems):
         tp = list_info("problems", -1)
         maxlen = 0
         for p in tp:
@@ -279,10 +275,10 @@ def setup_piernik(data=None):
         for p in tp:
             print("%-*s : %s" % (maxlen, p[0], p[1]))
 
-    if(options.show_units):
+    if (options.show_units):
         print(get_stdout("grep uses ./src/base/units.F90"))
 
-    if(options.show_units or options.show_problems):
+    if (options.show_units or options.show_problems):
         sys.exit()
 
     if (len(args) < 1):
@@ -301,27 +297,27 @@ def setup_piernik(data=None):
 
     # parse cppflags
     cppflags = ""
-    if(options.cppflags):
+    if (options.cppflags):
         for flag_grp in options.cppflags:
             for flag in flag_grp.split(","):
                 if (len(flag) > 0):
                     cppflags += ' -D' + flag
 
     # parse compiler
-    if(not re.search('\.in$', options.compiler)):
+    if (not re.search('\.in$', options.compiler)):
         compiler = options.compiler + '.in'
     else:
         compiler = options.compiler
 
     objdir = 'obj'
     rundir = 'runs/' + os.path.basename(args[0])
-    if(len(options.objdir) > 0):
+    if (len(options.objdir) > 0):
         objdir += '_' + options.objdir
         rundir += '_' + options.objdir + '/'
     else:
         rundir += '/'
 
-    if(os.path.isdir(objdir)):
+    if (os.path.isdir(objdir)):
         shutil.rmtree(objdir)
     os.mkdir(objdir)
 
@@ -336,9 +332,9 @@ def setup_piernik(data=None):
     f90files = []
     allfiles = []
     for f in DirectoryWalker('src'):
-        if(is_f90.search(f)):
+        if (is_f90.search(f)):
             f90files.append(f)
-        if(is_header.search(f)):
+        if (is_header.search(f)):
             allfiles.append(f)
 
     '''Take subproblem files, ignore subdirectories,
@@ -353,9 +349,9 @@ def setup_piernik(data=None):
         pdir = os.path.dirname(pdir)
     for ff in probfiles:
         f = probfiles[ff]
-        if(is_f90.search(f)):
+        if (is_f90.search(f)):
             f90files.append(f)
-        if(is_header.search(f) or ff == "piernik.def" or ff == options.param):
+        if (is_header.search(f) or ff == "piernik.def" or ff == options.param):
             allfiles.append(f)
 
     piernikdef = ""
@@ -389,7 +385,7 @@ def setup_piernik(data=None):
     cmd += " && cpp %s -dM -I%s \"%s\" && rm \"%s\"" % (
         cppflags, os.path.dirname(piernikdef), foo_path, foo_path)
     defines = get_stdout(cmd).rstrip().split("\n")
-    if(options.verbose):
+    if (options.verbose):
         print(cmd)
         print("Defined symbols:")
         for defin in defines:
@@ -397,11 +393,12 @@ def setup_piernik(data=None):
 
     our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match, defines)]
     our_defs.append("ANY")
-    if(options.verbose):
+    if (options.verbose):
         print("our_defs:")
         print(our_defs)
 
     files = ['src/base/defines.c']
+
     uses = [[]]
     incl = ['']
     module = dict()
@@ -452,14 +449,14 @@ def setup_piernik(data=None):
 
         keys_logic1 = len(
             keys) == 0 or (len(keys) == 1 and keys[0] in our_defs)
-        if(len(keys) == 3):
+        if (len(keys) == 3):
             keys_logic2 = (
                 (keys[1] == "&&" and
                  (keys[0] in our_defs and keys[2] in our_defs)) or
                 (keys[1] == "||" and (keys[0] in our_defs or
                                       keys[2] in our_defs)))
 
-        if(keys_logic1 or keys_logic2):
+        if (keys_logic1 or keys_logic2):
             # workaround the fact that we're using cpp and some of use clauses may depend on __INTEL_COMPILER
             cmd = "cpp %s -I%s -I%s -I%s %s" % (cppflags + " -D__INTEL_COMPILER", probdir, 'src/base', os.path.dirname(piernikdef), f)
             # Scan preprocessed files
@@ -481,7 +478,7 @@ def setup_piernik(data=None):
     allfiles.extend(files)
 
     for f in allfiles:
-        if(options.hard_copy):
+        if (options.hard_copy):
             shutil.copy(f, objdir)
             # Perhaps we should check for overwriting duplicates here too
         else:
@@ -492,7 +489,14 @@ def setup_piernik(data=None):
                 print("Possible duplicate link or a name clash :", f)
                 raise
 
-    if(options.param != 'problem.par'):
+    if (options.hard_copy):
+        otdir = objdir + "/tests/"
+        os.mkdir(otdir)
+        ctdir = "compilers/tests/"
+        for f in os.listdir(ctdir):
+            shutil.copy(ctdir + f, otdir)
+
+    if (options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 
     makefile_head = open('compilers/' + compiler, 'r').readlines()
@@ -505,13 +509,18 @@ def setup_piernik(data=None):
     stripped_files = strip_leading_path(files)
     stripped_files_v = strip_leading_path(files)
 
-    stripped_files.append("version.F90")   # adding version
-    incl.append('')
-    uses.append([])
-    module.setdefault('version', 'version')
-    known_external_modules = (
-        "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl",
-        "ifposix", "ifport", "ifcore")  # Ugly trick: these modules are detected by -D__INTEL_COMPILER
+    for f in ("version", "os_detect"):  # adding version.F90 and os_detect.F90, which are generated by the Makefile
+        stripped_files.append(f + ".F90")
+        incl.append('')
+        if f == "os_detect":
+            uses.append(["constants"])
+        else:
+            uses.append([])
+        module.setdefault(f, f)
+
+    known_external_modules = ["hdf5", "h5lt", "iso_c_binding", "iso_fortran_env", "fgsl",
+                              "ifposix", "ifport", "ifcore"]  # Ugly trick: these modules are detected by -D__INTEL_COMPILER
+    known_external_modules.append("mpi_f08" if "-DMPIF08" in cppflags.split() else "mpi")
 
     files_to_build = remove_suf(stripped_files)
 
@@ -527,22 +536,19 @@ def setup_piernik(data=None):
     m.write("\nCPPFLAGS += %s\n" % cppflags)
     if (isinstance(options.f90flags, str)):
         m.write("\nF90FLAGS += %s\n" % options.f90flags)
-    if("PGPLOT" in our_defs):
+    if ("PGPLOT" in our_defs):
         m.write("LIBS += -lpgplot\n")
-    if("SHEAR" in our_defs or "MULTIGRID" in our_defs):
+    if ("SHEAR" in our_defs or "MULTIGRID" in our_defs):
         if ("NO_FFT" not in our_defs):
             m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
         m.write("CPPFLAGS += $(shell pkg-config --libs fftw3 2> /dev/null || echo '-DNO_FFT')\n")
-    if("PIERNIK_OPENCL" in our_defs):
+    if ("PIERNIK_OPENCL" in our_defs):
         m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
         m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
-    if(options.laconic):
-        m.write("SILENT = 1\n\n")
-    else:
-        m.write("SILENT = 0\n\n")
-    m.write(head_block1)
-    m.write(
-        "\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
+
+    m.write("SILENT = %d\n\n" % (1 if options.laconic else 0))
+    m.write(head_block1.replace("./compilers", "") if options.hard_copy else head_block1)
+    m.write("\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
     m.write(head_block2)
 
     for i in range(0, len(files_to_build)):
@@ -550,7 +556,7 @@ def setup_piernik(data=None):
         if (files_to_build[i] == "defines"):
             deps += "piernik.def "
         d = ""
-        if(len(incl[i]) > 0):
+        if (len(incl[i]) > 0):
             d += ' '.join(incl[i]) + ' '
         for j in uses[i]:
             if j in module:
@@ -652,9 +658,8 @@ def setup_piernik(data=None):
         if (mp):
             makejobs = "-j%i" % multiprocessing.cpu_count()
         makecmd = "make %s -C %s" % (makejobs, objdir)
-        if(sp.call([makecmd], shell=True) != 0):
-            sys.exit('\033[91m' + "It appears that '%s' crashed. \
-    Cannot continue." % makecmd + '\033[0m')
+        if (sp.call([makecmd], shell=True) != 0):
+            sys.exit('\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m')
 
     try:
         os.makedirs(rundir)
@@ -663,7 +668,7 @@ def setup_piernik(data=None):
             print('\033[93m' + "Found old run." + '\033[0m' +
                   " Making copy of old 'problem.par'.")
             try:
-                if(os.path.isfile(rundir + 'problem.par')):
+                if (os.path.isfile(rundir + 'problem.par')):
                     shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
             except (IOError, OSError):
                 print('\033[91m' +
@@ -674,14 +679,14 @@ def setup_piernik(data=None):
                 print('\033[93m' + "Found old run." + '\033[0m' +
                       " Preserving copy of old 'problem.par'.")
         try:
-            if(os.path.isfile(rundir + 'piernik')):
+            if (os.path.isfile(rundir + 'piernik')):
                 os.remove(rundir + 'piernik')
         except (IOError, OSError):
             print('\033[91m' +
                   "Problem with removing old 'piernik' executable from '%s'." %
                   rundir.rstrip('/') + '\033[0m')
         try:
-            if(os.path.isfile(rundir + 'piernik.def')):
+            if (os.path.isfile(rundir + 'piernik.def')):
                 os.remove(rundir + 'piernik.def')
         except (IOError, OSError):
             print('\033[91m' +
@@ -717,6 +722,17 @@ def setup_piernik(data=None):
               rundir.rstrip('/') + '\033[0m')
         fatal_problem = True
 
+    # Add a link to original problem directory to make it easier to access auxiliary files stored there
+    if options.link_problem:
+        orig_prob_link = rundir + "problem"
+        if (os.path.islink(orig_prob_link)):
+            os.remove(orig_prob_link)
+        try:
+            os.symlink("../../" + probdir, orig_prob_link)
+        except FileExistsError:
+            print('\033[91m' + "Cannot create the link to original problem because '" + orig_prob_link + "' exists (and is not a symbolic link)" + '\033[0m')
+            fatal_problem = True
+
     if (options.nocompile):
         print("\033[93mCompilation of '%s' skipped on request." % args[0] +
               """
@@ -731,7 +747,7 @@ def setup_piernik(data=None):
             makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
         if re.search(r"Circular", output[1].decode("ascii")):
             print('\033[91m' +
-                  "Circular dependencies foud in '%s'." % objdir + '\033[0m')
+                  "Circular dependencies found in '%s'." % objdir + '\033[0m')
     else:
         if (fatal_problem):
             print('\033[93m' +
@@ -807,6 +823,9 @@ runs/<problem>_POSTFIX rather than runs/<problem> .""")
 
     parser.add_option("-k", "--keeppar", action="store_true", dest="keep_par",
                       help="Do not override existing problem.par file with the default one.")
+
+    parser.add_option("--linkproblem", action="store_true", dest="link_problem",
+                      help="Make a symbolic link to the original problem directory in the run directory.")
 
     if data is None:
         all_args = []

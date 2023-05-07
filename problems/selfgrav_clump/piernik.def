@@ -1,13 +1,13 @@
+#if !defined LOCAL_FR_SPEED
+#  define GLOBAL_FR_SPEED
+#endif
+
+#undef ISO
+
 #ifndef IONIZED
 #  define NEUTRAL
 #endif /* !IONIZED */
 
 #undef  MAGNETIC
-
-#undef ISO
-
-#if !defined LOCAL_FR_SPEED
-#  define GLOBAL_FR_SPEED
-#endif
 
 #define SELF_GRAV

@@ -51,12 +51,10 @@ contains
 
       implicit none
 
-!      if (all(cg%bnd(:,:) /= BND_USER)) then
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
 #endif /* MAGNETIC */
-!      endif
 
    end subroutine all_bnd
 
@@ -64,14 +62,20 @@ contains
 
       use cg_leaves,        only: leaves
       use named_array_list, only: qna
+      use ppp,              only: ppp_main
 
       implicit none
 
       integer(kind=4) :: iq
+      character(len=*), parameter :: abq_label = "all_boundaries_vital_q"
+
+      call ppp_main%start(abq_label)
 
       do iq = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(iq)%vital) call leaves%leaf_arr3d_boundaries(iq)
       enddo
+
+      call ppp_main%stop(abq_label)
 
    end subroutine all_bnd_vital_q
 
@@ -82,6 +86,7 @@ contains
       use constants,          only: xdim, zdim
       use domain,             only: dom
       use named_array_list,   only: wna
+      use ppp,                only: ppp_main
 
       implicit none
 
@@ -89,10 +94,13 @@ contains
       logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4)                     :: d
+      character(len=*), parameter :: abf_label = "all_fluid_boundaries"
 
       if (present(dir)) then
          if (.not. dom%has_dir(dir)) return
       endif
+
+      call ppp_main%start(abf_label)
 
 !      call finest%level%restrict_to_base
 
@@ -106,6 +114,8 @@ contains
          enddo
       endif
 
+      call ppp_main%stop(abf_label)
+
    end subroutine all_fluid_boundaries
 
 #ifdef MAGNETIC
@@ -113,29 +123,25 @@ contains
 
       use cg_leaves,        only: leaves
 !!$      use cg_list_global,   only: all_cg
-      use constants,        only: xdim, zdim, psi_n, BND_INVALID
+      use constants,        only: xdim, zdim, psi_n, BND_INVALID, PPP_MAG
       use domain,           only: dom
       use global,           only: psi_bnd
       use named_array_list, only: wna, qna
+      use ppp,              only: ppp_main
 
       implicit none
 
       integer(kind=4) :: dir
+      character(len=*), parameter :: abm_label = "all_mag_boundaries"
 
-!!$      do dir = xdim, zdim
-!!$         if (dom%has_dir(dir)) then
-!!$            call all_cg%internal_boundaries_4d(wna%bi, dir=dir) ! should be more selective (modified leaves?)
-!!$            if (qna%exists(psi_n)) call all_cg%internal_boundaries_3d(qna%ind(psi_n), dir=dir)
-!!$         endif
-!!$      enddo
+      call ppp_main%start(abm_label, PPP_MAG)
 
-      call leaves%leaf_arr4d_boundaries(wna%bi)
-      if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
-
-      ! Do not fuse these loops
       do dir = xdim, zdim
          if (dom%has_dir(dir)) call leaves%bnd_b(dir)
       enddo
+      call leaves%leaf_arr4d_boundaries(wna%bi)
+      if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
+
       if (qna%exists(psi_n)) then
          if (psi_bnd == BND_INVALID) then
             call leaves%external_boundaries(qna%ind(psi_n))
@@ -143,6 +149,8 @@ contains
             call leaves%external_boundaries(qna%ind(psi_n), bnd_type=psi_bnd)
          endif
       endif
+
+      call ppp_main%stop(abm_label, PPP_MAG)
 
    end subroutine all_mag_boundaries
 #endif /* MAGNETIC */

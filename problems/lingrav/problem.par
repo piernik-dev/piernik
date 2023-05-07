@@ -50,7 +50,6 @@
     cfl          = 0.9
     smalld       = 1.e-5
     smallei      = 1.e-4
-    integration_order = 2
     limiter= 'vanleer'
   /
 
@@ -61,7 +60,7 @@
  /
 
  $RESISTIVITY
-    cfl_resist   =    0.9   ! Courant's number for resistiwity
+    cfl_resist   =    0.9   ! Courant's number for resistivity
     eta_0        =  100.0   ! uniform resistivity
     eta_1        =    0.0   ! anomalous resistivity, works above j_crit
     j_crit       = 1000.0   ! critical value of current

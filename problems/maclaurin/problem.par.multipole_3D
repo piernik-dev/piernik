@@ -84,9 +84,9 @@
     grav_bnd_str  = "isolated"
     mpole_solver = "3D"  ! this is necessary to get 3D potental estimate from multipoles in "mpole" field
                          ! "errm" and "rellerr" depend on "mpole"
-!    level_3D = -1       ! coarsening for the "3D" multipole integrator
-    res_factor = 0.3    ! radial resolution of the multipole distribution near the origin
-!    size_factor = 1.    ! enlargement factor to improve the accuaracy of multipoles at large distances
+!    mpole_level = -1     ! coarsening for the "3D" multipole integrator
+    res_factor = 0.3     ! radial resolution of the multipole distribution near the origin
+!    size_factor = 1.     ! enlargement factor to improve the accuaracy of multipoles at large distances
 !    lmax = 64
 !    norm_tol = 1e-10
  /

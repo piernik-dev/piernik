@@ -42,6 +42,7 @@ module timestep_retry
    ! for simplicity create an array of pointers to qna and wna
    type :: na_p
       class(na_var_list), pointer :: p => null()
+      integer, allocatable, dimension(:) :: indices
    end type na_p
    type(na_p), dimension(2) :: na_lists  ! currently we have only 2 such lists, fna may join in the future
 
@@ -82,14 +83,17 @@ contains
 
    subroutine repeat_fluidstep
 
+      use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE
+      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE, INVALID
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
+      use global,           only: dt, dt_full, t, t_saved, max_redostep_attempts, nstep, nstep_saved, dt_cur_shrink, repetitive_steps, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
+      use ppp,              only: ppp_main
+      use repeatstep,       only: repeat_step
       use user_hooks,       only: user_reaction_to_redo_step
 #ifdef RANDOMIZE
       use randomization,    only: randoms_redostep
@@ -101,23 +105,23 @@ contains
       integer(kind=4)                :: no_hist_count
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
-      integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
+      character(len=*), parameter :: rs_label = "repeat_step_"
 
-      if (.not.repeat_step) return
+      if (.not. repetitive_steps) return
 
       call restart_arrays
 
-      if (cfl_violated) then
+      if (repeat_step()) then
          tstep_attempt = tstep_attempt + I_ONE
-         if (tstep_attempt > max_attempts) then
-            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_attempts, " (hardcoded limit)"
+         if (tstep_attempt > max_redostep_attempts) then
+            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_redostep_attempts, " (max_redostep_attempts)"
             call die(msg)
          endif
          write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
          if (master) call warn(msg)
          t = t_saved
          nstep = nstep_saved
-         dt = dtm * dt_shrink
+         dt = dt_full * dt_cur_shrink
          call reset_freezing_speed
          call downgrade_magic_mass
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
@@ -127,27 +131,55 @@ contains
          t_saved = t
       endif
 #ifdef RANDOMIZE
-      call randoms_redostep(cfl_violated)
+      call randoms_redostep(repeat_step())
 #endif /* RANDOMIZE */
 
+      ! refresh na_lists(:)%indices
+      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+         associate (na => na_lists(j)%p)
+            allocate(na_lists(j)%indices(size(na%lst)))
+            do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
+               if (na%lst(i)%restart_mode > AT_IGNORE) then
+                  rname = get_rname(na%lst(i)%name)
+                  select type(na)
+                     type is (na_var_list_q)
+                        na_lists(j)%indices(i) = qna%ind(rname)
+                     type is (na_var_list_w)
+                        na_lists(j)%indices(i) = wna%ind(rname)
+                     class default
+                        call die("[timestep_retry:repeat_fluidstep] unknown named array list type (rname)")
+                  end select
+               else
+                  na_lists(j)%indices(i) = INVALID
+               endif
+            enddo
+         end associate
+      enddo
+
+      if (repeat_step()) then
+         call ppp_main%start(rs_label // "reverting")
+      else
+         call ppp_main%start(rs_label // "saving")
+      endif
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
-         ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
+         call cgl%cg%costs%start
 
+         ! No need to take care of any cgl%cg%q arrays as long as gravity is extrapolated from the previous timestep.
          ! error checking should've been done in restart_arrays, called few lines earlier
          do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
             associate (na => na_lists(j)%p)
                do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
                   if (na%lst(i)%restart_mode > AT_IGNORE) then
                      rname = get_rname(na%lst(i)%name)
-                     if (cfl_violated) then
+                     if (repeat_step()) then
                         if (cgl%cg%has_previous_timestep) then
                            select type(na)  !! ToDo: unify qna and wna somehow at least in the grid_container
                               type is (na_var_list_q)
-                                 cgl%cg%q(i)%arr = cgl%cg%q(qna%ind(rname))%arr
+                                 cgl%cg%q(i)%arr = cgl%cg%q(na_lists(j)%indices(i))%arr
                               type is (na_var_list_w)
-                                 cgl%cg%w(i)%arr = cgl%cg%w(wna%ind(rname))%arr
+                                 cgl%cg%w(i)%arr = cgl%cg%w(na_lists(j)%indices(i))%arr
                               class default
                                  call die("[timestep_retry:repeat_fluidstep] unknown named array list type ->")
                            end select
@@ -157,9 +189,9 @@ contains
                      else
                         select type(na)
                            type is (na_var_list_q)
-                              cgl%cg%q(qna%ind(rname))%arr = cgl%cg%q(i)%arr
+                              cgl%cg%q(na_lists(j)%indices(i))%arr = cgl%cg%q(i)%arr
                            type is (na_var_list_w)
-                              cgl%cg%w(wna%ind(rname))%arr = cgl%cg%w(i)%arr
+                              cgl%cg%w(na_lists(j)%indices(i))%arr = cgl%cg%w(i)%arr
                            class default
                               call die("[timestep_retry:repeat_fluidstep] unknown named array list type <-")
                         end select
@@ -169,8 +201,16 @@ contains
                enddo
             end associate
          enddo
+
+         call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
       enddo
+      if (repeat_step()) then
+         call ppp_main%stop(rs_label // "reverting")
+      else
+         call ppp_main%stop(rs_label // "saving")
+      endif
+
       call piernik_MPI_Allreduce(no_hist_count, pSUM)
       if (master .and. no_hist_count/=0) then
          write(msg, '(a,i6,a)')"[timestep_retry:repeat_fluidstep] Error: not reverted: ", no_hist_count, " grid pieces."
@@ -178,6 +218,10 @@ contains
          ! AMR domains require careful treatment of timestep retries.
          ! Going back past rebalancing or refinement change would require updating whole AMR structure, not just field values.
       endif
+
+      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+         deallocate(na_lists(j)%indices)
+      enddo
 
    end subroutine repeat_fluidstep
 

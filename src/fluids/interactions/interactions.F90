@@ -46,7 +46,7 @@ module interactions
    real, allocatable, dimension(:,:)          :: collfaq            !< flind%fluids x flind%fluids array of collision factors
    real                                       :: collision_factor   !< collision factor
    real                                       :: cfl_interact       !< Courant factor for %interactions
-   real                                       :: dragc_gas_dust     !< Drag cooefficient \deprecated remove me
+   real                                       :: dragc_gas_dust     !< Drag coefficient \deprecated remove me
    real                                       :: grain_size         !< size of dust grains in cm
    real                                       :: grain_dens         !< density of dust grains in g/cm^3
    real                                       :: grain_dens_x_size  !< size times density of dust grains in g/cm^2
@@ -88,7 +88,7 @@ contains
    subroutine init_interactions
 
       use constants,     only: PIERNIK_INIT_FLUIDS, cbuff_len
-      use dataio_pub,    only: die, code_progress, nh      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: die, code_progress, nh
       use fluidindex,    only: flind
       use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, piernik_MPI_Bcast
       use units,         only: cm, gram
@@ -203,7 +203,7 @@ contains
          enddo
          ! has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions, don't needed in implicit solver??
       else
-         if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+         if (has_interactions .and. .not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
          warned = .true.
       endif
 
@@ -233,7 +233,7 @@ contains
             end select
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
          else
-            if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+            if (has_interactions .and. .not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
             warned = .true.
          endif
       endif
@@ -255,6 +255,7 @@ contains
 
    end function fluid_interactions_dummy
 
+#ifndef BALSARA
    function fluid_interactions_aero_drag(dens, velx) result(acc)
 
       use fluidindex,       only: flind
@@ -285,6 +286,7 @@ contains
       acc(:, flind%neu%pos) = -acc(:, flind%dst%pos) * dens(:, flind%dst%pos) / dens(:, flind%neu%pos)
 
    end function fluid_interactions_aero_drag_ep
+#endif /* !BALSARA */
 
 !>
 !! \details
@@ -433,7 +435,7 @@ contains
             call die("[interactions:balsara_based_interactions_function] Unsupported substep")
          end select
       enddo
-      ! usrc should be used to update u1 in all_sources procedure: u1 = u1 + rk2factror*usrc*dt
+      ! usrc should be used to update u1 in internal_sources procedure: u1 = u1 + rk2factror*usrc*dt
       return
    end function balsara_based_interactions_function
 
@@ -458,6 +460,7 @@ contains
 
    end subroutine update_grain_size
 
+#ifndef BALSARA
 !>
 !! \brief Function that computes contribution from a drag force for all fluids
 !! \param dens density flind%fluids x ncells array
@@ -484,6 +487,7 @@ contains
       enddo
 
    end function dragforce
+#endif /* !BALSARA */
 
 !>
 !! \brief interface between sources and fluid_interactions

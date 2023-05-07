@@ -52,7 +52,7 @@ contains
       integer(kind=4)               :: i
       type(grid_container), pointer :: cg
 
-      if (is_multicg) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
+      if (is_multicg) call die("[magboundaries:bnd_a] multiple grid pieces per processor not implemented yet") !nontrivial MPI_Waitall
 
       if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_a] is_mpi_noncart is not implemented") !procn, psize
       call die("[magboundaries:bnd_a] Unimplemented")
@@ -182,13 +182,14 @@ contains
       implicit none
 
       integer(kind=4),                   intent(in)  :: bndcase
-      integer(kind=4),                   intent(in)  :: ndirb   !< cg%{nxb,nyb,nzb} depanding on the current direction
+      integer(kind=4),                   intent(in)  :: ndirb   !< cg%{nxb,nyb,nzb} depending on the current direction
       integer(kind=4), dimension(LO:HI), intent(out) :: edge    !< index of the left and right edge of physical domain for emf
       integer(kind=4), dimension(LO:HI), intent(out) :: nbcells !< number of cells in a loop at left and right boundaries
       integer(kind=4), dimension(LO:HI), intent(out) :: rrbase  !< COMMENT ME
       real,                              intent(out) :: bndsign !< 1. or -1. to change the sign or not
       logical,                           intent(out) :: zndiff  !< COMMENT ME
 
+      bndsign = huge(1.0)
       select case (bndcase)
          case (1)
             edge(LO)    = dom%nb

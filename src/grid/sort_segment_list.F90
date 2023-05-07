@@ -72,7 +72,7 @@ module sort_segment_list
       procedure :: l_bound          !< Get lower bound of the list
       procedure :: u_bound          !< Get upper bound of the list
       procedure :: assign_element   !< Make an assignment
-      procedure :: compare_elements !< Make a comparision
+      procedure :: compare_elements !< Make a comparison
    end type sort_segment_list_t
 
 contains
@@ -179,7 +179,7 @@ contains
          return
       endif
 
-      if (b == temp_index) then ! this is the only case occuring in sortable_list::sort
+      if (b == temp_index) then ! this is the only case occurring in sortable_list::sort
          compare_elements = this%list(a)%tag > this%temp%tag
       else if (a == temp_index) then
          compare_elements = this%temp%tag > this%list(b)%tag

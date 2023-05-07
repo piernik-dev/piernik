@@ -32,6 +32,8 @@
 !!
 !! \details The structure that contains most important information of all blocks on all processes on a given level
 !! and information on decomposition as well.
+!!
+!! OPT: consider converting gse to oct-tree for faster and more natural searching.
 !<
 
 module dot
@@ -61,7 +63,8 @@ module dot
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range  !< min and max SFC id on processes
       integer                                      :: tot_se        !< global number of grids on the level
       logical                                      :: is_blocky     !< .true. when all grid pieces on this level on all processes have same shape and size
-      logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributd along SFC curve
+      logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributed along SFC curve
+!      logical                                      :: is_complete   !< .true. but in the future allow incomplete dot for really large simulations containing only neighbor data
    contains
       procedure :: cleanup              !< Deallocate everything
       procedure :: update_global        !< Gather updated information about the level and overwrite it to this%gse
@@ -104,8 +107,9 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
-      use mpi,        only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use MPIF,       only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather, MPI_Allgatherv
+      use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
       implicit none
@@ -122,11 +126,12 @@ contains
       integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
       integer(kind=8) :: prev_id, cur_id
 
+!      this%is_complete = .true.
       ! get the count of grid pieces on each process
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
       ! Use size(this%dot%gse(proc)%c) if you want to propagate gse before the grid containers are actually added to the level
       ! OPT: this call can be quite long to complete
-      call MPI_Allgather(cnt, I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgather(cnt, I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! compute offsets for  a composite table of all grid pieces
       alloff(FIRST) = I_ZERO
@@ -151,7 +156,7 @@ contains
       ! First use of MPI_Allgatherv in the Piernik Code!
       ncub_allcnt(:) = int(ncub * allcnt(:), kind=4)
       ncub_alloff(:) = int(ncub * alloff(:), kind=4)
-      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Rewrite the gse array, forget about past.
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
@@ -192,6 +197,7 @@ contains
       integer                        :: i
       type(cg_list_element), pointer :: cgl
 
+!      this%is_complete = .true.
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
       if (allocated(this%gse(proc)%c)) deallocate(this%gse(proc)%c)
       allocate(this%gse(proc)%c(cnt))
@@ -265,8 +271,13 @@ contains
    subroutine check_blocky(this)
 
       use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use mpi,        only: MPI_INTEGER, MPI_REQUEST_NULL
-      use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
+      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
+      use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
+      use ppp_mpi,    only: piernik_Waitall
+#ifdef MPIF08
+      use MPIF,       only: MPI_Comm
+#endif /* MPIF08 */
 
       implicit none
 
@@ -274,8 +285,13 @@ contains
 
       integer(kind=4), dimension(ndims) :: shape, shape1
       integer(kind=4), parameter :: sh_tag = 7
-      integer, parameter :: nr = 2
+      integer(kind=4), parameter :: nr = 2
       integer :: i
+#ifdef MPIF08
+      type(MPI_Comm)  :: dot_comm
+#else /* !MPIF08 */
+      integer(kind=4) :: dot_comm
+#endif /* !MPIF08 */
 
       call inflate_req(nr)
       this%is_blocky = .true.
@@ -292,10 +308,15 @@ contains
             enddo
          endif
       endif
+
+      call MPI_Comm_dup(MPI_COMM_WORLD, dot_comm, err_mpi)
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
-      call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
+      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, dot_comm, req(1 ), err_mpi)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, dot_comm, req(nr), err_mpi)
+
+      call piernik_Waitall(nr, "dot:chk_blocky")
+      call MPI_Comm_free(dot_comm, err_mpi)
+
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.
       endif
@@ -313,10 +334,11 @@ contains
 
    subroutine update_SFC_id_range(this, off)
 
-      use constants,  only: LO, HI, ndims
+      use constants,  only: LO, HI, ndims, I_ONE
       use dataio_pub, only: die
-      use mpi,        only: MPI_INTEGER8
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use MPIF,       only: MPI_INTEGER8, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Allgather
+      use mpisetup,   only: FIRST, LAST, proc, err_mpi
       use ordering,   only: SFC_order
 
       implicit none
@@ -346,7 +368,8 @@ contains
       endif
 
       allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+1, MPI_INTEGER8, id_buf, HI-LO+1, MPI_INTEGER8, comm, mpi_err)
+      call MPI_Allgather([this%SFC_id_range(proc, LO), this%SFC_id_range(proc, HI)], HI-LO+I_ONE, MPI_INTEGER8, &
+           &             id_buf, HI-LO+I_ONE, MPI_INTEGER8, MPI_COMM_WORLD, err_mpi)
       this%SFC_id_range(:, LO) = id_buf(1::2)
       this%SFC_id_range(:, HI) = id_buf(2::2)
 
@@ -374,7 +397,7 @@ contains
 
       class(dot_t),    intent(inout) :: this
       integer(kind=8), intent(in)    :: SFC_id
-      integer,         intent(out)   :: p
+      integer(kind=4), intent(out)   :: p
       integer,         intent(out)   :: grid_id
 
       integer :: ip, il, iu, j, pp_lb, pp_ub
@@ -458,7 +481,7 @@ contains
          do j = i1, i2
             if (this%gse(pp(ip))%c(j)%SFCid == SFC_id) then
                grid_id = j
-               p = pp(ip)
+               p = int(pp(ip), kind=4)
                exit
             endif
          enddo

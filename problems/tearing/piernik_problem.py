@@ -18,6 +18,8 @@ def _CurrentZ(field, data):
 
 def _convertCurrent(data):
     return 1.0 / data.convert("cm")
+
+
 add_field("curz", function=_CurrentZ, convert_function=_convertCurrent,
           validators=[ValidateSpatial(1, ["magx", "magy", "magz"])],
           units=r"\rm{g}/(\rm{cm}\,\rm{s}^{3}\,\rm{gauss})")
@@ -36,6 +38,7 @@ def visualize(files):
                 slc.set_zlim(field, -maxabs, maxabs)
             output.append(slc.save(fn.replace('.h5', '_%s.png' % field))[0])
     return output
+
 
 if __name__ == "__main__":
     import sys

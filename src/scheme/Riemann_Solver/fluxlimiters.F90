@@ -160,6 +160,7 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
 
 ! Monotonized central limiter
+! OPT: it looks like vectors longer than 1000 elements tend to be slower than shorter ones (in MHD only)
 
    function slope_limiter_moncen(u) result(dq)
 
@@ -208,6 +209,6 @@ contains
               merge(min(abs(dlft), abs(two*drgt)), min(abs(two*dlft), abs(drgt)), abs(dlft) > abs(drgt))
       enddo
 
-    end function slope_limiter_superbee
+   end function slope_limiter_superbee
 
 end module fluxlimiters

@@ -1,0 +1,11 @@
+#if !defined LOCAL_FR_SPEED
+#  define GLOBAL_FR_SPEED
+#endif
+
+#define ISO
+
+#define NEUTRAL
+#undef  MAGNETIC
+
+#define GRAV
+#define NBODY

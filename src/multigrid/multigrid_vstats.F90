@@ -40,20 +40,16 @@ module multigrid_vstats
    integer, parameter :: prefix_len = 3              !< length of prefix for distinguishing V-cycles in the log
 
    type :: vcycle_stats
-
       real, allocatable, dimension(:) :: factor      !< norm reduction factor
       real, allocatable, dimension(:) :: time        !< time spent
       integer                         :: count       !< number of executed V-cycles
       real                            :: norm_rhs    !< norm of the source
       real                            :: norm_final  !< norm of the defect relative to the source
       character(len=prefix_len)       :: cprefix     !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
-
-    contains
-
-       procedure :: init                             !< Initialize vcycle_stats
-       procedure :: brief_v_log                      !< Assembles one-line log of V-cycle achievements
-       procedure :: cleanup                          !< Free the memory
-
+   contains
+      procedure :: init                              !< Initialize vcycle_stats
+      procedure :: brief_v_log                       !< Assembles one-line log of V-cycle achievements
+      procedure :: cleanup                           !< Free the memory
    end type vcycle_stats
 
 contains

@@ -145,6 +145,7 @@ def Maclaurin_test(file):
     P.draw()
     P.savefig('maclaurin.png', facecolor='white')
 
+
 if __name__ == "__main__":
     import sys
     if (len(sys.argv) <= 1):

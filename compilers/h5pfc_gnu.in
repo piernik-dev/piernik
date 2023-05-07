@@ -1,21 +1,40 @@
 # This is currently the default compiler configuration.
-# It requires HDF5 package to be installed with full support for parralel Fortran 90.
+# It requires HDF5 package to be installed with full support for parallel Fortran 90.
 # This file should work for at least Fedora and Ubuntu installations if one
 # followed the instructions in the INSTALL file.
 
 PROG      = piernik
 
 F90       = h5pfc
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g -I/usr/include
-LDFLAGS   = -Wl,--as-needed -Wl,-O1
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g
+
+ifeq ($(TERM_PROGRAM),Apple_Terminal)
+   F90FLAGS += -I/usr/local/include
+else
+   F90FLAGS += -I/usr/include
+   LDFLAGS   = -Wl,--as-needed -Wl,-O1
+endif
+
+
 
 ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer -fbacktrace
-   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
+   F90FLAGS += -Wall -W -Wextra
 endif
 
 # safe optimization choice
 F90FLAGS += -O2 -fno-stack-arrays
+
+# Fixes for known problematic gfortran flags that are implied by optimization
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre
+
+GFORTRAN := $(shell gfortran -dumpversion | cut -f1 -d.)
+ifeq ($(shell expr $(GFORTRAN) \>= 10), 1)
+  # Ugly hack for old MPI interface
+  F90FLAGS += -fallow-argument-mismatch -frecursive
+else ifeq ($(PIERNIK_DEBUG), 1)
+  F90FLAGS += -pedantic-errors
+endif
 
 # The option -fstack-arrays may offer a bit better performance but also may require to set
 #    ulimit -s unlimited

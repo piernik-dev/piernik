@@ -26,13 +26,14 @@
 !
 #include "piernik.h"
 
-!> \brief Module containing most basic properties ofgrid levels. Created to avoid circular dependencies between grid_container and cg_level_t
+!> \brief Module containing most basic properties of grid levels. Created to avoid circular dependencies between grid_container and cg_level_t
 
 module level_essentials
 
    use constants, only: ndims, LONG, INT4
 
    implicit none
+
    private
    public :: level_t
 
@@ -81,11 +82,11 @@ contains
 
       call this%write(id, n_d, off)
 
-      write(msg, '(a,i4,a,3i8,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
+      write(msg, '(a,i4,a,3i11,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
       if (any(dom%has_dir .and. (this%off /= 0))) then
-         write(msg, '(2a,3i8,a)')trim(msg)," offset=[", this%off, "]"
+         write(msg(len_trim(msg)+1:), '(a,3i8,a)') " offset=[", this%off, "]"
       else
-         write(msg, '(2a)')trim(msg)," no offset"
+         write(msg(len_trim(msg)+1:), '(a)') " no offset"
       endif
       if (master) call printinfo(msg)
 

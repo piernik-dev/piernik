@@ -30,21 +30,21 @@
 
 module refinement
 
-   use constants,          only: ndims, LO, HI, cbuff_len
+   use constants, only: ndims, LO, HI, cbuff_len
 
    implicit none
 
    private
    public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
-        &    ref_box, refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, jeans_ref, jeans_plot
+        &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
-   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow for optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
    integer(kind=4), protected :: level_max           !< Maximum allowed refinement, if set > 0 then AMR is requested (don't need to be reached if not necessary)
    integer(kind=4), dimension(ndims), protected :: bsize  !< The size of cg for multiblock decomposition, if not set explicitly, then a heuristic values will be used, if possible.
+   logical,         protected :: auto_bsize          !< Allows to compute bsize automatically when bsize is not explicitly provided
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
@@ -62,30 +62,29 @@ module refinement
       real, dimension(ndims, LO:HI) :: coords !< coordinates, where to refine
    end type ref_box
    type(ref_box), dimension(nshapes), protected :: refine_boxes !< Areas (boxes) of refinement to be used from problem.par: level, (x-y-z)-coordinates of lower left corner and (x-y-z)-coordinates of upper right corner
+   type(ref_box), dimension(nshapes), protected :: refine_zcyls !< z-axis cylinders that fit the specified boxes
 
    !> \brief Parameters of automagic refinement
    type :: ref_auto_param
       character(len=cbuff_len) :: rvar  !< name of the refinement variable
       character(len=cbuff_len) :: rname !< name of the refinement routine
       real :: ref_thr                   !< refinement threshold
-      real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
       logical :: plotfield              !< create a 3D array to keep the value of refinement criterion when set to .true.
    end type ref_auto_param
    integer, parameter :: n_ref_auto_param = 10                                 !< number of automatic refinement criteria available to user
-   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement vatiable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
+   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< Definitions of user-supplied automatic refinement criteria: refinement variable, refinement algorithm, refinement threshold, derefinement threshold, auxiliary parameter
 
    ! \brief Parameters of Jeans length based refinement
    real    :: jeans_ref   !< minimum resolution in cells per Jeans wavelengths
    logical :: jeans_plot  !<create a 3D array to keep the value of Jeans resolution
 
-   character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterium
+   character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterion
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, bsize, n_updAMR, strict_SFC_ordering, &
-        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_vars, &
-        &         jeans_ref, jeans_plot
+   namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
+        &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot
 
 contains
 
@@ -96,48 +95,55 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td> bsize(3)            </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::bsize               </td></tr>
+!!   <tr><td> auto_bsize          </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::auto_bsize          </td></tr>
 !!   <tr><td> level_min           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_min           </td></tr>
 !!   <tr><td> level_max           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_max           </td></tr>
 !!   <tr><td> n_updAMR            </td><td> HUGE    </td><td> integer          </td><td> \copydoc refinement::n_updAMR            </td></tr>
 !!   <tr><td> oop_thr             </td><td> 0.1     </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
 !!   <tr><td> refine_points(10)   </td><td> none    </td><td> integer, 3*real  </td><td> \copydoc refinement::refine_points       </td></tr>
 !!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
+!!   <tr><td> refine_zcyls(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_zcyls        </td></tr>
 !!   <tr><td> refine_vars(10)     </td><td> none    </td><td> 2*string, 3*real </td><td> \copydoc refinement::refine_vars         </td></tr>
+!!   <tr><td> jeans_ref           </td><td> 0.      </td><td> real             </td><td> \copydoc refinement::jeans_ref           </td></tr>
+!!   <tr><td> jeans_plot          </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::jeans_plot          </td></tr>
 !!   <tr><td> prefer_n_bruteforce </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::prefer_n_bruteforce </td></tr>
-!!   <tr><td> strict_SFC_ordering </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::strict_SFC_ordering </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_refinement
 
       use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: die, code_progress, warn, msg, printinfo
+      use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use user_hooks, only: problem_domain_update
 
       implicit none
 
-      integer :: d
+      integer :: d, level_crit
       logical :: do_refine
+      integer(kind=4), save :: level_insane = 64  ! That's absolute limit for 1D and current implementation of ordering::Morton_id based on 8-bit integers
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[refinement:init_refinement] Domain not initialized.")
 
       level_min = base_level_id
       level_max = level_min
       bsize(:)  = I_ZERO
+      auto_bsize = associated(problem_domain_update)  ! allow by default for problems with domain expansion configured
       n_updAMR  = huge(I_ONE)
-      strict_SFC_ordering = .false.
       prefer_n_bruteforce = .false.
       oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0., .false.)
+      refine_zcyls(:)  = refine_boxes (:)
+      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., .false.)
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
 
-      if (1 + 9*nshapes +3*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
-      if (2*n_ref_auto_param > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (2*n_ref_auto_param              > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (10+3*nshapes                    > ubound(ibuff, dim=1)) call die("[refinement:init_refinement] increase ibuff size")
+      if (2+15*nshapes+2*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size")
+
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -156,7 +162,6 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-
          if (any(bsize(:) > 0 .and. bsize(:) < dom%nb .and. dom%has_dir(:))) call die("[refinement:init_refinement] bsize(:) is too small.")
 
          ! minimal sanitizing
@@ -170,12 +175,13 @@ contains
          ibuff(2) = level_max
          ibuff(3) = n_updAMR
          ibuff(4:3+ndims) = bsize
-         ibuff(11        :10+  nshapes) = refine_points(:)%level
-         ibuff(11+nshapes:10+2*nshapes) = refine_boxes (:)%level
+         ibuff(11          :10+  nshapes) = refine_points(:)%level
+         ibuff(11+  nshapes:10+2*nshapes) = refine_boxes (:)%level
+         ibuff(11+2*nshapes:10+3*nshapes) = refine_zcyls (:)%level
 
          lbuff(1) = jeans_plot
-         lbuff(2) = strict_SFC_ordering
-         lbuff(3) = prefer_n_bruteforce
+         lbuff(2) = prefer_n_bruteforce
+         lbuff(3) = auto_bsize
          lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
 
          rbuff(1) = oop_thr
@@ -183,15 +189,23 @@ contains
          rbuff(3          :2+  nshapes) = refine_points(:)%coords(xdim)
          rbuff(3+  nshapes:2+2*nshapes) = refine_points(:)%coords(ydim)
          rbuff(3+2*nshapes:2+3*nshapes) = refine_points(:)%coords(zdim)
+
          rbuff(3+3*nshapes:2+4*nshapes) = refine_boxes (:)%coords(xdim, LO)
          rbuff(3+4*nshapes:2+5*nshapes) = refine_boxes (:)%coords(xdim, HI)
          rbuff(3+5*nshapes:2+6*nshapes) = refine_boxes (:)%coords(ydim, LO)
          rbuff(3+6*nshapes:2+7*nshapes) = refine_boxes (:)%coords(ydim, HI)
          rbuff(3+7*nshapes:2+8*nshapes) = refine_boxes (:)%coords(zdim, LO)
          rbuff(3+8*nshapes:2+9*nshapes) = refine_boxes (:)%coords(zdim, HI)
-         rbuff(3+9*nshapes                   :2+9*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
-         rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param) = refine_vars(:)%deref_thr
-         rbuff(3+9*nshapes+2*n_ref_auto_param:2+9*nshapes+3*n_ref_auto_param) = refine_vars(:)%aux
+
+         rbuff(3+ 9*nshapes:2+10*nshapes) = refine_zcyls (:)%coords(xdim, LO)
+         rbuff(3+10*nshapes:2+11*nshapes) = refine_zcyls (:)%coords(xdim, HI)
+         rbuff(3+11*nshapes:2+12*nshapes) = refine_zcyls (:)%coords(ydim, LO)
+         rbuff(3+12*nshapes:2+13*nshapes) = refine_zcyls (:)%coords(ydim, HI)
+         rbuff(3+13*nshapes:2+14*nshapes) = refine_zcyls (:)%coords(zdim, LO)
+         rbuff(3+14*nshapes:2+15*nshapes) = refine_zcyls (:)%coords(zdim, HI)
+
+         rbuff(3+15*nshapes                   :2+15*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
+         rbuff(3+15*nshapes+  n_ref_auto_param:2+15*nshapes+2*n_ref_auto_param) = refine_vars(:)%aux
 
       endif
 
@@ -209,12 +223,13 @@ contains
          level_max = ibuff(2)
          n_updAMR  = ibuff(3)
          bsize     = ibuff(4:3+ndims)
-         refine_points(:)%level = ibuff(11        :10+  nshapes)
-         refine_boxes (:)%level = ibuff(11+nshapes:10+2*nshapes)
+         refine_points(:)%level = ibuff(11          :10+  nshapes)
+         refine_boxes (:)%level = ibuff(11+  nshapes:10+2*nshapes)
+         refine_zcyls (:)%level = ibuff(11+2*nshapes:10+3*nshapes)
 
          jeans_plot               = lbuff(1)
-         strict_SFC_ordering      = lbuff(2)
-         prefer_n_bruteforce      = lbuff(3)
+         prefer_n_bruteforce      = lbuff(2)
+         auto_bsize               = lbuff(3)
          refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
 
          oop_thr   = rbuff(1)
@@ -222,15 +237,23 @@ contains
          refine_points(:)%coords(xdim)     = rbuff(3          :2+  nshapes)
          refine_points(:)%coords(ydim)     = rbuff(3+  nshapes:2+2*nshapes)
          refine_points(:)%coords(zdim)     = rbuff(3+2*nshapes:2+3*nshapes)
+
          refine_boxes (:)%coords(xdim, LO) = rbuff(3+3*nshapes:2+4*nshapes)
          refine_boxes (:)%coords(xdim, HI) = rbuff(3+4*nshapes:2+5*nshapes)
          refine_boxes (:)%coords(ydim, LO) = rbuff(3+5*nshapes:2+6*nshapes)
          refine_boxes (:)%coords(ydim, HI) = rbuff(3+6*nshapes:2+7*nshapes)
          refine_boxes (:)%coords(zdim, LO) = rbuff(3+7*nshapes:2+8*nshapes)
          refine_boxes (:)%coords(zdim, HI) = rbuff(3+8*nshapes:2+9*nshapes)
-         refine_vars  (:)%ref_thr          = rbuff(3+9*nshapes                   :2+9*nshapes+  n_ref_auto_param)
-         refine_vars  (:)%deref_thr        = rbuff(3+9*nshapes+  n_ref_auto_param:2+9*nshapes+2*n_ref_auto_param)
-         refine_vars  (:)%aux              = rbuff(3+9*nshapes+2*n_ref_auto_param:2+9*nshapes+3*n_ref_auto_param)
+
+         refine_zcyls (:)%coords(xdim, LO) = rbuff(3+ 9*nshapes:2+10*nshapes)
+         refine_zcyls (:)%coords(xdim, HI) = rbuff(3+10*nshapes:2+11*nshapes)
+         refine_zcyls (:)%coords(ydim, LO) = rbuff(3+11*nshapes:2+12*nshapes)
+         refine_zcyls (:)%coords(ydim, HI) = rbuff(3+12*nshapes:2+13*nshapes)
+         refine_zcyls (:)%coords(zdim, LO) = rbuff(3+13*nshapes:2+14*nshapes)
+         refine_zcyls (:)%coords(zdim, HI) = rbuff(3+14*nshapes:2+15*nshapes)
+
+         refine_vars  (:)%ref_thr          = rbuff(3+15*nshapes                   :2+15*nshapes+  n_ref_auto_param)
+         refine_vars  (:)%aux              = rbuff(3+15*nshapes+  n_ref_auto_param:2+15*nshapes+2*n_ref_auto_param)
 
       endif
 
@@ -238,7 +261,7 @@ contains
 
       do_refine = (level_max > base_level_id) .or. all((bsize /= I_ZERO) .or. .not. dom%has_dir)
 
-      if (do_refine .and. all(bsize == I_ZERO)) call automagic_bsize
+      if ((do_refine .or. auto_bsize) .and. all(bsize == I_ZERO)) call automagic_bsize
 
       where (.not. dom%has_dir) bsize = I_ONE
 
@@ -248,7 +271,7 @@ contains
             if (bsize(d) < dom%nb) then
                if (do_refine .and. master) then
                   if (bsize(d) > 1) then
-                     call die("[refinement:init_refinement] Refinements disabled (bsize small)er than nb")
+                     call die("[refinement:init_refinement] Refinements disabled bsize smaller than nb")
                   else
                      call warn("[refinement:init_refinement] any(bsize == 1) disables refinement")
                   endif
@@ -268,18 +291,32 @@ contains
       enddo
 
       if (any(dom%has_dir .and. modulo(bsize, refinement_factor) /= 0)) then
-         write(msg, '(a,3i5,a,i2)')"[refinement:init_refinement] bsize = [", bsize, "] not divisible by ",refinement_factor
+         write(msg, '(a,3i5,a,i2)')"[refinement:init_refinement] bsize = [", bsize, "] not divisible by ", refinement_factor
          call die(msg)
-         ! Formally we can implement blocky AMR with blocks of odd sizes, it is just easier to have even sizes, especially when our refinement factor is fixed at 2"
-         ! Odd bsize would be divided into even+odd blocks and all prolongation and restriction routines should be aware of the difference.
-         ! do_refine = .false. is there to make it safer to turn call die() into call warn()
-         do_refine = .false.
+         ! A block with odd bsize cannot be refined to blocks with odd bsizes because we prefer to allow for incomplete coverage.
+         ! Then partially refined block would have to handle fluxes in partially refined cells in some places.
+         ! A workaround for this would involve handling blocks with different bsize which is not worth the added complexity.
+         do_refine = .false.  ! just in case someone wants to experiment with odd bsize anyway
+      endif
+
+      if (dom%eff_dim == 0) then
+         level_crit = huge(1)
+      else
+         level_crit = (63 - int(log(maxval(dom%n_d)-1.)/log(2.)+1)*dom%eff_dim)/dom%eff_dim  ! these are the limits of ordering::Morton_id
       endif
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
-      if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")
+      if (level_max >  level_crit) then
+         write(msg, '(a,i2,a)')"[refinement:init_refinement] BEWARE: Refinement levels above ", level_crit, " may lead to integer overflows in this run under certain conditions."
+         if (master) call warn(msg)
+      endif
+      if (level_max > level_insane) then
+         write(msg, '(a,i8,a)')"[refinement:init_refinement] level_max = ", level_max, " is way too much. Reducing. Expect failure somewhat earlier anyway."
+         level_max = level_insane
+         if (master) call warn(msg)
+      endif
 
-      if (.not. do_refine) bsize = I_ZERO
+      if (.not. do_refine .and. .not. auto_bsize) bsize = I_ZERO
 
       if (do_refine) then
          write(msg, '(a)')"[refinement]"
@@ -289,7 +326,8 @@ contains
       else
          if (level_max > base_level_id .and. master) call warn("[refinement] refinements were requested but are disabled by sanity checks")
          msg = "[refinement] No static or adaptive refinement"
-         ! switch off efinement options
+         if (any(bsize(:) > 0)) write(msg(len_trim(msg)+1:), '(a,3i5,a)')", block size = [", bsize, "]"
+         ! switch off refinement options
          level_min = base_level_id
          level_max = base_level_id
          n_updAMR  = huge(I_ONE)
@@ -334,11 +372,16 @@ contains
       integer(kind=4), dimension(ndims) :: b1, b2
       integer(kind=4) :: sq
 
+      if (dom%eff_dim == 0) then
+         bsize(:) = 1
+         return
+      endif
+
       b1 = INVALID
       b2 = b1
 
       ! start with size that results with roughly one block per process on highest full level, but don't go below 16 cells per dimension
-      ! also divide each dmension to at least 4 pieces even for low thread count
+      ! also divide each dimension to at least 4 pieces even for low thread count
       sq = max(not_too_small, int(((product(dom%n_d, mask=dom%has_dir) * refinement_factor**(dom%eff_dim * level_min))/max(nproc, int((2*refinement_factor)**dom%eff_dim, kind=4)))**(1./dom%eff_dim), kind=4))
       if (mod(sq, I_TWO) == I_ONE) sq = sq + I_ONE
       ! find divisible values in each dim in the range [nb .. dom%n_d] starting from sq in both directions
@@ -371,7 +414,7 @@ contains
             endif
          enddo
 
-         ! pick the best one somehow: a bit longer block in x-direction usually doesn't hurt, sometimes gives good performace
+         ! pick the best one somehow: a bit longer block in x-direction usually doesn't hurt, sometimes gives good performance
          where (b1 == INVALID) b1 = b2
          where (b2 == INVALID) b2 = b1
          bsize = [ b1(xdim), b2(ydim:zdim) ]

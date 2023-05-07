@@ -1,0 +1,12 @@
+#define GLOBAL_FR_SPEED
+
+#define ISO
+
+#define NEUTRAL
+
+#undef  MAGNETIC
+
+#define GRAV
+#define NBODY
+#define NBODY_MULTIGRID
+#undef NBODY_GRIDDIRECT

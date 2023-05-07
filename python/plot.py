@@ -65,6 +65,7 @@ def get_frame(filename, options):
 
     return arr, title_str, extent
 
+
 usage = "usage: %prog [options] FILE"
 try:
     parser = OptionParser(

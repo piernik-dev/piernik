@@ -145,8 +145,8 @@ contains
       cgl => curl%first
       do while (associated(cgl))
          associate (cg => cgl%cg)
-         cgl%cg%prolong_xyz(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cgl%cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         max_in = max(max_in, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
+         cgl%cg%prolong_xyz(RNG) = cgl%cg%q(soln)%arr(RNG)
+         max_in = max(max_in, maxval(abs(cg%prolong_xyz(RNG))))
          end associate
          cgl => cgl%nxt
       enddo

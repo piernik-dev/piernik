@@ -25,6 +25,7 @@ def read_data_hdf5(name):
 def sum_y(tab, n):
     return np.sum(tab.T, 1) / n
 
+
 usage = "usage: %prog FILE"
 parser = OptionParser(usage=usage)
 (options, args) = parser.parse_args()

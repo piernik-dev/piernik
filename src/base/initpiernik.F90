@@ -46,9 +46,12 @@ contains
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, INCEPTIVE, tmr_fu
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
+           &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
+           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
+      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, &
+           &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -62,7 +65,12 @@ contains
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use interpolations,        only: set_interpolations
+      use lb_helpers,            only: costs_maintenance
+      use load_balance,          only: init_load_balance
+      use memory_usage,          only: init_memory
       use mpisetup,              only: init_mpi, master
+      use ppp,                   only: init_profiling, ppp_main
+      use procnames,             only: pnames
       use refinement,            only: init_refinement, level_max
       use refinement_update,     only: update_refinement
       use sources,               only: init_sources
@@ -76,8 +84,13 @@ contains
 #ifdef GRAV
       use gravity,               only: init_grav, init_terms_grav, source_terms_grav
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
-      use particle_pub,          only: init_particles
 #endif /* GRAV */
+#ifdef NBODY
+      use particle_gravity,      only: update_particle_gravpot_and_acc
+      use particle_pub,          only: init_particles
+      use particle_solvers,      only: init_psolver, update_particle_kinetic_energy
+      use particle_utils,        only: global_count_all_particles
+#endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
 #endif /* MULTIGRID */
@@ -88,6 +101,9 @@ contains
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      use cresp_grid,            only: cresp_init_grid
+#endif /* CRESP */
 #ifdef RANDOMIZE
       use randomization,         only: init_randomization
 #endif /* RANDOMIZE */
@@ -107,7 +123,9 @@ contains
       integer :: nit, ac
       real    :: ts                  !< Timestep wallclock
       logical :: finished
-      integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
+      integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
+      character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", prob_label = "problem_IC"
+      character(len=cbuff_len) :: label
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
@@ -135,6 +153,12 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+
+      call pnames%init ; call print_hostnames
+      call init_load_balance
+      call init_memory
+      call init_profiling                    ! May require init_dataio_parameters and memory_usage set up
+      call ppp_main%set_bb(ip_label)         ! can't call tst_cnt%start("init_piernik") before init_mpi
 
       call init_units
 
@@ -174,9 +198,12 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-      call init_particles
       call init_hydrostatic
 #endif /* GRAV */
+#ifdef NBODY
+      call init_particles
+      call init_psolver
+#endif /* NBODY */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
       call multigrid_par
@@ -209,7 +236,12 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
+#ifdef CRESP
+      call cresp_init_grid                   ! depends on cg
+#endif /* CRESP */
+
 #ifdef GRAV
+      if (restarted_sim) call source_terms_grav
       call init_terms_grav
 #endif /* GRAV */
 
@@ -218,6 +250,7 @@ contains
          call all_bnd_vital_q
       endif
 
+      call ppp_main%start(ic_label)
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
@@ -241,28 +274,48 @@ contains
          endif
       else
 
+         call ppp_main%start(iter_label // "0", PPP_PROB)
          nit = 0
          finished = .false.
+
+         call ppp_main%start(prob_label)
          call problem_initial_conditions ! may depend on anything
+         call ppp_main%stop(prob_label)
+
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
+         call ppp_main%stop(iter_label // "0", PPP_PROB)
+
+         call costs_maintenance
 
          do while (.not. finished)
+            write(label, '(i8)') nit + 1
+            call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
+#ifdef NBODY
+            call update_particle_gravpot_and_acc  ! calls source_terms_grav
+            call update_particle_kinetic_energy
+#else /* !NBODY */
 #ifdef GRAV
             call source_terms_grav
 #endif /* GRAV */
+#endif /* !NBODY */
 
             call update_refinement(act_count=ac)
-            finished = (ac == 0) .or. (nit > 2*level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
+            finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
+            call ppp_main%start(prob_label)
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
+            call ppp_main%stop(prob_label)
+
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
+            call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
+            call costs_maintenance
          enddo
 #ifdef GRAV
          call cleanup_hydrostatic
@@ -274,22 +327,109 @@ contains
             call source_terms_grav  ! fix up gravitational potential when refiements did not converge
 #endif /* GRAV */
          endif
+#if defined(SELF_GRAV) && defined(NBODY)
+         !  Do we need to do anything particle-related to be called here?
+#endif /* SELF_GRAV && NBODY */
          if (associated(problem_post_IC)) call problem_post_IC
       endif
+      call ppp_main%stop(ic_label)
 
       code_progress = PIERNIK_POST_IC
 
-      write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
+      write(msg, '(a,3i11,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
+
+#if defined(GRAV) && defined(NBODY)
+      write(msg,'(a,i9)')"[initpiernik:init_piernik] Total number of particles is ", global_count_all_particles()
+      if (master) call printinfo(msg)
+#endif /* GRAV && NBODY */
 
 #ifdef VERBOSE
       call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
+      call costs_maintenance
 
       call write_data(output=INCEPTIVE)
 
       call sanitize_smallx_checks            ! depends on problem_initial_conditions || init_dataio/read_restart_hdf5
+
+      call ppp_main%stop(ip_label)
+
+   contains
+
+      !>
+      !! \brief Print the list of hostnames in use and associated MPI ranks
+      !!
+      !! It was intentionally moved outside procnames module because of dataio_pub dependencies.
+      !<
+
+      subroutine print_hostnames
+
+         use constants,  only: fmt_len
+         use dataio_pub, only: msg, printinfo
+         use mpisetup,   only: slave, nproc
+         use procnames,  only: pnames
+
+         implicit none
+
+         integer :: h, hl
+         integer, parameter :: mpl = 16  ! maximum ranks per line to be printed (in non-consecutive case)
+         character(len=*), parameter :: rah_o = "Ranks at host '", rah_c = "' :"
+         character(len=fmt_len) :: fmtl, fmtr, fmt1, header
+         logical :: successive, succ
+
+         if (slave) return
+
+         associate (intlen => int(log10(real(max(1, nproc-1)))) + 2)
+
+            write(fmtl, *)"(a,", mpl, "i", intlen, ")"
+            write(fmtr, *)"(a,i", intlen, ",' ..',i", intlen, ")"
+            write(fmt1, *)"(a,i", intlen, ")"
+
+         end associate
+
+         successive = .true.
+         do h = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
+            associate (p => pnames%proc_on_node(h))
+
+               header = rah_o // p%nodename(:pnames%maxnamelen) // rah_c
+
+               succ = .true.
+               if (size(p%proc) > 1) succ = all(p%proc(:ubound(p%proc, 1)-1) + 1 == p%proc(lbound(p%proc, 1)+1:))
+               successive = successive .and. succ
+
+               if (succ) then
+
+                  if (size(p%proc) > 1) then
+                     write(msg, fmtr) trim(header), p%proc(lbound(p%proc, 1)), p%proc(ubound(p%proc, 1))
+                  else
+                     write(msg, fmt1) trim(header), p%proc(lbound(p%proc, 1))
+                  endif
+                  call printinfo(msg)
+
+               else
+
+                  do hl = 0, int((ubound(p%proc, 1) - 1)/ mpl)
+                     write(msg, fmtl) merge(repeat(" ", len_trim(header)), trim(header), hl>0), p%proc(hl*mpl+1:min((hl+1)*mpl, ubound(p%proc, 1)))
+                     call printinfo(msg)
+                  enddo
+
+               endif
+
+            end associate
+         enddo
+
+         ! The load balance and cg distribution routines are designed to use
+         ! space-filling curve that is placing spatially adjacent cgs closely
+         ! on the block list in most cases.
+         ! The use of mpirun options like "-map-by node" may defeat these efforts
+         ! and significantly increase the amount of inter-node communication.
+         if (.not. successive) call warn("[initpiernik:init_piernik] Non-successive MPI ranks on hosts detected. This may severely degrade the performance.")
+
+         if (any(pnames%hostindex < 0)) call die("[initpiernik:init_piernik] pnames%hostindex contains invalid data")
+
+      end subroutine print_hostnames
 
    end subroutine init_piernik
 !-----------------------------------------------------------------------------
@@ -297,7 +437,7 @@ contains
 
       use constants,  only: stdout, cwdlen
       use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, log_wr
-      use version,    only: nenv,env, init_version
+      use version,    only: nenv, env, init_version
 
       implicit none
 
@@ -338,7 +478,7 @@ contains
             write(log_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-n', '--namelist')
-            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(get_next_arg(i+1, arg))
+            write(cmdl_nml(len_trim(cmdl_nml)+1:), '(2A)') " ", trim(get_next_arg(i+1, arg))
             skip_next = .true.
          case ('-h', '--help')
             call print_help()
@@ -352,8 +492,8 @@ contains
          end select
       enddo
 
-      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr,'(a,a1)') trim(wd_wr),'/'
-      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd,'(a,a1)') trim(wd_rd),'/'
+      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr(len_trim(wd_wr)+1:),'(a1)') '/'
+      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd(len_trim(wd_rd)+1:),'(a1)') '/'
 
       ! Print the date and, optionally, the time
       call date_and_time(DATE=date, TIME=time, ZONE=zone)

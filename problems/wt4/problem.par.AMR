@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 64, 128
+    n_d = 64, 64, 64
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
@@ -53,13 +53,14 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.7
+    cfl    = 0.6
     smalld = 1.e-7
     smallei= 1.e-10
     dt_initial = 1e-4
     dt_min = 1e-7
     dt_max_grow = 1.25
     limiter= 'vanleer'
+    SOLVER_STR="riemann"
  /
 
  $GRAVITY
@@ -98,7 +99,7 @@
 !    ord_laplacian = 2
 !    ord_laplacian_outer = 2
 !    mpole_solver = "3D"
-!    level_3D = 0
+!    mpole_level = 0
  /
 
  $INTERACTIONS

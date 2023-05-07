@@ -41,7 +41,7 @@ module grid
 
 contains
 
-!> \brief Routine that prepares base level and most importand cg lists
+!> \brief Routine that prepares base level and most important cg lists
 
    subroutine init_grid
 
@@ -49,13 +49,17 @@ contains
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_finest,    only: finest
-      use constants,          only: PIERNIK_INIT_DOMAIN
+      use constants,          only: PIERNIK_INIT_DOMAIN, tmr_amr
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
       use mpisetup,           only: master
+      use timer,              only: set_timer
 
       implicit none
 
+      real :: ts  !< time for runtime profiling
+
+      ts =  set_timer(tmr_amr, .true.)  ! we need it here for call leaves%update()
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
 #ifdef VERBOSE
@@ -71,7 +75,7 @@ contains
       if (master) call base%level%add_patch
       call base%level%init_all_new_cg
 
-      ! Refinement lists will be added by iterating the initproblem::problem_initial_conditions routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
+      ! Refinement lists will be added by iterating the initproblem::problem_initial_conditions routine, in restart_hdf5::read_restart_hdf5 or in refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
 
       call leaves%update(" (base level) ")
@@ -86,16 +90,22 @@ contains
 
    subroutine cleanup_grid
 
+      use cg_leaves,          only: leaves
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list_global,     only: all_cg
+      use grid_cont_fcflx,    only: cleanup_flxp
       use list_of_cg_lists,   only: all_lists
       use named_array_list,   only: qna, wna
 
       implicit none
 
       type(cg_level_connected_t), pointer :: curl, aux
+
+      call cleanup_flxp
+
+      if (allocated(leaves%up_to_level)) deallocate(leaves%up_to_level)
 
       curl => coarsest%level
       do while (associated(curl))

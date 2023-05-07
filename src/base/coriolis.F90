@@ -70,7 +70,7 @@ contains
 !>
 !! \brief Compute the Coriolis acceleration for a given row of cells.
 !!
-!! The equtions for the non-inertial acceleration in the x and y directions are given by:
+!! The equations for the non-inertial acceleration in the x and y directions are given by:
 !! \f{equation}
 !! acc_x = 2 * \Omega * v_y
 !! acc_y = -2 * \Omega * v_x
