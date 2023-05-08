@@ -37,7 +37,7 @@ module cresp_crspectrum
    implicit none
 
    private ! most of it
-   public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all, &
+   public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all &
       &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content, fq_to_e, fq_to_n, q
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
@@ -69,8 +69,7 @@ module cresp_crspectrum
 
    real, allocatable, dimension(:) :: r                                   !> r term for energy losses (Miniati 2001, eqn. 25)
    real, allocatable, dimension(:) :: q                                   !> power-law exponent array
-   real, allocatable, dimension(:) :: s, three_ps, four_ps                !> power-law exponent arrays for transrelativistic limit
-   real, allocatable, dimension(:) :: g                                   !> kinetic energy
+
 
 ! power-law
    real,    dimension(LO:HI)       :: p_cut_next, p_cut
@@ -142,8 +141,8 @@ contains
       r = zero
       f = zero
       q = zero
-      s = zero
-      g = zero
+      !s = zero
+      !g = zero
 
       if (present(substeps)) then
          n_substep = substeps
@@ -260,7 +259,7 @@ contains
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-         call compute_gs(p_fix, active_bins)
+         !call compute_gs(p_fix, active_bins)
          call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
@@ -313,7 +312,9 @@ contains
                endif
             endif
 
-            call ne_to_q(n, e, q, active_bins)  !< begins new step
+            !print *, 'Hello !'
+
+            call ne_to_q(n, e, g, q, active_bins)  !< begins new step
             f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)  !< Compute values of distribution function in the new step
          endif
 
@@ -577,7 +578,9 @@ contains
       approx_p = I_ZERO
       i_cut = pre_i_cut                         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
-      call ne_to_q(n, e, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
+      !print *, 'Hi ! '
+
+      call ne_to_q(n, e, g, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
       f = nq_to_f(p(I_ZERO:ncrb-I_ONE), p(I_ONE:ncrb), n(I_ONE:ncrb), q(I_ONE:ncrb), active_bins)  !< Compute values of distribution function f for active left edges at [t]
 
@@ -1402,7 +1405,7 @@ contains
       use constants,       only: zero, one, three, four
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps
+      use initcrspectrum,  only: eps, g, three_ps
 
       implicit none
 
@@ -1537,7 +1540,7 @@ contains
       use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps, cresp_all_bins
+      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g
 
       implicit none
 
@@ -1632,7 +1635,7 @@ contains
 
       use constants,      only: zero, one, four, five
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: eps
+      use initcrspectrum, only: eps, three_ps, four_ps
 
       implicit none
 
@@ -1666,53 +1669,7 @@ contains
 
    end subroutine cresp_compute_r
 
-   subroutine compute_gs(p, bins)
 
-      use cresp_variables, only: clight_cresp
-      use cr_data,         only: transrelativistic
-      use constants,       only: zero, three, four
-
-      implicit none
-
-      real(kind=8), dimension(:), intent(in) :: p
-      integer, dimension(:), intent(in)     :: bins
-      real(kind=8), dimension(bins(1):bins(size(bins))) :: r_num, r_den, rn_den
-
-      s = zero
-      three_ps = zero
-      four_ps = zero
-
-      print *, 'compute_gs'
-      print *, '   p =', p
-      print *, 'bins =', bins
-
-      if(transrelativistic) then
-         g = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
-      else
-         g = clight_cresp*p
-      endif
-
-      print *, 'p : ', p
-      print *, 'p(bins) : ', p(bins)
-      print *, 'p(bins-1) : ', p(bins-1)
-      print *, 'g(bins) : ', g(bins)
-      print *, 'g(bins-1) : ', g(bins-1)
-      print *, 'size(bins) : ', size(bins)
-      print *, 'size(bins-1) : ', size(bins-1)
-      print *, 'size(g) : ', size(g)
-      print *, 'size(p) : ', size(p)
-      print *, 'g =', g
-      print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      print *, 'log10 1 : ', log10( g(bins(1:size(bins))) /g(bins(1:size(bins))-1))
-      print *, 'log10 2 : ',log10(p(bins(1:size(bins))) /p(bins(1:size(bins))-1))
-
-      s(bins) = log10(g(bins(1:size(bins)))/g(bins(1:size(bins))-1))/log10(p(bins(1:size(bins)))/p(bins(1:size(bins))-1))
-
-      print *, 's =', s
-      three_ps = three + s
-      four_ps  = four + s
-
-   end subroutine compute_gs
 
 
 !-------------------------------------------------------------------------------------------------
@@ -1721,18 +1678,18 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   subroutine ne_to_q(n, e, q, bins)
+   subroutine ne_to_q(n, e, g, q, bins)
 
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small
+      use initcrspectrum,  only: e_small, g
 
       implicit none
 
-      real, dimension(1:ncrb),       intent(in)  :: n, e
+      real, dimension(1:ncrb),       intent(in)  :: n, e, g
       real, dimension(1:ncrb),       intent(out) :: q
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer                                    :: i, i_active
@@ -1750,6 +1707,7 @@ contains
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
+            !print *, 'i : ',i, ' g(i-1) : ', g(i-1)
             alpha_in = e(i)/(n(i)*g(i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
@@ -1821,7 +1779,7 @@ contains
 
       use constants,       only: one, four
       use cresp_variables, only: fp3cc
-      use initcrspectrum,  only: eps
+      use initcrspectrum,  only: eps, g, three_ps
 
       implicit none
 
@@ -2039,13 +1997,9 @@ contains
       call my_allocate_with_index(e_amplitudes_r,ma1d, I_ONE)
       call my_allocate_with_index(r,ma1d, I_ONE)
       call my_allocate_with_index(q,ma1d, I_ONE)
-      call my_allocate_with_index(s,ma1d, I_ONE)
-      call my_allocate_with_index(three_ps,ma1d, I_ONE)
-      call my_allocate_with_index(four_ps,ma1d, I_ONE)
 
       call my_allocate_with_index(f,ma1d, I_ZERO)
       call my_allocate_with_index(p,ma1d, I_ZERO)
-      call my_allocate_with_index(g,ma1d, I_ZERO)
 
       call my_allocate_with_index(edt,ma1d, I_ONE)
       call my_allocate_with_index(ndt,ma1d, I_ONE)
