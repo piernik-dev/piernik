@@ -260,7 +260,7 @@ contains
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-         call compute_gs(p, active_bins)
+         call compute_gs(p_fix, active_bins)
          call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
@@ -1692,17 +1692,21 @@ contains
          g = clight_cresp*p
       endif
 
-      print *, p(bins)
-      print *, p(bins-1)
-      print *, g(bins)
-      print *, g(bins-1)
+      print *, 'p : ', p
+      print *, 'p(bins) : ', p(bins)
+      print *, 'p(bins-1) : ', p(bins-1)
+      print *, 'g(bins) : ', g(bins)
+      print *, 'g(bins-1) : ', g(bins-1)
+      print *, 'size(bins) : ', size(bins)
+      print *, 'size(bins-1) : ', size(bins-1)
+      print *, 'size(g) : ', size(g)
+      print *, 'size(p) : ', size(p)
       print *, 'g =', g
       print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      print *, log10( g(bins(1:size(bins)))/g(bins(1:size(bins))-1))
-      print *, log10(p(bins)/p(bins-1))
+      print *, 'log10 1 : ', log10( g(bins(1:size(bins))) /g(bins(1:size(bins))-1))
+      print *, 'log10 2 : ',log10(p(bins(1:size(bins))) /p(bins(1:size(bins))-1))
 
-      s(bins) = log10(     g(bins(1:size(bins)))/     g(bins(1:size(bins))-1)) &
-               /log10(p(bins(1:size(bins)))/p(bins(1:size(bins))-1))
+      s(bins) = log10(g(bins(1:size(bins)))/g(bins(1:size(bins))-1))/log10(p(bins(1:size(bins)))/p(bins(1:size(bins))-1))
 
       print *, 's =', s
       three_ps = three + s

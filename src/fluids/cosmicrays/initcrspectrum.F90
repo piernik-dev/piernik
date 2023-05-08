@@ -493,8 +493,8 @@ contains
 !!\brief for now algorithm requires at least 3 bins
       p_fix = zero
       w  = log10(p_max_fix/p_min_fix) / real(ncrb-2)
-      p_fix(1:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncrb-1)-1))
-      p_fix(0)    = zero
+      p_fix(0:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(0:ncrb-1)-1))
+      !p_fix(0)    = zero
       p_fix(ncrb) = zero
       p_fix_ratio = ten**w
 
