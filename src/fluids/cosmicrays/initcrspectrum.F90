@@ -42,7 +42,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active,                 &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim_a, arr_dim_n, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,           &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum_n, norm_init_spectrum_e, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,     &
-           & u_b_max, def_dtsynch, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, bin_old
+           & u_b_max, def_dtsynch, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, bin_old, g, s, three_ps, four_ps
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -61,7 +61,9 @@ module initcrspectrum
    real, dimension(:), allocatable :: q_br_init                   !< initial q for low energy break
    real            :: q_big                       !< maximal amplitude of q
    real, dimension(:), allocatable :: cfl_cre                     !< CFL parameter  for CR spectrally resolved components! TODO FIXME RENAME ME PLEASE!!!!
-   real, dimension(:), allocatable :: cre_eff                     !< fraction of energy passed to CR spectrally resolved components by nucleons (mainly protons) ! TODO wat do with cr_eff now?! TODO FIXME RENAME ME PLEASE!!!!
+   real, dimension(:), allocatable :: cre_eff                     !< fraction of energy passed to CR spectrally resolved components by nucleons (mainly protons)! TODO wat do with cr_eff now?! TODO FIXME RENAME ME PLEASE!!!!
+   real, allocatable, dimension(:) :: s, three_ps, four_ps                !> power-law exponent arrays for transrelativistic limit
+   real, allocatable, dimension(:) :: g                                   !> kinetic energy
    real, dimension(:,:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:,:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:), allocatable :: K_cre_pow   !< exponent for power law-like diffusion-energy dependence ! TODO FIXME RENAME ME PLEASE!!!!
@@ -172,7 +174,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc, icr_H1, cr_spectral
+      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc, icr_H1, cr_spectral, cr_table
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
@@ -250,8 +252,12 @@ contains
       synch_active(:)      = .true.
       adiab_active(:)      = .true.
       cre_active(:)        = 0.0
+      s(:) = 0.0
+      three_ps(:) = 0.0
+      four_ps(:) = 0.0
+      g(:) = 0.0
 
-      if(cr_spectral(icr_H1)) cre_active(findloc(icr_spc, icr_H1)) = 1.0
+      if(cr_spectral(cr_table(icr_H1))) cre_active(findloc(icr_spc, icr_H1)) = 1.0
 
       if(size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
 
@@ -351,6 +357,10 @@ contains
          rbuff(11*nspc+14:12*nspc+13) = p_diff(1:nspc)
          rbuff(12*nspc+15) = q_eps
          rbuff(12*nspc+16) = b_max_db
+         rbuff(12*nspc+17:13*nspc+16) = g
+         rbuff(13*nspc+17:14*nspc+16) = s
+         rbuff(14*nspc+17:15*nspc+16) = three_ps
+         rbuff(15*nspc+17:16*nspc+16) = four_ps
 
          cbuff(1)  = initial_spectrum
       endif
@@ -423,6 +433,10 @@ contains
          p_diff(1:nspc)       = rbuff(11*nspc+14:12*nspc+13)
          q_eps                = rbuff(12*nspc+15)
          b_max_db             = rbuff(12*nspc+16)
+         g(1:nspc)            = rbuff(13*nspc+16)
+         s(1:nspc)            = rbuff(14*nspc+16)
+         three_ps(1:nspc)     = rbuff(15*nspc+16)
+         four_ps(1:nspc)      = rbuff(16*nspc+16)
 
          initial_spectrum            = trim(cbuff(1))
 
@@ -476,6 +490,10 @@ contains
 
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
+      call my_allocate_with_index(g,                ncrb, I_ONE)
+      call my_allocate_with_index(s,                ncrb, I_ONE)
+      call my_allocate_with_index(three_ps,         ncrb, I_ONE)
+      call my_allocate_with_index(four_ps,          ncrb, I_ONE)
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
       call my_allocate_with_index(cresp_all_bins,   ncrb, I_ONE )
@@ -520,6 +538,8 @@ contains
       gamma_beta_c_fix = mom_cre_fix / me
 
       n_small_bin(:) = e_small / (p_mid_fix(:) * clight_cresp)
+
+      call compute_gs(p_fix, cresp_all_bins)
 
 #ifdef VERBOSE
          write (msg,'(A, 50I3)')    '[initcrspectrum:init_cresp] fixed all edges: ', cresp_all_edges
@@ -718,6 +738,57 @@ contains
    end subroutine init_crel
 !----------------------------------------------------------------------------------------------------
 
+   subroutine compute_gs(p, bins)
+
+      use cresp_variables, only: clight_cresp
+      use cr_data,         only: transrelativistic
+      use constants,       only: zero, three, four
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(in) :: p
+      integer                               :: i_bin
+      integer, dimension(:), intent(in)     :: bins
+      real(kind=8), dimension(bins(1):bins(size(bins))) :: r_num, r_den, rn_den
+
+
+      s = zero
+      three_ps = zero
+      four_ps = zero
+
+      print *, 'compute_gs'
+      print *, '   p =', p
+      print *, 'bins =', bins
+
+      if(transrelativistic) then
+         g = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
+      else
+         g = clight_cresp*p
+      endif
+
+      print *, 'p : ', p
+      print *, 'p(bins) : ', p(bins)
+      print *, 'p(bins-1) : ', p(bins-1)
+      print *, 'g(bins) : ', g(bins)
+      print *, 'g(bins-1) : ', g(bins-1)
+      print *, 'size(bins) : ', size(bins)
+      print *, 'size(bins-1) : ', size(bins-1)
+      print *, 'size(g) : ', size(g)
+      print *, 'size(p) : ', size(p)
+      print *, 'g =', g
+      print *, 'bins =', bins, ',   size(bins)=', size(bins)
+      print *, 'log10 1 : ', log10( g(bins(1:size(bins))) /g(bins(1:size(bins))-1))
+      print *, 'log10 2 : ',log10(p(bins(1:size(bins))) /p(bins(1:size(bins))-1))
+
+      s(bins) = log10(g(bins(1:size(bins)))/g(bins(1:size(bins))-1))/log10(p(bins(1:size(bins)))/p(bins(1:size(bins))-1))
+
+      print *, 's =', s
+      three_ps = three + s
+      four_ps  = four + s
+
+   end subroutine compute_gs
+
+
    real function cresp_get_mom(gamma, particle_mass)
 
       use constants, only: zero, one
@@ -777,6 +848,10 @@ contains
       if (allocated(norm_init_spectrum_e))   deallocate(norm_init_spectrum_e)
 
       if (allocated(p_fix)) call my_deallocate(p_fix)
+      if (allocated(g)) call my_deallocate(g)
+      if (allocated(s)) call my_deallocate(s)
+      if (allocated(three_ps)) call my_deallocate(three_ps)
+      if (allocated(four_ps)) call my_deallocate(four_ps)
       if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
       if (allocated(cresp_all_edges)) call my_deallocate(cresp_all_edges)
       if (allocated(cresp_all_bins )) call my_deallocate(cresp_all_bins)
