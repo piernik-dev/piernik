@@ -88,7 +88,7 @@ $BASE_DOMAIN
     arr_dim_a = 50
     arr_dim_n = 50
     arr_dim_q = 1000
-    adiab_active(:)  = 2*.false.
+    adiab_active(:)  = 2*.true.
     !adiab_active(2)  = .false.
     synch_active(:)  = 2*.false.
     nullify_empty_bins = .false.
@@ -114,12 +114,13 @@ $BASE_DOMAIN
  /
 
  $MULTIGRID_DIFFUSION
-    diff_explicit = .true.
-    diff_theta     = 0.6
-    diff_tstep_fac = 1000
-    norm_tol = 1e-2
+    diff_explicit = .false.
+    diff_theta     = 0.5
+    diff_tstep_fac = 10
+    norm_tol = 1e-5
     nsmoob = 4
     max_cycles = 50
+    diff_bnd_str = "zero"
  /
 
  $PROBLEM_CONTROL
