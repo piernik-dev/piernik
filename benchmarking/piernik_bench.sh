@@ -118,7 +118,7 @@ fi
 #
 
 for p in $B_PROBLEM_LIST ; do
-    for t in flood weak strong; do
+    for t in flood strong weak ; do
 	echo "Benchmarking $p, $t scaling"
 	(
 	    RUNDIR=runs/${p}_B_${p}
@@ -133,7 +133,7 @@ for p in $B_PROBLEM_LIST ; do
                 MPIRUN="mpirun"
                 mpirun -np $i echo > /dev/null 2>&1 || MPIRUN="mpirun --use-hwthread-cpus"
                 # OpenMPI refuses to run more jobs than CPU cores but with --use-hwthread-cpus its performance is poor on 2 threads
-                max_mem=$( echo $MEMM $i | awk '{print int(0.95*$1*1024/$2)}' )
+                max_mem=$( echo $MEMM $i | awk '{print int(0.90*$1*1024/$2)}' )
                 rm *log 2> /dev/null
 		for j in $( seq $i ) ; do
 		    if [ ! -d $j ] ; then
