@@ -143,7 +143,7 @@ contains
       f = zero
       q = zero
       s = zero
-      g = zero
+      !g = zero
 
       if (present(substeps)) then
          n_substep = substeps
@@ -260,7 +260,7 @@ contains
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-         call compute_gs(p_fix, active_bins)
+         !call compute_gs(p_fix, active_bins)
          call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
@@ -313,7 +313,9 @@ contains
                endif
             endif
 
-            call ne_to_q(n, e, q, active_bins)  !< begins new step
+            !print *, 'Hello !'
+
+            call ne_to_q(n, e, g, q, active_bins)  !< begins new step
             f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)  !< Compute values of distribution function in the new step
          endif
 
@@ -577,7 +579,9 @@ contains
       approx_p = I_ZERO
       i_cut = pre_i_cut                         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
-      call ne_to_q(n, e, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
+      !print *, 'Hi ! '
+
+      call ne_to_q(n, e, g, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
       f = nq_to_f(p(I_ZERO:ncrb-I_ONE), p(I_ONE:ncrb), n(I_ONE:ncrb), q(I_ONE:ncrb), active_bins)  !< Compute values of distribution function f for active left edges at [t]
 
@@ -1721,7 +1725,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   subroutine ne_to_q(n, e, q, bins)
+   subroutine ne_to_q(n, e, g, q, bins)
 
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
@@ -1732,7 +1736,7 @@ contains
 
       implicit none
 
-      real, dimension(1:ncrb),       intent(in)  :: n, e
+      real, dimension(1:ncrb),       intent(in)  :: n, e, g
       real, dimension(1:ncrb),       intent(out) :: q
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer                                    :: i, i_active
@@ -1750,6 +1754,7 @@ contains
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
+            !print *, 'i : ',i, ' g(i-1) : ', g(i-1)
             alpha_in = e(i)/(n(i)*g(i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
