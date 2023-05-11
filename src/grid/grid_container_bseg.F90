@@ -64,7 +64,8 @@ module grid_cont_bseg
    type :: tgt_list
       type(segment), dimension(:), allocatable :: seg  !< segments of data to be received or sent
    contains
-      procedure :: add_seg !< Add an new segment, reallocate if necessary
+      procedure :: add_seg  !< Add an new segment, reallocate if necessary
+      procedure :: cleanup  !< Deallocate internals
    end type tgt_list
 
    type, extends(grid_container_na_t), abstract :: grid_container_bseg_t
@@ -94,7 +95,7 @@ contains
       type(segment), dimension(:), allocatable :: tmp
       integer :: g
 
-      if (tag <0) call die("[grid_container_bseg:add_seg] tag<0")
+      if (tag < 0) call die("[grid_container_bseg:add_seg] tag<0")
 
       if (allocated(this%seg)) then
          allocate(tmp(lbound(this%seg, dim=1):ubound(this%seg, dim=1)+1))
@@ -115,7 +116,27 @@ contains
 
 !> \brief Deallocate all internals
 
-      subroutine cleanup_bseg(this)
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(tgt_list), intent(inout) :: this  !< object invoking type-bound procedure
+
+      integer :: g
+
+      if (allocated(this%seg)) then
+         do g = lbound(this%seg, dim=1), ubound(this%seg, dim=1)
+            if (allocated(this%seg(g)%buf )) deallocate(this%seg(g)%buf )
+            if (allocated(this%seg(g)%buf4)) deallocate(this%seg(g)%buf4)
+         enddo
+         deallocate(this%seg)
+      endif
+
+   end subroutine cleanup
+
+!> \brief Deallocate all internals
+
+   subroutine cleanup_bseg(this)
 
       implicit none
 
@@ -125,13 +146,14 @@ contains
 
       if (allocated(this%i_bnd)) then
          do d = lbound(this%i_bnd, dim=1), ubound(this%i_bnd, dim=1)
-            if (allocated(this%i_bnd(d)%seg)) deallocate(this%i_bnd(d)%seg)
+            call this%i_bnd(d)%cleanup
          enddo
          deallocate(this%i_bnd)
       endif
+
       if (allocated(this%o_bnd)) then
          do d = lbound(this%o_bnd, dim=1), ubound(this%o_bnd, dim=1)
-            if (allocated(this%o_bnd(d)%seg)) deallocate(this%o_bnd(d)%seg)
+            call this%o_bnd(d)%cleanup
          enddo
          deallocate(this%o_bnd)
       endif
