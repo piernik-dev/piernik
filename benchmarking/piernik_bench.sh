@@ -1,13 +1,30 @@
 #!/bin/bash
 
-#check if we're allowed to skip making and want to just run existing piernik
-DO_MAKE=1
-if [ $# -ge 1 ] ; then
-    if [ $1 == "-fast" -o $1 == "-f" ] ; then
-	DO_MAKE=0
-	shift
-    fi
-fi
+# The defaults
+DO_MAKE=1  # measure the compilation time scaling
+COMPILER_CONFIG="benchmarking"  # for the setup script it means "./compilers/../benchmarking/${COMPILER_CONFIG}.in"
+N_PROC_LIST=""
+
+usage() {
+    echo "Usage:   $0 [options] [n_threads_1 [n_threads_2 ...]]"
+    echo "         -h | --help : this message"
+    echo "         -f | --fast : skip compilation test if possible"
+    echo "         -c | --config file : use ./benchmarking/\${file}.in as the compiler config (default: ./benchmarking/benchmarking.in)"
+    echo "default: $0 \$( seq number_of_logical_CPUs )"
+    exit 1
+}
+
+j=1
+skip=0
+for i in "$@" ; do
+    j=$(( $j + 1 ))
+    [ $skip == 0 ] && case $i in
+	"-f" | "--fast") DO_MAKE=0 ;;  # are we allowed to skip making and want to just run existing piernik
+	"-h" | "--help") usage ;;
+	"-c" | "--config") COMPILER_CONFIG=${*:$j:1} ; skip=1 ;;
+	*) N_PROC_LIST="${N_PROC_LIST} $i"
+    esac || skip=0
+done
 
 SCALE=${BIG:=1}
 
@@ -23,22 +40,20 @@ MEMM=$( LC_ALL=C free -m | awk '/Mem/ {print $2}' )
 echo "## "$( cat /proc/cpuinfo  | grep "model name" | uniq )
 echo "## Memory : $MEMG GB"
 
-
 [ "$SCALE" != "1" ] && echo "# test domains are scaled by factor of $SCALE"
 
 # create list of thread count to be tested
-if [ $# -lt 1 ] ; then
+if [ ${#N_PROC_LIST} == 0 ] ; then
     N=$( awk 'BEGIN {c=0} /processor/ {if ($NF > c) c=$NF} END {print c+1}' /proc/cpuinfo )
     N_PROC_LIST=$( seq $N )
 else
-    N_PROC_LIST=$( echo $* | awk '{for (i=1; i<=NF; i++) printf("%d ",1*$i); print ""}' )
+    N_PROC_LIST=$( echo $N_PROC_LIST | awk '{for (i=1; i<=NF; i++) printf("%d\n",1*$i); print ""}' | sort -n | uniq )
 fi
 
 for i in $N_PROC_LIST ; do
     if [ $i -le 0 ] ; then
-	echo "Usage:   $0 [n_threads_1 [n_threads_2 ...]]"
-	echo "default: $0 \$( seq number_of_logical_CPUs )"
-	exit 1
+	echo "N_PROC_LIST: ${N_PROC_LIST}"
+	usage
     fi
 done
 
@@ -70,7 +85,7 @@ if [ $DO_MAKE == 1 ] ; then
     {
 	# create object and run directories
 	echo -n "Preparing objects                "
-	SETUP_PARAMS="-c ../benchmarking/benchmarking -n --linkexe -d BENCHMARKING_HACK "
+	SETUP_PARAMS="-c ../benchmarking/${COMPILER_CONFIG} -n --linkexe -d BENCHMARKING_HACK "
 	( time for i in $PROBLEM_LIST; do
 	./setup $i $SETUP_PARAMS -o "B_"$i > /dev/null
 	done ) 2>&1 | awkfor
@@ -111,6 +126,8 @@ if [ $DO_MAKE == 1 ] ; then
 	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
     }
     echo
+else
+    echo "## compilation skipped"
 fi
 
 #
@@ -119,6 +136,7 @@ fi
 
 for p in $B_PROBLEM_LIST ; do
     for t in flood strong weak ; do
+	echo "## "$( date )
 	echo "Benchmarking $p, $t scaling"
 	(
 	    RUNDIR=runs/${p}_B_${p}
