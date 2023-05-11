@@ -153,12 +153,13 @@ for p in $B_PROBLEM_LIST ; do
                 # OpenMPI refuses to run more jobs than CPU cores but with --use-hwthread-cpus its performance is poor on 2 threads
                 max_mem=$( echo $MEMM $i | awk '{print int(0.90*$1*1024/$2)}' )
                 rm *log 2> /dev/null
-		for j in $( seq $i ) ; do
-		    if [ ! -d $j ] ; then
+		if [ $t == flood ] ; then  # refresh the subdirectories for flood scaling runs
+		    for j in $( seq $i ) ; do
+			[ -e $j ] && rm -rf $j
 			mkdir $j
 			cp piernik problem.par $j
-		    fi
-		done
+		    done
+		fi
 		case $p in
 		    sedov)
 			NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
