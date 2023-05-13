@@ -159,7 +159,7 @@ contains
       use fluidtypes,       only: component_fluid
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crn, iarr_crs, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, fsynchr, crel, total_init_cree
+      use initcrspectrum,   only: smallcree, cresp, cre_eff, use_cresp, f_synchIC, crel, total_init_cree
 #ifndef ISO
       use func,             only: ekin, emag
 #endif /* !ISO */
@@ -176,9 +176,9 @@ contains
 
 ! NOTICE: Btot is preferred over bx0, by0 and bz0 if these are set as well and overwrites them, B field in nonexistent direction is ignored.
       if (Btot > zero .or. u_b0 > zero) then  ! Distribute Btot evenly over all available directions
-         if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / fsynchr / dom%eff_dim)
-         if (dom%has_dir(ydim)) by0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / fsynchr / dom%eff_dim)
-         if (dom%has_dir(zdim)) bz0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / fsynchr / dom%eff_dim)
+         if (dom%has_dir(xdim)) bx0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / f_synchIC / dom%eff_dim)
+         if (dom%has_dir(ydim)) by0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / f_synchIC / dom%eff_dim)
+         if (dom%has_dir(zdim)) bz0 = sqrt(Btot**2 / dom%eff_dim) + sqrt(two * u_b0 / f_synchIC / dom%eff_dim)
       endif
 
       cgl => leaves%first
