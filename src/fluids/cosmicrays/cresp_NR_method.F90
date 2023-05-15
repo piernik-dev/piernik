@@ -1000,7 +1000,7 @@ contains
    real function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
       use constants,      only: one, three
-      use initcrspectrum, only: q_eps, s
+      use initcrspectrum, only: q_eps
 
       implicit none
 
@@ -1008,7 +1008,7 @@ contains
       real             :: q_in3, q_in4
 
       q_in3 = three - x
-      q_in4 = s + q_in3
+      q_in4 = one + q_in3
       if (abs(q_in3) < q_eps) then
          alpha_to_q = (p_ratio_4_q**q_in4 - one)/log(p_ratio_4_q)
       else if (abs(q_in4) < q_eps) then
@@ -1133,7 +1133,7 @@ contains
    real function encp_func_2_zero(side, p_ratio, q_in3) ! from eqn. 29
 
       use constants,      only: LO, one
-      use initcrspectrum, only: eps, s
+      use initcrspectrum, only: eps
 
       implicit none
 
@@ -1141,7 +1141,7 @@ contains
       real,            intent(in) :: p_ratio, q_in3
       real                        :: q_in4
 
-      q_in4 = s[side] + q_in3
+      q_in4 = one + q_in3
       if (abs(q_in3) < eps) then
          encp_func_2_zero = (p_ratio**q_in4)/(q_in4*log(p_ratio))  ! if q = 3
       else if (abs(q_in4) < eps) then
