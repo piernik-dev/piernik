@@ -37,7 +37,7 @@ module cresp_crspectrum
    implicit none
 
    private ! most of it
-   public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all &
+   public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all, &
       &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content, fq_to_e, fq_to_n, q
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
@@ -106,13 +106,14 @@ contains
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, substeps, p_out)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
+      use cr_data,        only: p_bnd
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use global,         only: disallow_CRnegatives
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms, g
 
       implicit none
 
@@ -182,71 +183,76 @@ contains
       n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
-      if (approx_p(HI) > 0) then
-         if (i_cut(HI) > 1) then
-            call get_fqp_cutoff(HI, solve_fail_up)
-         else                                                  !< spectrum cutoff beyond the fixed momentum grid
-            p_cut(HI)     = p_fix(i_cut(HI))
-            p(i_cut(HI))  = p_fix(i_cut(HI))
-            solve_fail_up = .false.
-         endif
+      if(p_bnd == 'mov') then
+         if (approx_p(HI) > 0) then
+            if (i_cut(HI) > 1) then
+               call get_fqp_cutoff(HI, solve_fail_up)
+            else                                                  !< spectrum cutoff beyond the fixed momentum grid
+               p_cut(HI)     = p_fix(i_cut(HI))
+               p(i_cut(HI))  = p_fix(i_cut(HI))
+               solve_fail_up = .false.
+            endif
 
-         if (solve_fail_up) then                               !< exit_code support
-            if (i_cut(HI) < ncrb) then
-               if (allow_unnatural_transfer) call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
-               call decr_vec(active_bins, num_active_bins)
-               call decr_vec(active_edges, num_active_edges)
-               is_active_bin(i_cut(HI))  = .false.
-               is_active_edge(i_cut(HI)) = .false.
-               num_active_bins = num_active_bins - I_ONE
-               f(i_cut(HI)-I_ONE:) = zero
-               q(i_cut(HI))        = zero
-               i_cut(HI) = i_cut(HI) - I_ONE
-               p_cut(HI) = p_fix(i_cut(HI))
-            else
-               p_cut(HI) = p_mid_fix(i_cut(HI))
+            if (solve_fail_up) then                               !< exit_code support
+               if (i_cut(HI) < ncrb) then
+                  if (allow_unnatural_transfer) call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
+                  call decr_vec(active_bins, num_active_bins)
+                  call decr_vec(active_edges, num_active_edges)
+                  is_active_bin(i_cut(HI))  = .false.
+                  is_active_edge(i_cut(HI)) = .false.
+                  num_active_bins = num_active_bins - I_ONE
+                  f(i_cut(HI)-I_ONE:) = zero
+                  q(i_cut(HI))        = zero
+                  i_cut(HI) = i_cut(HI) - I_ONE
+                  p_cut(HI) = p_fix(i_cut(HI))
+               else
+                  p_cut(HI) = p_mid_fix(i_cut(HI))
+               endif
+               p(i_cut(HI)) = p_cut(HI)
             endif
             p(i_cut(HI)) = p_cut(HI)
          endif
-      endif
 
-      if (approx_p(LO) > 0) then
-         if (i_cut(LO) + 1 /= ncrb) then
-            call get_fqp_cutoff(LO, solve_fail_lo)
-         else                                                  !< spectrum cutoff beyond the fixed momentum grid
-            p_cut(LO)     = p_fix(i_cut(LO))
-            p(i_cut(LO))  = p_cut(LO)
-            solve_fail_lo = .false.
-         endif
 
-         if (solve_fail_lo) then                               !< exit_code support
-            if (i_cut(LO) > 0) then
-               if (allow_unnatural_transfer)  call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
-               call decr_vec(active_bins, 1)
-               call decr_vec(active_edges, 1)
-               is_active_bin(i_cut(LO)+1) = .false.
-               is_active_edge(i_cut(LO))  = .false.
-               num_active_bins = num_active_bins - I_ONE
-               f(i_cut(LO):)      = zero
-               q(i_cut(LO)+I_ONE) = zero
-               i_cut(LO) = i_cut(LO) + I_ONE
-               p_cut(LO) = p_fix(i_cut(LO))
-            else
-               p_cut(LO) = p_mid_fix(1)
+         if (approx_p(LO) > 0) then
+            if (i_cut(LO) + 1 /= ncrb) then
+               call get_fqp_cutoff(LO, solve_fail_lo)
+            else                                                  !< spectrum cutoff beyond the fixed momentum grid
+               p_cut(LO)     = p_fix(i_cut(LO))
+               p(i_cut(LO))  = p_cut(LO)
+               solve_fail_lo = .false.
+            endif
+
+            if (solve_fail_lo) then                               !< exit_code support
+               if (i_cut(LO) > 0) then
+                  if (allow_unnatural_transfer)  call manually_deactivate_bin_via_transfer(i_cut(LO) + I_ONE, I_ONE, n, e)
+                  call decr_vec(active_bins, 1)
+                  call decr_vec(active_edges, 1)
+                  is_active_bin(i_cut(LO)+1) = .false.
+                  is_active_edge(i_cut(LO))  = .false.
+                  num_active_bins = num_active_bins - I_ONE
+                  f(i_cut(LO):)      = zero
+                  q(i_cut(LO)+I_ONE) = zero
+                  i_cut(LO) = i_cut(LO) + I_ONE
+                  p_cut(LO) = p_fix(i_cut(LO))
+               else
+                  p_cut(LO) = p_mid_fix(1)
+               endif
+               p(i_cut(LO)) = p_cut(LO)
             endif
             p(i_cut(LO)) = p_cut(LO)
          endif
-      endif
 
-      if (num_active_bins < 1) then          !< if 2 active_bins and solution fails in both, return empty_cell
-         approx_p = e_small_approx_p         !< restore approximation after momenta computed
-         empty_cell = .true.
-         return
+         if (num_active_bins < 1) then          !< if 2 active_bins and solution fails in both, return empty_cell
+            approx_p = e_small_approx_p         !< restore approximation after momenta computed
+            empty_cell = .true.
+            return
+         endif
       endif
 
       do i_sub = 1, n_substep                   !< if one substep, all is done the classic way
 ! Compute momentum changes in after time period [t,t+dt]
-         call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
+         if (p_bnd == 'mov') call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
 
          if (cfl_cresp_violation) then !< disallow_CRnegatives is not used here, as potential negatives do not appear in transfer of n,e but in p
             approx_p = e_small_approx_p         !< restore approximation after momenta computed
@@ -322,7 +328,7 @@ contains
 
       approx_p = e_small_approx_p         !< restore approximation after momenta computed
 
-      p_cut = p_cut_next
+      if (p_bnd == 'mov') p_cut = p_cut_next
 
 #ifdef CRESP_VERBOSED
       write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] :"               ; call printinfo(msg)
@@ -511,7 +517,7 @@ contains
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: incr_vec
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: e_small, cresp_all_bins, p_fix, p_mid_fix
+      use initcrspectrum, only: e_small, cresp_all_bins, p_fix, p_mid_fix, g
 
       implicit none
 
@@ -929,10 +935,11 @@ contains
    subroutine cresp_init_state(init_n, init_e)
 
       use constants,       only: zero, I_ZERO, I_ONE
+      use cr_data,         only: p_bnd
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncrb, nspc
-      use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
+      use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel, g,  &
                               &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
       use mpisetup,        only: master
 
@@ -1020,7 +1027,7 @@ contains
                 call die(msg)
         end select
 
-        if (e_small_approx_init_cond > 0) then
+        if (e_small_approx_init_cond > 0 .and. p_bnd == 'mov') then
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
                 if (exit_code) then
@@ -1116,7 +1123,7 @@ contains
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, g
 
       implicit none
 
@@ -1158,7 +1165,7 @@ contains
       use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, g
 
       implicit none
 
@@ -1216,10 +1223,6 @@ contains
          q(i) = pf_to_q(p_range_add(i-1), p_range_add(i), f(i-1), f(i))
       enddo
 
-      call compute_gs(p_fix, act_bins)
-
-      print *, 'g : ', g
-
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
       e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), q(1:ncrb), act_bins)
 
@@ -1236,7 +1239,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init
+      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init, g
 
       implicit none
 
@@ -1261,7 +1264,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init
+      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init, g
 
       implicit none
 
@@ -1283,7 +1286,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init
+      use initcrspectrum, only: p_fix, q_init, g
 
       implicit none
 
@@ -1312,7 +1315,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init
+      use initcrspectrum, only: p_fix, q_init, g
 
       implicit none
 
@@ -1339,7 +1342,7 @@ contains
 
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: f_init, p_init
+      use initcrspectrum,  only: f_init, p_init, g
 
       implicit none
 
@@ -1405,7 +1408,7 @@ contains
       use constants,       only: zero, one, three, four
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps, g, three_ps
+      use initcrspectrum,  only: eps, three_ps
 
       implicit none
 
@@ -1540,7 +1543,7 @@ contains
       use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g
+      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g, s
 
       implicit none
 
@@ -1685,7 +1688,7 @@ contains
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small, g
+      use initcrspectrum,  only: e_small
 
       implicit none
 
