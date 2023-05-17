@@ -252,7 +252,7 @@ contains
 
       do i_sub = 1, n_substep                   !< if one substep, all is done the classic way
 ! Compute momentum changes in after time period [t,t+dt]
-         if (p_bnd == 'mov') call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
+         call cresp_update_bin_index(sptab%ub*dt, sptab%ud*dt, p_cut, p_cut_next, cfl_cresp_violation)
 
          if (cfl_cresp_violation) then !< disallow_CRnegatives is not used here, as potential negatives do not appear in transfer of n,e but in p
             approx_p = e_small_approx_p         !< restore approximation after momenta computed
@@ -822,6 +822,7 @@ contains
    subroutine cresp_update_bin_index(ubdt, uddt, p_cut, p_cut_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
       use constants,      only: zero, I_ZERO, I_ONE, one
+      use cr_data,        only: p_bnd
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -837,23 +838,26 @@ contains
       integer                             :: i
 
       dt_too_high = .false.
+
+      if (p_bnd=='mov') then
 ! Compute p_cut at [t+dt] (update p_range)
-      p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
-      p_cut_next = abs(p_cut_next)
+         p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
+         p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
-      i_cut_next = get_i_cut(p_cut_next)
-      i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
-      i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
+         i_cut_next = get_i_cut(p_cut_next)
+         i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
+         i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
 
-      i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
-      i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
+         i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
+         i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
 
-      if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
-         dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
-         return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
-      endif
+         if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
+            dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
+            return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
+         endif
 ! Detect changes in positions of lower an upper cut-ofs
-      del_i = i_cut_next - i_cut
+         del_i = i_cut_next - i_cut
+      endif
 
 ! Construct index arrays for fixed edges between p_cut(LO) and p_cut(HI), active edges after timestep
       call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO) + I_ONE, i_cut_next(HI) - I_ONE])
@@ -1567,6 +1571,8 @@ contains
       de_upw = zero
       nflux  = zero
       eflux  = zero
+
+      print *, 'ce : ', ce !, ' pimh : ', pimh(ce)
 
       dn_upw(ce) = fpi*fimh(ce)*pimh(ce)**3
       where (abs( qi(ce) - three ) > eps)
