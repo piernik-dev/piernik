@@ -252,10 +252,10 @@ contains
       synch_active(:)      = .true.
       adiab_active(:)      = .true.
       cre_active(:)        = 0.0
-      s(:) = 0.0
-      three_ps(:) = 0.0
-      four_ps(:) = 0.0
-      g(:) = 0.0
+      !s(:) = 0.0
+      !three_ps(:) = 0.0
+      !four_ps(:) = 0.0
+      !g(:) = 0.0
 
       if(cr_spectral(cr_table(icr_H1))) cre_active(findloc(icr_spc, icr_H1)) = 1.0
 
@@ -357,10 +357,10 @@ contains
          rbuff(11*nspc+14:12*nspc+13) = p_diff(1:nspc)
          rbuff(12*nspc+15) = q_eps
          rbuff(12*nspc+16) = b_max_db
-         rbuff(12*nspc+17:13*nspc+16) = g
-         rbuff(13*nspc+17:14*nspc+16) = s
-         rbuff(14*nspc+17:15*nspc+16) = three_ps
-         rbuff(15*nspc+17:16*nspc+16) = four_ps
+         !rbuff(12*nspc+17:12*nspc+ncrb+16) = g
+         !rbuff(12*nspc+ncrb+17:12*nspc+2*ncrb+16) = s
+         !rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16) = three_ps
+         !rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16) = four_ps
 
          cbuff(1)  = initial_spectrum
       endif
@@ -433,10 +433,10 @@ contains
          p_diff(1:nspc)       = rbuff(11*nspc+14:12*nspc+13)
          q_eps                = rbuff(12*nspc+15)
          b_max_db             = rbuff(12*nspc+16)
-         g(1:nspc)            = rbuff(13*nspc+16)
-         s(1:nspc)            = rbuff(14*nspc+16)
-         three_ps(1:nspc)     = rbuff(15*nspc+16)
-         four_ps(1:nspc)      = rbuff(16*nspc+16)
+         !g(1:ncrb)            = rbuff(12*nspc+17:12*nspc+ncrb+16)
+         !s(1:ncrb)            = rbuff(12*nspc+ncrb+17:12*nspc+2*ncrb+16)
+         !three_ps(1:ncrb)     = rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16)
+         !four_ps(1:ncrb)      = rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16)
 
          initial_spectrum            = trim(cbuff(1))
 
@@ -490,10 +490,10 @@ contains
 
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
-      call my_allocate_with_index(g,                ncrb, I_ONE)
-      call my_allocate_with_index(s,                ncrb, I_ONE)
-      call my_allocate_with_index(three_ps,         ncrb, I_ONE)
-      call my_allocate_with_index(four_ps,          ncrb, I_ONE)
+      call my_allocate_with_index(g,                ncrb, I_ZERO)
+      call my_allocate_with_index(s,                ncrb, I_ZERO)
+      call my_allocate_with_index(three_ps,         ncrb, I_ZERO)
+      call my_allocate_with_index(four_ps,          ncrb, I_ZERO)
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
       call my_allocate_with_index(cresp_all_bins,   ncrb, I_ONE )
@@ -747,9 +747,8 @@ contains
       implicit none
 
       real(kind=8), dimension(:), intent(in) :: p
-      integer                               :: i_bin
-      integer, dimension(:), intent(in)     :: bins
-      real(kind=8), dimension(bins(1):bins(size(bins))) :: r_num, r_den, rn_den
+      integer, dimension(:), intent(in)      :: bins
+      integer                                :: i_bin
 
 
       s = zero
@@ -759,6 +758,7 @@ contains
       print *, 'compute_gs'
       print *, '   p =', p
       print *, 'bins =', bins
+      print *, 'bins-1 =', bins-1
 
       if(transrelativistic) then
          g = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
@@ -766,21 +766,25 @@ contains
          g = clight_cresp*p
       endif
 
-      print *, 'p : ', p
-      print *, 'p(bins) : ', p(bins)
-      print *, 'p(bins-1) : ', p(bins-1)
-      print *, 'g(bins) : ', g(bins)
-      print *, 'g(bins-1) : ', g(bins-1)
       print *, 'size(bins) : ', size(bins)
       print *, 'size(bins-1) : ', size(bins-1)
       print *, 'size(g) : ', size(g)
       print *, 'size(p) : ', size(p)
+      print *, 'p : ', p
       print *, 'g =', g
+      print *, 'p(bins) : ', p(2:size(bins)+1)
+      print *, 'p(bins-1) : ', p(1:size(bins))
+      print *, 'g(bins) : ', g(1:size(bins))
+      print *, 'g(bins-1) : ', g(0:size(bins)-1)
       print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      print *, 'log10 1 : ', log10( g(bins(1:size(bins))) /g(bins(1:size(bins))-1))
-      print *, 'log10 2 : ',log10(p(bins(1:size(bins))) /p(bins(1:size(bins))-1))
+      !print *, 'log10 1 : ', log10( g(1:size(bins)) /g(0:size(bins)-1))
+      !print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
 
-      s(bins) = log10(g(bins(1:size(bins)))/g(bins(1:size(bins))-1))/log10(p(bins(1:size(bins)))/p(bins(1:size(bins))-1))
+      do i_bin = 1, size(bins)
+
+         if (g(i_bin) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g(i_bin) /g(i_bin-1))/log10(p(i_bin+1) /p(i_bin))
+
+      enddo
 
       print *, 's =', s
       three_ps = three + s
