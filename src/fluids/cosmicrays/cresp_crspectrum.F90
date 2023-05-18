@@ -157,7 +157,7 @@ contains
       else
          p_cut = zero
          if (dfpq%any_dump) then
-            p = zero
+            crel%p = zero
             crel%f = zero
             crel%q = zero
             crel%e = zero
@@ -1080,7 +1080,7 @@ contains
         endif
 
         if (dfpq%any_dump) then
-            p = p
+            crel%p = p
             crel%f = f
             crel%q = q
             crel%e = e
@@ -1611,16 +1611,16 @@ contains
       endif
 
       dn_upw(he) = fpi*fimth(he)*gimth(he)*p_upw(he)**three*(pimth(he)/p_upw(he))**(qi(he)-s(he))
-      where(qi(he) .ne. three_ps(he))
-         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three_ps(he)-qi(he)) - one)/(three_ps(he) - qi(he))
+      where(qi(he) .ne. three)
+         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three-qi(he)) - one)/(three - qi(he))
       elsewhere
          dn_upw(he) = dn_upw(he)*log((pimh(he)/p_upw(he)))
       endwhere
       nflux(he) = dn_upw(he)
 
-      de_upw(he) = fpcc * fimth(he) * p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
-      where (abs(qi(he) - four) > eps)
-         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
+      de_upw(he) = fpcc * fimth(he) * gimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
+      where (abs(qi(he) - three_ps(he)) > eps)
+         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three_ps(he)-qim1(he)) - one)/(three_ps(he) - qim1(he))
       elsewhere
          de_upw(he) = de_upw(he)*log(pimh(he)/p_upw(he))
       endwhere
@@ -1666,7 +1666,7 @@ contains
          r_num = log(p(bins)/p(bins-1))
       endwhere
 
-      where(q(bins) .ne. three_ps(bins) )
+      where(q(bins) .ne. three_ps(bins))
          r_den = ((p(bins)/p(bins-1))**(three_ps(bins)-q(bins))-one)/(three_ps(bins)-q(bins))
       elsewhere
          r_den = log(p(bins)/p(bins-1))
@@ -1784,22 +1784,22 @@ contains
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray pressure (eq. 44)
 !---------------------------------------------------------------------------------------------------
-   real function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
+   real function get_pcresp(p_l, p_r, f_l, g_l, q, bins) ! computes cre pressure, not used currently
 
       use constants,       only: one, four
       use cresp_variables, only: fp3cc
-      use initcrspectrum,  only: eps, g, three_ps
+      use initcrspectrum,  only: eps, three_ps
 
       implicit none
 
-      real,    dimension(:), intent(in) :: p_l, p_r, f_l, q
+      real,    dimension(:), intent(in) :: p_l, p_r, f_l, g_l, q
       integer, dimension(:), intent(in) :: bins
       real,    dimension(size(bins))    :: p_cresp
 
-      p_cresp = fp3cc * f_l(bins)*p_l(bins)**4
+      p_cresp = fp3cc * f_l(bins)*g_l(bins)*p_l(bins)**3
 
-      where (abs(q(bins) - four) > eps)
-         p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
+      where (abs(q(bins) - three_ps) > eps)
+         p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(three_ps-q(bins)) - one)/(three_ps - q(bins))
       elsewhere
          p_cresp = p_cresp*log(p_r(bins)/p_l(bins))
       endwhere
@@ -1853,7 +1853,7 @@ contains
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf, g
 
       implicit none
 
@@ -1867,7 +1867,7 @@ contains
       qi    = i_cut(cutoff) + oz(cutoff)
       call assoc_pointers(cutoff)
 
-      alpha = e(qi)/(n(qi) * p_fix(ipfix) * clight_cresp)
+      alpha = e(qi)/(n(qi) * g(ipfix))
       n_in  = n(qi)
       x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
       if (.not. interpolated) then
