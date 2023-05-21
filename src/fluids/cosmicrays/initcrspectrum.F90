@@ -511,9 +511,9 @@ contains
 !!\brief for now algorithm requires at least 3 bins
       p_fix = zero
       w  = log10(p_max_fix/p_min_fix) / real(ncrb-2)
-      p_fix(0:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(0:ncrb-1)-1))
+      p_fix(1:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncrb-1)-1))
       !p_fix(0)    = zero
-      p_fix(ncrb) = zero
+      !p_fix(ncrb) = zero
       p_fix_ratio = ten**w
 
       p_mid_fix = 0.0
@@ -537,9 +537,11 @@ contains
 
       gamma_beta_c_fix = mom_cre_fix / me
 
-      n_small_bin(:) = e_small / (p_mid_fix(:) * clight_cresp)
-
       call compute_gs(p_fix, cresp_all_bins)
+
+      n_small_bin(:) = e_small / g(:)
+
+
 
 #ifdef VERBOSE
          write (msg,'(A, 50I3)')    '[initcrspectrum:init_cresp] fixed all edges: ', cresp_all_edges
@@ -777,14 +779,16 @@ contains
       print *, 'g(bins) : ', g(1:size(bins))
       print *, 'g(bins-1) : ', g(0:size(bins)-1)
       print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      !print *, 'log10 1 : ', log10( g(1:size(bins)) /g(0:size(bins)-1))
-      !print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
+      print *, 'log10 1 : ', log10( g(1:size(bins)) /g(0:size(bins)-1))
+      print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
 
-      do i_bin = 1, size(bins)
+      !do i_bin = 1, size(bins)
+      !
+      !   if (g(i_bin) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g(i_bin) /g(i_bin-1))/log10(p(i_bin+1) /p(i_bin))
+      !
+      !enddo
 
-         if (g(i_bin) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g(i_bin) /g(i_bin-1))/log10(p(i_bin+1) /p(i_bin))
-
-      enddo
+      s(bins) =   log10( g(1:size(bins)) /g(0:size(bins)-1)) / log10(p(2:size(bins)+1) /p(1:size(bins)))
 
       print *, 's =', s
       three_ps = three + s
