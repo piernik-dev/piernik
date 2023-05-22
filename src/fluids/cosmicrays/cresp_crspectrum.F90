@@ -925,7 +925,7 @@ contains
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncrb, nspc
       use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g, three_ps
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g_fix, three_ps
       use mpisetup,        only: master
 
       implicit none
@@ -1055,7 +1055,7 @@ contains
                 allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
                 active_bins = pack(cresp_all_bins, is_active_bin)
 
-                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins) ! once again we must count n and e
+                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins) ! once again we must count n and e
                 n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
             endif
         endif
@@ -1108,7 +1108,7 @@ contains
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, g, three_ps
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, g_fix, three_ps
 
       implicit none
 
@@ -1132,7 +1132,7 @@ contains
       f(act_edges) = f_init(i_spc) * (p_range_add(act_edges)/p_init(LO, i_spc))**(-q_init(i_spc))
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
       call my_deallocate(act_edges)
@@ -1150,7 +1150,7 @@ contains
       use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, g, three_ps
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, g_fix, three_ps
 
       implicit none
 
@@ -1209,7 +1209,7 @@ contains
       enddo
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
       !print *, 'n : ', n
@@ -1224,7 +1224,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init, g, three_ps
+      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init, g_fix, three_ps
 
       implicit none
 
@@ -1236,7 +1236,7 @@ contains
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpg_spectrum
@@ -1249,7 +1249,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init, g, three_ps
+      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init, g_fix, three_ps
 
       implicit none
 
@@ -1259,7 +1259,7 @@ contains
       i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
       q(:i_br) = q_br_init(i_spc) ; q(i_br+1:) = q_init(i_spc)
       f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init(i_spc))
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpl_spectrum
@@ -1271,7 +1271,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init, g, three_ps
+      use initcrspectrum, only: p_fix, q_init, g_fix, three_ps
 
       implicit none
 
@@ -1288,7 +1288,7 @@ contains
 
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) - I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_symf_spectrum
@@ -1300,7 +1300,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init, g, three_ps
+      use initcrspectrum, only: p_fix, q_init, g_fix, three_ps
 
       implicit none
 
@@ -1314,7 +1314,7 @@ contains
       enddo
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_syme_spectrum
@@ -1327,7 +1327,7 @@ contains
 
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: f_init, p_init, g, three_ps
+      use initcrspectrum,  only: f_init, p_init, g_fix, three_ps
 
       implicit none
 
@@ -1339,7 +1339,7 @@ contains
       do i = 1, ncrb
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_bump_spectrum
@@ -1535,7 +1535,7 @@ contains
       use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g, s
+      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g_fix, s
 
       implicit none
 
@@ -1549,8 +1549,8 @@ contains
       fimh(1:ncrb-1) = f(1:ncrb-1)
       fimth(1:ncrb-1) = f(0:ncrb-2)
 
-      gimh(1:ncrb-1)  = g(1:ncrb-1)
-      gimth(1:ncrb-1) = g(0:ncrb-2)
+      gimh(1:ncrb-1)  = g_fix(1:ncrb-1)
+      gimth(1:ncrb-1) = g_fix(0:ncrb-2)
 
       qi(1:ncrb-1)  = q(2:ncrb)
       qim1(1:ncrb-1) = q(1:ncrb-1)
@@ -1677,7 +1677,7 @@ contains
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small, g
+      use initcrspectrum,  only: e_small, g_fix
 
       implicit none
 
@@ -1700,7 +1700,7 @@ contains
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
             !print *, 'i : ',i, ' g(i-1) : ', g(i-1)
-            alpha_in = e(i)/(n(i)*g(i-1))
+            alpha_in = e(i)/(n(i)*g_fix(i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
             else
@@ -1836,7 +1836,7 @@ contains
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf, g
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf, g_fix
 
       implicit none
 
@@ -1850,7 +1850,7 @@ contains
       qi    = i_cut(cutoff) + oz(cutoff)
       call assoc_pointers(cutoff)
 
-      alpha = e(qi)/(n(qi) * g(ipfix))
+      alpha = e(qi)/(n(qi) * g_fix(ipfix))
       n_in  = n(qi)
       x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
       if (.not. interpolated) then

@@ -42,7 +42,7 @@ module initcrspectrum
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active,                 &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim_a, arr_dim_n, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,           &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum_n, norm_init_spectrum_e, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,     &
-           & u_b_max, def_dtsynch, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, bin_old, g, s, three_ps, four_ps
+           & u_b_max, def_dtsynch, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, bin_old, g_fix, g_mid_fix, s, three_ps, four_ps
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -63,7 +63,7 @@ module initcrspectrum
    real, dimension(:), allocatable :: cfl_cre                     !< CFL parameter  for CR spectrally resolved components! TODO FIXME RENAME ME PLEASE!!!!
    real, dimension(:), allocatable :: cre_eff                     !< fraction of energy passed to CR spectrally resolved components by nucleons (mainly protons)! TODO wat do with cr_eff now?! TODO FIXME RENAME ME PLEASE!!!!
    real, allocatable, dimension(:) :: s, three_ps, four_ps                !> power-law exponent arrays for transrelativistic limit
-   real, allocatable, dimension(:) :: g                                   !> kinetic energy
+   real, allocatable, dimension(:) :: g_fix, g_mid_fix                                  !> kinetic energy arrays
    real, dimension(:,:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:,:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:), allocatable :: K_cre_pow   !< exponent for power law-like diffusion-energy dependence ! TODO FIXME RENAME ME PLEASE!!!!
@@ -490,11 +490,12 @@ contains
 
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
-      call my_allocate_with_index(g,                ncrb, I_ZERO)
+      call my_allocate_with_index(g_fix,                ncrb, I_ZERO)
       call my_allocate_with_index(s,                ncrb, I_ZERO)
       call my_allocate_with_index(three_ps,         ncrb, I_ZERO)
       call my_allocate_with_index(four_ps,          ncrb, I_ZERO)
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
+      call my_allocate_with_index(g_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
       call my_allocate_with_index(cresp_all_bins,   ncrb, I_ONE )
       call my_allocate_with_index(n_small_bin,      ncrb, I_ONE )
@@ -516,8 +517,11 @@ contains
       !p_fix(ncrb) = zero
       p_fix_ratio = ten**w
 
+      call compute_gs(p_fix, cresp_all_bins)
+
       p_mid_fix = 0.0
       p_mid_fix(2:ncrb-1) = sqrt(p_fix(1:ncrb-2)*p_fix(2:ncrb-1))
+      g_mid_fix(2:ncrb-1) = sqrt(g_fix(1:ncrb-2)*g_fix(2:ncrb-1))
       p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
       p_mid_fix(ncrb) = p_mid_fix(ncrb-1) * p_fix_ratio
 
@@ -537,9 +541,7 @@ contains
 
       gamma_beta_c_fix = mom_cre_fix / me
 
-      call compute_gs(p_fix, cresp_all_bins)
-
-      n_small_bin(:) = e_small / g(:)
+      n_small_bin(:) = e_small / g_mid_fix(:)
 
 
 
@@ -764,33 +766,34 @@ contains
 
       if(transrelativistic) then
 
-         g = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
+         g_fix = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
 
          do i_bin = 1, size(bins) - 1
 
-            if (g(i_bin) .ne. 0.0 .or. g(i_bin-1) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g(i_bin) /g(i_bin-1))/log10(p(i_bin+1) /p(i_bin))
+            if (g_fix(i_bin) .ne. 0.0 .or. g_fix(i_bin-1) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g_fix(i_bin) /g_fix(i_bin-1))/log10(p(i_bin+1) /p(i_bin))
 
          enddo
+
       else
 
-         g = clight_cresp*p
+         g_fix = clight_cresp*p
          s = 1.0
 
       endif
 
       print *, 'size(bins) : ', size(bins)
       print *, 'size(bins-1) : ', size(bins-1)
-      print *, 'size(g) : ', size(g)
+      print *, 'size(g) : ', size(g_fix)
       print *, 'size(p) : ', size(p)
       print *, 'p : ', p
-      print *, 'g =', g
+      print *, 'g_fix =', g_fix
       print *, 'p(bins) : ', p(2:size(bins)+1)
       print *, 'p(bins-1) : ', p(1:size(bins))
-      print *, 'g(bins) : ', g(1:size(bins))
-      print *, 'g(bins-1) : ', g(0:size(bins)-1)
+      print *, 'g_fix(bins) : ', g_fix(1:size(bins))
+      print *, 'g_fix(bins-1) : ', g_fix(0:size(bins)-1)
       print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      print *, 'log10 1 : ', log10( g(1:size(bins)) /g(0:size(bins)-1))
-      print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
+      !print *, 'log10 1 : ', log10( g_fix(1:size(bins)) /g_fix(0:size(bins)-1))
+      !print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
 
 
 
@@ -862,11 +865,12 @@ contains
       if (allocated(norm_init_spectrum_e))   deallocate(norm_init_spectrum_e)
 
       if (allocated(p_fix)) call my_deallocate(p_fix)
-      if (allocated(g)) call my_deallocate(g)
+      if (allocated(g_fix)) call my_deallocate(g_fix)
       if (allocated(s)) call my_deallocate(s)
       if (allocated(three_ps)) call my_deallocate(three_ps)
       if (allocated(four_ps)) call my_deallocate(four_ps)
       if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
+      if (allocated(g_mid_fix)) call my_deallocate(g_mid_fix)
       if (allocated(cresp_all_edges)) call my_deallocate(cresp_all_edges)
       if (allocated(cresp_all_bins )) call my_deallocate(cresp_all_bins)
 
