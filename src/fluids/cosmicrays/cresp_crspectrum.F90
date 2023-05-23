@@ -105,6 +105,7 @@ contains
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, substeps, p_out)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
+      use cr_data,        only: p_bnd
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
@@ -180,7 +181,7 @@ contains
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
       if (approx_p(HI) > 0) then
-         if (i_cut(HI) > 1) then
+         if (i_cut(HI) > 1 .and. p_bnd=='mov') then
             call get_fqp_cutoff(HI, solve_fail_up)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(HI)     = p_fix(i_cut(HI))
@@ -208,7 +209,7 @@ contains
       endif
 
       if (approx_p(LO) > 0) then
-         if (i_cut(LO) + 1 /= ncrb) then
+         if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='mov') then
             call get_fqp_cutoff(LO, solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(LO)     = p_fix(i_cut(LO))
@@ -921,6 +922,7 @@ contains
    subroutine cresp_init_state(init_n, init_e)
 
       use constants,       only: zero, I_ZERO, I_ONE
+      use cr_data,         only: p_bnd
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncrb, nspc
@@ -1012,7 +1014,7 @@ contains
                 call die(msg)
         end select
 
-        if (e_small_approx_init_cond > 0) then
+        if (e_small_approx_init_cond > 0 .and. p_bnd=='mov') then
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
                 if (exit_code) then
