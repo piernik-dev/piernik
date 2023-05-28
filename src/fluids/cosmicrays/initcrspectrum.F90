@@ -512,9 +512,9 @@ contains
 !!\brief for now algorithm requires at least 3 bins
       p_fix = zero
       w  = log10(p_max_fix/p_min_fix) / real(ncrb-2)
-      p_fix(0:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(0:ncrb-1)-1))
-      !p_fix(0)    = zero
-      !p_fix(ncrb) = zero
+      p_fix(1:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncrb-1)-1))
+      p_fix(0)    = zero
+      p_fix(ncrb) = zero
       p_fix_ratio = ten**w
 
       call compute_gs(p_fix, cresp_all_bins)
@@ -768,16 +768,10 @@ contains
 
          g_fix = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
 
-         do i_bin = 1, size(bins) - 1
-
-            if (g_fix(i_bin) .ne. 0.0 .or. g_fix(i_bin-1) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g_fix(i_bin) /g_fix(i_bin-1))/log10(p(i_bin+1) /p(i_bin))
-
-         enddo
-
       else
 
-         g_fix = clight_cresp*p
-         s = 1.0
+         g_fix = clight_cresp*p_fix
+         !s = 1.0
 
       endif
 
@@ -787,17 +781,23 @@ contains
       print *, 'size(p) : ', size(p)
       print *, 'p : ', p
       print *, 'g_fix =', g_fix
-      print *, 'p(bins) : ', p(2:size(bins)+1)
-      print *, 'p(bins-1) : ', p(1:size(bins))
-      print *, 'g_fix(bins) : ', g_fix(1:size(bins))
-      print *, 'g_fix(bins-1) : ', g_fix(0:size(bins)-1)
+      print *, 'p(bins) : ', p(0:size(bins))
+      !print *, 'p(bins-1) : ', p(1:size(bins))
+      print *, 'g_fix(bins) : ', g_fix(0:size(bins))
+      !print *, 'g_fix(bins-1) : ', g_fix(1:size(bins))
       print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      !print *, 'log10 1 : ', log10( g_fix(1:size(bins)) /g_fix(0:size(bins)-1))
+      !²print *, 'log10 1 : ', log10( g_fix(1:size(bins)) /g_fix(0:size(bins)-1))
       !print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
 
 
 
       !s(bins) =   log10( g(1:size(bins)) /g(0:size(bins)-1)) / log10(p(2:size(bins)+1) /p(1:size(bins)))
+
+      do i_bin = 1, size(bins) - 2
+
+            if (g_fix(i_bin+1) .ne. 0.0 .or. g_fix(i_bin) .ne. 0.0 .or. p(i_bin+2) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g_fix(i_bin+1) /g_fix(i_bin))/log10(p(i_bin+2) /p(i_bin+1))
+
+      enddo
 
       print *, 's =', s
       three_ps = three + s
