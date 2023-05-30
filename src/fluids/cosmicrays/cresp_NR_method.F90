@@ -124,29 +124,30 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine NR_algorithm_1D(x, exit_code)
+   subroutine NR_algorithm_1D(x, three_p_s, exit_code)
 
       use constants,      only: zero, big
       use func,           only: operator(.equals.)
-      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
+      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D!, three_ps
 
       implicit none
 
       integer :: i
       real    :: x, delta, dfun_1D, fun1D_val
+      real(kind=8) :: three_p_s
       logical :: exit_code, func_check
 
       delta = big
       func_check = .false.
 
       do i = 1, NR_iter_limit
-         fun1D_val = alpha_to_q(x) - alpha
+         fun1D_val = alpha_to_q(x, three_p_s) - alpha
          if ((abs(fun1D_val) <= tol_f_1D) .and. (abs(delta) <= tol_f_1D)) then ! delta <= tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
             exit_code = .false.
             return
          endif
 
-         dfun_1D = derivative_1D(x)
+         dfun_1D = derivative_1D(x, three_p_s)
 
          if (abs(dfun_1D) .equals. zero) then
             exit_code = .true.
@@ -170,7 +171,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   real function derivative_1D(x) ! via finite difference method
+   real function derivative_1D(x, three_p_s) ! via finite difference method
 
       use constants,      only: half
       use initcrspectrum, only: eps
@@ -180,10 +181,11 @@ contains
       real, intent(in) :: x
       real             :: dx
       real, parameter  :: dx_par = 1.0e-4
+      real(kind=8)     :: three_p_s
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
-      derivative_1D = half * (alpha_to_q(x+dx) - alpha_to_q(x-dx))/dx
+      derivative_1D = half * (alpha_to_q(x+dx,three_p_s) - alpha_to_q(x-dx,three_p_s))/dx
 
    end function derivative_1D
 
@@ -929,6 +931,7 @@ contains
    subroutine fill_q_grid(i_incr)
 
       use initcrspectrum, only: p_fix_ratio, arr_dim_q
+      use constants,      only: four
 
       implicit none
 
@@ -951,12 +954,12 @@ contains
          write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q, ", (alpha): ",alpha  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
          x = prev_solution
-         call NR_algorithm_1D(x, exit_code)
+         call NR_algorithm_1D(x, four, exit_code)
          if (exit_code) then
             do j = 1, helper_arr_dim
                if (exit_code) then
                   x = q_space(j)
-                  call NR_algorithm_1D(x, exit_code)
+                  call NR_algorithm_1D(x, four, exit_code)
                   if (.not. exit_code) then
                      q_grid(i) = x
                      prev_solution = x
@@ -997,7 +1000,7 @@ contains
 
    end subroutine q_control
 !----------------------------------------------------------------------------------------------------
-   real function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
+   real function alpha_to_q(x, three_p_s) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
       use constants,      only: one, three
       use initcrspectrum, only: q_eps
@@ -1006,9 +1009,10 @@ contains
 
       real, intent(in) :: x
       real             :: q_in3, q_in4
+      real(kind=8)     :: three_p_s
 
       q_in3 = three - x
-      q_in4 = one + q_in3
+      q_in4 = three_p_s - x
       if (abs(q_in3) < q_eps) then
          alpha_to_q = (p_ratio_4_q**q_in4 - one)/log(p_ratio_4_q)
       else if (abs(q_in4) < q_eps) then
@@ -1318,7 +1322,7 @@ contains
 
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
-   real function compute_q(alpha_in, exit_code, outer_p_ratio)
+   real function compute_q(alpha_in, three_p_s, exit_code, outer_p_ratio)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
       use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio, arr_dim_q
@@ -1328,6 +1332,7 @@ contains
       real,           intent(inout) :: alpha_in
       logical,        intent(inout) :: exit_code ! value should be .true. at input
       real, optional, intent(in)    :: outer_p_ratio
+      real(kind = 8)                :: three_p_s
       integer(kind=4)               :: loc_1, loc_2
 
       compute_q = zero
@@ -1354,7 +1359,7 @@ contains
       if (NR_refine_solution_q) then
          alpha = alpha_in
          call q_control(compute_q,exit_code)
-         call NR_algorithm_1D(compute_q, exit_code)
+         call NR_algorithm_1D(compute_q, three_p_s, exit_code)
       endif
 
       if (abs(compute_q) > q_big) compute_q = sign(one, compute_q) * q_big
