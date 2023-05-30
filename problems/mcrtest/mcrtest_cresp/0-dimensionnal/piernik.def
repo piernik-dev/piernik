@@ -10,7 +10,10 @@
 #define CRESP
 
 #define MAGNETIC
+#undef RESISTIVE
 
 #undef GRAV
 
+#undef SN_SRC
+#undef RANDOMIZE
 #undef MULTIGRID
