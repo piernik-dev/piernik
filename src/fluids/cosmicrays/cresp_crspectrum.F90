@@ -699,7 +699,7 @@ contains
       use cresp_variables, only: clight_cresp
       use cresp_NR_method, only: compute_q
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: p_fix, e_small, eps
+      use initcrspectrum,  only: p_fix, g_fix, e_small, eps, three_ps
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: printinfo, msg
 #endif /* CRESP_VERBOSED */
@@ -723,8 +723,8 @@ contains
          endif
 
          exit_code = .true.
-         alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
-         q_one = compute_q(alpha, exit_code)
+         alpha = e_in/(n_in * g_fix(i_cutoff-1))
+         q_one = compute_q(alpha, three_ps(i_cutoff-1), exit_code)
          q_1m3 = three - q_one
 
          p_l = p_fix(i_cutoff-1)
@@ -1744,7 +1744,7 @@ contains
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small, g_fix
+      use initcrspectrum,  only: e_small, g_fix, p_fix, three_ps
 
       implicit none
 
@@ -1753,7 +1753,7 @@ contains
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer                                    :: i, i_active
       real                                       :: alpha_in
-      real(kind=8)                               :: three_psi
+      real(kind=8)                               :: three_p_s
       logical                                    :: exit_code
 
       q = zero
@@ -1761,6 +1761,7 @@ contains
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          exit_code = .false.
          i = bins(i_active)
+         three_p_s = three_ps(i)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
@@ -1769,11 +1770,11 @@ contains
             !print *, 'i : ',i, ' g(i-1) : ', g(i-1)
             alpha_in = e(i)/(n(i)*g_fix(i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
-               print *, 'compute_q called'
-               q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
+               !print *, 'compute_q called'
+               q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
             else
-               print *, 'compute_q called'
-               q(i) = compute_q(alpha_in, exit_code)
+               !print *, 'compute_q called'
+               q(i) = compute_q(alpha_in, three_p_s, exit_code)
             endif
          else
             q(i) = zero
