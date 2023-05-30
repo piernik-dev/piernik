@@ -31,7 +31,7 @@ m = 1.0
 
 first_run = True
 got_q_tabs = False
-q_explicit = False
+q_explicit = True
 interpolate_cutoffs = True
 highlighted = False
 plotted_init_slope = False
@@ -101,11 +101,12 @@ def nq2f(n, q, p_l, p_r):
 #
 
 
-def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, q_not_found : bool) -> float:
+def nr_get_q(q_start : float, three_p_s : float, e_to_npc_ratio : float, p_ratio : float, q_not_found : bool) -> float:
     iter_limit = 30
     tol_f = 1.0e-9
     x = q_start
     df = 1.0
+    #print('three_p_s : ', three_p_s)
     for i in range(iter_limit):
         if abs(x) >= q_big:
             x = (x / abs(x)) * q_big
@@ -113,9 +114,9 @@ def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, q_not_fou
             break
         dx = min(x * 1e-3, 10e-2)
         dx = sign(dx) * max(abs(dx), 1.0e-10)
-        df = 0.5 * (spectral_slope_root_function(x + dx, e_to_npc_ratio, p_ratio) -
-                    spectral_slope_root_function(x - dx, e_to_npc_ratio, p_ratio)) / dx
-        delta = -spectral_slope_root_function(x, e_to_npc_ratio, p_ratio) / df
+        df = 0.5 * (spectral_slope_root_function(x + dx, three_p_s, e_to_npc_ratio, p_ratio) -
+                    spectral_slope_root_function(x - dx, three_p_s, e_to_npc_ratio, p_ratio)) / dx
+        delta = -spectral_slope_root_function(x, three_p_s, e_to_npc_ratio, p_ratio) / df
         if abs(delta) <= tol_f:
             q_not_found = False
             return x, q_not_found
@@ -127,14 +128,14 @@ def nr_get_q(q_start : float, e_to_npc_ratio : float, p_ratio : float, q_not_fou
 
 # function used to find q: ----------------------
 
-def spectral_slope_root_function(x : float, e2npc_ratio : float, p_ratio : float) -> float:
+def spectral_slope_root_function(x : float, three_p_s : float, e2npc_ratio : float, p_ratio : float) -> float:
     if abs(x - 3.0) < q_eps:
         root_function_value = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
-    elif abs(x - 4.0) < q_eps:
+    elif abs(x - three_p_s) < q_eps:
         root_function_value = -e2npc_ratio + p_ratio * log(p_ratio) / (p_ratio - 1.0)
     else:
-        root_function_value = -e2npc_ratio + ((3.0 - x) / (4.0 - x)) * \
-            ((p_ratio**(4.0 - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
+        root_function_value = -e2npc_ratio + ((3.0 - x) / (three_p_s - x)) * \
+            ((p_ratio**(three_p_s - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
     return root_function_value
 
 
@@ -185,13 +186,13 @@ def fill_q_grid():
     for i in range(1, arr_dim_q, 1):
         #print('fill q grid call : ')
         x, exit_code = nr_get_q(
-            previous_solution, e2npc_tab_q[i], p_fix_ratio, exit_code)
+            previous_solution, 4.0, e2npc_tab_q[i], p_fix_ratio, exit_code)
         if exit_code is True:
             for j in range(1, helper_arr_dim, 1):
                 x = q_space[j]
                 #print('fill q grid call 2 : ')
                 x, exit_code = nr_get_q(
-                    x, e2npc_tab_q[i], p_fix_ratio, exit_code)
+                    x, 4.0, e2npc_tab_q[i], p_fix_ratio, exit_code)
                 if exit_code is False:
                     q_grid[i] = x
                     prev_solution = x
@@ -272,10 +273,12 @@ def plot_data(plot_var, pl, pr, gl, gr, fl, fr, q, time, location, i_lo_cut, i_u
 
     if par_fixed_dims:  # overwrite
         if (plot_var != "e"):
-            plt.ylim(9.5e-13, 1.e2)
+            plt.ylim(10. * plot_var_min, 10. *
+                 max(plot_var_r))
             plt.xlim(p_fix[1], p_fix[-2] * 0.5)
         else:
-            plt.ylim(e_small, 1.e2)
+            plt.ylim(10. * plot_var_min, 10. *
+                 max(plot_var_r))
             plt.xlim(p_fix[1], p_fix[-2] * 0.5)
 
     if (par_plot_e3):
@@ -414,7 +417,8 @@ def plot_data_ratio(plot_var, ratio, p, time, location, i_lo_cut, i_up_cut,A):
 
     if par_fixed_dims:  # overwrite
         if (plot_var == "BC_ratio"):
-            plt.ylim(9.5e-13, 1.e-3)
+            plt.ylim(10. * plot_var_min, 10. *
+                 max(plot_var_r))
             plt.xlim(p_fix[1], p_fix[-2] * 0.5)
 
     if (par_plot_e3):
@@ -563,7 +567,7 @@ def detect_active_bins_new(n_in, e_in):
         if (q_explicit is True):
             print('active bins call : ')
             q_tmp, exit_code = nr_get_q(
-                q_tmp, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
+                q_tmp, 3 + s_nr[i], e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
@@ -603,7 +607,7 @@ def crs_initialize(parameter_names, parameter_values):
     except:
         die("Exiting: len(names) not equal len(values)")
 
-    global p_fix_ratio, p_fix, g_fix
+    global p_fix_ratio, p_fix, g_fix, s_nr
 
     edges = []
     p_fix = []
@@ -642,6 +646,20 @@ def crs_initialize(parameter_names, parameter_values):
     p_mid_fix = tuple(p_mid_fix)
     g_fix = tuple(g_fix)
     g_mid_fix = tuple(g_mid_fix)
+
+    pln = p_fix[0:ncrb - 1]
+    prn = p_fix[1:ncrb]
+    gln = g_fix[0:ncrb - 1]
+    grn = g_fix[1:ncrb]
+    pln = array(pln)
+    prn = array(prn)
+    gln = array(gln)
+    grn = array(grn)
+
+    s_nr = log10(grn/gln)/log10(prn/pln)
+
+    print('s_nr : ', s_nr)
+
     global clean_plot
     clean_plot = True
 
@@ -682,7 +700,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         prtinfo("e = " + str(ecrs1e3))
         enpc1e3 = []
         for i in range(len(ecrs)):
-            enpc1e3.append(float('%1.3e' % (ecrs[i] / (ncrs[i] * c * p_fix[i]))))
+            enpc1e3.append(float('%1.3e' % (ecrs[i] / (ncrs[i] * g_fix[i]))))
         prtinfo("e/(npc) = " + str(enpc1e3))
 
     if (empty_cell):
@@ -693,7 +711,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
         exit_code_lo = True
         pf_ratio_lo = [0., 0.]
         pf_ratio_lo, exit_code_lo = crs_pf.get_interpolated_ratios(
-            "lo", ecrs[i_lo] / (ncrs[i_lo] * c * p_fix[i_lo + 1]), ncrs[i_lo], exit_code_lo, verbose=verbosity_2)
+            "lo", ecrs[i_lo] / (ncrs[i_lo] * g_fix[i_lo + 1]), ncrs[i_lo], exit_code_lo, verbose=verbosity_2)
 
         exit_code_up = True
         pf_ratio_up = [0., 0.]
@@ -710,6 +728,8 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     prn = array(prn)
     gln = array(gln)
     grn = array(grn)
+
+    s_nr = log10(grn/gln)/log10(prn/pln)
 
     if interpolate_cutoffs:
         if exit_code_lo is True:
@@ -738,7 +758,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
             prtinfo("Spectral indices q will be obtained explicitly")
 
     q_nr = []
-    s_nr = []
+    #s_nr = []
     fln = []
     frn = []
     for i in range(0, i_up - i_lo + 1):
@@ -747,12 +767,16 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
             exit_code = False
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             print('plot_main call : ')
+            print('s_nr : ', s_nr)
+            print('i+i_lo : ', i + i_lo)
+            print('s_nr(i+i_lo) : ', s_nr[i + i_lo])
             q_tmp, exit_code = nr_get_q(
-                q_tmp, ecrs[i + i_lo] / (ncrs[i + i_lo] * c * pln[i + i_lo]), prn[i + i_lo] / pln[i + i_lo], exit_code)
+                q_tmp, 3 + s_nr[i + i_lo], ecrs[i + i_lo] / (ncrs[i + i_lo] * gln[i + i_lo]), prn[i + i_lo] / pln[i + i_lo], exit_code)
+            print('q_tmp, exit_code : ', q_tmp, exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
-                ecrs[i + i_lo] / (ncrs[i + i_lo] * pln[i + i_lo]))
+                ecrs[i + i_lo] / (ncrs[i + i_lo] * gln[i + i_lo]))
         q_nr.append(q_tmp)
         fln.append(nq2f(ncrs[i + i_lo], q_nr[-1],
                    pln[i + i_lo], prn[i + i_lo]))
@@ -763,7 +787,7 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
     fln = array(fln)
     frn = array(fln)
     frn = frn * (prn[i_lo:i_up + 1] / pln[i_lo:i_up + 1]) ** (-q_nr)
-    s_nr = log10(grn/gln)/log10(plr/pln)
+    s_nr = log10(grn/gln)/log10(prn/pln)
     plot = False
 
     # retrieve slopes and f values for cutoffs
