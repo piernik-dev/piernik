@@ -541,7 +541,8 @@ contains
 
       gamma_beta_c_fix = mom_cre_fix / me
 
-      n_small_bin(:) = e_small / g_mid_fix(:)
+! MH: Bugg in the line! comented out.
+!      n_small_bin(:) = e_small / g_mid_fix(:)
 
 
 
@@ -760,7 +761,7 @@ contains
       four_ps = zero
 
       print *, 'compute_gs'
-      print *, '   p =', p
+      print *, 'p =', p
       print *, 'bins =', bins
       print *, 'bins-1 =', bins-1
 
@@ -779,14 +780,9 @@ contains
       print *, 'size(bins-1) : ', size(bins-1)
       print *, 'size(g) : ', size(g_fix)
       print *, 'size(p) : ', size(p)
-      print *, 'p : ', p
       print *, 'g_fix =', g_fix
-      print *, 'p(bins) : ', p(0:size(bins))
-      !print *, 'p(bins-1) : ', p(1:size(bins))
-      print *, 'g_fix(bins) : ', g_fix(0:size(bins))
-      !print *, 'g_fix(bins-1) : ', g_fix(1:size(bins))
-      print *, 'bins =', bins, ',   size(bins)=', size(bins)
-      !²print *, 'log10 1 : ', log10( g_fix(1:size(bins)) /g_fix(0:size(bins)-1))
+
+      !print *, 'log10 1 : ', log10( g_fix(1:size(bins)) /g_fix(0:size(bins)-1))
       !print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
 
 

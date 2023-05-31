@@ -31,7 +31,7 @@ $BASE_DOMAIN
 
  $END_CONTROL
     tend   = 10. !00.0
-    nend   = 1
+    nend   = 0
  /
 
  $OUTPUT_CONTROL
@@ -61,7 +61,7 @@ $BASE_DOMAIN
  $COSMIC_RAYS
     cfl_cr        = 0.3
     cr_active     = 1.0
-    ncrb          = 16  ! number of spectrum bins (including cutoff bins)
+    ncrb          = 8  ! number of spectrum bins (including cutoff bins)
     K_cr_paral    = 4*1.e5 ! CRESP electrons !1.0e4  !100*1.0e3 ! upper limit K_cre_paral
     K_cr_perp     = 4*1.e3 !1.0e2 ! 1.e2 ! upper limit K_cre_perp
  /
@@ -70,10 +70,10 @@ $BASE_DOMAIN
     use_cresp_evol   = .true.   ! enables usage of cresp_update_grid @fluidupdate
     cre_eff     = 0.01 !, 0.1     ! factor scaling sn explosion energy to total spectrum energy
     cfl_cre     = 0.5 !, 0.1
-    p_min_fix = 1.0e-2 ! momentum fixed grid
-    p_max_fix = 1.0e2  ! momentum fixed grid
-    p_lo_init = 4*1.0e-1 !, 5.0, 5.0 , 5.0 , 5.0! initial lower cut momentum
-    p_up_init = 4*1.0e1!, 8.5e5, 8.5e5 , 8.5e5 , 8.5e5   ! initial upper cut momentum
+    p_min_fix = 1.0e-1 ! momentum fixed grid
+    p_max_fix = 1.0e1  ! momentum fixed grid
+    p_lo_init = 4*1.0e-2 !, 5.0, 5.0 , 5.0 , 5.0! initial lower cut momentum
+    p_up_init = 4*1.0e2!, 8.5e5, 8.5e5 , 8.5e5 , 8.5e5   ! initial upper cut momentum
     p_br_init_lo = 4*5.0e-1 !, 1.0e2, 1.0e2, 1.0e2, 1.0e2
     p_br_init_up = 4*5.0e1!, 5.0e5, 5.0e5, 5.0e5, 5.0e5
     expan_order = 3

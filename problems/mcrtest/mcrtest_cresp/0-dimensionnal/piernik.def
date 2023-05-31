@@ -17,3 +17,5 @@
 #undef SN_SRC
 #undef RANDOMIZE
 #undef MULTIGRID
+
+#define CRESP_VERBOSED
