@@ -70,6 +70,7 @@ $BASE_DOMAIN
     use_cresp_evol   = .true.   ! enables usage of cresp_update_grid @fluidupdate
     cre_eff     = 0.01 !, 0.1     ! factor scaling sn explosion energy to total spectrum energy
     cfl_cre     = 0.5 !, 0.1
+    p_bnd      =  'fixed' !'moving' !
     p_min_fix = 1.0e-1 ! momentum fixed grid
     p_max_fix = 1.0e1  ! momentum fixed grid
     p_lo_init = 4*1.0e-2 !, 5.0, 5.0 , 5.0 , 5.0! initial lower cut momentum

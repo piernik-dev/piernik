@@ -38,7 +38,7 @@ module initcrspectrum
    implicit none
 
    private
-   public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
+   public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_bnd, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active,                 &
            & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim_a, arr_dim_n, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,           &
            & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum_n, norm_init_spectrum_e, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,     &
@@ -54,6 +54,7 @@ module initcrspectrum
    real, dimension(:), allocatable :: p_up_init                   !< initial upper cutoff momentum
    real, dimension(:,:), allocatable :: p_init                   !< vector to store p_lo_init and p_up_init
    character(len=cbuff_len) :: initial_spectrum   !< available types: bump, powl, brpl, symf, syme. Description below.
+   character(len=cbuff_len) :: p_bnd                             !< available types: 'mov' for electrons or 'fix' for nucleons
    real, dimension(:), allocatable :: p_br_init_lo, p_br_init_up  !< initial low energy break
    real, dimension(:,:), allocatable :: p_br_init                !< vector to store p_br_init_lo and p_br_init_up
    real, dimension(:), allocatable :: f_init                      !< initial value of distr. func. for isolated case
@@ -189,7 +190,7 @@ contains
       integer(kind=4) :: i, j
       real, dimension(:), allocatable ::  p_br_def, q_br_def
 
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_min_fix, p_max_fix,  &
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_bnd, p_min_fix, p_max_fix,  &
       &                         cre_eff, cre_active, K_cre_pow, expan_order, e_small, use_cresp, use_cresp_evol,                    &
       &                         e_small_approx_init_cond, p_br_init_lo, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,    &
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim_a, arr_dim_n, arr_dim_q, q_br_init, &
@@ -215,6 +216,7 @@ contains
       p_up_init(:)      = 7.5e2
       p_br_def(:)       = p_lo_init(:)
       initial_spectrum  = "powl"
+      p_bnd             = 'fixed'
       f_init(:)         = 1.0
       q_init(:)         = 4.1
       q_br_def(:)       = q_init(:)
@@ -363,6 +365,7 @@ contains
          !rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16) = four_ps
 
          cbuff(1)  = initial_spectrum
+         cbuff(2)  = p_bnd
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -438,7 +441,8 @@ contains
          !three_ps(1:ncrb)     = rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16)
          !four_ps(1:ncrb)      = rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16)
 
-         initial_spectrum            = trim(cbuff(1))
+         initial_spectrum      = trim(cbuff(1))
+         p_bnd                 = trim(cbuff(2))
 
       endif
 
