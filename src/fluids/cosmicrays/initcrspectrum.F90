@@ -495,9 +495,9 @@ contains
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
       call my_allocate_with_index(g_fix,                ncrb, I_ZERO)
-      call my_allocate_with_index(s,                ncrb, I_ZERO)
-      call my_allocate_with_index(three_ps,         ncrb, I_ZERO)
-      call my_allocate_with_index(four_ps,          ncrb, I_ZERO)
+      call my_allocate_with_index(s,                ncrb, I_ONE)
+      call my_allocate_with_index(three_ps,         ncrb, I_ONE)
+      call my_allocate_with_index(four_ps,          ncrb, I_ONE)
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(g_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
@@ -517,11 +517,11 @@ contains
       p_fix = zero
       w  = log10(p_max_fix/p_min_fix) / real(ncrb-2)
       p_fix(1:ncrb-1) = p_min_fix*ten**(w*real(cresp_all_edges(1:ncrb-1)-1))
-      p_fix(0)    = zero
-      p_fix(ncrb) = zero
+      p_fix(0)    = p_lo_init(1)  ! plo_init_and p_up_init should be reduced to a scalar
+      p_fix(ncrb) = p_up_init(1)
       p_fix_ratio = ten**w
 
-      call compute_gs(p_fix, cresp_all_bins)
+      call compute_gs !(p_fix, cresp_all_bins)
 
       p_mid_fix = 0.0
       p_mid_fix(2:ncrb-1) = sqrt(p_fix(1:ncrb-2)*p_fix(2:ncrb-1))
@@ -747,61 +747,44 @@ contains
    end subroutine init_crel
 !----------------------------------------------------------------------------------------------------
 
-   subroutine compute_gs(p, bins)
+   subroutine compute_gs
 
       use cresp_variables, only: clight_cresp
       use cr_data,         only: transrelativistic
       use constants,       only: zero, three, four
+      use initcosmicrays,  only: ncrb
 
       implicit none
-
-      real(kind=8), dimension(:), intent(in) :: p
-      integer, dimension(:), intent(in)      :: bins
-      integer                                :: i_bin
-
 
       s = zero
       three_ps = zero
       four_ps = zero
 
-      print *, 'compute_gs'
-      print *, 'p =', p
-      print *, 'bins =', bins
-      print *, 'bins-1 =', bins-1
-
       if(transrelativistic) then
-
-         g_fix = sqrt(clight_cresp**2*p**2 + clight_cresp**4) - clight_cresp**2
-
+         g_fix = sqrt(clight_cresp**2*p_fix**2 + clight_cresp**4) - clight_cresp**2 ! mass should be here, as in crs:
+!         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
+!         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
       else
-
          g_fix = clight_cresp*p_fix
-         !s = 1.0
-
       endif
 
-      print *, 'size(bins) : ', size(bins)
-      print *, 'size(bins-1) : ', size(bins-1)
-      print *, 'size(g) : ', size(g_fix)
-      print *, 'size(p) : ', size(p)
-      print *, 'g_fix =', g_fix
 
-      !print *, 'log10 1 : ', log10( g_fix(1:size(bins)) /g_fix(0:size(bins)-1))
-      !print *, 'log10 2 : ',log10(p(2:size(bins)+1) /p(1:size(bins)))
+      s = log10(g_fix(1:ncrb)/g_fix(0:ncrb-1)) &
+         /log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
 
-
-
-      !s(bins) =   log10( g(1:size(bins)) /g(0:size(bins)-1)) / log10(p(2:size(bins)+1) /p(1:size(bins)))
-
-      do i_bin = 1, size(bins) - 2
-
-            if (g_fix(i_bin+1) .ne. 0.0 .or. g_fix(i_bin) .ne. 0.0 .or. p(i_bin+2) .ne. 0.0 .or. p(i_bin+1) .ne. 0.0) s(i_bin) = log10( g_fix(i_bin+1) /g_fix(i_bin))/log10(p(i_bin+2) /p(i_bin+1))
-
-      enddo
-
-      print *, 's =', s
       three_ps = three + s
       four_ps  = four + s
+
+# ifdef CRESP_VERBOSED
+      print *, 'In compute_gs'
+      print *, 'sizes(s):   ', lbound(s),  ubound(s), size(s)
+      print *, 'sizes(p):   ', lbound(p_fix),  ubound(p_fix), size(p_fix)
+      print *, 'sizes(g_fix):', lbound(g_fix),  ubound(g_fix), size(g_fix)
+      print *, 'bins =', ncrb
+      print *, 'p =', p_fix
+      print *, 'g_fix =', g_fix
+      print *, 's =', s
+#endif
 
    end subroutine compute_gs
 

@@ -30,8 +30,8 @@ $BASE_DOMAIN
  /
 
  $END_CONTROL
-    tend   = 10. !00.0
-    nend   = 0
+    tend   = 1. !00.0
+    nend   = 100
  /
 
  $OUTPUT_CONTROL
@@ -61,7 +61,7 @@ $BASE_DOMAIN
  $COSMIC_RAYS
     cfl_cr        = 0.3
     cr_active     = 1.0
-    ncrb          = 8  ! number of spectrum bins (including cutoff bins)
+    ncrb          = 6  ! number of spectrum bins (including cutoff bins)
     K_cr_paral    = 4*1.e5 ! CRESP electrons !1.0e4  !100*1.0e3 ! upper limit K_cre_paral
     K_cr_perp     = 4*1.e3 !1.0e2 ! 1.e2 ! upper limit K_cre_perp
  /

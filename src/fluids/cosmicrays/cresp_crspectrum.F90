@@ -944,6 +944,8 @@ contains
       real                                     :: c
       logical                                  :: exit_code
 
+      print *, 'In init_state'
+
       max_ic = [I_ZERO, ncrb]
       fail_count_interpol = 0
       fail_count_NR_2dim  = 0
@@ -1014,13 +1016,12 @@ contains
 
 ! Pure power law spectrum initial condition (default case)
 
-        print *, 'p_init : ', p_init
-        print *, 'q_init : ', q_init
-
         q = q_init(i_spc)
         f = f_init(i_spc) * (p/p_init(LO, i_spc))**(-q_init(i_spc))
 
+        print *, 'p_init : ', p_init
         print *, 'f_init : ', f_init
+        print *, 'q_init : ', q_init
 
         select case (initial_spectrum)
             case ('powl')
@@ -1142,6 +1143,8 @@ contains
         call deallocate_active_arrays
     enddo
 
+!    stop
+
    end subroutine cresp_init_state
 
 !>
@@ -1194,7 +1197,7 @@ contains
       f(act_edges) = f_init(i_spc) * (p_range_add(act_edges)/p_init(LO, i_spc))**(-q_init(i_spc))
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
       call my_deallocate(act_edges)
