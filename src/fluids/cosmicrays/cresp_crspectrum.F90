@@ -957,11 +957,6 @@ contains
       init_e = zero
       init_n = zero
 
-      !print *, 'beginning'
-      !
-      !print *, 'p_fix : ', p_fix
-      !print *, 'p     : ', p
-
       do i_spc = 1, nspc
         f = zero ; q = zero ; p = zero ; n = zero ; e = zero
 
@@ -977,15 +972,15 @@ contains
         !print *, 'p     : ', p
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
-        !do k = ncrb, 1, -1
-        !    do i = 0, k-1
-        !        if (p(i) > p(i+1)) then
-        !        c = p(i)
-        !        p(i) = p(i+1)
-        !        p(i+1) = c
-        !        endif
-        !    enddo
-        !enddo
+        do k = ncrb, 1, -1
+            do i = 0, k-1
+                if (p(i) > p(i+1)) then
+                c = p(i)
+                p(i) = p(i+1)
+                p(i+1) = c
+                endif
+            enddo
+        enddo
 
         !print *, 'loop'
         !
@@ -999,6 +994,8 @@ contains
 ! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_cut are needed.
 
         i_cut = get_i_cut(p_cut)
+
+        print *, 'i_spc, p_cut, i_cut =', i_spc, p_cut, i_cut
 
         do co = LO, HI
             if (abs(p_init(co,i_spc) - p_fix(i_cut(co)+oz(co)-1)) <= eps ) then
@@ -1047,7 +1044,7 @@ contains
         !print *, 'p_fix : ', p_fix
         !print *, 'p     : ', p
 
-        if (e_small_approx_init_cond > 0 .and. p_bnd=='mov') then
+        if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
                 if (exit_code) then
@@ -1129,21 +1126,37 @@ contains
 
         if (master) call check_init_spectrum(i_spc)
 
-        !n_tot0 = sum(n)
-        !e_tot0 = sum(e)
+        n_tot0 = sum(n)
+        e_tot0 = sum(e)
 
         init_n(i_spc,:) = n(:)
         init_e(i_spc,:) = e(:)
+
+
         print *, 'call check_init_spectrum + the end !'
-        print *, 'p_fix : ', p_fix
+        print *, 'act.bins: ', active_bins
+        print *, 'i_cut : ', i_cut
         print *, 'p     : ', p
         print *, 'q     : ', q
+        print *, 'n     : ', n
+        print *, 'e     : ', e
+        print *, 'n_tot0 =', n_tot0
+        print *, 'e_tot0 =', e_tot0
+
+        ! Test for consistency of conversion (f,q) <--> (n,e)
+        ! Compute power indexes for each bin at [t], from n and ekin
+        call ne_to_q(n, e, q, active_bins)
+        ! Compute f on left bin faces at [t]
+        f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)
+        print *, 'test f =',  f
+        print *, 'test q =',  q
+
 
         total_init_cree(i_spc) = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
         call deallocate_active_arrays
-    enddo
+      enddo
 
-!    stop
+    stop
 
    end subroutine cresp_init_state
 

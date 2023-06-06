@@ -31,7 +31,7 @@ $BASE_DOMAIN
 
  $END_CONTROL
     tend   = 1. !00.0
-    nend   = 100
+    nend   = 1
  /
 
  $OUTPUT_CONTROL

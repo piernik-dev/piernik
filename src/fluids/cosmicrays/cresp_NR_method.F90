@@ -339,6 +339,10 @@ contains
       enddo
       if (ilim .ge. qmaxiter) call die ("[cresp_NR_method:fill_guess_grids] Maximal iteration limit exceeded, q_grid might not have converged!")
 #ifdef CRESP_VERBOSED
+
+      print *, a_min_q, a_max_q, p_fix_ratio, epsilon(one), j, ilim, qmaxiter
+      stop
+
       do i = 1, arr_dim_q
          print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
       enddo
