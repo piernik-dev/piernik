@@ -34,8 +34,7 @@ module particle_solvers
    implicit none
 
    private
-   public :: psolver, hermit_4ord
-   public :: leapfrog_2ord, update_particle_kinetic_energy
+   public :: init_psolver, psolver, hermit_4ord, leapfrog_2ord, update_particle_kinetic_energy
 
    procedure(particle_solver_P), pointer :: psolver => NULL()
 
@@ -46,6 +45,30 @@ module particle_solvers
    end interface
 
 contains
+
+!> \brief Initialize psolver
+   subroutine init_psolver
+
+      use dataio_pub,   only: msg, die
+      use particle_pub, only: default_ti, time_integrator
+
+      implicit none
+
+      psolver => null()
+      select case (trim(time_integrator))
+#ifndef _CRAYFTN
+         case ('hermit4')
+            psolver => hermit_4ord
+         case ('leapfrog2')
+            psolver => leapfrog_2ord
+         case (default_ti) ! be quiet
+#endif /* !_CRAYFTN */
+         case default
+            write(msg, '(3a)')"[particle_solvers:init_psolver] Unknown integrator '",trim(time_integrator),"'"
+            call die(msg)
+      end select
+
+   end subroutine init_psolver
 
    !>
    !!  from:   Moving Stars Around (Piet Hut and Jun Makino, 2003).
@@ -332,8 +355,9 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: half, two
       use global,           only: dt
+      use particle_diag,    only: particle_diagnostics
       use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_utils,   only: particle_diagnostics, twodtscheme
+      use particle_pub,     only: twodtscheme
 
       implicit none
 
@@ -369,8 +393,8 @@ contains
 
          implicit none
 
-         real, intent(in) :: kdt
-         type(particle), pointer        :: pset
+         real,        intent(in) :: kdt
+         type(particle), pointer :: pset
 
          cgl => leaves%first
          do while (associated(cgl))
@@ -387,15 +411,14 @@ contains
       subroutine drift(ddt)
 
          use constants,      only: PPP_PART
-         use particle_utils, only: part_leave_cg, is_part_in_cg
+         use particle_utils, only: part_leave_cg, is_part_in_cg, detach_particle
          use particle_types, only: particle
          use ppp,            only: ppp_main
 
          implicit none
 
-         real, intent(in)                  :: ddt
-
-         type(particle), pointer        :: pset, pset2
+         real,            intent(in) :: ddt
+         type(particle), pointer     :: pset
          character(len=*), parameter :: d_label = "part_drift"
 
          call ppp_main%start(d_label, PPP_PART)
@@ -403,16 +426,14 @@ contains
          do while (associated(cgl))
             pset => cgl%cg%pset%first
             do while (associated(pset))
-               !Remove ghosts
-               if (.not. pset%pdata%phy) then
-                  pset2 => pset%nxt
-                  call cgl%cg%pset%remove(pset)
-                  pset => pset2
-                  cycle
+               if (pset%pdata%phy) then
+                  pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
+                  call pset%pdata%is_outside()
+                  call is_part_in_cg(cgl%cg, pset%pdata%pos, .not.pset%pdata%outside, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
+                  pset => pset%nxt
+               else !Remove ghosts
+                  call detach_particle(cgl%cg, pset)
                endif
-               pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
-               call is_part_in_cg(cgl%cg, pset%pdata%pos, pset%pdata%in, pset%pdata%phy, pset%pdata%out)
-               pset => pset%nxt
             enddo
             cgl => cgl%nxt
          enddo

@@ -586,7 +586,6 @@ contains
                ! particles may be smooth (with partial mappings allowed) but it must not allow for
                ! particle mappings extending beyond domain boundaries.
                !
-               ! BUG: Sometimes particles that are outside computational domain don't have the "outside" flag set up.
             ! A "not_mapped" flag set in the mapping routine would fix this issue.
 
             pset => pset%nxt

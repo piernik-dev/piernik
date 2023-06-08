@@ -395,6 +395,7 @@ contains
       class(component_fluid), pointer     :: pfl
 
       if (.not. thermal_active) return
+      hfunc = huge(1.)  ! suppress spurious compiler warning triggered by -Wmaybe-uninitialized
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -590,6 +591,7 @@ contains
          case default
             write(msg,'(3a)') 'Cool model: ',cool_model,' not implemented'
             if (master) call warn(msg)
+            coolf = huge(1.)  ! this may crash the code or at least disturb the output to catch attention
       end select
 
    end subroutine cool
@@ -612,6 +614,7 @@ contains
          case default
             write(msg,'(3a)') 'Heat model: ',heat_model,' not implemented'
             if (master) call warn(msg)
+            heatf = huge(1.)  ! this may crash the code or at least disturb the output to catch attention
       end select
 
    end subroutine heat

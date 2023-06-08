@@ -38,7 +38,7 @@ w_str = "Waiting (%d/%d) ..."
 w_len = len(w_str % (10, 10)) + 1
 
 for i in ("3-body%20CI", "64-bit%20int%20CR%20test%20CI", "dep.png%20CI", "IO%20v2%20CI",
-          "Jeans%20CI", "Maclaurin%20CI", "mergeable%20benchmarking%20CI", "noHDF5%20CI",
+          "Jeans%20CI", "Maclaurin%20CI", "noHDF5%20CI",
           "PEP8%20CI", "Piernik%20CI", "python3%20CI", "QA%20CI", "user_gold%20CI",
           "streaming%20instability%20gold%20CI", "resist%20gold%20CI", "CRESP%20gold%20CI",
           "MHD%20sedov%20AMR%20gold%20CI", "mcrwind%20gold%20CI", "mcrtest%20gold%20CI"):

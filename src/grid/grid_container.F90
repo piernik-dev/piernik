@@ -33,7 +33,7 @@ module grid_cont
    use cg_cost,           only: cg_cost_t
    use cg_cost_data,      only: cg_cost_data_t
    use constants,         only: LO, HI
-   use grid_cont_bnd,     only: segment
+   use grid_cont_bseg,    only: tgt_list
    use grid_cont_prolong, only: grid_container_prolong_t
 #if defined(GRAV) && defined(NBODY)
    use particle_types,    only: particle_set
@@ -43,11 +43,6 @@ module grid_cont
 
    private
    public :: grid_container
-
-   !< \brief target list container for prolongations, restrictions and boundary exchanges
-   type :: tgt_list
-      type(segment), dimension(:), allocatable :: seg  !< a segment of data to be received or sent
-   end type tgt_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
    type, extends(grid_container_prolong_t) :: grid_container
@@ -117,7 +112,8 @@ contains
 
       call this%init_gc_base(my_se, grid_id, l)
 
-      call this%init_gc_bnd
+      call this%init_gc_ref
+      call this%init_gc_fcflx
 
       call ppp_main%start(na_label, PPP_AMR + PPP_CG)
       call this%add_all_na
@@ -149,28 +145,24 @@ contains
 
       class(grid_container), intent(inout) :: this  !< object invoking type-bound procedure
 
-      integer :: b, g
-      integer, parameter :: nseg = 4*2
-      type(tgt_list), dimension(nseg) :: rpio_tgt
-
       call this%cleanup_base
       call this%cleanup_na
-      call this%cleanup_bnd
+      call this%cleanup_bseg
+      call this%cleanup_ref
+      call this%cleanup_fcflx
       call this%cleanup_prolong
 #ifdef NBODY
       call this%pset%cleanup
 #endif /* NBODY */
 
-      rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &
-           &               this%pib_tgt, this%pob_tgt, this%rif_tgt, this%rof_tgt ]
-      do b = 1, nseg
-         if (allocated(rpio_tgt(b)%seg)) then
-            do g = lbound(rpio_tgt(b)%seg, dim=1), ubound(rpio_tgt(b)%seg, dim=1)
-               if (allocated(rpio_tgt(b)%seg(g)%buf)) deallocate(rpio_tgt(b)%seg(g)%buf)
-            enddo
-            deallocate(rpio_tgt(b)%seg)
-         endif
-      enddo
+      call this%ri_tgt%cleanup
+      call this%ro_tgt%cleanup
+      call this%pi_tgt%cleanup
+      call this%po_tgt%cleanup
+      call this%pib_tgt%cleanup
+      call this%pob_tgt%cleanup
+      call this%rif_tgt%cleanup
+      call this%rof_tgt%cleanup
 
    end subroutine cleanup
 

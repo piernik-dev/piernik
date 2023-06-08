@@ -86,12 +86,10 @@ contains
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef NBODY
-#ifdef GRAV
-      use particle_pub,          only: init_particles
-      use particle_utils,        only: global_count_all_particles
-#endif /* GRAV */
       use particle_gravity,      only: update_particle_gravpot_and_acc
-      use particle_solvers,      only: update_particle_kinetic_energy
+      use particle_pub,          only: init_particles
+      use particle_solvers,      only: init_psolver, update_particle_kinetic_energy
+      use particle_utils,        only: global_count_all_particles
 #endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -200,11 +198,12 @@ contains
       call init_decomposition
 #ifdef GRAV
       call init_grav                         ! Has to be called before init_grid
-#ifdef NBODY
-      call init_particles
-#endif /* NBODY */
       call init_hydrostatic
 #endif /* GRAV */
+#ifdef NBODY
+      call init_particles
+      call init_psolver
+#endif /* NBODY */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
       call multigrid_par
@@ -289,11 +288,6 @@ contains
          if (master) call printinfo(msg)
          call ppp_main%stop(iter_label // "0", PPP_PROB)
 
-#ifdef NBODY
-         call update_particle_gravpot_and_acc
-         call update_particle_kinetic_energy
-#endif /* NBODY */
-
          call costs_maintenance
 
          do while (.not. finished)
@@ -301,9 +295,14 @@ contains
             call ppp_main%start(iter_label // adjustl(label), PPP_PROB)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
+#ifdef NBODY
+            call update_particle_gravpot_and_acc  ! calls source_terms_grav
+            call update_particle_kinetic_energy
+#else /* !NBODY */
 #ifdef GRAV
             call source_terms_grav
 #endif /* GRAV */
+#endif /* !NBODY */
 
             call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
@@ -479,7 +478,7 @@ contains
             write(log_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-n', '--namelist')
-            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(get_next_arg(i+1, arg))
+            write(cmdl_nml(len_trim(cmdl_nml)+1:), '(2A)') " ", trim(get_next_arg(i+1, arg))
             skip_next = .true.
          case ('-h', '--help')
             call print_help()
@@ -493,8 +492,8 @@ contains
          end select
       enddo
 
-      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr,'(a,a1)') trim(wd_wr),'/'
-      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd,'(a,a1)') trim(wd_rd),'/'
+      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr(len_trim(wd_wr)+1:),'(a1)') '/'
+      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd(len_trim(wd_rd)+1:),'(a1)') '/'
 
       ! Print the date and, optionally, the time
       call date_and_time(DATE=date, TIME=time, ZONE=zone)

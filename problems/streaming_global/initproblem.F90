@@ -852,7 +852,9 @@ contains
 
    end subroutine my_attrs_rd
 !-----------------------------------------------------------------------------------------------------------------------
-   elemental function signum(a) result (b)
+#if 0
+! Currently unused
+    elemental function signum(a) result (b)
       implicit none
       real, intent(in) :: a
       real             :: b
@@ -862,5 +864,6 @@ contains
          b = -1.0
       endif
    end function signum
+#endif /* 0 */
 !-----------------------------------------------------------------------------------------------------------------------
 end module initproblem

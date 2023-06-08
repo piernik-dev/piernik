@@ -286,11 +286,11 @@ contains
                   p%iplot = new_ref_field()
                   write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] refinement criterion of type '", trim(p%rname), "' for '"
                   if (p%ic /= INVALID) then
-                     write(msg, '(3a,i3,a)') trim(msg), trim(wna%lst(p%iv)%name), "(", p%ic, ")"
+                     write(msg(len_trim(msg)+1:), '(2a,i3,a)') trim(wna%lst(p%iv)%name), "(", p%ic, ")"
                   else
-                     write(msg, '(2a)') trim(msg), trim(qna%lst(p%iv)%name)
+                     write(msg(len_trim(msg)+1:), '(a)') trim(qna%lst(p%iv)%name)
                   endif
-                  write(msg, '(4a)') trim(msg), "' is stored in array '", trim(ref_n), "'"
+                  write(msg(len_trim(msg)+1:), '(3a)') "' is stored in array '", trim(ref_n), "'"
                   if (master) call printinfo(msg)
                endif
             class is (urc_jeans)

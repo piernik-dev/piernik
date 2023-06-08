@@ -28,7 +28,7 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
+    tend   = 0.5
     nend   = 1000
  /
 
@@ -49,7 +49,7 @@
 
  $FLUID_NEUTRAL
     gamma = 1.67
-    selfgrav = .false.
+    selfgrav = .true.
  /
 
  $NUMERICAL_SETUP
@@ -71,7 +71,7 @@
     clump_mass = 1e23
     clump_K = 10.0e4
 !    crashNotConv = .false.
-    clump_vel(1) = 2e5
+    clump_vel(1) = 2.5e5
     clump_r = 2.e4
     maxitC = 1000
 !    verbose = .true.

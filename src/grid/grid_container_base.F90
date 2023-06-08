@@ -85,6 +85,7 @@ module grid_cont_base
       real :: idz                                                !< inverted length of the %grid cell in z-direction
       real :: idx2, idy2, idz2                                   !< inverse of d{x,y,z} square
       real, dimension(ndims) :: idl2                             !< [ idx2, idy2, idz2 ]
+      real :: suminv                                             !< idx + idy + idz
 
       ! Grid properties
 
@@ -265,10 +266,11 @@ contains
       this%ksb = this%ijkseb(zdim, LO)
       this%keb = this%ijkseb(zdim, HI)
 
+      ! Beware: 0-dimensional simulations should not rely on cg%vol or cg%dvol
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
-            this%dvol = product(this%dl(:), mask=dom%has_dir(:))
+            this%vol = merge(0., product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:)), dom%eff_dim == 0)
+            this%dvol = merge(0., product(this%dl(:), mask=dom%has_dir(:)), dom%eff_dim == 0)
          case (GEO_RPZ)
             if (.not. dom%has_dir(ydim)) then
                this%dl(ydim) = dpi
@@ -281,15 +283,24 @@ contains
             this%dvol = product(this%dl(:), mask=(dom%has_dir(:) .or. [.false., .true., .false.])) ! multiply by actual radius to get true cell volume
       end select
 
-      this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+      if (dom%eff_dim == 0) then
+         this%maxxyz = 1
+      else
+         this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+      endif
 
       call this%set_coords
 
-      this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      if (dom%eff_dim == 0) then
+         this%dxmn  = minval(dom%L_(:))
+      else
+         this%dxmn  = minval(this%dl(:), mask=dom%has_dir(:))
+      endif
       this%dxmn2 = (this%dxmn)**2
 
       ! some shortcuts for convenience
       this%idl(:) = 1./this%dl(:)
+      this%suminv = merge(sum(this%idl(:), mask=dom%has_dir(:)), 0., dom%eff_dim /= 0)
 
       this%dx = this%dl(xdim)
       this%dy = this%dl(ydim)

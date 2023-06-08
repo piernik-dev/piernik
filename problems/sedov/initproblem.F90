@@ -313,7 +313,7 @@ contains
 
    end subroutine sedov_tsl
 
-!> \brief Find hov close it the shockwave to the external edges and call expansion routine if necessary
+!> \brief Find how close is the shockwave to the external edges and call expansion routine if necessary
 
    subroutine sedov_dist_to_edge
 
@@ -406,12 +406,12 @@ contains
 
    subroutine sedov_late_init
 
-      use cg_list,        only: cg_list_element
-      use cg_list_dataop, only: expanded_domain
-      use constants,      only: xdim, ydim, zdim, ION
-      use dataio_pub,     only: die
-      use fluidindex,     only: flind
-      use func,           only: ekin, emag
+      use cg_list,          only: cg_list_element
+      use cg_list_dataop,   only: expanded_domain
+      use constants,        only: xdim, ydim, zdim, ION, psi_n
+      use fluidindex,       only: flind
+      use func,             only: ekin, emag
+      use named_array_list, only: qna
 
       implicit none
 
@@ -421,22 +421,26 @@ contains
 
       cgl => expanded_domain%first
       do while (associated(cgl))
-         if (cgl%cg%is_old) call die("[initproblem:sedov_late_init] Old piece on a new list")
-         do p = 1, flind%energ
-            associate (fl => flind%all_fluids(p)%fl)
-            cgl%cg%u(fl%idn, :, :, :) = d0
-            cgl%cg%u(fl%imx, :, :, :) = 0.
-            cgl%cg%u(fl%imy, :, :, :) = 0.
-            cgl%cg%u(fl%imz, :, :, :) = 0.
-            cgl%cg%u(fl%ien, :, :, :) = p0/(fl%gam_1) + ekin(cgl%cg%u(fl%imx, :, :, :), cgl%cg%u(fl%imy, :, :, :), cgl%cg%u(fl%imz, :, :, :), cgl%cg%u(fl%idn, :, :, :))
-            if (fl%tag == ION) then
-               call cgl%cg%set_constant_b_field([bx0, by0, bz0])
-               cgl%cg%u(fl%ien, :, :, :) = cgl%cg%u(fl%ien, :, :, :) + emag(cgl%cg%b(xdim, :, :, :), cgl%cg%b(ydim, :, :, :), cgl%cg%b(zdim, :, :, :)**2)
-            endif
-            end associate
-         enddo
+         if (.not. cgl%cg%is_old) then
+            do p = 1, flind%energ
+               associate (fl => flind%all_fluids(p)%fl)
+                  cgl%cg%u(fl%idn, :, :, :) = d0
+                  cgl%cg%u(fl%imx, :, :, :) = 0.
+                  cgl%cg%u(fl%imy, :, :, :) = 0.
+                  cgl%cg%u(fl%imz, :, :, :) = 0.
+                  cgl%cg%u(fl%ien, :, :, :) = p0/(fl%gam_1) + ekin(cgl%cg%u(fl%imx, :, :, :), cgl%cg%u(fl%imy, :, :, :), cgl%cg%u(fl%imz, :, :, :), cgl%cg%u(fl%idn, :, :, :))
+                  if (fl%tag == ION) then
+                     call cgl%cg%set_constant_b_field([bx0, by0, bz0])
+                     cgl%cg%u(fl%ien, :, :, :) = cgl%cg%u(fl%ien, :, :, :) + emag(cgl%cg%b(xdim, :, :, :), cgl%cg%b(ydim, :, :, :), cgl%cg%b(zdim, :, :, :)**2)
+                  endif
+               end associate
+            enddo
+         endif
          cgl => cgl%nxt
       enddo
+
+      ! ToDo: move this call to some other place where it would be automagically called
+      if (qna%exists(psi_n)) call expanded_domain%set_q_value(qna%ind(psi_n), 0.)
 
    end subroutine sedov_late_init
 

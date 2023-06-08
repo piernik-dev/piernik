@@ -310,8 +310,8 @@ contains
 
       class(ion_fluid),     intent(in)             :: this
       integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of ionized fluid
-      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for ionized fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
       real, dimension(:),   intent(in),    pointer :: vx        !< velocity of ionized fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
@@ -405,19 +405,19 @@ contains
 
       implicit none
 
-      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
-      real, dimension(:),   intent(out)          :: p         !< thermal pressure of ionized fluid
-      real, dimension(:),   intent(out)          :: pmag      !< pressure of magnetic field
-      real,                 intent(in)           :: gam, gam1
+      integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:),   intent(inout)          :: p         !< thermal pressure of ionized fluid
+      real, dimension(:),   intent(inout)          :: pmag      !< pressure of magnetic field
+      real,                 intent(in)             :: gam, gam1
 
       ! locals
       integer :: nm
 
-      nm = n-1
+      nm = n - 1
 #ifdef MAGNETIC
       pmag(RNG2) = emag(bb(RNG2, xdim), bb(RNG2, ydim), bb(RNG2, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
@@ -429,8 +429,8 @@ contains
       ps(RNG2) = p(RNG2) + pmag(RNG2)
 #else /* !ISO */
       if (associated(cs_iso2)) call die("[initionized:all_pres_ion] cs_iso2 should not be associated")
-      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*(gam1) + (2.0 - gam)*pmag(RNG2)
-      p(RNG2) = ps(RNG2)- pmag(RNG2);  p(1) = p(2); p(n) = p(nm)
+      ps(RNG2) = (uu(RNG2, ien) - ekin(uu(RNG2, imx),uu(RNG2, imy),uu(RNG2, imz),uu(RNG2, idn)) )*gam1 + (2.0 - gam)*pmag(RNG2)
+      p(RNG2) = ps(RNG2) - pmag(RNG2); p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
       ps(1) = ps(2); ps(n) = ps(nm)
 
@@ -449,12 +449,12 @@ contains
 
       implicit none
 
-      class(ion_fluid),     intent(in)           :: this
-      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
+      class(ion_fluid),     intent(in)             :: this
+      integer(kind=4),      intent(in)             :: n        !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),    pointer :: uu       !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: bb       !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2  !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(inout), pointer :: ps       !< pressure of ionized fluid for current sweep
 
       ! locals
       real, dimension(n) :: p           !< thermal pressure of ionized fluid

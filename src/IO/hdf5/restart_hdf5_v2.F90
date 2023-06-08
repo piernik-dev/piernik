@@ -124,11 +124,7 @@ contains
    end subroutine write_restart_hdf5_v2
 
 !> \brief create empty datasets for each cg to store restart data
-#ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
-#else /* !NBODY_1FILE */
-   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
-#endif /* !NBODY_1FILE */
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE, PPP_IO, PPP_CG
@@ -136,10 +132,10 @@ contains
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-#ifdef NBODY_1FILE
-      use cg_particles_io,  only: pdsets
+#ifdef NBODY
       use data_hdf5,        only: gdf_translate
-#endif /* NBODY_1FILE */
+      use particles_io,     only: pvarn
+#endif /* NBODY */
 
       implicit none
 
@@ -147,13 +143,11 @@ contains
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
+      integer(kind=8),               intent(in) :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
 
       integer :: i
       integer(HSIZE_T), dimension(:), allocatable :: d_size
-#ifdef NBODY_1FILE
-      integer(kind=8)                           :: n_part
-      integer(HID_T),                intent(in) :: st_g_id
-#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrce_label = "IO_write_empty_dset"
 
       if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
@@ -187,13 +181,16 @@ contains
       endif
       deallocate(d_size)
 
-#ifdef NBODY_1FILE
-      do i = lbound(pdsets,1, kind=4), ubound(pdsets,1, kind=4)
-         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_RES)
+#ifdef NBODY
+      do i = lbound(pvarn, 1, kind=4), ubound(pvarn, 1, kind=4)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pvarn(i)), [n_part], Z_avail, O_RES)
       enddo
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       call ppp_main%stop(wrce_label, PPP_IO + PPP_CG)
+
+      return
+      if (.false.) i = int(n_part) + int(st_g_id)
 
    end subroutine create_empty_cg_datasets_in_restart
 
@@ -213,13 +210,10 @@ contains
       use mpisetup,         only: master, FIRST, proc, err_mpi, tag_ub
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-#ifdef NBODY_1FILE
-      use cg_particles_io,  only: pdsets, nbody_datafields
+#ifdef NBODY
       use data_hdf5,        only: gdf_translate
-      use MPIF,             only: MPI_INTEGER, MPI_INTEGER8
-      use mpisetup,         only: LAST
-      use particle_utils,   only: count_all_particles
-#endif /* NBODY_1FILE */
+      use particles_io,     only: parallel_nbody_datafields, serial_nbody_datafields, pvarn
+#endif /* NBODY */
 
       implicit none
 
@@ -236,7 +230,7 @@ contains
       real, pointer,    dimension(:,:,:)                    :: pa3d
       real, pointer,    dimension(:,:,:,:)                  :: pa4d
       integer                                               :: tot_lst_n, ic
-      integer(kind=4)                                       :: ncg, n, i
+      integer(kind=4)                                       :: ncg, n, i, ntags
       type(grid_container),  pointer                        :: cg
       type(cg_list_element), pointer                        :: cgl
       integer, allocatable, dimension(:)                    :: qr_lst, wr_lst
@@ -245,11 +239,6 @@ contains
       real, target, dimension(0,0,0)                        :: null_r3d
       real, target, dimension(0,0,0,0)                      :: null_r4d
       integer(kind=4), dimension(ndims)                     :: n_b
-#ifdef NBODY_1FILE
-      integer(kind=4)                                      :: n_part
-      integer(HID_T), dimension(LAST+1)                    :: tmp
-      integer(HID_T)                                       :: id
-#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrcg_label = "IO_write_restart_v2_all_cg", wrcg1s_label = "IO_write_restart_v2_1cg_(serial)", wrcg1p_label = "IO_write_restart_v2_1cg_(parallel)"
 
       call ppp_main%start(wrcg_label, PPP_IO)
@@ -271,16 +260,15 @@ contains
             ic = ic + 1
          enddo
       endif
-#ifdef NBODY_1FILE
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets, gdf_translate(pdsets))
-#else /* !NBODY_1FILE */
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
-#endif /* !NBODY_1FILE */
+#ifdef NBODY
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, dsets, gdf_translate(pvarn))
+#else /* !NBODY */
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, dsets)
+#endif /* !NBODY */
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         if (cg_desc%tot_cg_n * (ubound(qr_lst, dim=1, kind=4) + I_ONE) > tag_ub) &
-              call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (cg_desc%tot_cg_n * ntags > tag_ub) call die("[restart_hdf5_v2:write_cg_to_restart] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrcg1s_label, PPP_IO + PPP_CG)
 
@@ -343,32 +331,11 @@ contains
                   endif
                endif
             endif
+#ifdef NBODY
+            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pvarn), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
+#endif /* NBODY */
             call ppp_main%stop(wrcg1s_label, PPP_IO + PPP_CG)
          enddo
-#ifdef NBODY_1FILE
-         n_part = count_all_particles()
-         if (n_part .gt. 0) then
-            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-               tmp(:) = 0
-               id=0
-               if (master) then
-                  tmp(:) = cg_desc%pdset_id(:, i)
-               endif
-               if (kind(id) == 4) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
-               else if (kind(id) == 8) then
-                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
-               else
-                  call die("[restart_hdf5_v2:write_cg_to_restart] no recognized kind of HID_T")
-               endif
-               if (master) then
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-               else
-                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
-               endif
-            enddo
-         endif
-#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
@@ -403,14 +370,9 @@ contains
                   deallocate(dims)
                endif
 
-#ifdef NBODY_1FILE
-               n_part = count_all_particles()
-               if (n_part .gt. 0) then
-                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
-                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
-                  enddo
-               endif
-#endif /* NBODY_1FILE */
+#ifdef NBODY
+               call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pvarn), ncg, cg)
+#endif /* NBODY */
 
                cgl => cgl%nxt
                call ppp_main%stop(wrcg1p_label, PPP_IO + PPP_CG)
@@ -598,9 +560,6 @@ contains
       use read_attr,          only: read_attribute
       use set_get_attributes, only: get_attr
       use timestep_pub,       only: c_all_old, cfl_c, stepcfl
-#ifdef NBODY
-      use mpisetup,           only: LAST
-#endif /* NBODY */
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */
@@ -612,7 +571,7 @@ contains
 #endif /* MULTIGRID && SELF_GRAV */
 #ifdef CRESP
       use initcrspectrum,     only: use_cresp
-      use cresp_NR_method,    only: cresp_read_smaps_from_hdf
+      use cresp_io,           only: cresp_read_smaps_from_hdf
 #endif /* CRESP */
 
       implicit none
@@ -828,10 +787,6 @@ contains
       allocate(cg_res(ibuf(1)))
       deallocate(ibuf)
 
-#ifdef NBODY
-      if (ubound(cg_res, dim=1) .ne. LAST+1) call die("[restart_hdf5_v2:read_restart_hdf5_v2] : Particles require restart with same number of cgs")
-#endif /* NBODY */
-
       do ia = lbound(cg_res, dim=1, kind=4), ubound(cg_res, dim=1, kind=4)
          call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/data/grid_%08d, ia"
 
@@ -1008,28 +963,23 @@ contains
            &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
       use overlap,          only: is_overlap
-#ifdef NBODY_1FILE
-      use cg_particles_io,  only: pdsets
+#ifdef NBODY
+      use common_hdf5,      only: part_gname, st_gname
       use data_hdf5,        only: gdf_translate
-      use read_attr,        only: read_attribute
-      use particle_types,   only: particle
+      use particles_io,     only: pvarn
       use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
+      use read_attr,        only: read_attribute
       use star_formation,   only: pid_gen
-#endif /* NBODY_1FILE */
+#endif /* NBODY */
 
       implicit none
 
-      type(grid_container), pointer,     intent(inout) :: cg        !< Own grid container
-      integer(HID_T),                    intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
-      integer(kind=4),                   intent(in)    :: ncg       !< number of cg in the restart file
-      type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
+      type(grid_container), pointer, intent(inout) :: cg        !< Own grid container
+      integer(HID_T),                intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
+      integer(kind=4),               intent(in)    :: ncg       !< number of cg in the restart file
+      type(cg_essentials),           intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
-#ifdef NBODY_1FILE
-      integer(HID_T)                               :: part_g_id !< particles group identifier
-      integer(HID_T)                               :: st_g_id !< stars group identifier
-      integer(HID_T)                               :: pdset_id
-#endif /* NBODY_1FILE */
       integer(HID_T)                               :: dset_id
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
@@ -1039,24 +989,21 @@ contains
       integer(kind=8), dimension(xdim:zdim)        :: own_off_nb, restart_off_nb, o_size_nb   !
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_ob, restart_box_ob              ! variants for AT_OUT_B
       integer(kind=8), dimension(xdim:zdim)        :: own_off_ob, restart_off_ob, o_size_ob   ! as opposed to AT_NO_B
-      integer, allocatable, dimension(:)           :: qr_lst, wr_lst
+      integer, dimension(:), allocatable           :: qr_lst, wr_lst
       integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
-#ifdef NBODY_1FILE
+#ifdef NBODY
+      integer(HID_T)                               :: part_g_id !< particles group identifier
+      integer(HID_T)                               :: st_g_id   !< stars group identifier
+      integer(HID_T)                               :: pdset_id
+      integer(HSIZE_T)                             :: n_part
       integer(kind=8)                              :: j
-      integer(kind=4)                              :: pid1
-      real, dimension(:), allocatable              :: a1d
-      integer(HSIZE_T), dimension(1)               :: n_part
-      integer(kind=4), dimension(1)                :: pid_max
-      integer(kind=4),   dimension(:), allocatable :: ibuf
-      integer(kind=4), allocatable, dimension(:)   :: pid
-      real, allocatable, dimension(:)              :: mass, ener, tform, tdyn
-      real, allocatable, dimension(:, :)           :: pos, vel, acc
-      real, dimension(ndims)                       :: pos1, vel1, acc1
-      real                                         :: mass1, ener1, tform1, tdyn1
-      type(particle), pointer                      :: pset
-#endif /* NBODY_1FILE */
+      real,            dimension(:),   allocatable :: a1d
+      real,            dimension(:),   allocatable :: mass, ener, tform, tdyn
+      real,            dimension(:,:), allocatable :: pos, vel, acc
+      integer(kind=4), dimension(:),   allocatable :: ibuf, pid
+#endif /* NBODY */
 
       ! Find overlap between own cg and restart cg
       own_box_nb(:, :) = cg%my_se(:, :)
@@ -1134,84 +1081,67 @@ contains
          deallocate(dims, off, cnt)
       endif
 
-#ifdef NBODY_1FILE
-      call h5gopen_f(cg_g_id, "particles", part_g_id, error)
-      call h5gopen_f(part_g_id, "stars", st_g_id, error)
+#ifdef NBODY
+      call h5gopen_f(cg_g_id,   part_gname, part_g_id, error)
+      call h5gopen_f(part_g_id,   st_gname,   st_g_id, error)
+
       allocate(ibuf(1))
-      call read_attribute(st_g_id, "n_part", ibuf)
-      n_part = ibuf(:)
-      deallocate(ibuf)
-      allocate(ibuf(1))
+      call read_attribute(st_g_id, "n_part",  ibuf)
+      n_part = ibuf(1)
       call read_attribute(st_g_id, "pid_max", ibuf)
-      pid_max = ibuf(:)
+      pid_gen = ibuf(1)
       deallocate(ibuf)
-      pid_gen = pid_max(1)
-      allocate(pid(n_part(1)), mass(n_part(1)), ener(n_part(1)), tform(n_part(1)), tdyn(n_part(1)))
-      allocate(pos(n_part(1), ndims), vel(n_part(1), ndims), acc(n_part(1), ndims))
-      do i = lbound(pdsets, dim=1), ubound(pdsets, dim=1)
-         call h5dopen_f(st_g_id, gdf_translate(pdsets(i)), pdset_id, error)
-         allocate(a1d(n_part(1)))
-         call h5dread_f(pdset_id, H5T_NATIVE_DOUBLE, a1d, n_part, error)
-         do j = 1, n_part(1)
-            select case (pdsets(i))
-               case ('ppid')
-                  pid(j) = int(a1d(j), kind=4)
-               case ('mass')
-                  mass(j) = a1d(j)
-               case ('ener')
-                  ener(j) = a1d(j)
-               case ('posx')
-                  pos(j, xdim) = a1d(j)
-               case ('posy')
-                  pos(j, ydim) = a1d(j)
-               case ('posz')
-                  pos(j, zdim) = a1d(j)
-               case ('velx')
-                  vel(j, xdim) = a1d(j)
-               case ('vely')
-                  vel(j, ydim) = a1d(j)
-               case ('velz')
-                  vel(j, zdim) = a1d(j)
-               case ('accx')
-                  acc(j, xdim) = a1d(j)
-               case ('accy')
-                  acc(j, ydim) = a1d(j)
-               case ('accz')
-                  acc(j, zdim) = a1d(j)
-               case ('tfor')
-                  tform(j) = a1d(j)
-               case ('tdyn')
-                  tdyn(j) = a1d(j)
-               case default
-            end select
-         enddo
-         deallocate(a1d)
+
+      allocate(pid(n_part), mass(n_part), ener(n_part), tform(n_part), tdyn(n_part))
+      allocate(pos(n_part, ndims), vel(n_part, ndims), acc(n_part, ndims))
+      allocate(a1d(n_part))
+      do i = lbound(pvarn, dim=1), ubound(pvarn, dim=1)
+         call h5dopen_f(st_g_id, gdf_translate(pvarn(i)), pdset_id, error)
+         call h5dread_f(pdset_id, H5T_NATIVE_DOUBLE, a1d, [n_part], error)
+         select case (pvarn(i))
+            case ('ppid')
+               pid = int(a1d, kind=4)
+            case ('mass')
+               mass = a1d
+            case ('ener')
+               ener = a1d
+            case ('posx')
+               pos(:, xdim) = a1d
+            case ('posy')
+               pos(:, ydim) = a1d
+            case ('posz')
+               pos(:, zdim) = a1d
+            case ('velx')
+               vel(:, xdim) = a1d
+            case ('vely')
+               vel(:, ydim) = a1d
+            case ('velz')
+               vel(:, zdim) = a1d
+            case ('accx')
+               acc(:, xdim) = a1d
+            case ('accy')
+               acc(:, ydim) = a1d
+            case ('accz')
+               acc(:, zdim) = a1d
+            case ('tfor')
+               tform = a1d
+            case ('tdyn')
+               tdyn = a1d
+            case default
+         end select
          call h5dclose_f(pdset_id, error)
       enddo
-      do j=1, n_part(1)
-         pid1=pid(j)
-         mass1=mass(j)
-         ener1=ener(j)
-         pos1=pos(j,:)
-         vel1=vel(j,:)
-         acc1=acc(j,:)
-         tform1=tform(j)
-         tdyn1=tdyn(j)
-         call add_part_in_proper_cg(pid1, mass1, pos1, vel1, acc1, ener1, tform1, tdyn1)
-      enddo
-      call part_leave_cg()
-
-      pset => cg%pset%first
-      do while (associated(pset))
-         call pset%pdata%is_outside()
-         pset => pset%nxt
-      enddo
-
-      deallocate(pid, mass, ener, tform, tdyn)
-      deallocate(pos, vel, acc)
+      deallocate(a1d)
       call h5gclose_f(st_g_id, error)
       call h5gclose_f(part_g_id, error)
-#endif /* NBODY_1FILE */
+
+      do j = 1, n_part
+         call add_part_in_proper_cg(pid(j), mass(j), pos(j,:), vel(j,:), acc(j,:), ener(j), tform(j), tdyn(j))
+      enddo
+      deallocate(pid, mass, pos, vel, acc, ener, tform, tdyn)
+
+      call part_leave_cg() ! TODO: isn't it redundant?
+#endif /* NBODY */
 
       call h5gclose_f(cg_g_id, error)
       deallocate(qr_lst, wr_lst)

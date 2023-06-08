@@ -284,8 +284,8 @@ contains
 
       if (master) then
          write(msg, '(a,i3)') 'Total amount of CR species: ', ncrsp
-         if (count(cr_spectral) > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', count(cr_spectral), ' spectral component(s)'
-         if (ncrsp - ncrsp_auto > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', ncrsp - ncrsp_auto, ' user component(s).'
+         if (count(cr_spectral) > 0) write(msg(len_trim(msg)+1:), '(a,i3,a)') ' | ', count(cr_spectral), ' spectral component(s)'
+         if (ncrsp - ncrsp_auto > 0) write(msg(len_trim(msg)+1:), '(a,i3,a)') ' | ', ncrsp - ncrsp_auto, ' user component(s).'
          call printinfo(msg)
       endif
 
@@ -332,7 +332,7 @@ contains
 
       implicit none
 
-      deallocate(cr_names, cr_table, cr_sigma, cr_tau, cr_primary, cr_mass)
+      deallocate(cr_names, cr_table, cr_index, cr_sigma, cr_tau, cr_primary, cr_mass, cr_spectral, cr_gpess)
 
    end subroutine cleanup_cr_species
 

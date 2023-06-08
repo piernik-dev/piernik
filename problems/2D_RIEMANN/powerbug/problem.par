@@ -1,0 +1,89 @@
+! For maximum RAM stress run:
+!
+! ./setup 2D_RIEMANN/powerbug -o R_powerbug --linkproblem
+! cd runs/powerbug_R_powerbug
+! ./problem/burn.sh
+!
+! Different CPU modelss reach thr maximum power demand on different parameters.
+! See the burn.sh scripts for more hints about optimizing it for specific CPU.
+
+ $BASE_DOMAIN
+
+! nicely divisible numbers:
+! 1680 = 2^4 * 3   * 5 * 7  = 120 * 14  ! 40 divisors: Highly Composite Number
+! 2160 = 2^4 * 3^3 * 5      = 120 * 18  ! 40 divisors
+! 2520 = 2^3 * 3^2 * 5 * 7  = 120 * 21  ! 48 divisors: Highly Composite Number
+! 2640 = 2^4 * 3   * 5 * 11 = 120 * 22  ! 40 divisors
+! 2880 = 2^6 * 3^2 * 5      = 120 * 24  ! 42 divisors
+! 3360 = 2^5 * 3   * 5 * 7  = 120 * 28  ! 48 divisors
+
+    n_d = 2*2880
+
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -1.
+    xmax   =  1.
+    ymin   = -1.
+    ymax   =  1.
+    zmin   =  0.
+    zmax   =  1.
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+   tend  = 1.e10
+   nend  = 10000000
+ /
+
+ $OUTPUT_CONTROL
+   problem_name  = '2d_powerbug'
+   run_id        = 'brn'
+   dt_hdf        = 0.
+   dt_res        = 0.
+   dt_log        = 0.
+   dt_tsl        = 0.
+   vars      = "dens"
+ /
+
+ $FLUID_NEUTRAL
+   gamma    = 1.4
+ /
+
+ $FLUID_IONIZED
+   gamma    = 1.4
+ /
+
+ $NUMERICAL_SETUP
+   cfl     = 0.5
+   smalld  = 1e-7
+   smallei = 1e-7
+   limiter = 'vanleer'
+!   interpol_str = "weno3"
+  solver_str = "Riemann"
+ /
+
+ $PROBLEM_CONTROL
+/
+
+ $INTERACTIONS
+ /
+
+ $AMR
+   bsize = 320, 320, 1
+ /

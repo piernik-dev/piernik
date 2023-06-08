@@ -48,6 +48,13 @@ else
     fi
 fi
 
+#Prevent old problem.par from messing up the tests
+HAS_KEEPPAR=0
+if [ -e .setuprc ] ; then
+    grep -q keeppar .setuprc && HAS_KEEPPAR=1
+    sed -i 's/--keeppar//g' .setuprc
+fi
+
 # Run the gold test if needed (in the background)
 if [ ! -e ${RUN_GOLD_DIR}${OUTPUT} ] ; then
     echo "(Re)creating the gold"
@@ -160,5 +167,8 @@ if [ $RIEMANN == 0 ] ; then
     fi
 fi
 
+[ $HAS_KEEPPAR == 1 ] && echo " --keeppar" >> .setuprc
+
 # Fail if gold distance is not 0.
 [ $( ( grep "^Total difference between" $GOLD_LOG || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
+

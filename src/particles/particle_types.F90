@@ -233,6 +233,7 @@ contains
             new%pdata%outside = .false.
             new%pdata%tform = tform
             new%pdata%tdyn = tdyn
+            call new%pdata%is_outside()
       new%nxt => null()
 
       if (.not. associated(this%first)) then ! the list was empty

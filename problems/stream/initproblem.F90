@@ -301,6 +301,9 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 
+#if 0
+! Currently unused
+
    subroutine compare
 
       use constants,  only: dpi, xdim, zdim
@@ -337,5 +340,6 @@ contains
       kz = dpi/dom%L_(zdim)
 
    end subroutine compare
+#endif /* 0 */
 
 end module initproblem

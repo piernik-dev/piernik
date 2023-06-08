@@ -52,6 +52,7 @@ module multigrid_old_soln
       procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.
       procedure :: store_solution             !< Manage old copies of potential for recycling.
       procedure :: sanitize                   !< Invalidate some stored solutions from the future i.e. when there was timestep retry
+      procedure :: sanitize_expanded          !< If the domain was recently expanded, initialize all history with zeroes
       procedure :: print                      !< Print the state of old solution list
       procedure :: unmark                     !< Reset restart flag of old soln
 #ifdef HDF5
@@ -287,6 +288,26 @@ contains
       endif
 
    end subroutine sanitize
+
+!> \brief If the domain was recently expanded, initialize history with zeroes
+
+   subroutine sanitize_expanded(this)
+
+      use cg_list_dataop, only: expanded_domain
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be sanitized after domain expansion
+
+      type(old_soln), pointer :: os
+
+      os => this%old%latest
+      do while (associated(os))
+         call expanded_domain%set_q_value(os%i_hist, 0.)
+         os => os%earlier
+      enddo
+
+   end subroutine sanitize_expanded
 
 !> \brief Print the state of old solution list
 
