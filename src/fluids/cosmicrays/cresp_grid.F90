@@ -121,13 +121,14 @@ contains
       use cresp_crspectrum, only: cresp_update_cell, q
       use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_B11, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
       use crhelpers,        only: divv_i
+      use cresp_helpers,    only: enden_CMB
       use dataio_pub,       only: msg, warn
       use func,             only: emag
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, ncrb
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old
-      use initcrspectrum,   only: cresp_substep, n_substeps_max
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, icomp_active, cresp, crel, dfpq, f_synchIC, u_b_max, use_cresp_evol, bin_old
+      use initcrspectrum,   only: cresp_substep, n_substeps_max, redshift
       use named_array_list, only: wna
       use ppp,              only: ppp_main
       use sourcecosmicrays, only: cr_spallation_sources
@@ -179,18 +180,22 @@ contains
          cg => cgl%cg
          call cg%costs%start
 
+         sptab%ucmb  = 0.0
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
 
-                  !u_cell = cg%u(:, i, j, k)
+                  sptab%ud = 0.0 ; sptab%ub = 0.0; sptab%umag = 0.0
 
                   do i_spc = 1, nspc
 
                      cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)  !TODO OPTIMIZE ME PLEASE !!
                      cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
-                     if (synch_active(i_spc)) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr(i_spc), u_b_max)    !< WARNING assusmes that b is in mGs
+                     if (synch_active(i_spc)) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC(i_spc), u_b_max)    !< WARNING assusmes that b is in mGs
                      if (adiab_active(i_spc)) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
+                     if (icomp_active(i_spc)) sptab%ucmb = enden_CMB(redshift) * f_synchIC(i_spc)
+                     sptab%ub = sptab%umag + sptab%ucmb
 
                      if (cresp_substep) then !< prepare substep timestep for each cell
                         call cresp_timestep_cell(cresp%n, cresp%e, sptab, dt_cresp, i_spc, inactive_cell)

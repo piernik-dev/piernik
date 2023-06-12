@@ -48,21 +48,26 @@ contains
    subroutine init_crdiffusion
 
       use cg_list_global,   only: all_cg
-      use constants,        only: wcr_n
+      use constants,        only: wcr_n, I_ZERO
       use crhelpers,        only: divv_i, divv_n
       use initcosmicrays,   only: ord_cr_prolong
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
-      use named_array_list, only: qna
+      use initcosmicrays,   only: diff_prolong
+      use named_array_list, only: qna, wna
 
       implicit none
 
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = ord_cr_prolong)
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all, ord_prolong = max(ord_cr_prolong, diff_prolong))
          ! Dirty trick: Ensure that all prolongation buffers are ready for ord_cr_prolong,
          ! wcr_n itself doesn't need it.
+
+         wna%lst(wna%ind(wcr_n))%ord_prolong = I_ZERO
+         ! QUIRKY: enforce proper all_cg%ord_prolong_nb, which will be later required for qna%wai, but ...
+         ! ord_prolong should be left at 0 as we're not ready to prolong flux-type quantities in a reasonable way yet
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -132,41 +137,63 @@ contains
 !<
    subroutine all_wcr_boundaries(crdim)
 
-      use cg_cost_data,     only: I_DIFFUSE
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-      use ppp,              only: ppp_main
+      use cg_cost_data,       only: I_DIFFUSE
+      use cg_leaves,          only: leaves
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
+      use cg_list,            only: cg_list_element
+      use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use initcosmicrays,     only: diff_max_lev
+      use named_array_list,   only: wna
+      use ppp,                only: ppp_main
 
       implicit none
 
       integer(kind=4), intent(in)             :: crdim
 
-      integer(kind=4)                         :: i, d, lh
+      integer(kind=4)                         :: i, d, lh, wcri
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
       real, dimension(:,:,:,:), pointer       :: wcr
       type(cg_list_element),    pointer       :: cgl
       type(grid_container),     pointer       :: cg
+      type(cg_level_connected_t), pointer     :: diffl, curl
       character(len=*), parameter :: awb_label = "all_wcr_boundaries"
 
       if (.not. has_cr) return
 
+      wcri = wna%ind(wcr_n)
+
       call ppp_main%start(awb_label, PPP_CR)
 
-      call leaves%leaf_arr4d_boundaries(wna%ind(wcr_n), no_fc = .true., dir=crdim)  ! skip coarse-to-fine prolongation as it doesn't work well for fluxes
-      ! ToDo: override coarse fluxes with restricted fine fluxes
+      if (diff_max_lev >= finest%level%l%id) then  ! do the old way
+         call leaves%leaf_arr4d_boundaries(wcri, no_fc = .true., dir=crdim)  ! skip coarse-to-fine prolongation as it doesn't work well for fluxes
+      else
+         diffl => finest%level
+         do while (associated(diffl))
+            if (diffl%l%id == diff_max_lev) exit
+            diffl => diffl%coarser
+         enddo
+         if (.not. associated(diffl)) call die("[crdiffusion:all_wcr_boundaries] .not. associated(diffl)")
+         if (diffl%l%id /= diff_max_lev) call die("[crdiffusion:all_wcr_boundaries] diffl%l%id /= diff_max_lev")
+
+         ! slightly modified copy of cg_leaves::leaf_arr4d_boundaries
+         curl => diffl
+         do while (associated(curl))
+            call curl%level_4d_boundaries(wcri)
+            curl => curl%coarser
+         enddo
+      endif
 
       ! do the external boundaries
-      cgl => leaves%first
+      cgl => leaves%up_to_level(min(diff_max_lev, finest%level%l%id))%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
 
-         wcr => cg%w(wna%ind(wcr_n))%arr
+         wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
          do d = xdim, zdim
@@ -211,14 +238,14 @@ contains
       use cg_leaves,        only: leaves
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half, I_ONE, base_level_id
       use dataio_pub,       only: die
       use domain,           only: dom
       use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp, ord_cr_prolong
+      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp, ord_cr_prolong, diff_max_lev
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
@@ -247,7 +274,7 @@ contains
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
       integer(kind=4) :: nr, nr_recv
       logical :: all_received
-      integer(kind=4) :: ord_save
+      integer(kind=4) :: ord_save, max_lev
       real, parameter :: flux_factor = half
 
       if (.not. has_cr) return
@@ -261,6 +288,7 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
+      max_lev = min(diff_max_lev, finest%level%l%id)
 
       ! Dirty trick: enforce prolongation order for CR in case someone wants smoother estimates for f/c ifnterpolation of cg%u(iarr_crs,:,:,:)
       ord_save = wna%lst(wna%fi)%ord_prolong
@@ -269,10 +297,10 @@ contains
       call all_fluid_boundaries  ! overkill?
       wna%lst(wna%fi)%ord_prolong = ord_save
 
-      nr_recv = compute_nr_recv(crdim)
-      nr = nr_recv
+      nr_recv = compute_nr_recv(crdim, max_lev - I_ONE)
+      nr = nr_recv  ! at this point we may have some requests posted by compute_nr_recv()
 
-      cgl => leaves%first
+      cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -368,7 +396,9 @@ contains
       enddo
 
       call piernik_Waitall(nr, "cr_diff")
-      cgl => leaves%first
+
+      nullify(cgl)
+      if (max_lev - I_ONE >= base_level_id) cgl => leaves%up_to_level(max_lev - I_ONE)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -383,7 +413,7 @@ contains
 
       call all_wcr_boundaries(crdim)
 
-      cgl => leaves%first
+      cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
@@ -392,30 +422,32 @@ contains
          ! It can be optimized as there are at most four different regions to exchange (we're on coarse side) and array assignments can be made
 
          ! To Do: Figure out where the flux factor value come from. And why it does not depend on dimensionality.
-         wcr => cg%w(wcri)%arr
-         do j = lbound(cg%finebnd(crdim, LO)%uflx, dim=2), ubound(cg%finebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
-            do k = lbound(cg%finebnd(crdim, LO)%uflx, dim=3), ubound(cg%finebnd(crdim, LO)%uflx, dim=3)
-               select case (crdim)
-                  case (xdim)
-                     if (cg%finebnd(crdim, LO)%index(j, k) > cg%is) &
-                          wcr(:, cg%finebnd(crdim, LO)%index(j, k) + 1, j, k) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
-                     if (cg%finebnd(crdim, HI)%index(j, k) < cg%ie) &
-                          wcr(:, cg%finebnd(crdim, HI)%index(j, k), j, k) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
-                  case (ydim)
-                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%js) &
-                          wcr(:, k, cg%finebnd(crdim, LO)%index(j, k) + 1, j) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
-                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%je) &
-                          wcr(:, k, cg%finebnd(crdim, HI)%index(j, k), j) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
-                  case (zdim)
-                     if (cg%finebnd(crdim, LO)%index(j, k) >= cg%ks) &
-                          wcr(:, j, k, cg%finebnd(crdim, LO)%index(j, k) + 1) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
-                     if (cg%finebnd(crdim, HI)%index(j, k) <= cg%ke) &
-                          wcr(:, j, k, cg%finebnd(crdim, HI)%index(j, k)) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
-                  case default
-                     call die("[crdiffusion:cr_diff] What to receive?")
-               end select
+         if (cg%l%id < max_lev) then
+            wcr => cg%w(wcri)%arr
+            do j = lbound(cg%finebnd(crdim, LO)%uflx, dim=2), ubound(cg%finebnd(crdim, LO)%uflx, dim=2)  ! bounds for (crdim, HI) are the same
+               do k = lbound(cg%finebnd(crdim, LO)%uflx, dim=3), ubound(cg%finebnd(crdim, LO)%uflx, dim=3)
+                  select case (crdim)
+                     case (xdim)
+                        if (cg%finebnd(crdim, LO)%index(j, k) > cg%is) &
+                             wcr(:, cg%finebnd(crdim, LO)%index(j, k) + 1, j, k) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                        if (cg%finebnd(crdim, HI)%index(j, k) < cg%ie) &
+                             wcr(:, cg%finebnd(crdim, HI)%index(j, k), j, k) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                     case (ydim)
+                        if (cg%finebnd(crdim, LO)%index(j, k) >= cg%js) &
+                             wcr(:, k, cg%finebnd(crdim, LO)%index(j, k) + 1, j) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                        if (cg%finebnd(crdim, HI)%index(j, k) <= cg%je) &
+                             wcr(:, k, cg%finebnd(crdim, HI)%index(j, k), j) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                     case (zdim)
+                        if (cg%finebnd(crdim, LO)%index(j, k) >= cg%ks) &
+                             wcr(:, j, k, cg%finebnd(crdim, LO)%index(j, k) + 1) = cg%finebnd(crdim, LO)%uflx(:flind%crs%all, j, k) * flux_factor
+                        if (cg%finebnd(crdim, HI)%index(j, k) <= cg%ke) &
+                             wcr(:, j, k, cg%finebnd(crdim, HI)%index(j, k)) = cg%finebnd(crdim, HI)%uflx(:flind%crs%all, j, k) * flux_factor
+                     case default
+                        call die("[crdiffusion:cr_diff] What to receive?")
+                  end select
+               enddo
             enddo
-         enddo
+         endif
 
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
@@ -428,8 +460,54 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call prolong_crs
+
       call ppp_main%stop(crd_label(crdim), PPP_CR)
 
    end subroutine cr_diff
+
+   subroutine prolong_crs
+
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
+      use constants,          only: GEO_XYZ, O_INJ
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use initcosmicrays,     only: diff_max_lev, diff_prolong, iarr_crs
+      use named_array_list,   only: wna, qna
+
+      implicit none
+
+      type(cg_level_connected_t), pointer :: diffl, curl
+      integer(kind=4) :: i
+
+      if (diff_max_lev >= finest%level%l%id) return
+      if (dom%geometry_type /= GEO_XYZ) call die("[crdiffusion:prolong_crs] Only cartesian geometry is supported by diff_max_lev right now")
+
+      diffl => finest%level
+      do while (associated(diffl))
+         if (diffl%l%id == diff_max_lev) exit
+         diffl => diffl%coarser
+      enddo
+      if (.not. associated(diffl)) call die("[crdiffusion:prolong_crs] .not. associated(diffl)")
+      if (diffl%l%id /= diff_max_lev) call die("[crdiffusion:prolong_crs] diffl%l%id /= diff_max_lev")
+
+      qna%lst(qna%wai)%ord_prolong = diff_prolong
+      curl => diffl
+      do while (associated(curl))
+         if (associated(curl%finer)) then
+            if (qna%lst(qna%wai)%ord_prolong /= O_INJ) call curl%level_4d_boundaries(wna%fi)  ! overkill: only iarr_crs are needed
+            do i = lbound(iarr_crs, dim=1, kind=4), ubound(iarr_crs, dim=1, kind=4)
+               call curl%wq_copy(wna%fi, iarr_crs(i), qna%wai)
+               call curl%finer%wq_copy(wna%fi, iarr_crs(i), qna%wai)  ! a bit of overkill, but current implementation may need some of this data
+               call curl%prolong_1var(qna%wai)
+               call curl%finer%qw_copy(qna%wai, wna%fi, iarr_crs(i))
+            enddo
+            call curl%prolong_bnd_from_coarser(wna%fi, nocorners=.false.)
+         endif
+         curl => curl%finer
+      enddo
+
+   end subroutine prolong_crs
 
 end module crdiffusion

@@ -391,6 +391,7 @@ contains
 
    subroutine reshuffle
 
+      use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
@@ -459,9 +460,10 @@ contains
       if (has_particles) call die("[rebalance:reshuffle] Particles aren't supported yet")
 #endif /* NBODY */
 
-      ! Count the number of fields on any of the top level cg
+      ! Count the number of fields on any of the base level cg.
+      ! Assume that base level and above have the same set of fields. Levels coarser than base may have different set of fields.
       totfld = 0
-      cgl => finest%level%first
+      cgl => base%level%first
       if (associated(cgl)) then
          do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
             if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) totfld = totfld + wna%lst(p)%dim4

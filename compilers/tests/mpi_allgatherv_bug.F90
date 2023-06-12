@@ -2,9 +2,11 @@
 ! The old approach with "use mpi" (after necessary changes such as adding ierror argument and
 ! removing MPI_Allgatherv from the import statement) works correctly.
 
+! MPICH 4.0.2 from Fedora 37 (mpich-4.0.2-4.fc37.x86_64) seems to work correctly.
+
 program Allgatherv_bug
 
-   use mpi_f08, only: MPI_Init, MPI_Finalize, MPI_Comm_size, MPI_Allgatherv, &
+   use mpi_f08, only: MPI_Init, MPI_Finalize, MPI_Comm_size, MPI_Allgatherv, MPI_Abort, &
         &             MPI_COMM_WORLD, MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER, MPI_INTEGER_KIND
 
    implicit none

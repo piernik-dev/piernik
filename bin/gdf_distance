@@ -171,8 +171,6 @@ def compare_dlists(h5f1, h5f2):
     if (len(fc) != len(f2)):
         print("Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc)))
 
-    digit = re.compile("[0-9]").search
-    digit2 = re.compile("[0-9][0-9]").search
     v0 = []
     for f in fc:
         if (f[-1] == 'x') or (f[-2] == 'x') or (f[-2:] == '01'):
@@ -194,7 +192,7 @@ def compare_dlists(h5f1, h5f2):
                     if f == v[:-2] + i + v[-1]:
                         vv.append(f)
         elif v[-2:] == '01':
-            digit2 = re.compile(v[:-2] + "[0-9][0-9]").search
+            digit2 = re.compile(v[:-2].replace("+", "\+") + "[0-9][0-9]").search
             for f in fc:
                 if bool(digit2(f)):
                     vv.append(f)

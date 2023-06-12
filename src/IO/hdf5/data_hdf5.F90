@@ -112,6 +112,8 @@ contains
          case ("divbc", "divbf", "divbc4", "divbf4", "divbc6", "divbf6", "divbc8", "divbf8")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
+         case ("divb_norm")
+            f%fu= ""
          case ("magdir")
             f%fu = "\rm{radians}"
 #ifdef COSM_RAYS
@@ -249,6 +251,8 @@ contains
                write(newname, '("magnetic_field_divergence_",A1,"_O(6)")') var(5:5)
             case ("divbc8", "divbf8")
                write(newname, '("magnetic_field_divergence_",A1,"_O(8)")') var(5:5)
+            case ("divb_norm")
+               newname = "normalized_divB"
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
@@ -595,6 +599,16 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .true.)
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
+         case ("divb_norm")
+            tab(:,:,:) = emag_c
+            where (tab(:,:,:) <= 0.)
+               tab(:,:,:) = 0.
+            elsewhere
+               tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / (sqrt(two) * sqrt(tab(:,:,:))) / cg%suminv * dom%eff_dim
+            endwhere
+            !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
+            ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.
+            ! Alternatively, one can use harmonic mean (cg%dvol**(1./dom%eff_dim)) instead.
 #endif /* MAGNETIC */
          case ("v") ! perhaps this should be expanded to vi, vn or vd, depending on fluids present
             nullify(fl_mach)
@@ -902,10 +916,10 @@ contains
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   endif
                enddo

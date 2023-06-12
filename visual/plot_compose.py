@@ -86,18 +86,24 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
 
 
 def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
-    smin, smax, zoom, ulen, sctype, drawg, gcolor, center = equip2d
+    smin, smax, zoom, ulen, sctype, scnorm, drawg, gcolor, center = equip2d
     ag, ah = [], []
     if field[0] or drawg:
         if field[0]:
-            vmin, vmax, symmin, cmap = field[1:-2]
+            vmin, vmax, symmin, cmap, autosc = field[1:-1]
         for blks in refis:
             for bl in blks:
                 bxyz, binb, ble, bre, level = bl[:-1]
                 if binb[ncut]:
                     if bxyz != []:
                         bplot = pu.scale_plotarray(bxyz[ncut], sctype, symmin)
-                        ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                        if scnorm == '':
+                            ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
+                        else:
+                            if autosc:
+                                ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], norm=scnorm, interpolation='nearest', cmap=cmap)
+                            else:
+                                ag = ax.imshow(bplot, origin="lower", extent=[ble[n1], bre[n1], ble[n2], bre[n2]], norm=scnorm, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap)
                     if drawg:
                         ax.plot([ble[n1], ble[n1], bre[n1], bre[n1], ble[n1]], [ble[n2], bre[n2], bre[n2], ble[n2], ble[n2]], '-', linewidth=ps.grid_linewidth, alpha=0.1 * float(level + 1), color=gcolor[level], zorder=4)
     if parts[0]:
@@ -157,13 +163,15 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
         pu.color_axes(axg, 'white')
         fr = [ps.cbar_hist2d_shift, ps.cbar_plot2d_shift]
         bar = inset_axes(axg, width='100%', height='100%', bbox_to_anchor=(fr[ic], 0.0, 0.06, 1.0), bbox_transform=axg.transAxes, loc=2, borderpad=0)
-        cbarh = P.colorbar(ab, cax=bar, format=clf, drawedges=False)
     else:
         if cbar_mode == 'each':
             bar = grid.cbar_axes[icb]
         elif cbar_mode == 'single':
             bar = grid.cbar_axes[0]
         bar.axis["right"].toggle(all=True)
+    if clf == '':
+        cbarh = P.colorbar(ab, cax=bar, drawedges=False)
+    else:
         cbarh = P.colorbar(ab, cax=bar, format=clf, drawedges=False)
     cbarh.ax.set_ylabel(clab)
     if cbar_mode == 'none':
@@ -182,7 +190,7 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, scnorm, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel = options
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
@@ -242,7 +250,7 @@ def plotcompose(pthfilen, var, output, options):
             if drawd:
                 vmin, vmax, symmin, autsc = pu.scale_manage(sctype, refis, umin, umax, draw1D, draw2D, extr)
 
-                vlab = pu.labellog(sctype, symmin, cmpr[0]) + var + pu.manage_units(uvar)
+                vlab = pu.properlabel(var, varlabel, pu.labellog(sctype, symmin, cmpr[0])) + pu.manage_units(uvar)
                 field = drawd, vmin, vmax, symmin, cmap, autsc, vlab
 
     zoom = rd.level_zoom(h5f, gridlist, zoom, smin, smax)
@@ -258,7 +266,7 @@ def plotcompose(pthfilen, var, output, options):
     cbar_mode = pu.colorbar_mode(drawd, drawh, figmode)
 
     equip1d = smin, smax, zoom, ulen, sctype, umin, umax, linstyl, output, timep
-    equip2d = smin, smax, zoom, ulen, sctype, drawg, gcolor, center
+    equip2d = smin, smax, zoom, ulen, sctype, scnorm, drawg, gcolor, center
 
     if draw1D[0]:
         plot1d(refis, field, parts, equip1d, 0, 1, 2)

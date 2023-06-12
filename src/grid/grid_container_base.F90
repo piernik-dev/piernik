@@ -85,6 +85,7 @@ module grid_cont_base
       real :: idz                                                !< inverted length of the %grid cell in z-direction
       real :: idx2, idy2, idz2                                   !< inverse of d{x,y,z} square
       real, dimension(ndims) :: idl2                             !< [ idx2, idy2, idz2 ]
+      real :: suminv                                             !< idx + idy + idz
 
       ! Grid properties
 
@@ -299,6 +300,7 @@ contains
 
       ! some shortcuts for convenience
       this%idl(:) = 1./this%dl(:)
+      this%suminv = merge(sum(this%idl(:), mask=dom%has_dir(:)), 0., dom%eff_dim /= 0)
 
       this%dx = this%dl(xdim)
       this%dy = this%dl(ydim)

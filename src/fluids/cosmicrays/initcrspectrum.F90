@@ -40,9 +40,9 @@ module initcrspectrum
    private
    public :: use_cresp, use_cresp_evol, p_init, initial_spectrum, p_bnd, p_br_init, f_init, q_init, q_br_init, q_big, cfl_cre, cre_eff, expan_order, e_small, e_small_approx_p, e_small_approx_init_cond,  &
            & smallcren, smallcree, max_p_ratio, NR_iter_limit, force_init_NR, NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf, nullify_empty_bins, synch_active, adiab_active,                 &
-           & allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim_a, arr_dim_n, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,           &
-           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum_n, norm_init_spectrum_e, cresp, crel, dfpq, fsynchr, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,     &
-           & u_b_max, def_dtsynch, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, bin_old, g_fix, g_mid_fix, s, three_ps, four_ps
+           & icomp_active, allow_source_spectrum_break, cre_active, tol_f, tol_x, tol_f_1D, tol_x_1D, arr_dim_a, arr_dim_n, arr_dim_q, eps, eps_det, w, p_fix, p_mid_fix, total_init_cree, p_fix_ratio,           &
+           & spec_mod_trms, cresp_all_edges, cresp_all_bins, norm_init_spectrum_n, norm_init_spectrum_e, cresp, crel, dfpq, f_synchIC, init_cresp, cleanup_cresp_sp, check_if_dump_fpq, cleanup_cresp_work_arrays, q_eps,     &
+           & u_b_max, def_dtsynchIC, def_dtadiab, NR_smap_file, NR_allow_old_smaps, cresp_substep, n_substeps_max, allow_unnatural_transfer, K_cresp_paral, K_cresp_perp, p_min_fix, p_max_fix, redshift, g_fix, s, three_ps, four_ps, bin_old
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -96,7 +96,9 @@ module initcrspectrum
    logical         :: allow_unnatural_transfer    !< allows unnatural transfer of n & e with 'manually_deactivate_bins_via_transfer'
    logical, dimension(:), allocatable :: synch_active !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical, dimension(:), allocatable :: adiab_active !< TEST feature - turns on / off adiabatic   cooling @ CRESP
+   logical, dimension(:), allocatable :: icomp_active !< TEST feature - turns on / off Inv-Compton cooling @ CRESP
    real,    dimension(:), allocatable :: cre_active   !< electron contribution to Pcr ! TODO FIXME RENAME ME PLEASE!!!!
+   real                               :: redshift                    !< redshift for chosen epoch WARNING this remains constant
 
 ! substepping parameters
    logical         :: cresp_substep               !< turns on / off usage of substepping for each cell independently
@@ -148,6 +150,7 @@ module initcrspectrum
    type spec_mod_trms
       real :: ub
       real :: ud
+      real :: umag
       real :: ucmb
    end type spec_mod_trms
 
@@ -165,7 +168,7 @@ module initcrspectrum
    end type dump_fpq_type
    type(dump_fpq_type) :: dfpq
 
-   real, allocatable, dimension(:) :: fsynchr, def_dtadiab, def_dtsynch
+   real, allocatable, dimension(:) :: f_synchIC, def_dtadiab, def_dtsynchIC
 
 !====================================================================================================
 !
@@ -196,7 +199,7 @@ contains
       &                         NR_iter_limit, max_p_ratio, synch_active, adiab_active, arr_dim_a, arr_dim_n, arr_dim_q, q_br_init, &
       &                         Gamma_min_fix, Gamma_max_fix, nullify_empty_bins, approx_cutoffs, NR_run_refine_pf, b_max_db,       &
       &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, smallcree, smallcren, p_br_init_up, p_diff, &
-      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer
+      &                         q_eps, NR_smap_file, cresp_substep, n_substeps_max, allow_unnatural_transfer, icomp_active, redshift
 
       call allocate_spectral_CRspecies_arrays(nspc, ncrb)
       ma1d = [nspc]
@@ -253,6 +256,7 @@ contains
       allow_unnatural_transfer     = .false.
       synch_active(:)      = .true.
       adiab_active(:)      = .true.
+      icomp_active(:)      = .false.
       cre_active(:)        = 0.0
       !s(:) = 0.0
       !three_ps(:) = 0.0
@@ -264,6 +268,8 @@ contains
       if(size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
 
       b_max_db             = 10.  ! default value of B limiter
+      redshift             = 0.
+
 ! NR parameters
       tol_f     = 1.0e-11
       tol_x     = 1.0e-11
@@ -314,19 +320,20 @@ contains
          lbuff(1)  =  use_cresp
          lbuff(2)  =  use_cresp_evol
          lbuff(3)  =  allow_source_spectrum_break
-         lbuff(4:3+nspc)        = synch_active(:)
-         lbuff(4+nspc:3+2*nspc) = adiab_active(:)
-         lbuff(4+2*nspc)        = force_init_NR
-         lbuff(5+2*nspc)        = NR_run_refine_pf
-         lbuff(6+2*nspc)        = NR_refine_solution_q
-         lbuff(7+2*nspc)        = NR_refine_pf_lo
-         lbuff(8+2*nspc)        = NR_refine_pf_up
-         lbuff(9+2*nspc)        = nullify_empty_bins
-         lbuff(10+2*nspc)       = approx_cutoffs
-         lbuff(11+2*nspc)       = NR_allow_old_smaps
+         lbuff(4:3+nspc)          = synch_active(:)
+         lbuff(4+nspc:3+2*nspc)   = adiab_active(:)
+         lbuff(4+2*nspc:3+3*nspc) = icomp_active(:)
+         lbuff(4+3*nspc)          = force_init_NR
+         lbuff(5+3*nspc)          = NR_run_refine_pf
+         lbuff(6+3*nspc)          = NR_refine_solution_q
+         lbuff(7+3*nspc)          = NR_refine_pf_lo
+         lbuff(8+3*nspc)          = NR_refine_pf_up
+         lbuff(9+3*nspc)          = nullify_empty_bins
+         lbuff(10+3*nspc)         = approx_cutoffs
+         lbuff(11+3*nspc)         = NR_allow_old_smaps
 
-         lbuff(12+2*nspc)       = cresp_substep
-         lbuff(13+2*nspc)       = allow_unnatural_transfer
+         lbuff(12+3*nspc)         = cresp_substep
+         lbuff(13+3*nspc)         = allow_unnatural_transfer
 
          rbuff(1:nspc)        = cfl_cre(1:nspc)
          rbuff(1+nspc:2*nspc) = cre_eff(1:nspc)
@@ -364,6 +371,8 @@ contains
          !rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16) = three_ps
          !rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16) = four_ps
 
+         rbuff(28) = redshift
+
          cbuff(1)  = initial_spectrum
          cbuff(2)  = p_bnd
       endif
@@ -393,17 +402,18 @@ contains
          allow_source_spectrum_break = lbuff(3)
          synch_active                = lbuff(4:3+nspc)
          adiab_active                = lbuff(4+nspc:3+2*nspc)
-         force_init_NR               = lbuff(4+2*nspc)
-         NR_run_refine_pf            = lbuff(5+2*nspc)
-         NR_refine_solution_q        = lbuff(6+2*nspc)
-         NR_refine_pf_lo             = lbuff(7+2*nspc)
-         NR_refine_pf_up             = lbuff(8+2*nspc)
-         nullify_empty_bins          = lbuff(9+2*nspc)
-         approx_cutoffs              = lbuff(10+2*nspc)
-         NR_allow_old_smaps          = lbuff(11+2*nspc)
+         icomp_active                = lbuff(4+2*nspc:3+3*nspc)
+         force_init_NR               = lbuff(4+3*nspc)
+         NR_run_refine_pf            = lbuff(5+3*nspc)
+         NR_refine_solution_q        = lbuff(6+3*nspc)
+         NR_refine_pf_lo             = lbuff(7+3*nspc)
+         NR_refine_pf_up             = lbuff(8+3*nspc)
+         nullify_empty_bins          = lbuff(9+3*nspc)
+         approx_cutoffs              = lbuff(10+3*nspc)
+         NR_allow_old_smaps          = lbuff(11+3*nspc)
 
-         cresp_substep               = lbuff(12+2*nspc)
-         allow_unnatural_transfer    = lbuff(13+2*nspc)
+         cresp_substep               = lbuff(12+3*nspc)
+         allow_unnatural_transfer    = lbuff(13+3*nspc)
 
          cfl_cre(1:nspc)      = rbuff(1:nspc)  !TODO check if i'm correct :)
          cre_eff(1:nspc)      = rbuff(1+nspc:2*nspc)
@@ -441,8 +451,14 @@ contains
          !three_ps(1:ncrb)     = rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16)
          !four_ps(1:ncrb)      = rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16)
 
+         q_eps                = rbuff(12*nspc+17)
+         b_max_db             = rbuff(12*nspc+18)
+         redshift             = rbuff(12*nspc+19)
+
+
          initial_spectrum      = trim(cbuff(1))
          p_bnd                 = trim(cbuff(2))
+
 
       endif
 
@@ -453,7 +469,7 @@ contains
       NR_refine_pf     = [NR_refine_pf_lo, NR_refine_pf_up]
 
 ! Input parameters check
-      if (use_cresp .and. ncrb <= I_ZERO)  then
+      if (use_cresp .and. (ncrb <= I_ZERO .or. nspc == I_ZERO))  then
          write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncrb   = ', ncrb, '; CR bins NOT initnialized. Switching CRESP module off.'
          if (master) call warn(msg)
          use_cresp      = .false.
@@ -614,9 +630,9 @@ contains
               if (master) call warn(msg)
            endif
         endif
-        fsynchr(j) =  (4. / 3. ) * cr_sigma_N(icr_spc(j)) / (cr_mass(icr_spc(j)) * amu * clight)
+        f_synchIC(j) =  (4. / 3. ) * cr_sigma_N(icr_spc(j)) / (cr_mass(icr_spc(j)) * amu * clight)
 
-        write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(icr_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", fsynchr(j)
+        write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(icr_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", f_synchIC(j)
         if (master) call printinfo(msg)
 
         K_cresp_paral(j, 1:ncrb) = K_cr_paral(icr_spc(j)) * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
@@ -637,13 +653,17 @@ contains
 #endif /* VERBOSE */
 
       def_dtadiab(:) = cfl_cre(:) * half * three * logten * w
-      def_dtsynch(:) = cfl_cre(:) * half * w
+      def_dtsynchIC(:) = cfl_cre(:) * half * w
 
-      u_b_max = maxval(fsynchr(:)) * emag(b_max_db, 0., 0.)   !< initializes factor for comparing u_b with u_b_max
+      print *, 'def_dtsynchIC(:) : ', def_dtsynchIC(:)
+      print *, 'p_max_fix : ', p_max_fix
+
+      u_b_max = maxval(f_synchIC(:)) * emag(b_max_db, 0., 0.)   !< initializes factor for comparing u_b with u_b_max
 
       write (msg, "(A,F10.4,A,ES12.5)") "[initcrspectrum:init_cresp] Maximal B_tot =",b_max_db, "mGs, u_b_max = ", u_b_max
       if (master)  call warn(msg)
-      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] Minimal dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", minval(def_dtsynch) / (p_max_fix* u_b_max)
+      write (msg, "(A,ES12.5,A,ES15.8,A,ES15.8)") "[initcrspectrum:init_cresp] Minimal dt_synch(p_max_fix = ",p_max_fix,", u_b_max = ",u_b_max,") = ", minval(def_dtsynchIC(:)) / (p_max_fix* u_b_max)
+
       if (master)  call warn(msg)
 
       if (cresp_substep) then
@@ -888,13 +908,14 @@ contains
       call my_allocate(cre_eff, ma1d)
       call my_allocate(K_cre_pow, ma1d)
       call my_allocate(p_diff, ma1d)
-      call my_allocate(fsynchr, ma1d)
+      call my_allocate(f_synchIC, ma1d)
       call my_allocate(def_dtadiab, ma1d)
-      call my_allocate(def_dtsynch, ma1d)
+      call my_allocate(def_dtsynchIC, ma1d)
       call my_allocate(total_init_cree, ma1d)
       call my_allocate(cre_active, ma1d)
       call my_allocate_with_index(synch_active, nsp, 1)
       call my_allocate_with_index(adiab_active, nsp, 1)
+      call my_allocate_with_index(icomp_active, nsp, 1)
 
       ma2d = [nsp, nb * 2]
       call my_allocate(K_cresp_paral, ma2d)

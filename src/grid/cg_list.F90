@@ -36,7 +36,7 @@ module cg_list
    implicit none
 
    private
-   public :: cg_list_t, cg_list_element
+   public :: cg_list_t, cg_list_element, cg_list_element_ptr
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -47,6 +47,11 @@ module cg_list
       type(grid_container),  pointer :: cg       !< the current grid container
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
+
+   !> \brief Just a wrapper around limitation of Fortran syntax
+   type :: cg_list_element_ptr
+      type(cg_list_element), pointer :: p
+   end type cg_list_element_ptr
 
    !> \brief Arbitrary list of grid containers, not for direct use.
    type, abstract :: cg_list_t

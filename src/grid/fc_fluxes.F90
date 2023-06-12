@@ -62,21 +62,25 @@ module fc_fluxes
 
 contains
 
-!> \brief Post a non-blocking MPI receives for all expected fluxes from fine grids.
+!>
+!! \brief Post a non-blocking MPI receives for all expected fluxes from fine grids.
+!! Returns number of requests in `nr`
+!<
 
-   integer(kind=4) function compute_nr_recv(cdim) result(nr)
+   integer(kind=4) function compute_nr_recv(cdim, max_level) result(nr)
 
       use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, I_ONE
+      use constants,    only: LO, HI, I_ONE, base_level_id
       use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,       only: MPI_Irecv
+      use MPIFUN,       only: MPI_Irecv, MPI_Comm_dup
       use mpisetup,     only: err_mpi, req, inflate_req
 
       implicit none
 
-      integer(kind=4), intent(in)       :: cdim
+      integer(kind=4),           intent(in) :: cdim
+      integer(kind=4), optional, intent(in) :: max_level
 
       type(cg_list_element), pointer    :: cgl
       integer(kind=8), dimension(LO:HI) :: jc
@@ -84,9 +88,15 @@ contains
 
       ! Prepare own communicator
       call MPI_Comm_dup(MPI_COMM_WORLD, fcflx_comm, err_mpi)
-
       nr = 0
-      cgl => leaves%first
+
+      nullify(cgl)
+      if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)
+         if (max_level >= base_level_id) cgl => leaves%up_to_level(max_level)%p
+      else  ! operate on the whole structure
+         cgl => leaves%first
+      endif
+
       do while (associated(cgl))
          call cgl%cg%costs%start
 
@@ -112,6 +122,7 @@ contains
          call cgl%cg%costs%stop(I_MHD)
          cgl => cgl%nxt
       enddo
+
    end function compute_nr_recv
 
 !> \brief Test if expected fluxes from fine grids have already arrived.
@@ -189,7 +200,7 @@ contains
 
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4), intent(inout)               :: nr
+      integer(kind=4), intent(inout)               :: nr  !< number of requests already set up on mpisetup::req array
 
       integer :: g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
@@ -244,6 +255,7 @@ contains
    subroutine finalize_fcflx
 
       use mpisetup, only: err_mpi
+      use MPIFUN,   only: MPI_Comm_free
 
       implicit none
 

@@ -61,13 +61,16 @@ program piernik
 #if defined DEBUG && defined GRAV && defined NBODY
    use particle_diag,     only: print_all_particles
 #endif /* DEBUG && GRAV && NBODY */
+#ifdef MAGNETIC
+   use all_boundaries,    only: all_mag_boundaries
+#endif /* MAGNETIC */
 
    implicit none
 
    logical              :: end_sim             !< Used in main loop, to test whether to stop simulation or not
    logical, save        :: tleft = .true.      !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
-   logical, save        :: first_step = .true.
+   logical, save        :: first_step = .true., just_expanded
    real                 :: tlast
    logical              :: try_rebalance, rs
 
@@ -129,8 +132,14 @@ program piernik
       if (associated(problem_domain_update)) then
          call problem_domain_update
          if (emergency_fix) try_rebalance = .true.
+         just_expanded = emergency_fix
          call update_refinement(refinement_fixup_only=.true.)
-         ! Full refinement here called rebalancing, which sometimes caused problems with initialization of expanded parts of the computational domain
+#ifdef MAGNETIC
+         ! Cheap and dirty fix: an extra update of exteral magnetic boundaries was sometimes needed after expanding magnetized domain.
+         ! This is intended to cure insane div B appearing ar fine-coarse boundary touching the external boundary.
+         ! The real cause is perhaps due to some data dependencies not fully met.
+         if (just_expanded) call all_mag_boundaries
+#endif /* MAGNETIC */
       endif
 
       call all_cg%check_na

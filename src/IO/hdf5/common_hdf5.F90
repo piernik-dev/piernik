@@ -189,6 +189,8 @@ contains
                read(vars(i), '(a4,a1)') aux, ord
                write(aux, '(3a)') "divb", fc, ord
                call append_var(aux)
+            case ("divb_diml")
+               call append_var("divb_norm")
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(cr_names)
@@ -307,7 +309,7 @@ contains
 
          character(len=dsetnamelen), allocatable, dimension(:) :: tmp
 
-         if (len_trim(n) <= 1) then
+         if (len_trim(n) < 1) then
             if (master) call warn("[common_hdf5:init_hdf5:append_var] empty name")
             return
          endif
@@ -1192,7 +1194,6 @@ contains
 !!
 !! The loop here has to match the loop in get_nth_cg!
 !>
-
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, cg_npart, cg_pid_max, dbuf, otype)
 
       use cg_leaves,      only: leaves

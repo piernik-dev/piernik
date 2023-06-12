@@ -51,11 +51,13 @@ contains
       use constants,        only: xdim, ydim, zdim, half, zero, pMIN, I_ONE
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use crhelpers,        only: div_v, divv_i
+      use cresp_helpers,    only: enden_CMB
       use fluidindex,       only: flind
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: cfl_cr, iarr_crspc2_e, iarr_crspc2_n, nspc
-      use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, use_cresp_evol, cresp, fsynchr, u_b_max, cresp_substep, n_substeps_max
+      use initcosmicrays,   only: cfl_cr, iarr_crspc2_e, iarr_crspc2_n, nspc, diff_max_lev
+      use initcrspectrum,   only: K_cresp_paral, K_cresp_perp, spec_mod_trms, synch_active, adiab_active, icomp_active, use_cresp_evol, cresp, f_synchIC, u_b_max, cresp_substep, n_substeps_max, redshift
+
       use mpisetup,         only: piernik_MPI_Allreduce
 
       implicit none
@@ -90,21 +92,26 @@ contains
          endif
 
          do i_spc = 1, nspc
+            sptab%ucmb = zero
+            if (icomp_active(i_spc)) sptab%ucmb = enden_CMB(redshift) * f_synchIC(i_spc) ! NOTICE redshift is hard-coded to zero (current epoch)
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     sptab%ud = zero ; sptab%ub = zero ; sptab%ucmb = zero ; empty_cell = .false.
-                     sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * fsynchr(i_spc)
+                     sptab%ud = zero ; sptab%ub = zero ; sptab%umag = zero ; empty_cell = .false.
+                     if (synch_active(i_spc)) sptab%umag = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC(i_spc)
                      cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
                      cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
                      call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
                      i_up_max = max(i_up_max, i_up_max_tmp)
 
-                     if (.not. empty_cell .and. synch_active(i_spc)) dt_cre_synch = min(cresp_dt_synch_species(min(sptab%ub, u_b_max), i_up_max_tmp, i_spc), dt_cre_synch)
+                     sptab%ub = sptab%umag + sptab%ucmb  ! prepare term for synchrotron + IC losses
+
+                     if (.not. empty_cell .and. synch_active(i_spc)) call cresp_timestep_synchrotron_IC(i_spc, min(sptab%ub, u_b_max), i_up_max_tmp) !dt_cre_synch = min(cresp_dt_synch_species(min(sptab%ub, u_b_max), i_up_max_tmp, i_spc), dt_cre_synch)
                   enddo
                enddo
             enddo
-            if (adiab_active(i_spc)) dt_cre_adiab = min(cresp_dt_adiab_species(abs_max_ud, i_spc), dt_cre_adiab)
+            !if (adiab_active(i_spc)) dt_cre_adiab = min(cresp_dt_adiab_species(i_spc, abs_max_ud, i_spc), dt_cre_adiab)
+            if (adiab_active(i_spc)) call cresp_timestep_adiabatic(i_spc, abs_max_ud)
          enddo
          call cg%costs%stop(I_OTHER)
          cgl=>cgl%nxt
@@ -115,7 +122,7 @@ contains
          dt_aux = cfl_cr * half / K_cre_max_sum                    ! We use cfl_cr here (CFL number for diffusive CR transport), cfl_cre used only for spectrum evolution
          cgl => leaves%first
          do while (associated(cgl))
-            dt_cre_K = min(dt_cre_K, dt_aux * cgl%cg%dxmn2)
+            if (cgl%cg%l%id <= diff_max_lev) dt_cre_K = min(dt_cre_K, dt_aux * cgl%cg%dxmn2)
             cgl => cgl%nxt
          enddo
       endif
@@ -138,54 +145,39 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   real function cresp_dt_adiab(u_d_abs) ! DEPRECATED
+   subroutine cresp_timestep_adiabatic(i_spc, u_d_abs)
 
       use initcrspectrum, only: def_dtadiab, eps
 
       implicit none
 
       real, intent(in) :: u_d_abs    ! assumes that u_d > 0 always
+      integer(kind=4), intent(in) :: i_spc
 
-      if (u_d_abs > eps) cresp_dt_adiab = minval(def_dtadiab(:)) / u_d_abs
+      if (u_d_abs > eps) dt_cre_adiab = def_dtadiab(i_spc) / u_d_abs
 
-   end function cresp_dt_adiab
-
-!----------------------------------------------------------------------------------------------------
-
-   real function cresp_dt_adiab_species(u_d_abs, i_spc)
-
-      use constants,      only: big
-      use initcrspectrum, only: def_dtadiab, eps   ! TODO Compare with something different than eps
-
-      implicit none
-
-      real,    intent(in) :: u_d_abs    ! assumes that u_d > 0 always
-      integer, intent(in) :: i_spc
-
-      cresp_dt_adiab_species = big
-      if (u_d_abs > eps) cresp_dt_adiab_species = def_dtadiab(i_spc) / u_d_abs
-
-   end function cresp_dt_adiab_species
+   end subroutine cresp_timestep_adiabatic
 
 !----------------------------------------------------------------------------------------------------
 
-   real function cresp_dt_synch_species(u_b, i_up_cell, i_spc)
+   subroutine cresp_timestep_synchrotron_IC(i_spc, u_b, i_up_cell)
 
-      use constants,      only: zero, big
-      use initcrspectrum, only: def_dtsynch
+      use constants,      only: zero
+      use initcrspectrum, only: def_dtsynchIC
 
       implicit none
 
       real,            intent(in) :: u_b
       integer(kind=4), intent(in) :: i_up_cell, i_spc
+      real                        :: dt_cre_ub
 
       ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
-      cresp_dt_synch_species = big
       if (u_b > zero) then
-         cresp_dt_synch_species = (def_dtsynch(i_spc)) / (assume_p_up(i_up_cell) * u_b)
+         dt_cre_ub = def_dtsynchIC(i_spc) / (assume_p_up(i_up_cell) * u_b)
+         dt_cre_synch = min(dt_cre_ub, dt_cre_synch)    ! remember to max dt_cre_synch at the beginning of the search
       endif
 
-   end function cresp_dt_synch_species
+   end subroutine cresp_timestep_synchrotron_IC
 
 !----------------------------------------------------------------------------------------------------
 !! \brief This subroutine returns timestep for cell at (i,j,k) position, with already prepared u_b and u_d values.
@@ -216,8 +208,8 @@ contains
       call cresp_find_prepare_spectrum(cresp_n, cresp_e, empty_cell, i_up_cell) ! needed for synchrotron timestep
 
       if (.not. empty_cell) then
-         if (synch_active(i_spc)) dt_cre_synch_cell = cresp_dt_synch_species(p_loss_terms%ub, i_up_cell, i_spc)
-         if (adiab_active(i_spc)) dt_cre_adiab_cell = cresp_dt_adiab_species(p_loss_terms%ud, i_spc)
+         if (synch_active(i_spc)) call cresp_timestep_synchrotron_IC(i_spc, p_loss_terms%ub, i_up_cell)
+         if (adiab_active(i_spc)) call cresp_timestep_adiabatic(i_spc, p_loss_terms%ud)
       else
          return
       endif

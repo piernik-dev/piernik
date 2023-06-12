@@ -216,7 +216,7 @@ contains
       do istep = first_stage(integration_order), last_stage(integration_order)
 
          nr_recv = compute_nr_recv(cdim)
-         nr = nr_recv
+         nr = nr_recv  ! at this point we may have some requests posted by compute_nr_recv()
          all_processed = .false.
 
          do while (.not. all_processed)

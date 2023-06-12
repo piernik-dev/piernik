@@ -41,6 +41,7 @@ module cg_leaves
    use cg_list,            only: cg_list_t   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
    use cg_level_connected, only: cg_level_connected_t
+   use cg_list,            only: cg_list_element_ptr
    use cg_list_bnd,        only: cg_list_bnd_t
 
    implicit none
@@ -55,7 +56,8 @@ module cg_leaves
    !<
 
    type, extends(cg_list_bnd_t) :: cg_leaves_t ! cg_list_bnd_t is required for calling bnd_u and bnd_b
-      type(cg_level_connected_t), private, pointer :: coarsest_leaves
+      type(cg_level_connected_t), private, pointer         :: coarsest_leaves  !< For optimization
+      type(cg_list_element_ptr), dimension(:), allocatable :: up_to_level      !< An array of pointers to get cg leaves no finer than a given level
    contains
       procedure :: update                  !< Select grids that should be included on leaves list
       procedure :: balance_and_update      !< Rebalance if required and update
@@ -100,7 +102,7 @@ contains
       type(cg_level_connected_t), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
-      integer :: g_cnt, g_max, sum_max, ih, is, b_cnt
+      integer :: g_cnt, g_max, sum_max, ih, is, b_cnt, i
       integer, save :: prev_is = 0
       character(len=len(msg)), save :: prev_msg
       real :: lf
@@ -115,20 +117,42 @@ contains
       if (present(str)) msg(len_trim(msg)+1:) = str
       ih = len_trim(msg) + 1
 
-      sum_max = 0
       curl => finest%level
       do while (associated(curl))
-         if (curl%l%id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
+         if (curl%l%id == base_level_id) this%coarsest_leaves => curl
+         !> \todo Find first not fully covered level, but current IO implementation depends on leaves
+         !! as a complete set of cg from base level to finest level, so be careful.
          curl => curl%coarser
       enddo
-      b_cnt = INVALID
-      curl => this%coarsest_leaves  ! base%level
+
+      ! Create leaves sorted from finest to coarser levels to easily obtain pointers to
+      ! cg subsets that doesn't contain cgs finer than given level
+      if (allocated(this%up_to_level)) deallocate(this%up_to_level)
+      allocate(this%up_to_level(base_level_id:finest%level%l%id))
+      curl => finest%level
       do while (associated(curl))
+         nullify(this%up_to_level(curl%l%id)%p)
          cgl => curl%first
          do while (associated(cgl))
             call this%add(cgl%cg)
+            if (associated(curl%first%cg, this%last%cg)) this%up_to_level(curl%l%id)%p => this%last
+            ! On top levels it will be unassociated if proc doesn't have that fine cg, fixed below
             cgl => cgl%nxt
          enddo
+         curl => curl%coarser
+         if (associated(curl)) then
+            if (curl%l%id < this%coarsest_leaves%l%id) nullify(curl)
+         endif
+      enddo
+      do i = lbound(this%up_to_level, dim=1) + 1, ubound(this%up_to_level, dim=1)
+         ! Set up pointers for top levels in case ihese weren't associated due to lack of that fine cgs
+         if (.not. associated(this%up_to_level(i)%p)) this%up_to_level(i)%p => this%up_to_level(i-1)%p
+      enddo
+
+      sum_max = 0
+      b_cnt = INVALID
+      curl => this%coarsest_leaves  ! base%level
+      do while (associated(curl))
          g_max = curl%cnt
          call piernik_MPI_Allreduce(g_max, pMAX)
          sum_max = sum_max + g_max * nproc
@@ -139,6 +163,7 @@ contains
          call curl%vertical_prep  ! is it necessary here?
          curl => curl%finer
       enddo
+
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
       write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ", cg load balance: ",g_cnt/real(sum_max)

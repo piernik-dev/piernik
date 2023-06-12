@@ -6,10 +6,10 @@
     bnd_yr = 'out'
     bnd_zl = 'out'
     bnd_zr = 'out'
-    xmin   =-0.4
-    xmax   = 0.6
-    ymin   =-0.7
-    ymax   = 0.3
+    xmin   =-0.5
+    xmax   = 0.5
+    ymin   =-0.5
+    ymax   = 0.5
     zmin   =-1.0
     zmax   = 1.0
  /
@@ -27,7 +27,7 @@
  /
 
  $END_CONTROL
-    tend   = 0.0001
+    tend   = 0.0002
     nend   = 1000
  /
 
@@ -54,6 +54,7 @@
     smalld = 1.e-3
     smallei= 1.e-5
     limiter= 'vanleer'
+    cflcontrol = "auto"
  /
 
  $GRAVITY
@@ -66,9 +67,9 @@
     bx0    = 1.0
     by0    = 1.0
     bz0    = 1.0
-    x0     = -0.0
-    y0     = -0.0
-    z0     = -0.0
+    x0     = 0.1
+    y0     = 0.2
+    z0     = 0.0
     r0     = 0.25
     dtrig  = 1.5
  /
@@ -78,7 +79,6 @@
 
  $INTERACTIONS
  /
-
 
  $FLUID_TRACER
  /
