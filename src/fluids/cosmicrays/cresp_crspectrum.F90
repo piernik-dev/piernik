@@ -1156,7 +1156,7 @@ contains
         call deallocate_active_arrays
       enddo
 
-    stop
+    !stop
 
    end subroutine cresp_init_state
 

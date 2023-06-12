@@ -197,7 +197,7 @@ contains
 
       use cresp_crspectrum, only: cresp_update_cell, q
       use domain,           only: dom
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, fsynchr, u_b_max, use_cresp_evol, bin_old, eps, cresp_substep, n_substeps_max, p_fix
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, f_synchIC, u_b_max, use_cresp_evol, bin_old, eps, cresp_substep, n_substeps_max, p_fix
       use timestep_cresp,   only: cresp_timestep_cell
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
 #ifdef DEBUG
