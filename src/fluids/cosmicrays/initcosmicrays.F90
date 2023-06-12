@@ -345,20 +345,10 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-	print *, 'ncr2b : ', ncr2b
-	print *, 'nspc : ', nspc
-	print *, 'ncrn : ', ncrn
-	print *, 'iarr_crspc : ', iarr_crspc
-	print *, 'iarr_crs : ', iarr_crs
-
       do icr = I_ONE, ncr2b * nspc
-         print *, 'icr : ', icr
          iarr_crspc(icr)      = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
-
-	print *, 'iarr_crspc : ', iarr_crspc
-	print *, 'iarr_crs : ', iarr_crs
 
 #ifdef CRESP
       flind%all = flind%all + flind%crspc%all
