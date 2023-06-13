@@ -159,8 +159,6 @@ def _total_cr_n(field, data):
     cr_n_tot = data[str(list_cr_n[0])]
     for element in list_cr_n[1:]:
         cr_n_tot = cr_n_tot + data[element]
-    #print('cr_n_tot :')
-    #print(cr_n_tot)
     return cr_n_tot
 
 
@@ -170,12 +168,7 @@ def _total_B(field, data):
     return b_tot
 
 def en_ratio(field, data):  # DEPRECATED (?)
-    print('Hello ! ')
     bin_nr = field.name[1][-2:]
-    print("field : ")
-    print(field)
-    print("data : ")
-    print(data)
     for element in h5ds.field_list:
         if search(spc_n_lab + str(bin_nr.zfill(2)), str(element[1])):
             cren_data = data[spc_n_lab + str(bin_nr.zfill(2))]
@@ -204,18 +197,7 @@ def BC_ratio(field, data):  # Boron to Carbon
     print('shape :')
     print(shape(BC_ratio))
     return BC_ratio
-"""
-def Gamma_Rays(field, data):  # Gamma ray spectrum from proton spectrum
-    bin_nr = field.name[1][-2:]
-    for element in h5ds.field_list:
-        if search("cr_p+n" + str(bin_nr.zfill(2)), str(element[1])) and search("cr_p+e" + str(bin_nr.zfill(2)), str(element[1])):
-            Pn_data = data["cr_p+n" + str(bin_nr.zfill(2))]
-            # necessary to avoid FPEs
-            cren_data[cren_data <= par_epsilon**2] = par_epsilon
-            Pe_data = data["cr_p+e" + str(bin_nr.zfill(2))]
-            BC_ratio = Pn_data / Pe_data
-    return BC_ratio
-"""
+
 def copy_field(field, data):
     field_name_to_copy = field.name[1][:].split("_")[0]
     copied_field = data[field_name_to_copy]
@@ -612,12 +594,8 @@ if f_run is True:
         print('Here it comes : ')
         print(plot_field)
 
-        #if(plot_field == "cr_B11n_tot"): #Plot B to C ratio rather than spectra
         if(plot_field == "cr_B11n_tot"): #Plot B to C ratio rather than spectra
-            """
-            prtinfo("Value of BC ratio at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
-                    coords[2], position["cr_B11n" + str(plot_field_click[-2:])] / position["cr_C12n" + str(plot_field_click[-2:])]))
-            """
+
             BC_ratio = []
 
             for ind in range(1,ncrb+1):
@@ -698,17 +676,6 @@ if f_run is True:
                     ncrs.append(
                         float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
 
-                print(plot_field)
-                """
-                if(plot_field == "cr_B11n_tot"):
-
-                    fig2, exit_code = crs_plot_ratio(BC_ratio(plot_field, data), plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index])
-
-
-                else:
-                """
-                print('plot var : ')
-                print(plot_var)
                 fig2, exit_code = crs_plot_main(
                     plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
 

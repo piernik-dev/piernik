@@ -302,21 +302,21 @@ def plot_data(plot_var, pl, pr, gl, gr, fl, fr, q, time, location, i_lo_cut, i_u
     p_range = linspace(s.get_xlim()[0], s.get_xlim()[1])
     e_smalls = zeros(len(p_range))
     e_smalls[:] = e_small
-    #if (plot_var == "e"):
-    #    plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
-    #elif (plot_var == "n"):
-    #    plt.plot(p_range, e_small / (c * p_range),
-    #             color="xkcd:azure", label="$n_{small}$")
+    if (plot_var == "e"):
+        plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
+    elif (plot_var == "n"):
+        plt.plot(p_range, e_small / (c * p_range),
+                 color="xkcd:azure", label="$n_{small}$")
 
     par_plot_color = set_plot_color(par_plot_color, i_plot, colors)
-    # par_plot_linestyle = set_plot_color(par_plot_linestyle, i_plot, linestyles)      ### WARNING temporary trick
+    par_plot_linestyle = set_plot_color(par_plot_linestyle, i_plot, linestyles)      ### WARNING temporary trick
 
     spectrum_label = (" d$%s$(p)/d$p$ %s, \n[%3.1f, %3.1f, %3.1f] kpc " % (
         plot_var, par_test_name, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
     spectrum_label = (" d$%s$(p)/d$p$ [%3.1f, %3.1f, %3.1f] kpc " % (
         plot_var, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
-    # spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
-    # spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
+    spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
+    spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
 
     for i in range(0, size(fr)):
         if (par_plot_e3):  # multiply times gamma**3
@@ -390,142 +390,6 @@ def plot_data(plot_var, pl, pr, gl, gr, fl, fr, q, time, location, i_lo_cut, i_u
         s.axis('off')
 
     return s
-
-def plot_data_ratio(plot_var, ratio, p, time, location, i_lo_cut, i_up_cut,A):
-    global first_run, e_small, i_plot, par_plot_color, par_plot_linestyle, s, clean_plot
-    global plot_p_min, plot_p_max, plot_var_min, plot_var_max, use_color_list, i_plot, handle_list, tightened, highlighted, plotted_init_slope
-
-    p_lo_cut = p[0]
-    p_up_cut = p[-1]
-
-    if clean_plot:
-        s.cla()
-
-    s.set_xscale('log')
-    s.set_yscale('log')
-
-    plt.xlabel('$p/A$', labelpad=0.2, fontsize=fontsize_axlabels)
-    plt.ylabel(+ plot_var + 'r',
-               fontsize=fontsize_axlabels, labelpad=-0.)
-    plt.tick_params(axis='both', which='major', labelsize=fontsize_axlabels)
-
-    if first_run:
-        plot_p_min = p_lo_cut
-        plot_p_max = p_up_cut
-
-        handle_list = []
-
-    if par_fixed_dims:  # overwrite
-        if (plot_var == "BC_ratio"):
-            plt.ylim(10. * plot_var_min, 10. *
-                 max(plot_var_r))
-            plt.xlim(p_fix[1], p_fix[-2] * 0.5)
-
-    if (par_plot_e3):
-        plt.ylim(10. * plot_var_min, 10. *
-                 max(plot_var_r) * max(pr)**3)  # override
-
-    if (par_vis_all_borders):
-        plt.grid()
-    else:
-        s.spines['top'].set_visible(False)
-        s.spines['right'].set_visible(False)
-        s.spines['bottom'].set_linewidth(1.5)
-        s.spines['left'].set_linewidth(1.5)
-
-    if (par_visible_gridy):
-        plt.grid(True, 'major', 'y', ls='--', lw=.5, c='k', alpha=.3)
-    if (par_visible_gridx):
-        plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
-
-    par_plot_color = set_plot_color(par_plot_color, i_plot, colors)
-    # par_plot_linestyle = set_plot_color(par_plot_linestyle, i_plot, linestyles)      ### WARNING temporary trick
-
-    spectrum_label = ("%s ratio, \n[%3.1f, %3.1f, %3.1f] kpc " % (
-        plot_var, par_test_name, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
-    spectrum_label = ("%s ratio$ [%3.1f, %3.1f, %3.1f] kpc " % (
-        plot_var, location[0] / 1000., location[1] / 1000., location[2] / 1000.))
-    # spectrum_label  = ("d$%s$/d$p$, %s (  )" % (plot_var, par_test_name) ) #
-    # spectrum_label  = (" %s (z=%3.1fkpc)" % ( par_test_name , location[2]/1000.) )
-    """
-    for i in range(0, size(fr1)):
-        if (par_plot_e3):  # multiply times gamma**3
-            plt.plot([pl[i], pr[i]], [(pl[i]**3) * plot_var_l[i], (pr[i]**3) *
-                     plot_var_r[i]], lw=par_plot_width, color=par_plot_color, alpha=par_alpha)
-            plt.plot([pl[i], pl[i]], [plot_var_min, (pl[i]**3) * plot_var_l[i]],
-                     lw=par_plot_width, color=par_plot_color, alpha=par_alpha)
-            plt.plot([pr[i], pr[i]], [plot_var_min, (pr[i]**3) * plot_var_r[i]],
-                     lw=par_plot_width, color=par_plot_color, alpha=par_alpha)
-        else:
-            plt.plot([pl[i], pr[i]], [plot_var_l[i], plot_var_r[i]], lw=2 * par_plot_width,
-                     solid_capstyle='round', color=par_plot_color, alpha=par_alpha, linestyle=par_plot_linestyle)
-            plt.plot([pl[i], pl[i]], [plot_var_r[i - 1], plot_var_l[i]], lw=2 * par_plot_width,
-                     solid_capstyle='round', color=par_plot_color, alpha=par_alpha, linestyle=par_plot_linestyle)
-            plt.plot([pl[i], pl[i]], [plot_var_min, plot_var_l[i]], lw=par_plot_width,
-                     solid_capstyle='round', color="xkcd:gray", alpha=par_alpha * 0.2)
-            plt.plot([pr[i], pr[i]], [plot_var_min, plot_var_r[i]], lw=par_plot_width,
-                     solid_capstyle='round', color="xkcd:gray", alpha=par_alpha * 0.2)
-
-    if (not par_plot_e3):
-        plt.plot([pr[size(fr) - 1], pr[size(fr) - 1]], [plot_var_r[size(fr) - 1], plot_var_min], lw=2 *
-                 par_plot_width, solid_capstyle='round', color=par_plot_color, alpha=par_alpha)  # rightmost edge
-    spectrum = mlines.Line2D([], [], color=par_plot_color, solid_capstyle='round',
-                             lw=par_plot_width, alpha=par_alpha, linestyle=par_plot_linestyle, label=spectrum_label)
-
-    if (not highlighted):
-        if (len(highlight_bins) > 0):
-            par_plot_color = set_plot_color(
-                par_plot_color, i_plot, xkcd_colorsh)
-            for ind in highlight_bins:
-                i = ind
-                i1 = i + 1
-                plt.fill([p_fix[i], p_fix[i1], p_fix[i1], p_fix[i]], [
-                         e_small, e_small, 10., 10.], color="mediumseagreen", alpha=0.20)
-            if (not (clean_plot is True)):
-                highlighted = True
-
-    if ((par_plot_init_slope is True) and (plotted_init_slope is False)):
-        if (plot_var == 'B/C'):
-            init_spec = plt.plot(p_range, (1.0 + 2.e-1) * f_init * 4 * pi * p_range**(-(q_init - 2)), color='gray',
-                                 linestyle=":", alpha=0.75, label=r"d$n(p,t)$/d$p$, $E<1/bt$", lw=3)     # initial spectrum
-        if (not (clean_plot is True)):
-            # if cleaning plot is on, init slope must be replotted each iteration
-            plotted_init_slope = True
-    """
-    p = p/A
-
-    plt.plot(p,ratio, label = 'B to C ratio',color=par_plot_color, alpha=par_alpha, linestyle=par_plot_linestyle)
-
-    if (par_visible_title):
-        if (par_simple_title):
-            plt.title("Spectrum of %s(p), Time = %7.3f" % (plot_var, time))
-        else:
-            plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (
-                plot_var, time, location[0], location[1], location[2]))
-
-    if (tightened is not True):
-        plt.tight_layout()
-        tightened = True
-
-    if (par_plot_legend):
-        handle_list.append(spectrum)
-        plt.legend(handles=handle_list, loc=default_legend_loc if par_legend_loc == (-2, -2)
-                   else par_legend_loc, edgecolor="gray", facecolor="white", framealpha=0.65, fontsize=fontsize_legend)
-
-    if (clean_plot):
-        handle_list = []
-
-    if (first_run is True):
-        first_run = False
-
-    if (hide_axes is True):
-        # allows one to hide all axes for the plot, useful for combining mulitple plots.
-        s.axis('off')
-
-    return s
-
-# -----------------------------------------------------------------
-
 
 def detect_active_bins_new(n_in, e_in):
     global num_active_bins
