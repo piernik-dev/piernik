@@ -164,24 +164,13 @@ contains
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_cr_1, iarr_crn, iarr_crs, nspc
+      use initcosmicrays, only: iarr_crs
 #ifdef SN_SRC
       use snsources,      only: cr_sn
 #endif /* SN_SRC */
 #endif /* COSM_RAYS */
 
       implicit none
-
-
-      !print *, icr_prim
-      !print *, icr_sec
-      !stop
-        !print *, 'nspc : ', nspc
-        !print *, 'icr_H1 : ', icr_H1, ' ',eH1(PRIM)
-        !print *, 'icr_C12 : ', icr_C12, ' ',eC12(PRIM)
-        !print *, 'icr_N14 : ', icr_N14, ' ',eN14(PRIM)
-        !print *, 'icr_O16 : ', icr_O16, ' ',eO16(PRIM)
-
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k
       real                            :: b0, csim2
