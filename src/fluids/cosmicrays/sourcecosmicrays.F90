@@ -80,10 +80,6 @@ contains
 #endif /* CRESP */
 
       full_dim = nn > 1
-      !print *, 'break 1'
-      !print *, full_dim
-      !print *, ' '
-      !print *, flind%crspc%all
 
       usrc = 0.0
 #ifdef CRESP
@@ -104,22 +100,17 @@ contains
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
-      !print *, 'break 3'
 #ifdef CRESP
       if (cr_spectral(cr_table(icr_H1)) .or. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)
-         !print *, 'uu array : ', uu(:,iarr_crspc2_e(iarr_spc(icr_H1), 4))
          call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(cr_table(icr_H1)), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(cr_table(icr_H1)))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
-         !print *, 'values :', grad_pcr_cresp
       endif
 #endif /* CRESP */
       usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
-      !print *, 'grad_pcr_cresp', grad_pcr_cresp
 #ifdef CRESP
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr_cresp
 #ifdef ISO
       return
 #endif /* ISO */
-      !print *, 'grad pcr cresp : ', grad_pcr_cresp
       usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
 #endif /* CRESP */
 
@@ -215,23 +206,15 @@ contains
       integer                        :: i_prim, i_sec
       integer(kind=4)                :: i_spc, i_bin
       type(spec_mod_trms)            :: sptab
-      !type(bin_old), dimension(:), allocatable :: crspc_bins_all
       real, dimension(ncrb,nspc)     :: q_spc_all
       real                           :: dt_doubled
       logical                        :: inactive_cell
-      !character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
       real, dimension(1:ncrb)        :: dcr_n, dcr_e, Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
-      !real, dimension(1:ncrb)        :: Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
       real                           :: dgas
-      !real                           :: dt_doubled
-      !real, parameter                :: gamma_lor = 10.0
-
 
       inactive_cell       = .false.
-
-      !gn = 1.0 / dom%eff_dim / gamma_lor
 
       dgas = 0.0
       if (has_ion) dgas = dgas + u_cell(flind%ion%idn) / mp
@@ -246,28 +229,13 @@ contains
 
       do i_prim = 1, ncrsp_prim
 
-         !print *, 'i_prim : ', i_prim
-         !print *, 'icr_prim(i_prim) : ', icr_prim(i_prim)
-
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
-
-         !print *, 'cr_table(',icr_prim(i_prim),') : ', cr_table(icr_prim(i_prim))
 
                do i_sec = 1, ncrsp_sec
 
-                  !print *, 'i_sec : ', i_sec
-                  !print *, 'icr_sec(i_sec) : ', icr_sec(i_sec)
-
                   associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  !print *, 'cr_table(',icr_sec(i_sec),') : ', cr_table(icr_sec(i_sec))
-
-
-                     !print *, 'helloow'
-
                   do i_bin = 1, ncrb
-
-                  !print *, 'i_bin : ', i_bin
 
                      if (p_fix(i_bin) > zero) then
 
@@ -297,9 +265,6 @@ contains
 
                   do i_bin = 1, ncrb
 
-
-                     !print *, 'dcr_e(',i_bin,') : ', dcr_e(i_bin)
-
                      if (i_bin == ncrb) then
 
                         usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
@@ -321,7 +286,6 @@ contains
 
          end associate
 
-      !print *, 'q_spc_all (1,:):', q_spc_all(1,:)
       enddo
 
       do i_spc = 1, nspc

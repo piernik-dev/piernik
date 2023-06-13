@@ -205,7 +205,6 @@ contains
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
-      !print *, 'iarr_all_swp : ', iarr_all_swp
       iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs

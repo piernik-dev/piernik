@@ -227,7 +227,6 @@ contains
 #ifdef IONIZED
       call src_gpcr(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-      !print *, 'usrc new : ', newsrc
 #endif /* IONIZED */
       if (use_CRdecay) then
          call src_cr_spallation_and_decay(u, n, newsrc, coeffdt) ! n safe

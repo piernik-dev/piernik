@@ -374,7 +374,7 @@ contains
       !if (dfpq%any_dump) then
       !  crel%p = p
       !crel%f = f
-         crel%q = q ! Temporary fix for passing the q value to cresp_update_grid
+      crel%q = q ! Temporary fix for passing the q value to cresp_update_grid
       !crel%e = e
       !crel%n = n
       !crel%i_cut = i_cut
@@ -963,12 +963,6 @@ contains
         p_cut = p_init(:,i_spc)
 
         p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
-        !p(max_ic) = p_cut
-
-        !print *, 'first step'
-        !
-        !print *, 'p_fix : ', p_fix
-        !print *, 'p     : ', p
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
         do k = ncrb, 1, -1
@@ -980,13 +974,6 @@ contains
                 endif
             enddo
         enddo
-
-        !print *, 'loop'
-        !
-        !print *, 'p_fix : ', p_fix
-        !print *, 'p     : ', p
-
-
 
         i_cut = max_ic
 
@@ -1039,10 +1026,6 @@ contains
                 call die(msg)
         end select
 
-        !print *, 'initial spectrum selected'
-        !print *, 'p_fix : ', p_fix
-        !print *, 'p     : ', p
-
         if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
@@ -1051,10 +1034,6 @@ contains
                 call die(msg)
                 endif
             enddo
-
-            !print *, 'get_fqp_cutoff calles'
-            !print *, 'p_fix : ', p_fix
-            !print *, 'p     : ', p
 
             if (allow_source_spectrum_break) then
 
@@ -1067,35 +1046,24 @@ contains
 
                 print *, 'if allow source spectrum break selected'
 
-                !print *, 'p_fix : ', p_fix
-                !print *, 'p     : ', p
-
                 do i = i_ch(LO)+1, i_cut(LO)
                 p(i) = p_fix(i)
                 f(i) = f(i_ch(LO)) * (p_fix(i)/p(i_ch(LO)))**(-q(i_ch(LO)+1))
                 q(i+1) = q(i_ch(LO)+1)
                 enddo
-                !print *, 'loop with i_ch and i_cut'
-                !print *, 'p_fix : ', p_fix
-                !print *, 'p     : ', p
 
                 do i = i_cut(HI), i_ch(HI)-1
                 p(i) = p_fix(i)
                 f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
                 q(i) = q(i_cut(HI))
                 enddo
-                !print *, 'loop with i_cut and i_ch'
-                !print *, 'p_fix : ', p_fix
-                !print *, 'p     : ', p
+
 #ifdef CRESP_VERBOSED
                 write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_ch(LO), i_cut(LO), ' |', i_ch(HI), i_cut(HI)     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
                 i_cut = i_ch
                 p(i_cut(HI)) = p_cut(HI)
-                !print *, 'new p_cut operation'
-                !print *, 'p_fix : ', p_fix
-                !print *, 'p     : ', p
 
                 is_active_bin = .false.
                 is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
@@ -1117,11 +1085,6 @@ contains
             crel%n = n
             crel%i_cut = i_cut
         endif
-
-        !print *, 'if with crel'
-        !
-        !print *, 'p_fix : ', p_fix
-        !print *, 'p     : ', p
 
         if (master) call check_init_spectrum(i_spc)
 
@@ -1154,8 +1117,6 @@ contains
         total_init_cree(i_spc) = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
         call deallocate_active_arrays
       enddo
-
-    !stop
 
    end subroutine cresp_init_state
 
@@ -1289,8 +1250,7 @@ contains
       e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
-      !print *, 'n : ', n
-      !print *,' e : ', e
+
    end subroutine cresp_init_plpc_spectrum
 
 !>
@@ -1480,13 +1440,11 @@ contains
       real,    dimension(1:ncrb)        :: fq_to_e
 
       fq_to_e = zero
-      !e_bins = fpcc * f_l(bins) *  p_l(bins)**four
       print *, 'g_l(bins) : ', g_l(bins)
       print *, 'p_l(bins) : ', p_l(bins)
       print *, 'three_p_s(bins) : ', three_p_s(bins)
       print *, 'q(bins)   : ', q(bins)
       e_bins = fpcc * f_l(bins) * g_l(bins) * p_l(bins)**three
-      !print *, ''* p_l(bins)**three
       where(abs(q(bins) - three_p_s(bins)) > eps)
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(three_p_s(bins) - q(bins)) - one)/(three_p_s(bins) - q(bins))
       elsewhere
@@ -1498,8 +1456,6 @@ contains
       print *, 'Hello ! '
 
       print *, 'fq_to_e : ', fq_to_e(bins)
-
-      !stop
 
    end function fq_to_e
 !-------------------------------------------------------------------------------------------------
@@ -1781,13 +1737,10 @@ contains
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
-            !print *, 'i : ',i, ' g(i-1) : ', g(i-1)
             alpha_in = e(i)/(n(i)*g_fix(i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
-               !print *, 'compute_q called'
                q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
             else
-               !print *, 'compute_q called'
                q(i) = compute_q(alpha_in, three_p_s, exit_code)
             endif
          else
@@ -1905,9 +1858,6 @@ contains
       P_cresp(:) = onet * sum(u(:, :),dim=2)
       grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp(1:n-2) - P_cresp(3:n) )/(2.*dx)
 
-      !print *, 'cre_active(i_spc) ', i_spc, ' ', cre_active(i_spc)
-
-      !print *, 'Pressure gradient : ', grad_pcresp(2:n-1)
    end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
 ! Preparation and computation of boundary momenta and and boundary

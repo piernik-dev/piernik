@@ -138,14 +138,8 @@ contains
          gnorm = 1./(pi*r_sn**2)  ! is this 2D case? Where is 1D?
       endif
 
-      !print *, 'gnorm : ', gnorm
-
 #ifdef COSM_RAYS
       amp_ecr_sn = cr_eff * e_sn * erg * gnorm
-      !print *, 'amp_ecr_sn : ', amp_ecr_sn
-      !print *, 'cr eff : ', cr_eff
-      !print *, 'gaussian integral : ', amp_ecr_sn
-      !stop
 #endif /* COSM_RAYS */
 
       f_sn = f_sn_kpc2 / Myr * dom%L_(xdim) * dom%L_(ydim) / kpc**2
@@ -167,7 +161,6 @@ contains
 
       use global,     only: t
       use repeatstep, only: repeat_step
-      use units,          only: erg
 
       implicit none
 
@@ -177,14 +170,10 @@ contains
       if (.not. repeat_step()) nsn_last = nsn
 
       nsn = int(t * f_sn, kind=4)
-      !print *, 'nsn : ', nsn
-      !print *, 'nsn_last : ' , nsn_last
+
       nsn_per_timestep = nsn - nsn_last
-      !print *, 'nsn_per_timestep : ', nsn_per_timestep
 
       do isn = 1, nsn_per_timestep
-
-         !print *, 'Hello ! '
 
          call rand_coords(snpos)
 
@@ -193,9 +182,6 @@ contains
 #endif /* COSM_RAYS */
 
       enddo
-
-      !print *, 'total sn energy per time step: ', amp_ecr_sn*nsn_per_timestep
-      !print *, 'total sn energy per time step (erg): ', amp_ecr_sn*nsn_per_timestep/erg
 
    end subroutine random_sn
 
@@ -209,19 +195,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, pi
+      use constants,        only: xdim, ydim, zdim
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use cr_data,          only: cr_index, cr_table, cr_mass, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16, rel_abound
-      use initcosmicrays,   only: iarr_crn
-      use units,            only: erg
+      use cr_data,          only: cr_table, icr_H1, rel_abound
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      !use initcrspectrum,   only: cresp, cre_eff, smallcree, use_cresp, nspc
-      !use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e
-      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc, iarr_crspc_e
-      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp, norm_init_spectrum_e, norm_init_spectrum_n, total_init_cree
-
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
+      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
 
       implicit none
@@ -284,15 +265,7 @@ contains
 
                        do icr = 1, nspc
 
-                          ! print *, 'test sum n: ', sum(norm_init_spectrum_n(icr,:))/total_init_cree(icr)
-                          ! print *, 'test sum e: ', sum(norm_init_spectrum_e(icr,:))/total_init_cree(icr)
-
                              if (icr==cr_table(icr_H1)) e_tot_sn =  decr !* cre_eff(icr)
-                             !print *, 'icr : ', icr
-                             !print *, ' cr_table(icr_H1) : ', cr_table(icr_H1)
-                             !print *, 'icr_H1 : ', icr_H1
-
-                             !if (icr==icr_H1) print *, 'e tot sn : ', e_tot_sn
                              if (e_tot_sn > smallcree .and. use_cresp) then
                              cresp%n = 0.0
                              cresp%e = 0.0
@@ -305,11 +278,8 @@ contains
 
                              endif
 
-                             !cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
-                             !cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
                              if (icr==cr_table(icr_H1)) cresp_e_sum = cresp_e_sum + sum(cresp%e)
 
-                          ! if (sum(posr) .lt. 1. .and. icr==icr_H1) print *, 'icr : ', icr, ' decr : ', decr, ' cresp decr : ', sum(cresp%e), ' |delta e| / e : ', abs(decr - sum(cresp%e))/decr
                     enddo
 
                  endif
@@ -325,28 +295,8 @@ contains
                  enddo
               enddo
            enddo
-
-         !print *, 'total converted SN energy : ', ampl*(sqrt(2*pi)**3*r_sn**3)
-         !print *, 'total converted SN energy (erg) : ', ampl*(sqrt(2*pi)**3*r_sn**3)/erg
-         !print *, 'Gaussian integral : ', cg%dvol*decr_sum/(sqrt(2*pi)**3*r_sn**3)
-         !print *, 'cg dvol : ', cg%dvol
-         !print *, 'decr : ', decr
-         !print *, 'decr_sum : ', decr_sum
-         !print *, 'cresp_e_sum : ', cresp_e_sum
-         !print *, 'ampl : ', ampl
-         !print *, 'Total energy density (non-spectral): ', cgl%cg%u(iarr_crspc_e(:),:,:,:)
-#ifdef CRESP
-         !print *, 'Total proton energy density (spectral): ', sum(cgl%cg%u(iarr_crspc2_e(cr_table(icr_H1),:),:,:,:))
-         !print *, 'Total proton rest mass energy density (spectral): ', sum(cgl%cg%u(iarr_crspc2_n(cr_table(icr_H1),:),:,:,:))
-#else /* CRESP */
-         !print *, 'Total proton energy density (non-spectral) : ', sum(cg%u(iarr_crn(cr_index(icr_H1)),:,:,:))
-#endif /* CRESP */
          cgl => cgl%nxt
       enddo
-   !print *, 'total SN energy : ', cg%dvol*ampl*(sqrt(2*pi)**3*r_sn**3)
-   !print *, 'Gaussian integral : ', cg%dvol*ampl
-   !print *, 'cg dvol : ', cg%dvol
-   !print *, 'decr : ', decr
    end subroutine cr_sn
 #endif /* COSM_RAYS */
 !--------------------------------------------------------------------------
@@ -366,10 +316,6 @@ contains
 
       call random_number(rand)
       pos(xdim:ydim) = dom%edge(xdim:ydim, LO)+ dom%L_(xdim:ydim)*rand(xdim:ydim)
-      !pos(xdim) = 0.0
-      !pos(zdim) = 0.0
-      !pos(ydim) = 0.0
-
 
       if (dom%has_dir(zdim)) then
          pos(zdim) = h_sn * gasdev(rand(3),rand(4))

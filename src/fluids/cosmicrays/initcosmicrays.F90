@@ -370,13 +370,6 @@ contains
       if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
       flind%crn%pos = flind%components
 
-      !print *, 'ncrn : ', ncrn
-      !print *, 'nspc : ', nspc
-
-      !print *, 'flind%crn%all', flind%crn%all, 'flind%crn%beg : ', flind%crn%beg, 'flind%crs%end : ',flind%crs%end
-      !print *, 'flind%crs%all', flind%crs%all, 'flind%crs%beg : ', flind%crs%beg, 'flind%crs%end : ',flind%crs%end
-
-
 #ifdef CRESP
       if (.not. allocated(flind%crspcs)) allocate(flind%crspcs(nspc))
 !     flind%crspc%nbeg, flind%crspc%nend, flind%crspc%ebeg, flind%crspc%eend are not used in this approach
@@ -386,8 +379,6 @@ contains
          flind%crspcs(icr)%nend = flind%crspcs(icr)%nbeg + ncrb
          flind%crspcs(icr)%ebeg = flind%crspcs(icr)%nend
          flind%crspcs(icr)%eend = flind%crspcs(icr)%ebeg + ncrb
-
-         !print *, 'flind%crspc%all', flind%crspc%all, 'flind%crspc%beg : ', flind%crspc%beg, 'flind%crspc%end : ',flind%crspc%end
 
          iarr_crspc2_n(icr, :) = [(jnb, jnb = flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend)]
          iarr_crspc2_e(icr, :) = [(jnb, jnb = flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend)] ! iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)

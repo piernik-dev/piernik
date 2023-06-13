@@ -452,7 +452,6 @@ contains
 #else /* !MAGNETIC */
       associate(emag_c => 0.)
 #endif /* !MAGNETIC */
-      !print *, lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
       select case (var)
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
@@ -477,7 +476,6 @@ contains
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
                tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
-               !print *, 'icr : ', icr, ' max val : ', maxval(tab(:,:,:)), 'bin : ', ibin
 
             else if (var(clast - 2:clast - 2) == 'n') then
 
@@ -488,7 +486,6 @@ contains
                   if (cr_names(i).eq.var(4:clast-3)) icr = i
                enddo
                tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
-               !print *, 'icr : ', icr, ' cgu : ', maxval(cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)), 'bin : ', ibin
 
             else
                do i = 1, size(cr_names)

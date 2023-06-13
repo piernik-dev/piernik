@@ -270,44 +270,24 @@ contains
       allocate(icr_sec(ncrsp_sec))
       icr_prim(:) = 0
       icr_sec(:) = 0
-      !print *, 'icr_prim : ', icr_prim
-      !print *, 'icr_sec : ', icr_sec
       iprim = 1
       isec = 1
 
       do i = 1, nicr
 
-      !print *, 'ePRIM : ', ePRIM
-
          if (eCRSP(i) .and. ePRIM(i)) then
 
-            !print *, 'ePRIM(i) : ', ePRIM(i)
-
             icr_prim(iprim) = i
-
-            !print *, 'icr_prim(iprim) : ', icr_prim(iprim)
-
             iprim=iprim+1
-
-
-
 
          else if (eCRSP(i)) then
 
             icr_sec(isec) = i
-
-            !print *, 'icr_sec(isec) : ', icr_sec(isec)
-
             isec=isec+1
 
          endif
 
       enddo
-
-      !print *, 'iprim : ', iprim
-      !print *, 'isec : ', isec
-      !print *, 'icr_prim : ', icr_prim
-      !print *, 'icr_sec : ', icr_sec
 
    end subroutine init_cr_species
 
@@ -347,46 +327,17 @@ contains
       cr_gpess(:)    = .false.
       rel_abound(:) = 0.
 
-
-
-
-
-
-
-
-
-
       icr = 0 ; jcr = 0; kcr = 0
-      !print *, 'icr : ', icr
-      !print *, 'cr_table : ', cr_table
-
-
-
-
-
-
-
-
 
       do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
 
             icr = icr + 1
-            !print *, 'icr : ', icr
             cr_table(i)      = icr
             cr_names(icr)    = eCRSP_names(i)
             cr_mass(icr)     = eCRSP_mass(i)
             cr_Z(icr)        = eCRSP_Z(i)
             cr_spectral(icr) = eCRSP_spec(i)
-
-
-
-
-
-
-
-
-
 
             if (eCRSP_spec(i)) then
                kcr = kcr + 1
@@ -437,15 +388,6 @@ contains
 
       print *, 'rel_abound array : ', rel_abound
 
-
-
-
-
-
-
-
-
-
       if (ncrsp_auto < ncrsp) then
          cr_gpess(ncrsp_auto+1:ncrsp) = crness
          do i = ncrsp_auto+1, ncrsp
@@ -482,9 +424,6 @@ contains
       endif
       cr_sigma = cr_sigma * mbarn
       if (eCRSP(icr_Be10)) cr_tau(cr_table(icr_Be10)) = tau_Be10 * myr
-      !print *, 'sigmas : ', cr_sigma
-      !print *, shape(cr_sigma)
-      !stop
       print *, 'cr_sigma : ', cr_sigma
       print *, 'cr_primary : ', cr_primary
 
