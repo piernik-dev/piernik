@@ -31,12 +31,12 @@ $BASE_DOMAIN
 
  $END_CONTROL
     tend   = 10. !00.0
-    nend   = 1
+    nend   = 10
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
-    run_id = 'tsv'
+    run_id = 'tsm'
     dt_hdf  = 1.0
     dt_res  = 0.0
     dt_log  = 1.0e-2
@@ -90,6 +90,7 @@ $BASE_DOMAIN
     adiab_active(:)  = 2*.true.
     !adiab_active(2)  = .false.
     synch_active(:)  = 2*.false.
+    icomp_active(:) = 2*.false.
     nullify_empty_bins = .false.
 !    NR_smap_file =
  /
