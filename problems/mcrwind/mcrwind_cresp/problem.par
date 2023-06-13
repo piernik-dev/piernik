@@ -104,8 +104,8 @@
     arr_dim_n = 50
     arr_dim_q = 1000
     adiab_active(:)  = 2*.true.
-    !adiab_active(2)  = .false.
     synch_active(:)  = 2*.false.
+    icomp_active(:)  = 2*.false.
     nullify_empty_bins = .false.
 !    NR_smap_file =
 /
