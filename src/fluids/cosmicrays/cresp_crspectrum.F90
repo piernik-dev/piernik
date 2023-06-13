@@ -696,7 +696,6 @@ contains
    logical function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
 
       use constants,       only: zero, fpi, one, three
-      use cresp_variables, only: clight_cresp
       use cresp_NR_method, only: compute_q
       use initcosmicrays,  only: ncrb
       use initcrspectrum,  only: p_fix, g_fix, e_small, eps, three_ps
@@ -1468,7 +1467,7 @@ contains
 
    function fq_to_e(p_l, p_r, f_l, g_l, three_p_s, q, bins)
 
-      use constants,       only: zero, one, three, four
+      use constants,       only: zero, one, three
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
       use initcrspectrum,  only: eps
@@ -1615,10 +1614,10 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_fluxes(ce,he)
 
-      use constants,       only: zero, one, three, four, fpi
+      use constants,       only: zero, one, three, fpi
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g_fix, s
+      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, g_fix
 
       implicit none
 
@@ -1652,7 +1651,7 @@ contains
       nflux(ce) = - dn_upw(ce)
 
       de_upw(ce) = fpcc * fimh(ce) *gimh(ce)*pimh(ce)**three
-      where(qi(ce+1) .ne. three_ps(ce+1))
+      where(abs(qi(ce+1) - three_ps(ce+1)) > eps)
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(three_ps(ce+1)-qi(ce+1)) - one)/(three_ps(ce+1) - qi(ce+1))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
@@ -1711,9 +1710,9 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_r(u_b, u_d, p, bins)
 
-      use constants,      only: zero, one, four, five
+      use constants,      only: zero, one
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: eps, three_ps, four_ps
+      use initcrspectrum, only: three_ps, four_ps, eps
 
       implicit none
 
@@ -1729,13 +1728,13 @@ contains
       ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
       ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
 
-      where(q(bins) .ne. four_ps(bins))
+      where(abs(q(bins) - four_ps(bins)) > eps)
          r_num = p(bins-1)*((p(bins)/p(bins-1))**(four_ps(bins)-q(bins)) - one)/(four_ps(bins)-q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
       endwhere
 
-      where(q(bins) .ne. three_ps(bins))
+      where((q(bins) - three_ps(bins)) > eps)
          r_den = ((p(bins)/p(bins-1))**(three_ps(bins)-q(bins))-one)/(three_ps(bins)-q(bins))
       elsewhere
          r_den = log(p(bins)/p(bins-1))
@@ -1758,9 +1757,8 @@ contains
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q
-      use cresp_variables, only: clight_cresp
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small, g_fix, p_fix, three_ps
+      use initcrspectrum,  only: e_small, g_fix, three_ps
 
       implicit none
 
@@ -1919,7 +1917,6 @@ contains
 
       use constants,       only: zero, one, I_ONE, I_TWO, LO, HI
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
-      use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo

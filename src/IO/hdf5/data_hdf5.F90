@@ -392,7 +392,7 @@ contains
 !<
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
-      use common_hdf5,      only: common_shortcuts, hdf_vars
+      use common_hdf5,      only: common_shortcuts
       use constants,        only: dsetnamelen, I_ONE
       use fluids_pub,       only: has_ion, has_neu, has_dst
       use fluidindex,       only: flind
@@ -440,6 +440,8 @@ contains
       if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
+      ibin = 0
+      icr = 0
 
 #ifdef MAGNETIC
       associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &

@@ -184,7 +184,6 @@ contains
 
    subroutine cresp_timestep_cell(cresp_n, cresp_e, p_loss_terms, dt_cell, i_spc, empty_cell)
 
-      use constants,        only: big
       use cresp_crspectrum, only: cresp_find_prepare_spectrum
       use initcosmicrays,   only: ncrb
       use initcrspectrum,   only: adiab_active, synch_active, spec_mod_trms
@@ -197,7 +196,6 @@ contains
       real,                intent(out) :: dt_cell
       logical,             intent(out) :: empty_cell
       integer(kind=4)                  :: i_up_cell
-      real                             :: dt_cre_adiab_cell, dt_cre_synch_cell
 
       dt_cell = huge(1.)
       dt_cre_adiab = huge(1.)

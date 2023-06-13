@@ -1119,9 +1119,6 @@ contains
                tot_q(T_CREN) = tot_q(T_CREN) + cg%dvol * sum(sum(pu(iarr_crspc_n,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_CREE) = tot_q(T_CREE) + cg%dvol * sum(sum(pu(iarr_crspc_e,  :,:,:), dim=1), mask=cg%leafmap)
                tot_q(T_ENCR) = tot_q(T_ENCR) + tot_q(T_CREE)
-               !print *, 'tot q CREN : ', tot_q(T_CREN)
-               !print *, 'tot q CREE : ', tot_q(T_CREE)
-               !print *, 'tot q ENCR : ', tot_q(T_ENCR)
 
 #endif /* CRESP */
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
@@ -1635,8 +1632,7 @@ contains
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef CRESP
-      use cr_data,            only: icr_H1, icr_E
-      use initcosmicrays,     only: iarr_crspc_e, iarr_crspc_n, iarr_crspc2_n, iarr_crspc2_e
+      use initcosmicrays,     only: iarr_crspc_e, iarr_crspc_n
       use timestep_cresp,     only: dt_cre_adiab, dt_cre_K
 #ifdef MAGNETIC
       use timestep_cresp,     only: dt_cre_synch

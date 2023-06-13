@@ -179,7 +179,6 @@ contains
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
       use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc, icr_H1, cr_spectral, cr_table
-      use cresp_variables, only: clight_cresp
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
       use global,          only: disallow_CRnegatives

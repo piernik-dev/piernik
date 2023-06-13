@@ -56,7 +56,7 @@ contains
       use dataio_pub,       only: printinfo, restarted_sim
       use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e, ncrb, nspc
+      use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e, ncrb
       use initcrspectrum,   only: norm_init_spectrum_n, norm_init_spectrum_e, dfpq, check_if_dump_fpq, use_cresp, p_bnd
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -65,7 +65,6 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      integer                        :: icr
 
       if (.not. use_cresp) return
 
@@ -118,8 +117,8 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
-      use cresp_crspectrum, only: cresp_update_cell, q
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_B11, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
+      use cresp_crspectrum, only: cresp_update_cell
+      use cr_data,          only: cr_table, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
       use crhelpers,        only: divv_i
       use cresp_helpers,    only: enden_CMB
       use dataio_pub,       only: msg, warn
@@ -133,16 +132,13 @@ contains
       use ppp,              only: ppp_main
       use sourcecosmicrays, only: cr_spallation_sources
       use timestep_cresp,   only: cresp_timestep_cell
-      use fluidindex,       only: flind
-      use fluids_pub,       only: has_ion, has_neu
-      use units,            only: clight, mH, mp
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
 
       implicit none
 
-      integer                        :: i, j, k, nssteps_max, i_prim, i_sec, i_sec_n, i_sec_e
+      integer                        :: i, j, k, nssteps_max
       integer(kind=4)                :: nssteps, i_spc
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
@@ -151,15 +147,10 @@ contains
       real                           :: dt_crs_sstep, dt_cresp, dt_doubled
       logical                        :: inactive_cell, cfl_violation_step
       character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
-      real, dimension(flind%all)     :: u_cell
-      !real, dimension(flind%all)     :: usrc_cell
-      real                           :: dgas
-      real, parameter                :: gamma_lor = 10.0
       real, dimension(ncrb)          :: q_spc
       real, dimension(ncrb,nspc)     :: q_spc_all
 
       allocate(crspc_bins_all(2*nspc*ncrb))
-     ! allocate(dcr_e(ncrb), dcr_n(ncrb))
 
       if (.not. use_cresp_evol) return
 
@@ -236,7 +227,7 @@ contains
                      endif
                   enddo
 
-                  call cr_spallation_sources(i,j,k,cg%u(:, i, j, k),dt_doubled, q_spc_all)
+                  call cr_spallation_sources(cg%u(:, i, j, k),dt_doubled, q_spc_all)
 
                enddo
             enddo

@@ -190,46 +190,41 @@ contains
 
    end subroutine src_cr_spallation_and_decay
 #ifdef CRESP
-   subroutine cr_spallation_sources(i,j,k,u_cell,dt_doubled, q_spc_all)
+   subroutine cr_spallation_sources(u_cell,dt_doubled, q_spc_all)
 
       use all_boundaries,   only: all_fluid_boundaries
-      use constants,        only: xdim, ydim, zdim, onet, one, zero
-
-      use cresp_crspectrum, only: cresp_update_cell, q
-      use domain,           only: dom
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, crel, dfpq, f_synchIC, u_b_max, use_cresp_evol, bin_old, eps, cresp_substep, n_substeps_max, p_fix
+      use constants,        only: one, zero
+      use cresp_crspectrum, only: cresp_update_cell
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, bin_old, cresp_substep, n_substeps_max, p_fix
       use timestep_cresp,   only: cresp_timestep_cell
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
 #endif /* DEBUG */
-      use cr_data,          only: eCRSP, ePRIM, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be9, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM, cr_mass
-      use dataio_pub,       only: msg, warn
+      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, eC12, eO16, eN14, cr_mass
+      use dataio_pub,       only: warn
       use func,             only: emag
-      use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: nspc
-      use named_array_list, only: wna
-      use ppp,              only: ppp_main
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
       use units,            only: clight, mH, mp
 
       implicit none
 
-      integer                        :: i,j,k,nssteps_max, i_prim, i_sec, i_sec_n, i_sec_e
-      integer(kind=4)                :: nssteps, i_spc, i_bin
+      integer                        :: i_prim, i_sec
+      integer(kind=4)                :: i_spc, i_bin
       type(spec_mod_trms)            :: sptab
-      type(bin_old), dimension(:), allocatable :: crspc_bins_all
+      !type(bin_old), dimension(:), allocatable :: crspc_bins_all
       real, dimension(ncrb,nspc)     :: q_spc_all
-      real                           :: dt_crs_sstep, dt_doubled, dt_cresp
-      logical                        :: inactive_cell, cfl_violation_step
-      character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
+      real                           :: dt_doubled
+      logical                        :: inactive_cell
+      !character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
       real, dimension(flind%all)     :: u_cell
       real, dimension(flind%all)     :: usrc_cell
       real, dimension(1:ncrb)        :: dcr_n, dcr_e, Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
       !real, dimension(1:ncrb)        :: Q_ratio_1, Q_ratio_2, S_ratio_1, S_ratio_2
-      real                           :: dgas, gn
+      real                           :: dgas
       !real                           :: dt_doubled
       !real, parameter                :: gamma_lor = 10.0
 
