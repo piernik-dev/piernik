@@ -162,11 +162,11 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_N14, icr_O16, icr_E, cr_index, cr_table, primary_C12, primary_N14,  primary_O16, ncrsp_auto, ncrsp_prim, icr_prim, icr_sec, ePRIM, eCRSP, eH1, eE, eBe9, eBe10, eC12, eO16, eN14, eLi7, PRIM, rel_abound
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, cr_index, cr_table, eCRSP, eH1, eE, eBe9, eBe10, eC12, eO16, eN14, eLi7, rel_abound
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
 #endif /* COSM_RAYS */
@@ -182,19 +182,6 @@ contains
 #ifdef CRESP
       real                            :: e_tot
 
-
-      !print *, icr_prim
-      !print *, icr_sec
-      !stop
-        !print *, 'nspc : ', nspc
-        !print *, 'icr_H1 : ', icr_H1, ' ',eH1(PRIM)
-        !print *, 'icr_C12 : ', icr_C12, ' ',eC12(PRIM)
-        !print *, 'icr_N14 : ', icr_N14, ' ',eN14(PRIM)
-        !print *, 'icr_O16 : ', icr_O16, ' ',eO16(PRIM)
-
-
-      !print *, rel_abound
-      !stop
 #endif /* CRESP */
 
       fl => flind%ion
@@ -282,30 +269,18 @@ contains
                   do icr = 1, nspc
                      e_tot = amp_cr1 * cre_eff(nspc) * decr
                      if (e_tot > smallcree .and. use_cresp) then
-!                         cresp%n = 1.e-4 ;  cresp%e = 1.e-2
                         call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot, icr)
-                        !stop
 
                         cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
                         cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
-                        !print *, 'cresp n ' , cresp%n,  'cresp e ' , cresp%e
-                        !print *, 'i : ', i, ' j :', j
-                        !if (i == 29 .and. j == 29) then
-                           !print *, icr
-                           !print *, ' cresp%n ', rel_abound(icr)*cresp%n
-                           !print *, 'cresp%e ', rel_abound(icr)*cresp%e
-                       !endif
+
                      endif
                   enddo
-                  !stop
 #endif /* CRESP */
                enddo
             enddo
          enddo
-         !do icr = 1, nspc
-            !print *, 'icr : ', icr, ' max val : ', cg%u(iarr_crspc2_n(icr,:),29,29,:)
-         !enddo
-         !print *, iarr_crspc2_e(:,:)
+
 #endif /* COSM_RAYS */
          call cg%costs%stop(I_IC)
          cgl => cgl%nxt
@@ -351,21 +326,20 @@ contains
 
    subroutine mcrtest_tsl(user_vars, tsl_names)
 
-      use cg_cost_data,     only: I_IC, I_MHD
+      use cg_cost_data,     only: I_IC
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM
       use diagnostics,      only: pop_vector
-      use fluidindex,       only: flind
       use grid_cont,        only: grid_container
-      use mpisetup,         only: proc, master, piernik_MPI_Allreduce
+      use mpisetup,         only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,          only: eCRSP, cr_spectral, cr_table, icr_H1, icr_C12, icr_B10, ncrsp_auto, ncrsp_prim, icr_prim, icr_sec, cr_index
-      use initcosmicrays,   only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
+      use cr_data,          only: cr_table, icr_C12, icr_B10
+      use initcosmicrays,   only: K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc, ncrb
-      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp, bin_old
+      use initcosmicrays,   only: iarr_crspc2_n, ncrb
+      use initcrspectrum,   only: expan_order, smallcree, cre_eff, use_cresp, bin_old
 #endif /* CRESP */
 #endif /* COSM_RAYS */
 
@@ -376,12 +350,16 @@ contains
       real, dimension(:), intent(inout), allocatable                       :: user_vars
       real(kind=8), dimension(ncrb)                                        :: cr_total
       real(kind=8)                                                         :: output1, output2, output3
-      type(bin_old), dimension(:), allocatable                             :: crspc_bins_all
+      !type(bin_old), dimension(:), allocatable                             :: crspc_bins_all
       type(cg_list_element), pointer                                       :: cgl
       type(grid_container), pointer                                        :: cg
 
       !allocate(crspc_bins_all(2*nspc*ncrb))
       !call ppp_main%start(crug_label)
+
+      output1 = 0
+      output2 = 0
+      output3 = 0
 
       if (present(tsl_names)) then
          call pop_vector(tsl_names, len(tsl_names(1)), ["cr_C12n_tot"])    !   add to header
@@ -397,9 +375,6 @@ contains
             call cg%costs%start
 
             ! do mpi stuff here...
-            output1 = 0
-            output2 = 0
-            output3 = 0
 
             cr_total = 0
 
