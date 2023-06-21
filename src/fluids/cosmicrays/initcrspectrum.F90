@@ -889,11 +889,12 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_spectral_CRspecies_arrays(nsp, nb)  ! Allocate arrays for spectrally resolved CR species
 
-      use diagnostics,  only: my_allocate, my_allocate_with_index, ma1d, ma2d
+      use constants,   only: I_ONE, I_TWO
+      use diagnostics, only: my_allocate, my_allocate_with_index, ma1d, ma2d
 
       implicit none
 
-      integer, intent(in)  :: nsp, nb
+      integer(kind=4), intent(in)  :: nsp, nb
 
       ma1d = [nsp]
       call my_allocate(p_lo_init, ma1d)
@@ -912,15 +913,15 @@ contains
       call my_allocate(def_dtsynchIC, ma1d)
       call my_allocate(total_init_cree, ma1d)
       call my_allocate(cre_active, ma1d)
-      call my_allocate_with_index(synch_active, nsp, 1)
-      call my_allocate_with_index(adiab_active, nsp, 1)
-      call my_allocate_with_index(icomp_active, nsp, 1)
+      call my_allocate_with_index(synch_active, nsp, I_ONE)
+      call my_allocate_with_index(adiab_active, nsp, I_ONE)
+      call my_allocate_with_index(icomp_active, nsp, I_ONE)
 
-      ma2d = [nsp, nb * 2]
+      ma2d = [nsp, nb * I_TWO]
       call my_allocate(K_cresp_paral, ma2d)
       call my_allocate(K_cresp_perp, ma2d)
 
-      ma2d = [2, nsp]
+      ma2d = [I_TWO, nsp]
       call my_allocate(p_init, ma2d)
       call my_allocate(p_br_init, ma2d)
 
