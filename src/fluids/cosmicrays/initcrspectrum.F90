@@ -647,8 +647,8 @@ contains
       call init_cresp_types
 
 #ifdef VERBOSE
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_paral = ", K_cresp_paral(1:ncrb) ; if (master) call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(1:ncrb)  ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_paral = ", K_cresp_paral(:, 1:ncrb) ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(:, 1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
       def_dtadiab(:) = cfl_cre(:) * half * three * logten * w
