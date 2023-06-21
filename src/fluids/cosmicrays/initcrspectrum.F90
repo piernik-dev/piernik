@@ -262,7 +262,12 @@ contains
       !four_ps(:) = 0.0
       !g(:) = 0.0
 
-      if (cr_spectral(cr_table(icr_H1))) cre_active(findloc(icr_spc, icr_H1)) = 1.0
+      if (cr_spectral(cr_table(icr_H1))) then
+         ! cre_active(findloc(icr_spc, icr_H1)) = 1.0
+         ! Since gfortran < 9.0 did not support the intrinsic findloc, I suggest to write it in some other way
+         ! until we migrate Jenkins server to something less ancient.
+         where (icr_spc(:) == icr_H1) cre_active(:) = 1.0
+      endif
 
       if (size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
 

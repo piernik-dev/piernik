@@ -161,7 +161,7 @@ contains
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
-      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, iarr_crspc
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
 #endif /* CRESP */
 #endif /* COSM_RAYS */
