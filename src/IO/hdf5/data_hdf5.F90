@@ -426,22 +426,28 @@ contains
       type(grid_container),   pointer, intent(in)    :: cg
 
       class(component_fluid), pointer                :: fl_dni, fl_mach
-      integer(kind=4)                                :: i_xyz, clast
+      integer(kind=4)                                :: i_xyz
       integer                                        :: ii, jj, kk, icr
 #ifdef COSM_RAYS
-      integer                                        :: i, ibin
+      integer                                        :: i
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
       character(len=2)                               :: varn2
       !character(len=*)                               :: vname
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      integer                                        :: ibin
+      integer(kind=4)                                :: clast
+#endif /* CRESP */
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
-      ibin = 0
       icr = 0
+#ifdef CRESP
+      ibin = 0
+#endif /* CRESP */
 
 #ifdef MAGNETIC
       associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
