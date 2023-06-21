@@ -68,7 +68,7 @@ contains
 
       if (.not. use_cresp) return
 
-!      if(p_bnd == 'moving') then
+!      if (p_bnd == 'moving') then
          call cresp_initialize_guess_grids
 !      endif
       call cresp_allocate_all

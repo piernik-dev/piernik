@@ -262,9 +262,9 @@ contains
       !four_ps(:) = 0.0
       !g(:) = 0.0
 
-      if(cr_spectral(cr_table(icr_H1))) cre_active(findloc(icr_spc, icr_H1)) = 1.0
+      if (cr_spectral(cr_table(icr_H1))) cre_active(findloc(icr_spc, icr_H1)) = 1.0
 
-      if(size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
+      if (size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
 
       b_max_db             = 10.  ! default value of B limiter
       redshift             = 0.
@@ -779,7 +779,7 @@ contains
       three_ps = zero
       four_ps = zero
 
-      if(transrelativistic) then
+      if (transrelativistic) then
          g_fix = sqrt(clight_cresp**2*p_fix**2 + clight_cresp**4) - clight_cresp**2 ! mass should be here, as in crs:
 !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
 !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.

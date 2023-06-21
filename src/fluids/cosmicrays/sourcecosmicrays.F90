@@ -290,7 +290,7 @@ contains
 
       do i_spc = 1, nspc
 
-         if(i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
+         if (i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
 
             u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - u_cell(iarr_crspc2_n(i_spc,:)) / (sqrt(1+p_fix**2)*cr_tau(i_spc)))
             u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+p_fix**2)*cr_tau(i_spc)))
@@ -320,7 +320,7 @@ contains
 
       Q_ratio = zero
 
-      if(abs(q_l - three) > eps) then
+      if (abs(q_l - three) > eps) then
          Q_ratio = ((A_prim/A_sec)**(three-q_l)-one)/((p_R/p_L)**(three-q_l)-one)
       else
          Q_ratio = log(A_prim/A_sec)/log(p_R/p_L)
@@ -340,7 +340,7 @@ contains
 
       S_ratio = zero
 
-      if(abs(q_l - four) > eps) then
+      if (abs(q_l - four) > eps) then
          S_ratio = ((A_prim/A_sec)**(four-q_l)-one)/((p_R/p_L)**(four-q_l)-one)
       else
          S_ratio = log(A_prim/A_sec)/log(p_R/p_L)
