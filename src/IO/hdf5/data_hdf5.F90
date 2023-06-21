@@ -432,10 +432,10 @@ contains
       integer                                        :: i
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
-      character(len=I_TWO)                           :: varn2
       !character(len=*)                               :: vname
 #endif /* COSM_RAYS */
 #ifdef CRESP
+      character(len=I_TWO)                           :: varn2
       integer                                        :: ibin
       integer(kind=4)                                :: clast
 #endif /* CRESP */

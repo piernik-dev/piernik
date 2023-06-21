@@ -198,18 +198,22 @@ contains
       use constants,        only: xdim, ydim, zdim
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use cr_data,          only: cr_table, icr_H1, rel_abound
+      use cr_data,          only: cr_table, icr_H1
 #ifdef CRESP
+      use cr_data,          only: rel_abound
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: smallcree, cresp, use_cresp!, cre_eff
+#else  /* !CRESP */
+      use cr_data,          only: icr_C12, icr_N14, icr_O16, eCRSP, cr_index, cr_primary, cr_mass
+      use initcosmicrays,   only: iarr_crn
 #endif /* CRESP */
 
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
       real,                   intent(in) :: ampl
-      integer                            :: i, j, k, ipm, jpm, icr
+      integer                            :: i, j, k, ipm, jpm
       real                               :: decr, decr_sum, ysna
       real                               :: cresp_e_sum
       real, dimension(ndims)             :: posr
@@ -219,6 +223,7 @@ contains
       real, dimension(3)                 :: ysnoi
 #endif /* SHEAR */
 #ifdef CRESP
+      integer                            :: icr
       real                               :: e_tot_sn
 #endif /* CRESP */
 
@@ -283,7 +288,7 @@ contains
                     enddo
 
                  endif
-#else /* CRESP */
+#else /* !CRESP */
                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_index(icr_H1 )),i,j,k) + decr
                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_index(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12)) * cr_mass(cr_table(icr_C12)) * decr
                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_index(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14)) * cr_mass(cr_table(icr_N14)) * decr
