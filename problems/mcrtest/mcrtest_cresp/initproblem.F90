@@ -157,7 +157,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, icr_N14, icr_O16, icr_E, cr_index, primary_C12, primary_N14,  primary_O16, ncrsp_auto, ncrsp_prim, icr_prim, icr_sec, ePRIM, eCRSP, eH1, eE, eBe9, eB11 , eC12, eO16, eN14, eLi7, PRIM, rel_abound
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, cr_index, eCRSP, rel_abound
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum

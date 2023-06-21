@@ -202,7 +202,7 @@ contains
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
-      use initcrspectrum,   only: expan_order, smallcree, cresp, cre_eff, use_cresp
+      use initcrspectrum,   only: smallcree, cresp, use_cresp!, cre_eff
 #endif /* CRESP */
 
       implicit none

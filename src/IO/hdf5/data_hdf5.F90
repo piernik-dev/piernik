@@ -393,7 +393,7 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5,      only: common_shortcuts
-      use constants,        only: dsetnamelen, I_ONE
+      use constants,        only: dsetnamelen, I_ONE, I_TWO
       use fluids_pub,       only: has_ion, has_neu, has_dst
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -432,7 +432,7 @@ contains
       integer                                        :: i
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
-      character(len=2)                               :: varn2
+      character(len=I_TWO)                           :: varn2
       !character(len=*)                               :: vname
 #endif /* COSM_RAYS */
 #ifdef CRESP

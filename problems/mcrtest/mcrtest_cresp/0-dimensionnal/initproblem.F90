@@ -45,11 +45,10 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_tsl
-      use user_hooks,  only: problem_domain_update, late_initial_conditions
 
       implicit none
 
-      user_tsl                => mcrtest_tsl
+      user_tsl => mcrtest_tsl
 
    end subroutine problem_pointers
 
@@ -162,7 +161,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, cr_index, cr_table, eCRSP, eH1, eE, eBe9, eBe10, eC12, eO16, eN14, eLi7, rel_abound
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, cr_index, cr_table, eCRSP, rel_abound
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
@@ -335,11 +334,9 @@ contains
       use mpisetup,         only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
       use cr_data,          only: cr_table, icr_C12, icr_B10
-      use initcosmicrays,   only: K_cr_paral, K_cr_perp
 #ifdef CRESP
-      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_crspc2_n, ncrb
-      use initcrspectrum,   only: expan_order, smallcree, cre_eff, use_cresp, bin_old
+      !use initcrspectrum,   only: bin_old
 #endif /* CRESP */
 #endif /* COSM_RAYS */
 

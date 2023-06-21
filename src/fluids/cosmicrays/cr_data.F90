@@ -41,6 +41,8 @@ module cr_data
 
 ! pulled by COSM_RAYS
 
+   use constants, only: idlen
+
    implicit none
 
    public               ! QA_WARN no secrets are kept here
@@ -90,7 +92,7 @@ module cr_data
    logical, parameter                                      :: transrelativistic = .true. !< Logical for transrelativistic limit of momentum in CRESP
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
-   character(len=3), parameter                             :: p_bnd =  'fix'     !, 'bnd! impose momentum boundaries to be fixed along time, or able to move
+   character(len=idlen), parameter                             :: p_bnd =  'fix'     !, 'bnd! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
    integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
    integer,                   allocatable, dimension(:)    :: cr_index           !< table of flind indices for CR species
    real,                      allocatable, dimension(:)    :: cr_mass            !< table of mass numbers for CR species

@@ -1026,7 +1026,7 @@ contains
                 call die(msg)
         end select
 
-        if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then
+        if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then  ! Possible bug: len(p_bnd) == idlen == 3
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
                 if (exit_code) then

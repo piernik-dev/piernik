@@ -57,7 +57,7 @@ contains
       use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e, ncrb
-      use initcrspectrum,   only: norm_init_spectrum_n, norm_init_spectrum_e, dfpq, check_if_dump_fpq, use_cresp, p_bnd
+      use initcrspectrum,   only: norm_init_spectrum_n, norm_init_spectrum_e, dfpq, check_if_dump_fpq, use_cresp !, p_bnd
       use mpisetup,         only: master
       use named_array_list, only: wna
 

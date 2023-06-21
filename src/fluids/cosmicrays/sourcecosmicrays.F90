@@ -183,19 +183,10 @@ contains
 #ifdef CRESP
    subroutine cr_spallation_sources(u_cell,dt_doubled, q_spc_all)
 
-      use all_boundaries,   only: all_fluid_boundaries
       use constants,        only: one, zero
-      use cresp_crspectrum, only: cresp_update_cell
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, bin_old, cresp_substep, n_substeps_max, p_fix
-      use timestep_cresp,   only: cresp_timestep_cell
+      use initcrspectrum,   only: spec_mod_trms, p_fix
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
-#ifdef DEBUG
-      use cresp_crspectrum, only: cresp_detect_negative_content
-#endif /* DEBUG */
-      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, eC12, eO16, eN14, cr_mass
-      use dataio_pub,       only: warn
-      use func,             only: emag
-      use grid_cont,        only: grid_container
+      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass
       use initcosmicrays,   only: nspc
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
