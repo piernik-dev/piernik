@@ -262,9 +262,14 @@ contains
       !four_ps(:) = 0.0
       !g(:) = 0.0
 
-      if(cr_spectral(cr_table(icr_H1))) cre_active(findloc(icr_spc, icr_H1)) = 1.0
+      if (cr_spectral(cr_table(icr_H1))) then
+         ! cre_active(findloc(icr_spc, icr_H1)) = 1.0
+         ! Since gfortran < 9.0 did not support the intrinsic findloc, I suggest to write it in some other way
+         ! until we migrate Jenkins server to something less ancient.
+         where (icr_spc(:) == icr_H1) cre_active(:) = 1.0
+      endif
 
-      if(size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
+      if (size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
 
       b_max_db             = 10.  ! default value of B limiter
       redshift             = 0.
@@ -647,8 +652,8 @@ contains
       call init_cresp_types
 
 #ifdef VERBOSE
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_paral = ", K_cresp_paral(1:ncrb) ; if (master) call printinfo(msg)
-      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(1:ncrb)  ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_paral = ", K_cresp_paral(:, 1:ncrb) ; if (master) call printinfo(msg)
+      write (msg,"(A,*(E14.5))") "[initcrspectrum:init_cresp] K_cresp_perp = ",  K_cresp_perp(:, 1:ncrb)  ; if (master) call printinfo(msg)
 #endif /* VERBOSE */
 
       def_dtadiab(:) = cfl_cre(:) * half * three * logten * w
@@ -779,7 +784,7 @@ contains
       three_ps = zero
       four_ps = zero
 
-      if(transrelativistic) then
+      if (transrelativistic) then
          g_fix = sqrt(clight_cresp**2*p_fix**2 + clight_cresp**4) - clight_cresp**2 ! mass should be here, as in crs:
 !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
 !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
@@ -889,11 +894,12 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine allocate_spectral_CRspecies_arrays(nsp, nb)  ! Allocate arrays for spectrally resolved CR species
 
-      use diagnostics,  only: my_allocate, my_allocate_with_index, ma1d, ma2d
+      use constants,   only: I_ONE, I_TWO
+      use diagnostics, only: my_allocate, my_allocate_with_index, ma1d, ma2d
 
       implicit none
 
-      integer, intent(in)  :: nsp, nb
+      integer(kind=4), intent(in)  :: nsp, nb
 
       ma1d = [nsp]
       call my_allocate(p_lo_init, ma1d)
@@ -912,15 +918,15 @@ contains
       call my_allocate(def_dtsynchIC, ma1d)
       call my_allocate(total_init_cree, ma1d)
       call my_allocate(cre_active, ma1d)
-      call my_allocate_with_index(synch_active, nsp, 1)
-      call my_allocate_with_index(adiab_active, nsp, 1)
-      call my_allocate_with_index(icomp_active, nsp, 1)
+      call my_allocate_with_index(synch_active, nsp, I_ONE)
+      call my_allocate_with_index(adiab_active, nsp, I_ONE)
+      call my_allocate_with_index(icomp_active, nsp, I_ONE)
 
-      ma2d = [nsp, nb * 2]
+      ma2d = [nsp, nb * I_TWO]
       call my_allocate(K_cresp_paral, ma2d)
       call my_allocate(K_cresp_perp, ma2d)
 
-      ma2d = [2, nsp]
+      ma2d = [I_TWO, nsp]
       call my_allocate(p_init, ma2d)
       call my_allocate(p_br_init, ma2d)
 

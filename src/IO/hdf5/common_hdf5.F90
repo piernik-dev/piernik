@@ -126,8 +126,11 @@ contains
       character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #ifdef COSM_RAYS
-      integer                                              :: k, ke, ks
+      integer                                              :: k, ke
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      integer                                              :: ks
+#endif /* CRESP */
 
       if (.not. allocated(hdf_vars)) allocate(hdf_vars(0))
 

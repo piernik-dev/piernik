@@ -76,8 +76,8 @@ for i, fn in enumerate(data):
     for ii, ff in enumerate(fls[i][0]):
         ax.plot(fn[:, xno], fn[:, ff], '--', label=fls[i][1][ii] + ' ' + args.files[i])
 
-ax.plot(fn[:, xno], 4.47941827958E-004*np.exp(-0.22968883100855497*fn[:, xno]),label='Theoretical C12')
-ax.plot(fn[:, xno], 4.47941827958E-004*(1.-np.exp(-0.22968883100855497*fn[:, xno])),label='Theoretical Be9')
+ax.plot(fn[:, xno], 4.47941827958E-004 * np.exp(-0.22968883100855497 * fn[:, xno]), label='Theoretical C12')
+ax.plot(fn[:, xno], 4.47941827958E-004 * (1. - np.exp(-0.22968883100855497 * fn[:, xno])), label='Theoretical Be9')
 
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, fontsize='small', ncol=2)
 print('Y axis range: ', ax.get_ylim())

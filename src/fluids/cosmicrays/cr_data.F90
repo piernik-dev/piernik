@@ -41,6 +41,8 @@ module cr_data
 
 ! pulled by COSM_RAYS
 
+   use constants, only: idlen
+
    implicit none
 
    public               ! QA_WARN no secrets are kept here
@@ -90,7 +92,7 @@ module cr_data
    logical, parameter                                      :: transrelativistic = .true. !< Logical for transrelativistic limit of momentum in CRESP
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
-   character(len=3), parameter                             :: p_bnd =  'fix'     !, 'bnd! impose momentum boundaries to be fixed along time, or able to move
+   character(len=idlen), parameter                             :: p_bnd =  'fix'     !, 'bnd! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
    integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
    integer,                   allocatable, dimension(:)    :: cr_index           !< table of flind indices for CR species
    real,                      allocatable, dimension(:)    :: cr_mass            !< table of mass numbers for CR species
@@ -102,7 +104,7 @@ module cr_data
    logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
    integer,                   allocatable, dimension(:)    :: icr_spc            !< table of cr_data indices for spectrally resolved CR species
-   integer,                   allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
+   integer(kind=4),           allocatable, dimension(:)    :: iarr_spc           !< table of indices allowing to find spectrally resolved via icr_* (helpful for iarr_crspc)
    integer                                                 :: i, iprim, isec, icr
    real,                      dimension(:), allocatable    :: rel_abound
 !<====Mass number and atomic number of nuclei species====>
@@ -293,6 +295,7 @@ contains
 
    subroutine cr_species_tables(ncrsp, crness)
 
+      use constants,  only: I_ONE
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master
       use units,      only: me, mp, myr, mbarn, sigma_T
@@ -302,7 +305,7 @@ contains
       integer(kind=4),       intent(in)    :: ncrsp
       logical, dimension(:), intent(inout) :: crness
 
-      integer                                    :: i, icr, jcr, kcr
+      integer(kind=4)                            :: i, icr, jcr, kcr
       character(len=specieslen), dimension(nicr) :: eCRSP_names
       logical,                   dimension(nicr) :: eCRSP_ess, eCRSP_spec, eCRSP_prim
       real,                      dimension(nicr) :: eCRSP_mass, eCRSP_Z
@@ -332,7 +335,7 @@ contains
       do i = icr_E, size(eCRSP)
          if (eCRSP(i)) then
 
-            icr = icr + 1
+            icr = icr + I_ONE
             cr_table(i)      = icr
             cr_names(icr)    = eCRSP_names(i)
             cr_mass(icr)     = eCRSP_mass(i)
@@ -340,7 +343,7 @@ contains
             cr_spectral(icr) = eCRSP_spec(i)
 
             if (eCRSP_spec(i)) then
-               kcr = kcr + 1
+               kcr = kcr + I_ONE
                icr_spc(kcr) = cr_table(i)
                iarr_spc(icr)  = kcr
             endif
@@ -352,7 +355,7 @@ contains
                   call warn(msg)
                endif
             else
-               jcr = jcr + 1
+               jcr = jcr + I_ONE
                cr_index(i) = jcr
             endif
             cr_gpess(icr)    = eCRSP_ess(i)
@@ -389,8 +392,8 @@ contains
       print *, 'rel_abound array : ', rel_abound
 
       if (ncrsp_auto < ncrsp) then
-         cr_gpess(ncrsp_auto+1:ncrsp) = crness
-         do i = ncrsp_auto+1, ncrsp
+         cr_gpess(ncrsp_auto+I_ONE:ncrsp) = crness
+         do i = ncrsp_auto+I_ONE, ncrsp
             write(msg,'(a,a,i2,a,l2)') spectral_or_not(cr_spectral(i)), 'user CR species no: ', i,' is present; taken into account for grad_pcr: ', cr_gpess(i)
             if (master) call printinfo(msg)
          enddo

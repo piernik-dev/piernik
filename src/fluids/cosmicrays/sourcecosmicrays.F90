@@ -183,19 +183,10 @@ contains
 #ifdef CRESP
    subroutine cr_spallation_sources(u_cell,dt_doubled, q_spc_all)
 
-      use all_boundaries,   only: all_fluid_boundaries
       use constants,        only: one, zero
-      use cresp_crspectrum, only: cresp_update_cell
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, use_cresp_evol, bin_old, cresp_substep, n_substeps_max, p_fix
-      use timestep_cresp,   only: cresp_timestep_cell
+      use initcrspectrum,   only: spec_mod_trms, p_fix
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
-#ifdef DEBUG
-      use cresp_crspectrum, only: cresp_detect_negative_content
-#endif /* DEBUG */
-      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, eC12, eO16, eN14, cr_mass
-      use dataio_pub,       only: warn
-      use func,             only: emag
-      use grid_cont,        only: grid_container
+      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass
       use initcosmicrays,   only: nspc
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
@@ -290,7 +281,7 @@ contains
 
       do i_spc = 1, nspc
 
-         if(i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
+         if (i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
 
             u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - u_cell(iarr_crspc2_n(i_spc,:)) / (sqrt(1+p_fix**2)*cr_tau(i_spc)))
             u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+p_fix**2)*cr_tau(i_spc)))
@@ -320,7 +311,7 @@ contains
 
       Q_ratio = zero
 
-      if(abs(q_l - three) > eps) then
+      if (abs(q_l - three) > eps) then
          Q_ratio = ((A_prim/A_sec)**(three-q_l)-one)/((p_R/p_L)**(three-q_l)-one)
       else
          Q_ratio = log(A_prim/A_sec)/log(p_R/p_L)
@@ -340,7 +331,7 @@ contains
 
       S_ratio = zero
 
-      if(abs(q_l - four) > eps) then
+      if (abs(q_l - four) > eps) then
          S_ratio = ((A_prim/A_sec)**(four-q_l)-one)/((p_R/p_L)**(four-q_l)-one)
       else
          S_ratio = log(A_prim/A_sec)/log(p_R/p_L)

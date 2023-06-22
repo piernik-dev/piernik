@@ -168,6 +168,9 @@ contains
 #ifdef SN_SRC
       use snsources,      only: cr_sn
 #endif /* SN_SRC */
+#ifndef CRESP
+      use initcosmicrays, only: gamma_cr_1, iarr_crn
+#endif /* !CRESP */
 #endif /* COSM_RAYS */
 
       implicit none
@@ -215,7 +218,7 @@ contains
 #ifdef COSM_RAYS
 #ifndef CRESP
                   cg%u(iarr_crn(1),i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / gamma_cr_1
-#endif /* CRESP */
+#endif /* !CRESP */
 #endif /* COSM_RAYS */
                enddo
             enddo

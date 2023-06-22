@@ -393,7 +393,7 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5,      only: common_shortcuts
-      use constants,        only: dsetnamelen, I_ONE
+      use constants,        only: dsetnamelen, I_ONE, I_TWO
       use fluids_pub,       only: has_ion, has_neu, has_dst
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -426,22 +426,28 @@ contains
       type(grid_container),   pointer, intent(in)    :: cg
 
       class(component_fluid), pointer                :: fl_dni, fl_mach
-      integer(kind=4)                                :: i_xyz, clast
+      integer(kind=4)                                :: i_xyz
       integer                                        :: ii, jj, kk, icr
 #ifdef COSM_RAYS
-      integer                                        :: i, ibin
+      integer                                        :: i
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
-      character(len=2)                               :: varn2
       !character(len=*)                               :: vname
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      character(len=I_TWO)                           :: varn2
+      integer                                        :: ibin
+      integer(kind=4)                                :: clast
+#endif /* CRESP */
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
-      ibin = 0
       icr = 0
+#ifdef CRESP
+      ibin = 0
+#endif /* CRESP */
 
 #ifdef MAGNETIC
       associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
@@ -465,7 +471,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef CRESP
          !case ('cr_A000' : 'cr_zz99')
-            clast = len(trim(var))
+            clast = len(trim(var), kind=4)
             varn2 = var(clast - 1:clast)
             if (var(clast - 2:clast - 2) == 'e') then
 

@@ -1026,7 +1026,7 @@ contains
                 call die(msg)
         end select
 
-        if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then
+        if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then  ! Possible bug: len(p_bnd) == idlen == 3
             do co = LO, HI
                 call get_fqp_cutoff(co, exit_code)
                 if (exit_code) then
@@ -1445,7 +1445,7 @@ contains
       print *, 'three_p_s(bins) : ', three_p_s(bins)
       print *, 'q(bins)   : ', q(bins)
       e_bins = fpcc * f_l(bins) * g_l(bins) * p_l(bins)**three
-      where(abs(q(bins) - three_p_s(bins)) > eps)
+      where (abs(q(bins) - three_p_s(bins)) > eps)
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(three_p_s(bins) - q(bins)) - one)/(three_p_s(bins) - q(bins))
       elsewhere
          e_bins = e_bins * log(p_r(bins)/p_l(bins))
@@ -1607,7 +1607,7 @@ contains
       nflux(ce) = - dn_upw(ce)
 
       de_upw(ce) = fpcc * fimh(ce) *gimh(ce)*pimh(ce)**three
-      where(abs(qi(ce+1) - three_ps(ce+1)) > eps)
+      where (abs(qi(ce+1) - three_ps(ce+1)) > eps)
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(three_ps(ce+1)-qi(ce+1)) - one)/(three_ps(ce+1) - qi(ce+1))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
@@ -1684,13 +1684,13 @@ contains
       ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
       ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
 
-      where(abs(q(bins) - four_ps(bins)) > eps)
+      where (abs(q(bins) - four_ps(bins)) > eps)
          r_num = p(bins-1)*((p(bins)/p(bins-1))**(four_ps(bins)-q(bins)) - one)/(four_ps(bins)-q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
       endwhere
 
-      where((q(bins) - three_ps(bins)) > eps)
+      where ((q(bins) - three_ps(bins)) > eps)
          r_den = ((p(bins)/p(bins-1))**(three_ps(bins)-q(bins))-one)/(three_ps(bins)-q(bins))
       elsewhere
          r_den = log(p(bins)/p(bins-1))
