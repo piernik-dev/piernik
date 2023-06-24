@@ -92,14 +92,14 @@ module cr_data
    logical, parameter                                      :: transrelativistic = .true. !< Logical for transrelativistic limit of momentum in CRESP
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
-   character(len=idlen), parameter                             :: p_bnd =  'fix'     !, 'bnd! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
+   character(len=idlen), parameter                         :: p_bnd =  'fix'     !, 'bnd! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
    integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
    integer,                   allocatable, dimension(:)    :: cr_index           !< table of flind indices for CR species
    real,                      allocatable, dimension(:)    :: cr_mass            !< table of mass numbers for CR species
    real,                      allocatable, dimension(:,:)  :: cr_sigma           !< table of cross sections for spallation
    real,                      allocatable, dimension(:)    :: cr_sigma_N         !< table of cross sections for spallation
    real,                      allocatable, dimension(:)    :: cr_tau             !< table of decay half live times
-   real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances
+   real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances TODO rename me please !
    real,                      allocatable, dimension(:)    :: cr_Z               !< table of atomic numbers
    logical,                   allocatable, dimension(:)    :: cr_spectral        !< table of logicals about energy spectral treatment
    logical,                   allocatable, dimension(:)    :: cr_gpess           !< table of essentiality for grad_pcr calculation
@@ -156,6 +156,7 @@ module cr_data
    real, parameter :: primary_O16  = 4.0e-3
 
    integer(kind=8), dimension(:), allocatable :: icr_prim, icr_sec
+   integer, dimension(3), parameter :: icrH = [icr_C12, icr_N14, icr_O16], icrL = [icr_Li7, icr_Be9, icr_Be10]
 
 contains
 
@@ -191,17 +192,17 @@ contains
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
 #ifdef CRESP
        eE     = [.true., .false., .true., .true.]
-       eH1    = [.true., .true., .false., .true.]
-       eLi7   = [.true., .false., .true., .false.]
-       eBe9   = [.true., .false., .true., .false.]
-       eBe10  = [.true., .false., .true., .false.]
-       eB10   = [.true., .false., .true., .false.]
-       eB11   = [.true., .false., .true., .false.]
-       eC12   = [.true., .false., .true., .true.]
-       eN14   = [.true., .false., .true., .true.]
-       eO16   = [.true., .false., .true., .true.]
+       eH1    = [.false., .true., .false., .true.]
+       eLi7   = [.false., .false., .true., .false.]
+       eBe9   = [.false., .false., .true., .false.]
+       eBe10  = [.false., .false., .true., .false.]
+       eB10   = [.false., .false., .true., .false.]
+       eB11   = [.false., .false., .true., .false.]
+       eC12   = [.false., .false., .true., .true.]
+       eN14   = [.false., .false., .true., .true.]
+       eO16   = [.false., .false., .true., .true.]
 #else /* !CRESP */
-
+      eE    = .false.
 #endif /* !CRESP */
 #define VS *4-3:4*
 
@@ -317,7 +318,7 @@ contains
       eCRSP_spec (1:nicr) = [eE(SPEC), eH1(SPEC), eC12(SPEC), eN14(SPEC), eO16(SPEC), eLi7(SPEC), eBe9(SPEC), eBe10(SPEC) , eB10(SPEC), eB11(SPEC) ]
       eCRSP_prim (1:nicr) = [eE(PRIM), eH1(PRIM), eC12(PRIM), eN14(PRIM), eO16(PRIM), eLi7(PRIM), eBe9(PRIM), eBe10(PRIM) , eB10(PRIM), eB11(PRIM) ]
 
-      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp_prim), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp), rel_abound(ncrsp))
+      allocate(cr_names(ncrsp), cr_table(nicr), cr_index(nicr), cr_sigma(ncrsp,ncrsp), cr_tau(ncrsp), cr_primary(ncrsp), cr_mass(ncrsp), cr_Z(ncrsp), cr_spectral(ncrsp), cr_gpess(ncrsp),cr_sigma_N(ncrsp), icr_spc(count(eCRSP_spec .and. eCRSP)), iarr_spc(ncrsp), rel_abound(ncrsp))
       cr_names(:)    = ''
       cr_table(:)    = 0
       cr_index(:)    = 0
