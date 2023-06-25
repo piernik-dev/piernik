@@ -127,9 +127,6 @@ contains
       integer                                       :: i_sub, n_substep
       real, dimension(ncrb), intent(out)            :: q1
 
-
-      print *, 'wouhou !!'
-
       e = zero; n = zero; edt = zero; ndt = zero
       solve_fail_lo = .false.
       solve_fail_up = .false.
@@ -1072,7 +1069,7 @@ contains
                 allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
                 active_bins = pack(cresp_all_bins, is_active_bin)
 
-                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), active_bins) ! once again we must count n and e
+                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins) ! once again we must count n and e
                 n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
             endif
         endif
@@ -1247,7 +1244,7 @@ contains
       enddo
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), act_bins)
 
       call my_deallocate(act_bins)
 
@@ -1273,7 +1270,7 @@ contains
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpg_spectrum
@@ -1296,7 +1293,7 @@ contains
       i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
       q(:i_br) = q_br_init(i_spc) ; q(i_br+1:) = q_init(i_spc)
       f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init(i_spc))
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpl_spectrum
@@ -1325,7 +1322,7 @@ contains
 
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) - I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_symf_spectrum
@@ -1351,7 +1348,7 @@ contains
       enddo
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_syme_spectrum
@@ -1376,7 +1373,7 @@ contains
       do i = 1, ncrb
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(0:ncrb-1), three_ps(1:ncrb), q(1:ncrb), active_bins)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_bump_spectrum
@@ -1749,7 +1746,7 @@ contains
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
-      print *, 'q : ', q
+      !print *, 'q : ', q
 
    end subroutine ne_to_q
 
