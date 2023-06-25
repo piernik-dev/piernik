@@ -2,17 +2,17 @@
 #  define GLOBAL_FR_SPEED
 #endif
 
-#undef ISO
+#define ISO
 
 #define IONIZED
 
 #define COSM_RAYS
 
 #define MAGNETIC
-#undef RESISTIVE
+#define RESISTIVE
 
-#define GRAV
+#define SELF_GRAV
 
 #define SN_SRC
 #define RANDOMIZE
-#undef MULTIGRID
+#define MULTIGRID
