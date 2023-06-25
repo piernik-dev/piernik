@@ -14,5 +14,3 @@
 #undef GRAV
 
 #undef MULTIGRID
-
-#define SN_SRC

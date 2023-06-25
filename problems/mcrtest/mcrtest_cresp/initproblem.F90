@@ -239,8 +239,12 @@ contains
 
 #ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
-         if (eCRSP(icr_H1 ) .and. .not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
-         if (eCRSP(icr_C12) .and. .not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         if (eCRSP(icr_H1 )) then
+            if (.not. cr_spectral(icr_H1)) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         endif
+         if (eCRSP(icr_C12)) then
+            if(.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         endif
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -256,8 +260,12 @@ contains
                         enddo
                      enddo
                   enddo
-                  if (eCRSP(icr_H1 ) .and. .not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
-                  if (eCRSP(icr_C12) .and. .not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+                  if (eCRSP(icr_H1 )) then
+                     if (.not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
+                  endif
+                  if (eCRSP(icr_C12)) then
+                     if(.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+                  endif
 #ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
                   do icr = 1, nspc
@@ -265,8 +273,8 @@ contains
                      if (e_tot > smallcree .and. use_cresp) then
                         call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot, icr)
 
-                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
-                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + cresp%n
+                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + cresp%e
 
                      endif
                   enddo
