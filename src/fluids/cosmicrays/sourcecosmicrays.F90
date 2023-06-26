@@ -55,7 +55,7 @@ contains
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: cr_active, gamma_cr_1, gpcr_ess_noncresp, iarr_crn
 #ifdef CRESP
-      use cr_data,          only: cr_gpess, cr_spectral, cr_table, icr_H1, iarr_spc
+      use cr_data,          only: cr_gpess, cr_spectral, cr_table, icr_E, icr_H1, iarr_spc
       use cresp_crspectrum, only: src_gpcresp
       use initcosmicrays,   only: iarr_crspc2_e
 #endif /* CRESP */
@@ -82,6 +82,7 @@ contains
       full_dim = nn > 1
 
       usrc = 0.0
+
 #ifdef CRESP
       if (.not. full_dim .or. flind%crspc%all < 1) return ! meaning of this line?
 #endif /* CRESP */
@@ -101,17 +102,20 @@ contains
 
       usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
 #ifdef CRESP
-      if (cr_spectral(cr_table(icr_H1)) .or. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)
-         call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(cr_table(icr_H1)), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(cr_table(icr_H1)))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
+      grad_pcr_cresp = 0.0
+      if (cr_spectral(cr_table(icr_H1)) .and. cr_gpess(cr_table(icr_H1))) then !< Primarily treat protons as the source of GPCR !TODO expand me for other CR spectral species (optional)     	
+	call src_gpcresp(uu(:,iarr_crspc2_e(iarr_spc(cr_table(icr_H1)), :)), nn, cg%dl(sweep), grad_pcr_cresp, iarr_spc(cr_table(icr_H1)))         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectral components in CRESP via div_v
       endif
 #endif /* CRESP */
-      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
-#ifdef CRESP
-      usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr_cresp
+      !usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
+!#ifdef CRESP
+      !usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr_cresp
 #ifdef ISO
       return
 #endif /* ISO */
-      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
+      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
+#ifdef CRESP
+      usrc(:, iarr_all_en(flind%ion%pos)) = usrc(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
 #endif /* CRESP */
 
    end subroutine src_gpcr
