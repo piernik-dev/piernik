@@ -176,7 +176,6 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef CRESP
       real                            :: e_tot
-
 #endif /* CRESP */
 
       fl => flind%ion
@@ -243,7 +242,7 @@ contains
             if (.not. cr_spectral(icr_H1)) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
          endif
          if (eCRSP(icr_C12)) then
-            if(.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+            if (.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
          endif
 
 ! Explosions
@@ -264,7 +263,7 @@ contains
                      if (.not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
                   endif
                   if (eCRSP(icr_C12)) then
-                     if(.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
+                     if (.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
                   endif
 #ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
@@ -282,11 +281,11 @@ contains
                enddo
             enddo
          enddo
-
 #endif /* COSM_RAYS */
          call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
+
 #ifdef COSM_RAYS
       do icr = 1, flind%crs%all
 
