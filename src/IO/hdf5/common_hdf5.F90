@@ -213,7 +213,7 @@ contains
             case ('cren') !< CRESP number density fields
                do k = 1, ncrb
                   if (k<=99) then
-                     write(aux,'(A4,I2.2)') 'cren', k
+                     write(aux,'(A3,a,A1,I2.2)') 'cr_','e-','n', k
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
@@ -230,7 +230,7 @@ contains
             case ('cree') !< CRESP energy density fields
                do k = 1, ncrb
                   if (k<=99) then
-                     write(aux,'(A4,I2.2)') 'cree', k
+                     write(aux,'(A3,a,A1,I2.2)') 'cr_','e-','e', k
                      call append_var(aux)
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
