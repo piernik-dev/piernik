@@ -464,43 +464,43 @@ contains
             tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-   !      !case ('cr_A000' : 'cr_zz99')
-   !         clast = len(trim(var), kind=4)
-   !         varn2 = var(clast - 1:clast)
-   !         if (var(clast - 2:clast - 2) == 'e') then
-   !
-   !         !part of the code for spectrally resolved species : energy density
-   !
-   !            read (varn2,'(I2.2)') ibin
-   !            do i = 1, size(cr_names)
-   !               if (cr_names(i).eq.var(4:clast-3)) icr = i
-   !            enddo
-   !            tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
-   !
-   !         else if (var(clast - 2:clast - 2) == 'n') then
-   !
-   !         !part of the code for spectrally resolved species : number density
-   !
-   !            read (varn2,'(I2.2)') ibin
-   !            do i = 1, size(cr_names)
-   !               if (cr_names(i).eq.var(4:clast-3)) icr = i
-   !            enddo
-   !            tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
-   !
-   !         else
-   !            do i = 1, size(cr_names)
-   !               if (var == trim('cr_' // cr_names(i))) exit
-   !            enddo
-   !            tab(:,:,:) = cg%u(flind%crn%beg+ibin-1-count(cr_spectral), RNG)
-   !         endif
+         !case ('cr_A000' : 'cr_zz99')
+            clast = len(trim(var), kind=4)
+            varn2 = var(clast - 1:clast)
+            if (var(clast - 2:clast - 2) == 'e') then
+
+            !part of the code for spectrally resolved species : energy density
+
+               read (varn2,'(I2.2)') ibin
+               do i = 1, size(cr_names)
+                  if (cr_names(i).eq.var(4:clast-3)) icr = i
+               enddo
+               tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
+
+            else if (var(clast - 2:clast - 2) == 'n') then
+
+            !part of the code for spectrally resolved species : number density
+
+               read (varn2,'(I2.2)') ibin
+               do i = 1, size(cr_names)
+                  if (cr_names(i).eq.var(4:clast-3)) icr = i
+               enddo
+               tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
+
+            !else
+            !   do i = 1, size(cr_names)
+            !      if (var == trim('cr_' // cr_names(i))) exit
+            !   enddo
+            !   tab(:,:,:) = cg%u(flind%crn%beg+ibin-1-count(cr_spectral), RNG)
+            endif
   !        print *, var, aux
   !        print *, flind%crn%beg+i-1-count(cr_spectral)
-         case ("cren01" : "cren99")
-            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%u(flind%crspc%nbeg+i-1, RNG)
-         case ("cree01" : "cree99")
-            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%u(flind%crspc%ebeg+i-1, RNG)
+         !case ("cren01" : "cren99")
+         !   read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+         !   tab(:,:,:) = cg%u(flind%crspc%nbeg+i-1, RNG)
+         !case ("cree01" : "cree99")
+         !   read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+         !   tab(:,:,:) = cg%u(flind%crspc%ebeg+i-1, RNG)
          case ("cref01" : "cref99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
