@@ -257,10 +257,6 @@ contains
       adiab_active(:)      = .true.
       icomp_active(:)      = .false.
       cre_active(:)        = 0.0
-      !s(:) = 0.0
-      !three_ps(:) = 0.0
-      !four_ps(:) = 0.0
-      !g(:) = 0.0
 
       if (cr_spectral(cr_table(icr_H1))) then
          ! cre_active(findloc(icr_spc, icr_H1)) = 1.0
@@ -370,10 +366,6 @@ contains
          rbuff(11*nspc+14:12*nspc+13) = p_diff(1:nspc)
          rbuff(12*nspc+15) = q_eps
          rbuff(12*nspc+16) = b_max_db
-         !rbuff(12*nspc+17:12*nspc+ncrb+16) = g
-         !rbuff(12*nspc+ncrb+17:12*nspc+2*ncrb+16) = s
-         !rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16) = three_ps
-         !rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16) = four_ps
 
          rbuff(28) = redshift
 
@@ -450,10 +442,6 @@ contains
          p_diff(1:nspc)       = rbuff(11*nspc+14:12*nspc+13)
          q_eps                = rbuff(12*nspc+15)
          b_max_db             = rbuff(12*nspc+16)
-         !g(1:ncrb)            = rbuff(12*nspc+17:12*nspc+ncrb+16)
-         !s(1:ncrb)            = rbuff(12*nspc+ncrb+17:12*nspc+2*ncrb+16)
-         !three_ps(1:ncrb)     = rbuff(12*nspc+ncrb+17:12*nspc+3*ncrb+16)
-         !four_ps(1:ncrb)      = rbuff(12*nspc+ncrb+17:12*nspc+4*ncrb+16)
 
          q_eps                = rbuff(12*nspc+17)
          b_max_db             = rbuff(12*nspc+18)
