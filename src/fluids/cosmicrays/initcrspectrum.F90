@@ -180,7 +180,7 @@ contains
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
       use cr_data,         only: cr_mass, cr_sigma_N, cr_names, icr_spc, icr_H1, cr_spectral, cr_table
       use dataio_pub,      only: printinfo, warn, msg, die, nh
-      use diagnostics,     only: my_allocate_with_index, my_allocate, ma1d
+      use diagnostics,     only: my_allocate_with_index, my_allocate, my_deallocate, ma1d
       use global,          only: disallow_CRnegatives
       use func,            only: emag
       use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
@@ -502,10 +502,10 @@ contains
 
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
-      call my_allocate_with_index(g_fix,                ncrb, I_ZERO)
-      call my_allocate_with_index(s,                ncrb, I_ONE)
-      call my_allocate_with_index(three_ps,         ncrb, I_ONE)
-      call my_allocate_with_index(four_ps,          ncrb, I_ONE)
+      call my_allocate_with_index(g_fix,            ncrb, I_ZERO)
+      call my_allocate_with_index(s,                ncrb, I_ONE )
+      call my_allocate_with_index(three_ps,         ncrb, I_ONE )
+      call my_allocate_with_index(four_ps,          ncrb, I_ONE )
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(g_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
@@ -679,6 +679,9 @@ contains
       if ( (minval(q_init(:) - three) < eps) .and. any(e_small_approx_p == I_ONE)) then
          call warn("[initcrspectrum:init_cresp] Initial parameters: q_init < 3.0 and approximation of outer momenta is on, approximation of outer momenta with hard energy spectrum might not work.")
       endif
+
+      call my_deallocate(p_br_def)
+      call my_deallocate(q_br_def)
 
       ! TODO (OPTIONAL) make a clenaup of redundant arrays after initialization
 
@@ -876,6 +879,33 @@ contains
          if (allocated(crel%e)) call my_deallocate(crel%e)
          if (allocated(crel%n)) call my_deallocate(crel%n)
       endif
+
+      if (allocated(p_lo_init))   call my_deallocate(p_lo_init)
+      if (allocated(p_up_init))   call my_deallocate(p_up_init)
+      if (allocated(p_br_init_lo))   call my_deallocate(p_br_init_lo)
+      if (allocated(p_br_init_up))   call my_deallocate(p_br_init_up)
+      if (allocated(f_init))   call my_deallocate(f_init)
+      if (allocated(q_init))   call my_deallocate(q_init)
+      if (allocated(q_br_init))   call my_deallocate(q_br_init)
+      if (allocated(cfl_cre))   call my_deallocate(cfl_cre)
+      if (allocated(cre_eff))   call my_deallocate(cre_eff)
+      if (allocated(K_cre_pow))   call my_deallocate(K_cre_pow)
+      if (allocated(p_diff))   call my_deallocate(p_diff)
+      if (allocated(f_synchIC))   call my_deallocate(f_synchIC)
+      if (allocated(def_dtadiab))   call my_deallocate(def_dtadiab)
+      if (allocated(def_dtsynchIC))   call my_deallocate(def_dtsynchIC)
+      if (allocated(total_init_cree))   call my_deallocate(total_init_cree)
+      if (allocated(cre_active))   call my_deallocate(cre_active)
+      if (allocated(synch_active))   call my_deallocate(synch_active)
+      if (allocated(adiab_active))   call my_deallocate(adiab_active)
+      if (allocated(icomp_active))   call my_deallocate(icomp_active)
+
+      if (allocated(p_init))   call my_deallocate(p_init)
+      if (allocated(p_br_init))   call my_deallocate(p_br_init)
+
+      if (allocated(norm_init_spectrum_n)) call my_deallocate(norm_init_spectrum_n)
+      if (allocated(norm_init_spectrum_e)) call my_deallocate(norm_init_spectrum_e)
+
 
    end subroutine cleanup_cresp_work_arrays
 
