@@ -464,7 +464,6 @@ contains
             tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-         !case ('cr_A000' : 'cr_zz99')
             clast = len(trim(var), kind=4)
             varn2 = var(clast - 1:clast)
             if (var(clast - 2:clast - 2) == 'e') then
