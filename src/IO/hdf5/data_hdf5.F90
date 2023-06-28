@@ -403,12 +403,14 @@ contains
 
             !part of the code for spectrally resolved species : energy density
 
+               read (varn2,'(I2.2)') ibin
                tab(:,:,:) = cg%u(flind%cre%ebeg+ibin-1, RNG)
 
             else if (var(clast - 2:clast - 2) == 'n') then
 
             !part of the code for spectrally resolved species : number density
 
+               read (varn2,'(I2.2)') ibin
                tab(:,:,:) = cg%u(flind%cre%nbeg+ibin-1, RNG)
             endif
 
