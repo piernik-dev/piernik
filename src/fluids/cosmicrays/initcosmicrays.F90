@@ -382,9 +382,9 @@ contains
 
       do icr = 1, nspc        !< Arrange iterable indexes for each spectral species separately; first indexes for n, then e.
          flind%crspcs(icr)%nbeg = flind%crn%end + I_ONE + (icr - I_ONE) * ncr2b  !< Arrange flind indexes too!
-         flind%crspcs(icr)%nend = flind%crspcs(icr)%nbeg + ncrb
-         flind%crspcs(icr)%ebeg = flind%crspcs(icr)%nend
-         flind%crspcs(icr)%eend = flind%crspcs(icr)%ebeg + ncrb
+         flind%crspcs(icr)%nend = flind%crspcs(icr)%nbeg - I_ONE + ncrb
+         flind%crspcs(icr)%ebeg = flind%crspcs(icr)%nend + I_ONE
+         flind%crspcs(icr)%eend = flind%crspcs(icr)%ebeg - I_ONE + ncrb
 
          iarr_crspc2_n(icr, :) = [(jnb, jnb = flind%crspcs(icr)%nbeg, flind%crspcs(icr)%nend)]
          iarr_crspc2_e(icr, :) = [(jnb, jnb = flind%crspcs(icr)%ebeg, flind%crspcs(icr)%eend)] ! iarr_crspc_e(I_ONE + (icr - I_ONE) * ncrb: ncrb + (icr - I_ONE) * ncrb)
