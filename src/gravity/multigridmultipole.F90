@@ -575,17 +575,22 @@ contains
 
          pset => cg%pset%first
          do while (associated(pset))
-            if (pset%pdata%outside) call Q%point2moments(fpiG*pset%pdata%mass, pset%pdata%pos(xdim), pset%pdata%pos(ydim), pset%pdata%pos(zdim))
+            if (pset%pdata%phy .and. pset%pdata%outside) &
+                 call Q%point2moments(fpiG*pset%pdata%mass, pset%pdata%pos(xdim), pset%pdata%pos(ydim), pset%pdata%pos(zdim))
 
-               ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
-               ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
-               ! only partially in the mapping routine and the rest is ignored here.
-               !
-               ! Suggested fix: set up some buffer at the boundaries (at least one cell wide, few cells are advised)
-               ! and make a "not_mapped" flag instead of "outside". The transition between mapped and not mapped
-               ! particles may be smooth (with partial mappings allowed) but it must not allow for
-               ! particle mappings extending beyond domain boundaries.
-               !
+            ! When the particles that are outside the domain happen to be close to projected exension od the cg-cg boundary,
+            ! they were counted twice. Since we use the phy flag for counting unique particles, it should work also here
+            ! to select the only ghost copy of the outside particle for multipole contribution.
+
+            ! WARNING: Particles that are too close to the outer boundary aren't fully mapped onto the grid.
+            ! This may cause huge errors in the potential, even for "3D" solver because their mass is counted
+            ! only partially in the mapping routine and the rest is ignored here.
+            !
+            ! Suggested fix: set up some buffer at the boundaries (at least one cell wide, few cells are advised)
+            ! and make a "not_mapped" flag instead of "outside". The transition between mapped and not mapped
+            ! particles may be smooth (with partial mappings allowed) but it must not allow for
+            ! particle mappings extending beyond domain boundaries.
+            !
             ! A "not_mapped" flag set in the mapping routine would fix this issue.
 
             pset => pset%nxt
