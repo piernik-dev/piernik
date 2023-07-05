@@ -48,7 +48,7 @@ contains
 
    subroutine is_part_in_cg(cg, pos, indomain, in, phy, out, fin)
 
-      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, LEFT, RIGHT
+      use constants,     only: LO, HI, half, ndims, xdim, ydim, zdim, LEFT, RIGHT
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use particle_func, only: particle_in_area, ijk_of_particle
@@ -60,7 +60,7 @@ contains
       logical,                       intent(in)  :: indomain
       logical,                       intent(out) :: in, phy, out, fin
       real, dimension(ndims,2)                   :: bnd_in, bnd_out
-      integer(kind=4), dimension(ndims)          :: ijk
+      integer(kind=4), dimension(ndims)          :: ijk, lft, rgt
 
       !There is probably a better way to write this
       bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)-npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)-npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)-npb)]
@@ -74,6 +74,10 @@ contains
       out = particle_in_area(pos, bnd_out)   ! Ghost particle
 
       ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
+      lft = 0
+      rgt = ijk_of_particle(dom%edge(:,HI) + half * cg%dl, dom%edge(:,LO), cg%idl) ! do it better: find max indices for the domain in the current refinement level
+      ijk = max(ijk, lft)
+      ijk = min(ijk, rgt)
       fin = cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))
 
       if (indomain) return
