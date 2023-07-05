@@ -249,7 +249,7 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: I_ONE, PPP_PART
-      use dataio_pub,     only: die
+      use dataio_pub,     only: warn
       use domain,         only: is_refined
       use grid_cont,      only: grid_container
       use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
@@ -269,7 +269,7 @@ contains
       type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg"
 
-      if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
+      if (is_refined) call warn("[particle_utils:part_leave_cg] AMR not fully implemented yet")
 
       call ppp_main%start(ts_label, PPP_PART)
 

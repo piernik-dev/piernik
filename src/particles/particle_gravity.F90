@@ -44,7 +44,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
       use constants,        only: ndims, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero
-      use dataio_pub,       only: die
+      use dataio_pub,       only: warn
       use domain,           only: is_refined
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
@@ -93,7 +93,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
+      if (is_refined) call warn("[particle_gravity:update_particle_gravpot_and_acc] AMR not fully implemented yet")
       ! map_tsc contains a loop over cg and a call to update boundaries
       ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
       ig = qna%ind(nbdn_n)
