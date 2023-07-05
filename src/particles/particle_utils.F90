@@ -319,9 +319,9 @@ contains
          pset => cg%pset%first
          do while (associated(pset))
 #ifdef NBODY_CHECK_PID
-            if (.not. pset%pdata%out) then
+            if (.not. pset%pdata%out .or. (pset%pdata%in .and. .not. pset%pdata%fin)) then
 #else /* !NBODY_CHECK_PID */
-            if (.not. pset%pdata%in) then
+            if (.not. (pset%pdata%in .and. pset%pdata%fin)) then
 #endif /* !NBODY_CHECK_PID */
                call detach_particle(cg, pset)
                cycle
