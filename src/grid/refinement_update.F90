@@ -642,6 +642,7 @@ contains
                   if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
                      if (all(aux%cg%leafmap)) then
                         cg => aux%cg
+                        ! Here we have to evacuate the particles to the parent grid
                         call all_lists%forget(cg)
                         if (present(act_count)) act_count = act_count + 1
                         curl%recently_changed = .true.
@@ -771,8 +772,13 @@ contains
       call cgl%cg%costs%start
       associate (flag => cgl%cg%flag)
          if (flag%pending_blocks()) then
+            ! The refinemap2SFC_list is responsible for reducing many cell refinement requests into appropriate child cgs.
+            ! No checks against duplication or proper alignment are implemented here.
+            ! The whole procedure of adding patches was written in a very general way and can be a bit simplified.
             do b = lbound(flag%SFC_refine_list, dim=1), ubound(flag%SFC_refine_list, dim=1)
                if (flag%SFC_refine_list(b)%level == curl%finer%l%id) then
+                  ! Here we can determine which particles should go to a refined grid but the grid is not yet created.
+                  ! We'll let the particles to stay and "prolong " them later, when it will be determined, where they should go.
                   call curl%finer%add_patch(int(bsize, kind=8), flag%SFC_refine_list(b)%off)
                else
                   call die("[refinement_update:refine_one_grid] wrong level!")
