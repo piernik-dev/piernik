@@ -134,7 +134,7 @@ contains
       real, optional,         intent(in)  :: tdyn
       logical, optional,      intent(out) :: success
       type(cg_list_element), pointer      :: cgl
-      logical                             :: in, phy, out, fin, indomain, cgfound
+      logical                             :: in, phy, out, fin, indomain, cgfound, toadd
       real                                :: tform1, tdyn1
 #ifdef NBODY_CHECK_PID
       type(particle), pointer             :: pset
@@ -150,21 +150,21 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
+         toadd = (phy .and. fin) .or. (out .and. .not. (in .or. fin)) ! finest refinement level for partilels in (including outside particles) OR pariticles for all refinement levels in a area of internal boundaries (including fine-coarse)
 #ifdef NBODY_CHECK_PID
-         if (phy .or. out) then
+         if (toadd) then
             pset => cgl%cg%pset%first
             do while (associated(pset))
                if (pset%pdata%pid == pid) then
-                  phy = .false.
-                  out = .false.
+                  toadd = .false.
                   exit
                endif
                pset => pset%nxt
             enddo
          endif
 #endif /* NBODY_CHECK_PID */
-         if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
-         cgfound = cgfound .or. (phy .or. out)
+         if (toadd) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
+         cgfound = cgfound .or. toadd
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound
