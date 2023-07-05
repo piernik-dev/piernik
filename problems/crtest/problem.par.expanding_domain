@@ -41,6 +41,7 @@
     dt_log  = 0.000
     dt_tsl  = 0.000
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'acr1', 'err1', 'velx', 'vely', 'velz'
+    h5_64bit = .true.
  /
 
  $NUMERICAL_SETUP

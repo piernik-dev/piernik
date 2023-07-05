@@ -166,13 +166,21 @@ def compare_dlists(h5f1, h5f2):
             f.remove("particles")
 
     fc = list(set(f1) & set(f2))
+    if ("cree01" in f1) == ("cr_e-e01" in f2):
+        f1c = []
+        f2c = []
+        cre_ = re.compile("^cre[en][0-9][0-9]").search
+        for f in f1:
+            f1c.append(f.replace("cre", "cr_e-") if bool(cre_(f)) else f)
+        for f in f2:
+            f2c.append(f.replace("cre", "cr_e-") if bool(cre_(f)) else f)
+        fc = list(set(f1c) & set(f2c))
+        print("Comparing CR components with old and new names (like 'cree01' translated to 'cr_e-e01')")
     if (len(fc) != len(f1)):
         print("Fields unique for `", h5f1.filename, "': ", list(set(f1) ^ set(fc)))
     if (len(fc) != len(f2)):
         print("Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc)))
 
-    digit = re.compile("[0-9]").search
-    digit2 = re.compile("[0-9][0-9]").search
     v0 = []
     for f in fc:
         if (f[-1] == 'x') or (f[-2] == 'x') or (f[-2:] == '01'):
@@ -194,7 +202,7 @@ def compare_dlists(h5f1, h5f2):
                     if f == v[:-2] + i + v[-1]:
                         vv.append(f)
         elif v[-2:] == '01':
-            digit2 = re.compile(v[:-2] + "[0-9][0-9]").search
+            digit2 = re.compile(v[:-2].replace("+", "\+") + "[0-9][0-9]").search
             for f in fc:
                 if bool(digit2(f)):
                     vv.append(f)
@@ -272,7 +280,13 @@ def collect_dataset(h5f, dset_name, level):
             n_b = [int(ngb[0]), int(ngb[1]), int(ngb[2])]
             ce = n_b + off
             for i in range(len(dset_name)):
-                dset[i, off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[dset_name[i]][:, :, :].swapaxes(0, 2)
+                if dset_name[i] in h5g:
+                    ds = dset_name[i]
+                elif dset_name[i].replace("cr_e-", "cre") in h5g:
+                    ds = dset_name[i].replace("cr_e-", "cre")
+                else:
+                    raise KeyError
+                dset[i, off[0]:ce[0], off[1]:ce[1], off[2]:ce[2]] = h5g[ds][:, :, :].swapaxes(0, 2)
 
     return dset, nd, levelmet
 

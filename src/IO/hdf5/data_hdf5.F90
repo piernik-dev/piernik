@@ -122,10 +122,10 @@ contains
             f%f2cgs = 1.0 / (erg/cm**3)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-         case ("cren01" : "cren99")
+         case ("cr_e-n01" : "cr_e-n99")
             f%fu = "1/\rm{cm}^3"
             f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-         case ("cree01" : "cree99")
+         case ("cr_e-e01" : "cr_e-e99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
          case ("cref01" : "cref99")
@@ -362,11 +362,19 @@ contains
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
 #endif /* COSM_RAYS */
+#ifdef CRESP
+      character(len=I_TWO)                           :: varn2
+      integer                                        :: ibin
+      integer(kind=4)                                :: clast
+#endif /* CRESP */
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
+#ifdef CRESP
+      ibin = 0
+#endif /* CRESP */
 
 #ifdef MAGNETIC
       associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
@@ -389,6 +397,23 @@ contains
             tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
 #endif /* COSM_RAYS */
 #ifdef CRESP
+            clast = len(trim(var), kind=4)
+            varn2 = var(clast - 1:clast)
+            if (var(clast - 2:clast - 2) == 'e') then
+
+            !part of the code for spectrally resolved species : energy density
+
+               read (varn2,'(I2.2)') ibin
+               tab(:,:,:) = cg%u(flind%cre%ebeg+ibin-1, RNG)
+
+            else if (var(clast - 2:clast - 2) == 'n') then
+
+            !part of the code for spectrally resolved species : number density
+
+               read (varn2,'(I2.2)') ibin
+               tab(:,:,:) = cg%u(flind%cre%nbeg+ibin-1, RNG)
+            endif
+
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%cre%nbeg+i-1, RNG)
@@ -493,8 +518,12 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
          case ("divb_norm")
-            tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / sqrt(two * emag_c) / cg%suminv * dom%eff_dim
-            ! In case of troubles, when emag_c ~= 0. we should use a local max(|emag_c|) over neighbors
+            tab(:,:,:) = emag_c
+            where (tab(:,:,:) <= 0.)
+               tab(:,:,:) = 0.
+            elsewhere
+               tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / (sqrt(two) * sqrt(tab(:,:,:))) / cg%suminv * dom%eff_dim
+            endwhere
             !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
             ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.
             ! Alternatively, one can use harmonic mean (cg%dvol**(1./dom%eff_dim)) instead.
@@ -805,10 +834,10 @@ contains
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   endif
                enddo

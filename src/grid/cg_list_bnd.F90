@@ -861,7 +861,7 @@ contains
       call ppp_main%start(bu_label)
 
       if (frun) then
-         call init_fluidboundaries
+         call sane_bnd
          frun = .false.
          if (HI-LO /= I_ONE) call die("[cg_list_bnd:bnd_u] HI-LO /= I_ONE")
       endif
@@ -960,7 +960,7 @@ contains
 
 !> \brief Perform some checks
 
-      subroutine init_fluidboundaries
+      subroutine sane_bnd
 
          use constants,  only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
               &                BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
@@ -971,55 +971,51 @@ contains
 
          integer(kind=4) :: dir, side
 
-         if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
+         if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:bnd_u:sane_bnd] MPI not initialized.") ! bnd_xl, bnd_xr
 
          do dir = xdim, zdim
-            do side = LO, HI
-
-               select case (dom%bnd(dir, side))
-                  case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
-                     ! Do nothing
-                  case (BND_FC, BND_MPI_FC)
-                     call die("[cg_list_bnd:init_fluidboundaries] fine-coarse interfaces not implemented yet")
-                  case (BND_COR)
-                     if (dir == zdim) then
-                        write(msg,'("[cg_list_bnd:init_fluidboundaries] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
-                             side, dom%bnd(dir, side), dir
+            if (dom%has_dir(dir)) then
+               do side = LO, HI
+                  select case (dom%bnd(dir, side))
+                     case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
+                        ! Do nothing
+                     case (BND_FC, BND_MPI_FC)
+                        call die("[cg_list_bnd:bnd_u:sane_bnd] fine-coarse interfaces not implemented yet")
+                     case (BND_COR)
+                        if (dir == zdim) then
+                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                           call warn(msg)
+                        endif
+                     case (BND_SHE)
+                        if (dir /= xdim) then
+                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                           call warn(msg)
+                        endif
+                     case (BND_OUTH)
+                        if (dir == zdim) then
+                           if (is_multicg) call die("[cg_list_bnd:bnd_u:sane_bnd] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
+                           ! nontrivial, not really checked
+                        else
+                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                           call warn(msg)
+                        endif
+                     case (BND_OUTHD)
+                        if (dir == zdim) then
+                           if (is_multicg) call die("[cg_list_bnd:bnd_u:sane_bnd] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
+                           ! nontrivial, not really checked
+                        else
+                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                           call warn(msg)
+                        endif
+                     case default
+                        write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
                         call warn(msg)
-                     endif
-                  case (BND_SHE)
-                     if (dir /= xdim) then
-                        write(msg,'("[cg_list_bnd:init_fluidboundaries] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
-                             side, dom%bnd(dir, side), dir
-                        call warn(msg)
-                     endif
-                  case (BND_OUTH)
-                     if (dir == zdim) then
-                        if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
-                        !nontrivial not really checked
-                     else
-                        write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
-                             side, dom%bnd(dir, side), dir
-                        call warn(msg)
-                     endif
-                  case (BND_OUTHD)
-                     if (dir == zdim) then
-                        if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
-                        !nontrivial not really checked
-                     else
-                        write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
-                             side, dom%bnd(dir, side), dir
-                        call warn(msg)
-                     endif
-                  case default
-                     write(msg,'("[cg_list_bnd:init_fluidboundaries] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
-                          side, dom%bnd(dir, side), dir
-                     call warn(msg)
-               end select
-            enddo
+                 end select
+              enddo
+           endif
          enddo
 
-      end subroutine init_fluidboundaries
+      end subroutine sane_bnd
 
    end subroutine bnd_u
 

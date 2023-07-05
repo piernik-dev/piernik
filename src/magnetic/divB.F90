@@ -100,9 +100,9 @@ contains
       write(msg,'(a)')"[divB:print_divB_norm]"
       do i = I_TWO, I_TWO*min(max_c, dom%nb), I_TWO  ! only even-order norms;  tricky: I_TWO*max_c
          call divB(i)
-         write(msg,'(2a,i1,a,g12.5)')trim(msg), " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
+         write(msg(len_trim(msg)+1:), '(a,i1,a,g12.5)') " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
-      if (qna%exists(psi_n)) write(msg,'(2a,g12.5)') trim(msg), " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
+      if (qna%exists(psi_n)) write(msg(len_trim(msg)+1:), '(a,g12.5)') " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
       if (master) call printinfo(msg)
 
    end subroutine print_divB_norm

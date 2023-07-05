@@ -390,7 +390,7 @@ contains
       write(msg, '(a,g14.6,3a,i3,a)') "[old_soln_list] t= ", t, " name: '", trim(this%label), "' contains ", this%cnt(), " elements"
       select type(this)
          type is (os_list_t)
-            write(msg, '(2a,l2)') trim(msg), " is valid? ", this%is_valid()
+            write(msg(len_trim(msg)+1:), '(a,l2)') " is valid? ", this%is_valid()
          class default
       end select
       if (master) call printinfo(msg)

@@ -284,8 +284,8 @@ contains
 
       if (master) then
          write(msg, '(a,i3)') 'Total amount of CR species: ', ncrsp
-         if (count(cr_spectral) > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', count(cr_spectral), ' spectral component(s)'
-         if (ncrsp - ncrsp_auto > 0) write(msg, '(a,a,i3,a)') trim(msg), ' | ', ncrsp - ncrsp_auto, ' user component(s).'
+         if (count(cr_spectral) > 0) write(msg(len_trim(msg)+1:), '(a,i3,a)') ' | ', count(cr_spectral), ' spectral component(s)'
+         if (ncrsp - ncrsp_auto > 0) write(msg(len_trim(msg)+1:), '(a,i3,a)') ' | ', ncrsp - ncrsp_auto, ' user component(s).'
          call printinfo(msg)
       endif
 

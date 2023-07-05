@@ -145,10 +145,6 @@ contains
 
       class(grid_container), intent(inout) :: this  !< object invoking type-bound procedure
 
-      integer :: b, g
-      integer, parameter :: nseg = 4*2
-      type(tgt_list), dimension(nseg) :: rpio_tgt
-
       call this%cleanup_base
       call this%cleanup_na
       call this%cleanup_bseg
@@ -159,16 +155,14 @@ contains
       call this%pset%cleanup
 #endif /* NBODY */
 
-      rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &
-           &               this%pib_tgt, this%pob_tgt, this%rif_tgt, this%rof_tgt ]
-      do b = 1, nseg
-         if (allocated(rpio_tgt(b)%seg)) then
-            do g = lbound(rpio_tgt(b)%seg, dim=1), ubound(rpio_tgt(b)%seg, dim=1)
-               if (allocated(rpio_tgt(b)%seg(g)%buf)) deallocate(rpio_tgt(b)%seg(g)%buf)
-            enddo
-            deallocate(rpio_tgt(b)%seg)
-         endif
-      enddo
+      call this%ri_tgt%cleanup
+      call this%ro_tgt%cleanup
+      call this%pi_tgt%cleanup
+      call this%po_tgt%cleanup
+      call this%pib_tgt%cleanup
+      call this%pob_tgt%cleanup
+      call this%rif_tgt%cleanup
+      call this%rof_tgt%cleanup
 
    end subroutine cleanup
 

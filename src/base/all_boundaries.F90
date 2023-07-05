@@ -136,13 +136,12 @@ contains
 
       call ppp_main%start(abm_label, PPP_MAG)
 
-      call leaves%leaf_arr4d_boundaries(wna%bi)
-      if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
-
-      ! Do not fuse these loops
       do dir = xdim, zdim
          if (dom%has_dir(dir)) call leaves%bnd_b(dir)
       enddo
+      call leaves%leaf_arr4d_boundaries(wna%bi)
+      if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
+
       if (qna%exists(psi_n)) then
          if (psi_bnd == BND_INVALID) then
             call leaves%external_boundaries(qna%ind(psi_n))

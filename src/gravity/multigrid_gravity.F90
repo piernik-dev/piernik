@@ -49,7 +49,8 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm, recover_sgp
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, &
+        &    unmark_oldsoln, recover_sgpm, recover_sgp, initialize_oldsoln_expanded
 #ifdef HDF5
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif /* HDF5 */
@@ -1210,6 +1211,19 @@ contains
       if (grav_bnd == bnd_isolated) call outer%unmark
 
    end subroutine unmark_oldsoln
+
+!> \brief If the domain was recently expanded, initialize all history with zeroes
+
+   subroutine initialize_oldsoln_expanded
+
+      use multigridvars, only: grav_bnd, bnd_isolated
+
+      implicit none
+
+      call inner%sanitize_expanded
+      if (grav_bnd == bnd_isolated) call outer%sanitize_expanded
+
+   end subroutine initialize_oldsoln_expanded
 
 #ifdef HDF5
    subroutine write_oldsoln_to_restart(file_id)
