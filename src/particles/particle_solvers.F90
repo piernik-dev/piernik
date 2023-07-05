@@ -426,7 +426,7 @@ contains
          do while (associated(cgl))
             pset => cgl%cg%pset%first
             do while (associated(pset))
-               if (pset%pdata%phy) then
+               if (pset%pdata%phy .and. pset%pdata%fin) then
                   pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
                   call pset%pdata%is_outside()
                   call is_part_in_cg(cgl%cg, pset%pdata%pos, .not.pset%pdata%outside, pset%pdata%in, pset%pdata%phy, pset%pdata%out, pset%pdata%fin)
