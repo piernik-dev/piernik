@@ -69,18 +69,17 @@ contains
 
       implicit none
 
-      logical, intent(in)             :: forward
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      type(particle), pointer         :: pset
-      class(component_fluid), pointer :: pfl
-      integer(kind=4)                 :: pid, ig, ir, n_SN
-      integer(kind=4)                 :: ifl, i, j, k, aijk1
+      logical, intent(in)               :: forward
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      type(particle), pointer           :: pset
+      class(component_fluid), pointer   :: pfl
+      integer(kind=4)                   :: pid, ig, ir, n_SN, ifl, i, j, k, aijk1
       integer(kind=4), dimension(ndims) :: ijk1, ijkp, ijkl, ijkr
-      real,    dimension(ndims)       :: pos, vel, acc
-      real,    dimension(ndims,LO:HI) :: sector
-      real                            :: sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
-      logical                         :: in, phy, out, fin, fed, kick, tcond1, tcond2
+      real, dimension(ndims)            :: pos, vel, acc
+      real, dimension(ndims,LO:HI)      :: sector
+      real                              :: sf_dens2dt, c_tau_ff, sfdf, eps_sf, frac, mass_SN, mass, ener, tdyn, tbirth, padd, t1, tj, stage, en_SN, en_SN01, en_SN09, mfdv, tini, tinj, fpadd
+      logical                           :: in, phy, out, fin, fed, kick, tcond1, tcond2
 
       if (.not. forward) return
 
@@ -223,8 +222,7 @@ contains
 
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: pfl
-      integer(kind=4),     intent(in) :: i, j, k
-      integer(kind=4),     intent(in) :: ir
+      integer(kind=4),     intent(in) :: i, j, k, ir
       real,                intent(in) :: mass, frac1
 
       dmass_stars                 = dmass_stars         + mass
