@@ -163,7 +163,10 @@ contains
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_cr_1, iarr_crn, iarr_crs
+      use initcosmicrays, only: iarr_crs
+#ifndef CRESP
+      use initcosmicrays, only: gamma_cr_1, iarr_crn
+#endif /* !CRESP */
 #ifdef SN_SRC
       use snsources,      only: cr_sn
 #endif /* SN_SRC */
@@ -213,7 +216,9 @@ contains
                                      & emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
+#ifndef CRESP
                   cg%u(iarr_crn(1),i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / gamma_cr_1
+#endif /* !CRESP */
 #endif /* COSM_RAYS */
                enddo
             enddo
