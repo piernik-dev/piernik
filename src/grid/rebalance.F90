@@ -387,6 +387,8 @@ contains
 !! Warning: The allocates of cglepa(i)%tbuf can be pretty huge (totfld * product(cg%n_) * sum_od_incoming_and_outgoing_blocks * sizeof(double)).
 !! Pessimistically, the amount of allocated memory can be doubled here for a brief period of time.
 !! ToDo: Make a check for available memory and implement also multi-pass variant of the exchange.
+!!
+!! The transfer of particles has to be implemented here alongside with the transfer of grid data.
 !<
 
    subroutine reshuffle
