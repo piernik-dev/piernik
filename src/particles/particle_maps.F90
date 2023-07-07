@@ -89,12 +89,14 @@ contains
 
    subroutine map_ngp(iv, factor)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_PART
       use dataio_pub,     only: die
       use domain,         only: dom
       use particle_types, only: particle
+      use ppp,            only: ppp_main
 
       implicit none
 
@@ -104,9 +106,13 @@ contains
       type(cg_list_element), pointer :: cgl
       type(particle), pointer        :: pset
       integer, dimension(ndims)      :: ijkp
+      character(len=*), parameter    :: map_label = "map_ngp"
+
+      call ppp_main%start(map_label, PPP_PART)
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
 
          ijkp(:) = cgl%cg%ijkse(:,LO)
          pset => cgl%cg%pset%first
@@ -122,18 +128,23 @@ contains
             pset => pset%nxt
          enddo
 
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(map_label, PPP_PART)
 
    end subroutine map_ngp
 
    subroutine map_cic(iv, factor)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: half, xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use constants,      only: half, xdim, ydim, zdim, ndims, LO, HI, CENTER, PPP_PART
       use domain,         only: dom
       use particle_types, only: particle
+      use ppp,            only: ppp_main
 
       implicit none
 
@@ -147,9 +158,13 @@ contains
       integer, dimension(ndims, LO:HI) :: ijkp
       integer, dimension(ndims)        :: cur_ind
       real                             :: weight
+      character(len=*), parameter      :: map_label = "map_cic"
+
+      call ppp_main%start(map_label, PPP_PART)
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
 
          pset => cgl%cg%pset%first
          do while (associated(pset))
@@ -191,18 +206,23 @@ contains
             pset => pset%nxt
          enddo
 
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
+
+      call ppp_main%stop(map_label, PPP_PART)
 
    end subroutine map_cic
 
    subroutine map_tsc(iv, factor)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE, PPP_PART
       use domain,         only: dom
       use particle_types, only: particle
+      use ppp,            only: ppp_main
 
       implicit none
 
@@ -216,9 +236,13 @@ contains
       integer(kind=4), dimension(ndims, IM:IP) :: ijkp
       integer, dimension(ndims)        :: cur_ind
       real                             :: weight, delta_x, weight_tmp
+      character(len=*), parameter      :: map_label = "map_tsc"
+
+      call ppp_main%start(map_label, PPP_PART)
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
 
          pset => cgl%cg%pset%first
          do while (associated(pset))
@@ -262,11 +286,14 @@ contains
             end associate
             pset => pset%nxt
          enddo
+
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
       call leaves%leaf_arr3d_boundaries(iv)
 
+      call ppp_main%stop(map_label, PPP_PART)
 
    end subroutine map_tsc
 
