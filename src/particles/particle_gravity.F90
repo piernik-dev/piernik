@@ -40,10 +40,11 @@ contains
 
    subroutine update_particle_gravpot_and_acc
 
+      use cg_cost_data,     only: I_PARTICLE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero
+      use constants,        only: ndims, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, PPP_PART
       use dataio_pub,       only: die
       use domain,           only: is_refined
       use gravity,          only: source_terms_grav
@@ -53,6 +54,7 @@ contains
       use particle_pub,     only: mask_gpot1b
       use particle_types,   only: particle
       use particle_utils,   only: global_count_all_particles
+      use ppp,              only: ppp_main
 #ifdef DROP_OUTSIDE_PART
       use particle_utils,   only: detach_particle
 #endif /* DROP_OUTSIDE_PART */
@@ -62,14 +64,17 @@ contains
 
       implicit none
 
-      type(grid_container),  pointer       :: cg
-      type(cg_list_element), pointer       :: cgl
-      type(particle),        pointer       :: pset
+      type(grid_container),  pointer :: cg
+      type(cg_list_element), pointer :: cgl
+      type(particle),        pointer :: pset
 
-      integer, dimension(ndims)            :: cell
-      real,    dimension(ndims)            :: dist
-      real                                 :: Mtot
-      integer(kind=4)                      :: ig, ip, ib
+      integer, dimension(ndims)      :: cell
+      real,    dimension(ndims)      :: dist
+      real                           :: Mtot
+      integer(kind=4)                :: ig, ip, ib
+      character(len=*), parameter    :: potacc_i_label = "upd_part_gpot_acc:pre", potacc_label = "upd_part_gpot_acc"
+
+      call ppp_main%start(potacc_i_label, PPP_PART)
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -81,15 +86,23 @@ contains
       call source_terms_grav
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
 
+      call ppp_main%stop(potacc_i_label, PPP_PART)
+
       if (global_count_all_particles() == 0) return
+
+      call ppp_main%start(potacc_label, PPP_PART)
 
       Mtot = find_Mtot()
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          cg%nbdn = zero
          cg%prth = zero
+
+         call cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -107,6 +120,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          pset => cg%pset%first
          do while (associated(pset))
@@ -130,12 +144,14 @@ contains
             pset => pset%nxt
          enddo
 
+         call cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Finish update of particle gravpot & acceleration')
 #endif /* VERBOSE */
+      call ppp_main%stop(potacc_label, PPP_PART)
 
    end subroutine update_particle_gravpot_and_acc
 
