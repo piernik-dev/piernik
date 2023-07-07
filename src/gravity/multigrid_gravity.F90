@@ -716,7 +716,7 @@ contains
       type(grid_container),  pointer :: cg
       logical                        :: apply_src_Mcorrection, use_p, vacuum
       integer(kind=4), allocatable, dimension(:) :: q_sg_arr
-      character(len=*), parameter :: mgi_label = "grav_MG_init_source"
+      character(len=*), parameter    :: mgi_label = "grav_MG_init_source"
 
       call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
