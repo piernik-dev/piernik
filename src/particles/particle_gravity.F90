@@ -334,7 +334,8 @@ contains
                  d2f_d2_o2(cell, cg, ig, zdim) * dist(zdim)**2 + &
            two * d2f_dd_o2(cell, cg, ig, xdim, ydim) * dist(xdim)*dist(ydim) + &
            two * d2f_dd_o2(cell, cg, ig, xdim, zdim) * dist(xdim)*dist(zdim)
-         pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%point(cell) + dpot + half * d2pot)
+         pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)) + dpot + half * d2pot)
+         !pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%point(cell) + dpot + half * d2pot)
       else
          pset%pdata%energy = -newtong * pset%pdata%mass * Mtot / norm2(pset%pdata%pos(:))
          if ((abs(pset%pdata%energy) < half * pset%pdata%mass * norm2(pset%pdata%vel(:)) **2)) pset%pdata%energy = 0.
