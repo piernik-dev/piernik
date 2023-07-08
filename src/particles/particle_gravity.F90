@@ -452,9 +452,10 @@ contains
 
    function update_particle_acc_tsc(ig, cg, pos) result (acc)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, zero
-      use domain,    only: dom
-      use grid_cont, only: grid_container
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, half, zero
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -462,55 +463,48 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       real, dimension(ndims),        intent(in) :: pos
       real, dimension(ndims)                    :: acc
+
       integer                                   :: i, j, k
-      integer(kind=4)                           :: cdim
       integer, dimension(ndims, IM:IP)          :: ijkp
-      integer, dimension(ndims)                 :: cur_ind
-      real,    dimension(ndims)                 :: fxyz, axyz
-      real                                      :: weight, delta_x, weight_tmp
+      real,    dimension(ndims)                 :: axyz
+      real                                      :: weight_x, weight_xy, weight, delta
 
-      fxyz = zero ! suppress -Wmaybe-uninitialized
+      ! This routine is performance-critical, so every optimization matters
+      if (dom%eff_dim /= ndims) call die("[particle_gravity:update_particle_acc_tsc] Only 3D version is implemented")
+
+      ijkp(:, I0) = nint((pos(:) - cg%fbnd(:,LO)-cg%dl(:)/2.) * cg%idl(:) + int(cg%lhn(:, LO)) + dom%nb, kind=4)
+      ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
+      ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
+
+      ! It is possible to write these loops in a more compact way, e.g. without repeating the formulas
+      ! but I found this hand-unrolled version as the fastest.
+
       axyz = zero
-
-      do cdim = xdim, zdim
-         if (dom%has_dir(cdim)) then
-            ijkp(cdim, I0) = nint((pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
-            ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
-            ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
-         else
-            ijkp(cdim, IM) = cg%ijkse(cdim, LO)
-            ijkp(cdim, I0) = cg%ijkse(cdim, LO)
-            ijkp(cdim, IP) = cg%ijkse(cdim, HI)
-         endif
-      enddo
-
       do i = ijkp(xdim, IM), ijkp(xdim, IP)
+
+         delta = (pos(xdim) - cg%x(i)) * cg%idl(xdim)
+         weight_x = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, i == ijkp(xdim, I0))  !!! BEWARE hardcoded magic
+
          do j = ijkp(ydim, IM), ijkp(ydim, IP)
+
+            delta = (pos(ydim) - cg%y(j)) * cg%idl(ydim)
+            weight_xy = weight_x * merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, j == ijkp(ydim, I0))  !!! BEWARE hardcoded magic
+
             do k = ijkp(zdim, IM), ijkp(zdim, IP)
 
-               cur_ind(:) = [i, j, k]
-               weight = 1.0
+               delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
+               weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
 
-               do cdim = xdim, zdim
-                  if (.not.dom%has_dir(cdim)) cycle
-                  delta_x = ( pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
+               ! axyz += weight * fxyz
+               axyz(:) = axyz(:) + weight_xy * weight * &
+                    &              [ cg%q(ig)%arr(i-dom%D_x, j, k) - cg%q(ig)%arr(i+dom%D_x, j, k), &
+                    &                cg%q(ig)%arr(i, j-dom%D_y, k) - cg%q(ig)%arr(i, j+dom%D_y, k), &
+                    &                cg%q(ig)%arr(i, j, k-dom%D_z) - cg%q(ig)%arr(i, j, k+dom%D_z) ]
 
-                  if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
-                     weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
-                  else
-                     weight_tmp = 0.75 - delta_x**2
-                  endif
-
-                  weight = weight_tmp * weight
-                  ! fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
-               enddo
-               fxyz(:) = [ cg%q(ig)%arr(i-dom%D_x, j, k) - cg%q(ig)%arr(i+dom%D_x, j, k), &
-                    &      cg%q(ig)%arr(i, j-dom%D_y, k) - cg%q(ig)%arr(i, j+dom%D_y, k), &
-                    &      cg%q(ig)%arr(i, j, k-dom%D_z) - cg%q(ig)%arr(i, j, k+dom%D_z) ]
-               axyz(:) = axyz(:) + fxyz(:) * weight
             enddo
          enddo
       enddo
+
       acc(:) = half * axyz(:) * cg%idl(:)
 
    end function update_particle_acc_tsc
