@@ -452,7 +452,7 @@ contains
 
    function update_particle_acc_tsc(ig, cg, pos) result (acc)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, idm, half, zero
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, zero
       use domain,    only: dom
       use grid_cont, only: grid_container
 
@@ -502,13 +502,11 @@ contains
                   endif
 
                   weight = weight_tmp * weight
-                  associate(cpx => cur_ind(xdim)+idm(cdim, xdim), cmx => cur_ind(xdim)-idm(cdim, xdim), &
-                       &    cpy => cur_ind(ydim)+idm(cdim, ydim), cmy => cur_ind(ydim)-idm(cdim, ydim), &
-                       &    cpz => cur_ind(zdim)+idm(cdim, zdim), cmz => cur_ind(zdim)-idm(cdim, zdim))
-                     fxyz(cdim) = -(cg%q(ig)%arr(cpx, cpy, cpz) - cg%q(ig)%arr(cmx, cmy, cmz))
-                  end associate
                   ! fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
                enddo
+               fxyz(:) = [ cg%q(ig)%arr(i-dom%D_x, j, k) - cg%q(ig)%arr(i+dom%D_x, j, k), &
+                    &      cg%q(ig)%arr(i, j-dom%D_y, k) - cg%q(ig)%arr(i, j+dom%D_y, k), &
+                    &      cg%q(ig)%arr(i, j, k-dom%D_z) - cg%q(ig)%arr(i, j, k+dom%D_z) ]
                axyz(:) = axyz(:) + fxyz(:) * weight
             enddo
          enddo
