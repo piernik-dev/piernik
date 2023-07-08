@@ -44,7 +44,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, PPP_PART
+      use constants,        only: ndims, xdim, ydim, zdim, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, PPP_PART
       use dataio_pub,       only: die
       use domain,           only: is_refined
       use gravity,          only: source_terms_grav
@@ -127,7 +127,8 @@ contains
 
             call locate_particle_in_cell(cg, pset%pdata%pos, cell, dist)
 
-            call update_particle_density_array(ip, cg, cell, pset%pdata%outside)
+            if (.not. pset%pdata%outside) &  ! Update particle density array
+                 cg%q(ip)%arr(cell(xdim), cell(ydim), cell(zdim)) = cg%q(ip)%arr(cell(xdim), cell(ydim), cell(zdim)) + one
 
             call update_particle_potential_energy(ig, cg, pset, cell, dist, Mtot)
 
@@ -175,22 +176,6 @@ contains
       enddo
 
    end subroutine locate_particle_in_cell
-
-   subroutine update_particle_density_array(ig, cg, cell, poutside)
-
-      use constants, only: ndims, one, xdim, ydim, zdim
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      integer(kind=4),               intent(in)    :: ig
-      type(grid_container), pointer, intent(inout) :: cg
-      integer, dimension(ndims),     intent(in)    :: cell
-      logical,                       intent(in)    :: poutside
-
-      if (.not. poutside) cg%q(ig)%arr(cell(xdim),cell(ydim),cell(zdim)) = cg%q(ig)%point(cell) + one
-
-   end subroutine update_particle_density_array
 
    function phi_pm_part(pos, mass)
 
