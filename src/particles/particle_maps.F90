@@ -219,7 +219,7 @@ contains
       use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE, PPP_PART
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, half, I_ONE, PPP_PART
       use dataio_pub,     only: die
       use domain,         only: dom
       use particle_types, only: particle
@@ -232,12 +232,11 @@ contains
 
       type(cg_list_element), pointer   :: cgl
       type(particle), pointer          :: pset
-      integer(kind=4)                  :: cdim
       integer                          :: i, j, k
-      integer(kind=4), dimension(ndims, IM:IP) :: ijkp
-      integer, dimension(ndims)        :: cur_ind
-      real                             :: weight_x, weight_xy, weight, delta
+      integer, dimension(ndims, IM:IP) :: ijkp
+      real                             :: weight_x, weight_xy, delta, fac
       character(len=*), parameter      :: map_label = "map_tsc"
+      logical                          :: full_span
 
       ! This routine is performance-critical, so every optimization matters
       if (dom%eff_dim /= ndims) call die("[particle_maps:map_tsc] Only 3D version is implemented")
@@ -259,9 +258,11 @@ contains
                ! Nearly the same code as in particle_gravity::update_particle_acc_tsc
                ! The same performance constraints apply here
 
-               ijkp(:, I0) = floor((part%pos(:) - dom%edge(:,LO)) *cg%idl(:), kind=4)
-               ijkp(:, IM) = max(ijkp(:, I0) - I_ONE, cg%lhn(:, LO))
-               ijkp(:, IP) = min(ijkp(:, I0) + I_ONE, cg%lhn(:, HI))
+               ijkp(:, I0) = floor((part%pos(:) - dom%edge(:,LO)) * cg%idl(:))
+               ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
+               ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
+
+               full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - I_ONE) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + I_ONE)
 
                do i = ijkp(xdim, IM), ijkp(xdim, IP)
 
@@ -273,13 +274,19 @@ contains
                      delta = (part%pos(ydim) - cg%y(j)) * cg%idl(ydim)
                      weight_xy = weight_x * merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, j == ijkp(ydim, I0))  !!! BEWARE hardcoded magic
 
-                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
-
-                        delta = (part%pos(zdim) - cg%z(k)) * cg%idl(zdim)
-                        weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
-
-                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cg%dvol) * weight_xy * weight
-                     enddo
+                     fac = factor * (part%mass / cg%dvol) * weight_xy
+                     if (full_span) then  ! aggressive manual unrolling
+                        k = ijkp(zdim, I0)
+                        delta = (part%pos(zdim) - cg%z(k)) * cg%idl(zdim) ! delta for neighbors differs by -/+ 1 so no need to recalculate it for every k
+                        field(i, j, k-1) = field(i, j, k-1) + fac * (1.625 - 1.5 * abs(delta + 1.) + delta + half * delta**2)
+                        field(i, j, k  ) = field(i, j, k  ) + fac * (0.75 - delta**2)
+                        field(i, j, k+1) = field(i, j, k+1) + fac * (1.625 - 1.5 * abs(delta - 1.) - delta + half * delta**2)
+                     else
+                        do k = ijkp(zdim, IM), ijkp(zdim, IP)
+                           delta = (part%pos(zdim) - cg%z(k)) * cg%idl(zdim)
+                           field(i, j, k) = field(i, j, k) + fac * merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
+                        enddo
+                     endif
                   enddo
                enddo
             end associate
