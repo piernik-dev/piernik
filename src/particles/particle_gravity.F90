@@ -516,7 +516,12 @@ contains
                   endif
 
                   weight = weight_tmp * weight
-                  fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
+                  associate(cpx => cur_ind(xdim)+idm(cdim, xdim), cmx => cur_ind(xdim)-idm(cdim, xdim), &
+                       &    cpy => cur_ind(ydim)+idm(cdim, ydim), cmy => cur_ind(ydim)-idm(cdim, ydim), &
+                       &    cpz => cur_ind(zdim)+idm(cdim, zdim), cmz => cur_ind(zdim)-idm(cdim, zdim))
+                     fxyz(cdim) = -(cg%q(ig)%arr(cpx, cpy, cpz) - cg%q(ig)%arr(cmx, cmy, cmz))
+                  end associate
+                  ! fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
                enddo
                axyz(:) = axyz(:) + fxyz(:) * weight
             enddo
