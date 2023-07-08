@@ -220,23 +220,27 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, half, I_ONE, PPP_PART
+      use dataio_pub,     only: die
       use domain,         only: dom
       use particle_types, only: particle
       use ppp,            only: ppp_main
 
       implicit none
 
-      integer(kind=4), intent(in)      :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)      :: factor !< typically fpiG
+      integer(kind=4), intent(in) :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in) :: factor !< typically fpiG
 
       type(cg_list_element), pointer   :: cgl
-      type(particle), pointer    :: pset
+      type(particle), pointer          :: pset
       integer(kind=4)                  :: cdim
       integer                          :: i, j, k
       integer(kind=4), dimension(ndims, IM:IP) :: ijkp
       integer, dimension(ndims)        :: cur_ind
-      real                             :: weight, delta_x, weight_tmp
+      real                             :: weight_x, weight_xy, weight, delta
       character(len=*), parameter      :: map_label = "map_tsc"
+
+      ! This routine is performance-critical, so every optimization matters
+      if (dom%eff_dim /= ndims) call die("[particle_maps:map_tsc] Only 3D version is implemented")
 
       call ppp_main%start(map_label, PPP_PART)
 
@@ -251,35 +255,30 @@ contains
                   pset => pset%nxt
                   cycle
                endif
-               do cdim = xdim, zdim
-                  if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = floor((part%pos(cdim) - dom%edge(cdim,LO)) *cg%idl(cdim), kind=4)
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - I_ONE, cg%lhn(cdim, LO))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + I_ONE, cg%lhn(cdim, HI))
-                  else
-                     ijkp(cdim, IM) = cg%ijkse(cdim, LO)
-                     ijkp(cdim, I0) = cg%ijkse(cdim, LO)
-                     ijkp(cdim, IP) = cg%ijkse(cdim, HI)
-                  endif
-               enddo
+
+               ! Nearly the same code as in particle_gravity::update_particle_acc_tsc
+               ! The same performance constraints apply here
+
+               ijkp(:, I0) = floor((part%pos(:) - dom%edge(:,LO)) *cg%idl(:), kind=4)
+               ijkp(:, IM) = max(ijkp(:, I0) - I_ONE, cg%lhn(:, LO))
+               ijkp(:, IP) = min(ijkp(:, I0) + I_ONE, cg%lhn(:, HI))
 
                do i = ijkp(xdim, IM), ijkp(xdim, IP)
-                  do j = ijkp(ydim, IM), ijkp(ydim, IP)
-                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
-                        cur_ind(:) = [i, j, k]
-                        weight = 1.0
 
-                        do cdim = xdim, zdim
-                           if (.not.dom%has_dir(cdim)) cycle
-                           delta_x = ( part%pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
-                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
-                              weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
-                           else
-                              weight_tmp = 0.75 - delta_x**2
-                           endif
-                           weight = weight_tmp * weight
-                        enddo
-                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cg%dvol) * weight
+                  delta = (part%pos(xdim) - cg%x(i)) * cg%idl(xdim)
+                  weight_x = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, i == ijkp(xdim, I0))  !!! BEWARE hardcoded magic
+
+                  do j = ijkp(ydim, IM), ijkp(ydim, IP)
+
+                     delta = (part%pos(ydim) - cg%y(j)) * cg%idl(ydim)
+                     weight_xy = weight_x * merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, j == ijkp(ydim, I0))  !!! BEWARE hardcoded magic
+
+                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
+
+                        delta = (part%pos(zdim) - cg%z(k)) * cg%idl(zdim)
+                        weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
+
+                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cg%dvol) * weight_xy * weight
                      enddo
                   enddo
                enddo
