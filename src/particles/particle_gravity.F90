@@ -44,9 +44,9 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, xdim, ydim, zdim, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, PPP_PART
+      use constants,        only: ndims, xdim, ydim, zdim, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, LO, PPP_PART
       use dataio_pub,       only: die
-      use domain,           only: is_refined
+      use domain,           only: dom, is_refined
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -125,7 +125,9 @@ contains
          pset => cg%pset%first
          do while (associated(pset))
 
-            call locate_particle_in_cell(cg, pset%pdata%pos, cell, dist)
+            ! Locate particle in cell
+            cell = floor((pset%pdata%pos - dom%edge(:, LO)) * cg%idl)
+            dist = pset%pdata%pos - (dom%edge(:, LO) + cell * cg%dl)
 
             if (.not. pset%pdata%outside) &  ! Update particle density array
                  cg%q(ip)%arr(cell(xdim), cell(ydim), cell(zdim)) = cg%q(ip)%arr(cell(xdim), cell(ydim), cell(zdim)) + one
@@ -155,27 +157,6 @@ contains
       call ppp_main%stop(potacc_label, PPP_PART)
 
    end subroutine update_particle_gravpot_and_acc
-
-   subroutine locate_particle_in_cell(cg, pos, cell, dist)
-
-      use constants, only: ndims, xdim, zdim, LO
-      use domain,    only: dom
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      type(grid_container),      intent(inout) :: cg
-      real,    dimension(ndims), intent(in)    :: pos
-      integer, dimension(ndims), intent(out)   :: cell
-      real,    dimension(ndims), intent(out)   :: dist
-      integer                                  :: cdim
-
-      do cdim = xdim, zdim
-         cell(cdim) = floor((pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
-         dist(cdim) = pos(cdim) - ( dom%edge(cdim,LO) + cell(cdim) * cg%dl(cdim) )
-      enddo
-
-   end subroutine locate_particle_in_cell
 
    function phi_pm_part(pos, mass)
 
