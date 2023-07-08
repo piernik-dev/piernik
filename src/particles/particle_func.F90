@@ -110,9 +110,11 @@ contains
 
    end subroutine check_ord
 
-   function df_d_o2(cell, cg, ig, dir)
+   ! These functions cannot be elemental, but even the pure attribute gains some performance here
 
-      use constants, only: idm, ndims, half
+   pure function df_d_o2(cell, cg, ig, dir)
+
+      use constants, only: idm, ndims, half, xdim, ydim, zdim
       use grid_cont, only: grid_container
 
       implicit none
@@ -123,13 +125,18 @@ contains
       real, target                              :: df_d_o2
 
       !o(R^2)
-      df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) * half *cg%idl(dir)
+      associate(cpx => cell(xdim)+idm(dir, xdim), cmx => cell(xdim)-idm(dir, xdim), &
+           &    cpy => cell(ydim)+idm(dir, ydim), cmy => cell(ydim)-idm(dir, ydim), &
+           &    cpz => cell(zdim)+idm(dir, zdim), cmz => cell(zdim)-idm(dir, zdim))
+         df_d_o2 = (cg%q(ig)%arr(cpx, cpy, cpz) - cg%q(ig)%arr(cmx, cmy, cmz)) * half * cg%idl(dir)
+      end associate
+      ! df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) * half *cg%idl(dir)
 
    end function df_d_o2
 
-   function d2f_d2_o2(cell, cg, ig, dir)
+   pure function d2f_d2_o2(cell, cg, ig, dir)
 
-      use constants, only: idm, ndims, two
+      use constants, only: idm, ndims, two, xdim, ydim, zdim
       use grid_cont, only: grid_container
 
       implicit none
@@ -140,13 +147,18 @@ contains
       real, target                              :: d2f_d2_o2
 
       !o(R^2)
-      d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - two*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) * cg%idl(dir)**2
+      associate(cpx => cell(xdim)+idm(dir, xdim), cmx => cell(xdim)-idm(dir, xdim), cx => cell(xdim), &
+           &    cpy => cell(ydim)+idm(dir, ydim), cmy => cell(ydim)-idm(dir, ydim), cy => cell(ydim), &
+           &    cpz => cell(zdim)+idm(dir, zdim), cmz => cell(zdim)-idm(dir, zdim), cz => cell(zdim))
+         d2f_d2_o2 = (cg%q(ig)%arr(cpx, cpy, cpz) - two * cg%q(ig)%arr(cx, cy, cz) + cg%q(ig)%arr(cmx, cmy, cmz)) * cg%idl(dir)**2
+      end associate
+      ! d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - two*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) * cg%idl(dir)**2
 
    end function d2f_d2_o2
 
-   function d2f_dd_o2(cell, cg, ig, dir1, dir2)
+   pure function d2f_dd_o2(cell, cg, ig, dir1, dir2)
 
-      use constants, only: idm, ndims, oneq
+      use constants, only: idm, ndims, oneq, xdim, ydim, zdim
       use grid_cont, only: grid_container
 
       implicit none
@@ -157,8 +169,17 @@ contains
       real, target                              :: d2f_dd_o2
 
       !o(R^2)
-      d2f_dd_o2 = (cg%q(ig)%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(ig)%point(cell+idm(dir1,:)-idm(dir2,:)) + &
-                   cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) * oneq*cg%idl(dir1)*cg%idl(dir2)
+      associate(cppx => cell(xdim)+idm(dir1, xdim)+idm(dir2, xdim), cmmx => cell(xdim)-idm(dir1, xdim)-idm(dir2, xdim), &
+           &    cppy => cell(ydim)+idm(dir1, ydim)+idm(dir2, ydim), cmmy => cell(ydim)-idm(dir1, ydim)-idm(dir2, ydim), &
+           &    cppz => cell(zdim)+idm(dir1, zdim)+idm(dir2, zdim), cmmz => cell(zdim)-idm(dir1, zdim)-idm(dir2, zdim), &
+           &    cpmx => cell(xdim)+idm(dir1, xdim)-idm(dir2, xdim), cmpx => cell(xdim)-idm(dir1, xdim)+idm(dir2, xdim), &
+           &    cpmy => cell(ydim)+idm(dir1, ydim)-idm(dir2, ydim), cmpy => cell(ydim)-idm(dir1, ydim)+idm(dir2, ydim), &
+           &    cpmz => cell(zdim)+idm(dir1, zdim)-idm(dir2, zdim), cmpz => cell(zdim)-idm(dir1, zdim)+idm(dir2, zdim))
+         d2f_dd_o2 = (cg%q(ig)%arr(cppx, cppy, cppz) - cg%q(ig)%arr(cpmx, cpmy, cpmz) + &
+              &       cg%q(ig)%arr(cmmx, cmmy, cmmz) - cg%q(ig)%arr(cmpx, cmpy, cmpz)) * oneq * cg%idl(dir1) * cg%idl(dir2)
+      end associate
+      ! d2f_dd_o2 = (cg%q(ig)%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(ig)%point(cell+idm(dir1,:)-idm(dir2,:)) + &
+      !              cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) * oneq*cg%idl(dir1)*cg%idl(dir2)
 
    end function d2f_dd_o2
 
