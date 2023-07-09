@@ -449,6 +449,7 @@ contains
       integer, dimension(ndims, IM:IP)          :: ijkp
       real,    dimension(ndims)                 :: axyz
       real                                      :: weight_x, weight_xy, weight, delta
+      logical                                   :: full_span
 
       ! This routine is performance-critical, so every optimization matters
       if (dom%eff_dim /= ndims) call die("[particle_gravity:update_particle_acc_tsc] Only 3D version is implemented")
@@ -456,6 +457,7 @@ contains
       ijkp(:, I0) = nint((pos(:) - cg%fbnd(:,LO)-cg%dl(:)/2.) * cg%idl(:) + int(cg%lhn(:, LO)) + dom%nb, kind=4)
       ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
       ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
+      full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
 
       ! It is possible to write these loops in a more compact way, e.g. without repeating the formulas
       ! but I found this hand-unrolled version as the fastest.
@@ -471,18 +473,36 @@ contains
             delta = (pos(ydim) - cg%y(j)) * cg%idl(ydim)
             weight_xy = weight_x * merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, j == ijkp(ydim, I0))  !!! BEWARE hardcoded magic
 
-            do k = ijkp(zdim, IM), ijkp(zdim, IP)
-
+            if (full_span) then  ! aggressive manual unrolling
+               k = ijkp(zdim, I0)
                delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
-               weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
+               axyz(:) = axyz(:) + weight_xy * (1.625 - 1.5 * abs(delta + 1.) + delta + half * delta**2) * &
+                       &           [ cg%q(ig)%arr(i-1, j, k-1) - cg%q(ig)%arr(i+1, j, k-1), &
+                       &             cg%q(ig)%arr(i, j-1, k-1) - cg%q(ig)%arr(i, j+1, k-1), &
+                       &             cg%q(ig)%arr(i, j, k-2) - cg%q(ig)%arr(i, j, k) ]
+               axyz(:) = axyz(:) + weight_xy * (0.75 - delta**2) * &
+                       &           [ cg%q(ig)%arr(i-1, j, k) - cg%q(ig)%arr(i+1, j, k), &
+                       &             cg%q(ig)%arr(i, j-1, k) - cg%q(ig)%arr(i, j+1, k), &
+                       &             cg%q(ig)%arr(i, j, k-1) - cg%q(ig)%arr(i, j, k+1) ]
+               axyz(:) = axyz(:) + weight_xy * (1.625 - 1.5 * abs(delta - 1.) - delta + half * delta**2) * &
+                       &           [ cg%q(ig)%arr(i-1, j, k+1) - cg%q(ig)%arr(i+1, j, k+1), &
+                       &             cg%q(ig)%arr(i, j-1, k+1) - cg%q(ig)%arr(i, j+1, k+1), &
+                       &             cg%q(ig)%arr(i, j, k) - cg%q(ig)%arr(i, j, k+2) ]
+            else
 
-               ! axyz += weight * fxyz
-               axyz(:) = axyz(:) + weight_xy * weight * &
-                    &              [ cg%q(ig)%arr(i-dom%D_x, j, k) - cg%q(ig)%arr(i+dom%D_x, j, k), &
-                    &                cg%q(ig)%arr(i, j-dom%D_y, k) - cg%q(ig)%arr(i, j+dom%D_y, k), &
-                    &                cg%q(ig)%arr(i, j, k-dom%D_z) - cg%q(ig)%arr(i, j, k+dom%D_z) ]
+               do k = ijkp(zdim, IM), ijkp(zdim, IP)
+                  delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
+                  weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
 
-            enddo
+                  ! axyz += weight * fxyz
+                  ! +/-1 in the indices is allowed instead of dom%D_[xyz] because we assumed 3D here
+                  axyz(:) = axyz(:) + weight_xy * weight * &
+                       &              [ cg%q(ig)%arr(i-1, j, k) - cg%q(ig)%arr(i+1, j, k), &
+                       &                cg%q(ig)%arr(i, j-1, k) - cg%q(ig)%arr(i, j+1, k), &
+                       &                cg%q(ig)%arr(i, j, k-1) - cg%q(ig)%arr(i, j, k+1) ]
+               enddo
+            endif
+
          enddo
       enddo
 
