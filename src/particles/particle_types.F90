@@ -35,7 +35,9 @@ module particle_types
    implicit none
 
    private
-   public :: particle, particle_set, particle_data
+   public :: particle, particle_set, particle_data, npb
+
+   integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
 
    !>
    !! \brief simple particle: just mass and position

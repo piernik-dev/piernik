@@ -42,13 +42,12 @@ module particle_utils
    public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
-   integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
 
 contains
 
    subroutine is_part_in_cg(cg, pos, indomain, in, phy, out)
 
-      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, LEFT, RIGHT
+      use constants,     only: ndims
       use grid_cont,     only: grid_container
       use particle_func, only: particle_in_area
 
@@ -58,18 +57,10 @@ contains
       real, dimension(ndims),        intent(in)  :: pos
       logical,                       intent(in)  :: indomain
       logical,                       intent(out) :: in, phy, out
-      real, dimension(ndims,2)                   :: bnd_in, bnd_out
 
-      !There is probably a better way to write this
-      bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)-npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)-npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)-npb)]
-      bnd_out(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)+npb), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)+npb), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)+npb)]
-
-      bnd_in(:,LO)  = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+npb)]
-      bnd_in(:,HI)  = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-npb), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-npb), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-npb)]
-
-      in  = particle_in_area(pos, bnd_in)
+      in  = particle_in_area(pos, cg%bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
-      out = particle_in_area(pos, bnd_out)   ! Ghost particle
+      out = particle_in_area(pos, cg%bnd_out)   ! Ghost particle
 
       if (indomain) return
 
@@ -195,7 +186,7 @@ contains
       use domain,             only: dom
       use mpisetup,           only: proc
       use particle_func,      only: particle_in_area
-      use particle_types,     only: particle
+      use particle_types,     only: particle, npb
 
       implicit none
 
