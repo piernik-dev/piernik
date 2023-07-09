@@ -458,6 +458,9 @@ contains
       ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
       ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
       full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
+      ! Unlike mapping, for acceleration we need one extra cell
+      if (any(ijkp(:, IM) < cg%lhn(:, LO)) .or. any(ijkp(:, IP) > cg%lhn(:, HI))) &
+           call die("[particle_gravity:update_particle_acc_tsc] the particle flew too far into ghostcells")
 
       ! It is possible to write these loops in a more compact way, e.g. without repeating the formulas
       ! but I found this hand-unrolled version as the fastest.
@@ -477,19 +480,18 @@ contains
                k = ijkp(zdim, I0)
                delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
                axyz(:) = axyz(:) + weight_xy * (1.625 - 1.5 * abs(delta + 1.) + delta + half * delta**2) * &
-                       &           [ cg%q(ig)%arr(i-1, j, k-1) - cg%q(ig)%arr(i+1, j, k-1), &
-                       &             cg%q(ig)%arr(i, j-1, k-1) - cg%q(ig)%arr(i, j+1, k-1), &
-                       &             cg%q(ig)%arr(i, j, k-2) - cg%q(ig)%arr(i, j, k) ]
+                       &           [ cg%q(ig)%arr(i-1, j,   k-1) - cg%q(ig)%arr(i+1, j,   k-1), &
+                       &             cg%q(ig)%arr(i,   j-1, k-1) - cg%q(ig)%arr(i,   j+1, k-1), &
+                       &             cg%q(ig)%arr(i,   j,   k-2) - cg%q(ig)%arr(i,   j,   k  ) ]
                axyz(:) = axyz(:) + weight_xy * (0.75 - delta**2) * &
-                       &           [ cg%q(ig)%arr(i-1, j, k) - cg%q(ig)%arr(i+1, j, k), &
-                       &             cg%q(ig)%arr(i, j-1, k) - cg%q(ig)%arr(i, j+1, k), &
-                       &             cg%q(ig)%arr(i, j, k-1) - cg%q(ig)%arr(i, j, k+1) ]
+                       &           [ cg%q(ig)%arr(i-1, j,   k  ) - cg%q(ig)%arr(i+1, j,   k  ), &
+                       &             cg%q(ig)%arr(i,   j-1, k  ) - cg%q(ig)%arr(i,   j+1, k  ), &
+                       &             cg%q(ig)%arr(i,   j,   k-1) - cg%q(ig)%arr(i,   j,   k+1) ]
                axyz(:) = axyz(:) + weight_xy * (1.625 - 1.5 * abs(delta - 1.) - delta + half * delta**2) * &
-                       &           [ cg%q(ig)%arr(i-1, j, k+1) - cg%q(ig)%arr(i+1, j, k+1), &
-                       &             cg%q(ig)%arr(i, j-1, k+1) - cg%q(ig)%arr(i, j+1, k+1), &
-                       &             cg%q(ig)%arr(i, j, k) - cg%q(ig)%arr(i, j, k+2) ]
+                       &           [ cg%q(ig)%arr(i-1, j,   k+1) - cg%q(ig)%arr(i+1, j,   k+1), &
+                       &             cg%q(ig)%arr(i,   j-1, k+1) - cg%q(ig)%arr(i,   j+1, k+1), &
+                       &             cg%q(ig)%arr(i,   j,   k  ) - cg%q(ig)%arr(i,   j,   k+2) ]
             else
-
                do k = ijkp(zdim, IM), ijkp(zdim, IP)
                   delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
                   weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
@@ -497,9 +499,9 @@ contains
                   ! axyz += weight * fxyz
                   ! +/-1 in the indices is allowed instead of dom%D_[xyz] because we assumed 3D here
                   axyz(:) = axyz(:) + weight_xy * weight * &
-                       &              [ cg%q(ig)%arr(i-1, j, k) - cg%q(ig)%arr(i+1, j, k), &
-                       &                cg%q(ig)%arr(i, j-1, k) - cg%q(ig)%arr(i, j+1, k), &
-                       &                cg%q(ig)%arr(i, j, k-1) - cg%q(ig)%arr(i, j, k+1) ]
+                       &              [ cg%q(ig)%arr(i-1, j,   k  ) - cg%q(ig)%arr(i+1, j,   k  ), &
+                       &                cg%q(ig)%arr(i,   j-1, k  ) - cg%q(ig)%arr(i,   j+1, k  ), &
+                       &                cg%q(ig)%arr(i,   j,   k-1) - cg%q(ig)%arr(i,   j,   k+1) ]
                enddo
             endif
 
