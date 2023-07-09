@@ -203,6 +203,7 @@ contains
 #ifdef NBODY_GRIDDIRECT
    subroutine update_gravpot_from_particles
 
+      use cg_cost_data,     only: I_PARTICLE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: nbgp_n, zero
@@ -220,16 +221,18 @@ contains
       ig = qna%ind(nbgp_n)
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          cg => cgl%cg
 
-            cg%nbgp = zero
+         cg%nbgp = zero
 
-            pset => cg%pset%first
-            do while (associated(pset))
-               call gravpot1b(pset, cg, ig)
-               pset => pset%nxt
-            enddo
+         pset => cg%pset%first
+         do while (associated(pset))
+            call gravpot1b(pset, cg, ig)
+            pset => pset%nxt
+         enddo
 
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -240,6 +243,7 @@ contains
 
    real function find_Mtot() result(Mtot)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: pSUM
@@ -257,6 +261,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          cg => cgl%cg
          pset => cg%pset%first
          do while (associated(pset))
@@ -264,6 +269,7 @@ contains
             !TO DO: include gas
             pset => pset%nxt
          enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 

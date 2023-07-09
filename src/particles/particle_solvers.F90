@@ -458,9 +458,10 @@ contains
 
    subroutine update_particle_kinetic_energy
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: half
+      use cg_cost_data,   only: I_PARTICLE
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: half
       use particle_types, only: particle
 
       implicit none
@@ -471,6 +472,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          pset => cgl%cg%pset%first
          do while (associated(pset))
             v2 = sum(pset%pdata%vel(:)**2)
@@ -478,6 +480,7 @@ contains
             pset%pdata%energy = half * pset%pdata%mass * v2 + pset%pdata%energy
             pset => pset%nxt
          enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 

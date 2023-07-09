@@ -109,6 +109,7 @@ contains
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: ndims
@@ -144,6 +145,7 @@ contains
       indomain = particle_in_area(pos, dom%edge)
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out)
 #ifdef NBODY_CHECK_PID
          if (phy .or. out) then
@@ -160,6 +162,7 @@ contains
 #endif /* NBODY_CHECK_PID */
          if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
          cgfound = cgfound .or. (phy .or. out)
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound
@@ -237,6 +240,7 @@ contains
    ! Sends leaving particles between processors, and creates ghosts
    subroutine part_leave_cg()
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: I_ONE, PPP_PART
@@ -271,6 +275,7 @@ contains
       do j = FIRST, LAST
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             cg => cgl%cg
                pset => cg%pset%first
                do while (associated(pset))
@@ -278,6 +283,7 @@ contains
                   if (attribute_to_proc(pset, j, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                   pset => pset%nxt
                enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
       enddo
@@ -291,6 +297,7 @@ contains
       do j = FIRST, LAST
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             cg => cgl%cg
             pset => cg%pset%first
             do while (associated(pset))
@@ -303,6 +310,7 @@ contains
                endif
                pset => pset%nxt
             enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
       enddo
@@ -310,6 +318,7 @@ contains
       !Remove particles out of cg
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          cg => cgl%cg
          pset => cg%pset%first
          do while (associated(pset))
@@ -324,6 +333,7 @@ contains
             pset => pset%nxt
          enddo
 
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -439,6 +449,7 @@ contains
 
    integer(kind=4) function count_all_particles() result(pcount)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: I_ONE
@@ -452,11 +463,13 @@ contains
       pcount = 0
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          pset => cgl%cg%pset%first
          do while (associated(pset))
             if (pset%pdata%phy) pcount = pcount + I_ONE
             pset => pset%nxt
          enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
