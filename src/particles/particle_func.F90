@@ -110,48 +110,69 @@ contains
 
    end subroutine check_ord
 
-   ! These functions cannot be elemental, but even the pure attribute gains some performance here
+   function df_d_o2(cell, cg, ig, dir)
 
-   pure function df_d_o2(cell, cg, ig, dir)
-
-      use constants, only: idm, ndims, half, xdim, ydim, zdim
-      use grid_cont, only: grid_container
+      use constants,  only: ndims, half, xdim, ydim, zdim
+      use dataio_pub, only: die
+      use grid_cont,  only: grid_container
 
       implicit none
 
       integer, dimension(ndims),     intent(in) :: cell
       type(grid_container), pointer, intent(in) :: cg
       integer(kind=4),               intent(in) :: ig, dir
-      real, target                              :: df_d_o2
+      real                                      :: df_d_o2
 
       !o(R^2)
-      associate(cpx => cell(xdim)+idm(dir, xdim), cmx => cell(xdim)-idm(dir, xdim), &
-           &    cpy => cell(ydim)+idm(dir, ydim), cmy => cell(ydim)-idm(dir, ydim), &
-           &    cpz => cell(zdim)+idm(dir, zdim), cmz => cell(zdim)-idm(dir, zdim))
-         df_d_o2 = (cg%q(ig)%arr(cpx, cpy, cpz) - cg%q(ig)%arr(cmx, cmy, cmz)) * half * cg%idl(dir)
-      end associate
+      select case (dir)
+         case (xdim)
+            df_d_o2 = ( -cg%q(ig)%arr(cell(xdim)-1, cell(ydim), cell(zdim)) &
+                 &      +cg%q(ig)%arr(cell(xdim)+1, cell(ydim), cell(zdim))) * half * cg%idl(xdim)
+         case (ydim)
+            df_d_o2 = ( -cg%q(ig)%arr(cell(xdim), cell(ydim)-1, cell(zdim)) &
+                 &      +cg%q(ig)%arr(cell(xdim), cell(ydim)+1, cell(zdim))) * half * cg%idl(ydim)
+         case (zdim)
+            df_d_o2 = ( -cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)-1) &
+                 &      +cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)+1)) * half * cg%idl(zdim)
+         case default
+            call die ("[particle_func:df_d_o2] Invalid dir")
+            df_d_o2 = 0.
+      end select
       ! df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) * half *cg%idl(dir)
 
    end function df_d_o2
 
-   pure function d2f_d2_o2(cell, cg, ig, dir)
+   function d2f_d2_o2(cell, cg, ig, dir)
 
-      use constants, only: idm, ndims, two, xdim, ydim, zdim
-      use grid_cont, only: grid_container
+      use constants,  only: ndims, two, xdim, ydim, zdim
+      use dataio_pub, only: die
+      use grid_cont,  only: grid_container
 
       implicit none
 
       integer, dimension(ndims),     intent(in) :: cell
       type(grid_container), pointer, intent(in) :: cg
       integer(kind=4),               intent(in) :: ig, dir
-      real, target                              :: d2f_d2_o2
+      real                                      :: d2f_d2_o2
 
       !o(R^2)
-      associate(cpx => cell(xdim)+idm(dir, xdim), cmx => cell(xdim)-idm(dir, xdim), cx => cell(xdim), &
-           &    cpy => cell(ydim)+idm(dir, ydim), cmy => cell(ydim)-idm(dir, ydim), cy => cell(ydim), &
-           &    cpz => cell(zdim)+idm(dir, zdim), cmz => cell(zdim)-idm(dir, zdim), cz => cell(zdim))
-         d2f_d2_o2 = (cg%q(ig)%arr(cpx, cpy, cpz) - two * cg%q(ig)%arr(cx, cy, cz) + cg%q(ig)%arr(cmx, cmy, cmz)) * cg%idl(dir)**2
-      end associate
+      select case (dir)
+         case (xdim)
+            d2f_d2_o2 = (        cg%q(ig)%arr(cell(xdim)-1, cell(ydim), cell(zdim)) &
+                 &       - two * cg%q(ig)%arr(cell(xdim)  , cell(ydim), cell(zdim)) &
+                 &             + cg%q(ig)%arr(cell(xdim)+1, cell(ydim), cell(zdim))) * cg%idl(xdim)**2
+         case (ydim)
+            d2f_d2_o2 = (        cg%q(ig)%arr(cell(xdim), cell(ydim)-1, cell(zdim)) &
+                 &       - two * cg%q(ig)%arr(cell(xdim), cell(ydim)  , cell(zdim)) &
+                 &             + cg%q(ig)%arr(cell(xdim), cell(ydim)+1, cell(zdim))) * cg%idl(ydim)**2
+         case (zdim)
+            d2f_d2_o2 = (        cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)-1) &
+                 &       - two * cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)  ) &
+                 &             + cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)+1)) * cg%idl(zdim)**2
+         case default
+            call die ("[particle_func:d2f_d2_o2] Invalid dir")
+            d2f_d2_o2 = 0.
+      end select
       ! d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - two*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) * cg%idl(dir)**2
 
    end function d2f_d2_o2
