@@ -389,27 +389,36 @@ contains
 
       subroutine kick(kdt)
 
+         use cg_cost_data,   only: I_PARTICLE
+         use constants,      only: PPP_PART
          use particle_types, only: particle
+         use ppp,            only: ppp_main
 
          implicit none
 
          real,        intent(in) :: kdt
          type(particle), pointer :: pset
+         character(len=*), parameter :: k_label = "part_kick"
 
+         call ppp_main%start(k_label, PPP_PART)
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             pset => cgl%cg%pset%first
             do while (associated(pset))
                pset%pdata%vel = pset%pdata%vel + pset%pdata%acc * kdt
                pset => pset%nxt
             enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
+         call ppp_main%stop(k_label, PPP_PART)
 
       end subroutine kick
 
       subroutine drift(ddt)
 
+         use cg_cost_data,   only: I_PARTICLE
          use constants,      only: PPP_PART
          use particle_utils, only: part_leave_cg, is_part_in_cg, detach_particle
          use particle_types, only: particle
@@ -424,6 +433,7 @@ contains
          call ppp_main%start(d_label, PPP_PART)
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             pset => cgl%cg%pset%first
             do while (associated(pset))
                if (pset%pdata%phy) then
@@ -435,6 +445,7 @@ contains
                   call detach_particle(cgl%cg, pset)
                endif
             enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
          call ppp_main%stop(d_label, PPP_PART)
