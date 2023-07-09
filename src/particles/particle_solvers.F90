@@ -385,6 +385,10 @@ contains
          call particle_diagnostics(.true.)
       endif
 
+      ! Since the nbdn field is updated in update_particle_gravpot_and_acc (prior to call to source_terms_grav), it contains slightly outdated info.
+      ! But call to map_particles is relatively expensive, so in case of an urgent need of up-to-date nbdn it is advised to hook an extra
+      ! call to map_particles somewhere in the I/O routines to avoid the overhead in each step.
+
    contains
 
       subroutine kick(kdt)

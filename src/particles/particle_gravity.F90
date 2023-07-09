@@ -83,16 +83,6 @@ contains
 #ifdef NBODY_GRIDDIRECT
       call update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
-      call source_terms_grav
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
-
-      call ppp_main%stop(potacc_i_label, PPP_PART)
-
-      if (global_count_all_particles() == 0) return
-
-      call ppp_main%start(potacc_label, PPP_PART)
-
-      Mtot = find_Mtot()
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -106,11 +96,22 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
       ! map_tsc contains a loop over cg and a call to update boundaries
       ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
-      ig = qna%ind(nbdn_n)
-      call map_particles(ig, one)
+
+      call map_particles(qna%ind(nbdn_n), one)
+
+      call source_terms_grav
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
+
+      call ppp_main%stop(potacc_i_label, PPP_PART)
+
+      if (global_count_all_particles() == 0) return
+      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
+
+      call ppp_main%start(potacc_label, PPP_PART)
+
+      Mtot = find_Mtot()
 
       ip = qna%ind(prth_n)
       ig = qna%ind(gpot_n)
