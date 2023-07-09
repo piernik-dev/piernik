@@ -61,7 +61,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: nh, restarted_sim
+      use dataio_pub, only: nh, restarted_sim, warn
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -112,6 +112,11 @@ contains
          blob_center    = rbuff(3:3+ndims-1)
          blob_velocity  = rbuff(3+ndims:3+2*ndims-1)
 
+      endif
+
+      if (blob_particles < 0) then
+         blob_particles = 0
+         call warn("[initproblem:read_problem_par] blob_particles has to be >= 0 (fixed)")
       endif
 
       ! Perhaps a more general approach should be implemeted once we decide to drop most of precompiler conditionals on NBODY.
