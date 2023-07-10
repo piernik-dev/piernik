@@ -36,6 +36,7 @@ module grid_cont
    use grid_cont_bseg,    only: tgt_list
    use grid_cont_prolong, only: grid_container_prolong_t
 #if defined(GRAV) && defined(NBODY)
+   use constants,         only: ndims
    use particle_types,    only: particle_set
 #endif /* GRAV && NBODY */
 
@@ -63,7 +64,8 @@ module grid_cont
 
       ! Particles
 #if defined(GRAV) && defined(NBODY)
-      type(particle_set) :: pset                                  !< set of particles that belong to this grid part
+      type(particle_set) :: pset                        !< set of particles that belong to this grid part
+      real, dimension(ndims, LO:HI) :: bnd_in, bnd_out  !< coordinates for qualifying particles in is_part_in_cg
 #endif /* GRAV && NBODY */
 
       ! Misc
@@ -97,7 +99,10 @@ contains
       use level_essentials, only: level_t
       use ordering,         only: SFC_order
       use ppp,              only: ppp_main
-
+#if defined(GRAV) && defined(NBODY)
+      use constants,        only: LEFT, RIGHT, xdim, ydim, zdim
+      use particle_types,   only: npb
+#endif /* GRAV && NBODY */
       implicit none
 
       class(grid_container), target,   intent(inout) :: this     ! intent(out) would silently clear everything, that was already set
@@ -122,6 +127,12 @@ contains
       call this%init_gc_prolong
 #ifdef NBODY
       call this%pset%init()
+
+      this%bnd_out(:,LO) = [this%coord(LEFT, xdim)%r(this%ijkse(xdim,LO)-npb), this%coord(LEFT, ydim)%r(this%ijkse(ydim,LO)-npb), this%coord(LEFT, zdim)%r(this%ijkse(zdim,LO)-npb)]
+      this%bnd_out(:,HI) = [this%coord(RIGHT,xdim)%r(this%ijkse(xdim,HI)+npb), this%coord(RIGHT,ydim)%r(this%ijkse(ydim,HI)+npb), this%coord(RIGHT,zdim)%r(this%ijkse(zdim,HI)+npb)]
+
+      this%bnd_in(:,LO)  = [this%coord(LEFT, xdim)%r(this%ijkse(xdim,LO)+npb), this%coord(LEFT, ydim)%r(this%ijkse(ydim,LO)+npb), this%coord(LEFT, zdim)%r(this%ijkse(zdim,LO)+npb)]
+      this%bnd_in(:,HI)  = [this%coord(RIGHT,xdim)%r(this%ijkse(xdim,HI)-npb), this%coord(RIGHT,ydim)%r(this%ijkse(ydim,HI)-npb), this%coord(RIGHT,zdim)%r(this%ijkse(zdim,HI)-npb)]
 #endif /* NBODY */
 
       this%membership = 1

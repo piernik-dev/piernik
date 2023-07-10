@@ -385,31 +385,44 @@ contains
          call particle_diagnostics(.true.)
       endif
 
+      ! Since the nbdn field is updated in update_particle_gravpot_and_acc (prior to call to source_terms_grav), it contains slightly outdated info.
+      ! But call to map_particles is relatively expensive, so in case of an urgent need of up-to-date nbdn it is advised to hook an extra
+      ! call to map_particles somewhere in the I/O routines to avoid the overhead in each step.
+
    contains
 
       subroutine kick(kdt)
 
+         use cg_cost_data,   only: I_PARTICLE
+         use constants,      only: PPP_PART
          use particle_types, only: particle
+         use ppp,            only: ppp_main
 
          implicit none
 
          real,        intent(in) :: kdt
          type(particle), pointer :: pset
+         character(len=*), parameter :: k_label = "part_kick"
 
+         call ppp_main%start(k_label, PPP_PART)
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             pset => cgl%cg%pset%first
             do while (associated(pset))
                pset%pdata%vel = pset%pdata%vel + pset%pdata%acc * kdt
                pset => pset%nxt
             enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
+         call ppp_main%stop(k_label, PPP_PART)
 
       end subroutine kick
 
       subroutine drift(ddt)
 
+         use cg_cost_data,   only: I_PARTICLE
          use constants,      only: PPP_PART
          use particle_utils, only: part_leave_cg, is_part_in_cg, detach_particle
          use particle_types, only: particle
@@ -424,6 +437,7 @@ contains
          call ppp_main%start(d_label, PPP_PART)
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             pset => cgl%cg%pset%first
             do while (associated(pset))
                if (pset%pdata%phy) then
@@ -435,6 +449,7 @@ contains
                   call detach_particle(cgl%cg, pset)
                endif
             enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
          call ppp_main%stop(d_label, PPP_PART)
@@ -447,9 +462,10 @@ contains
 
    subroutine update_particle_kinetic_energy
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: half
+      use cg_cost_data,   only: I_PARTICLE
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: half
       use particle_types, only: particle
 
       implicit none
@@ -460,6 +476,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          pset => cgl%cg%pset%first
          do while (associated(pset))
             v2 = sum(pset%pdata%vel(:)**2)
@@ -467,6 +484,7 @@ contains
             pset%pdata%energy = half * pset%pdata%mass * v2 + pset%pdata%energy
             pset => pset%nxt
          enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 

@@ -40,12 +40,13 @@ contains
 
    subroutine update_particle_gravpot_and_acc
 
+      use cg_cost_data,     only: I_PARTICLE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
-      use constants,        only: ndims, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero
+      use constants,        only: ndims, xdim, ydim, zdim, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, LO, PPP_PART
       use dataio_pub,       only: die
-      use domain,           only: is_refined
+      use domain,           only: dom, is_refined
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -53,6 +54,7 @@ contains
       use particle_pub,     only: mask_gpot1b
       use particle_types,   only: particle
       use particle_utils,   only: global_count_all_particles
+      use ppp,              only: ppp_main
 #ifdef DROP_OUTSIDE_PART
       use particle_utils,   only: detach_particle
 #endif /* DROP_OUTSIDE_PART */
@@ -62,14 +64,17 @@ contains
 
       implicit none
 
-      type(grid_container),  pointer       :: cg
-      type(cg_list_element), pointer       :: cgl
-      type(particle),        pointer       :: pset
+      type(grid_container),  pointer :: cg
+      type(cg_list_element), pointer :: cgl
+      type(particle),        pointer :: pset
 
-      integer, dimension(ndims)            :: cell
-      real,    dimension(ndims)            :: dist
-      real                                 :: Mtot
-      integer(kind=4)                      :: ig, ip, ib
+      integer, dimension(ndims)      :: cell
+      real,    dimension(ndims)      :: dist
+      real                           :: Mtot
+      integer(kind=4)                :: ig, ip, ib
+      character(len=*), parameter    :: potacc_i_label = "upd_part_gpot_acc:pre", potacc_label = "upd_part_gpot_acc"
+
+      call ppp_main%start(potacc_i_label, PPP_PART)
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Commencing update of particle gravpot & acceleration')
@@ -78,26 +83,35 @@ contains
 #ifdef NBODY_GRIDDIRECT
       call update_gravpot_from_particles
 #endif /* NBODY_GRIDDIRECT */
-      call source_terms_grav
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
-
-      if (global_count_all_particles() == 0) return
-
-      Mtot = find_Mtot()
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
+
          cg%nbdn = zero
          cg%prth = zero
+
+         call cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
-      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
       ! map_tsc contains a loop over cg and a call to update boundaries
       ! it gives O(#cg^2) cost and funny MPI errors when the number of cg differ from thread to thread
-      ig = qna%ind(nbdn_n)
-      call map_particles(ig, one)
+
+      call map_particles(qna%ind(nbdn_n), one)
+
+      call source_terms_grav
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one)   ], qna%ind(gpot_n))
+
+      call ppp_main%stop(potacc_i_label, PPP_PART)
+
+      if (global_count_all_particles() == 0) return
+      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
+
+      call ppp_main%start(potacc_label, PPP_PART)
+
+      Mtot = find_Mtot()
 
       ip = qna%ind(prth_n)
       ig = qna%ind(gpot_n)
@@ -107,13 +121,17 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         call cg%costs%start
 
          pset => cg%pset%first
          do while (associated(pset))
 
-            call locate_particle_in_cell(cg, pset%pdata%pos, cell, dist)
+            ! Locate particle in cell
+            cell = floor((pset%pdata%pos - dom%edge(:, LO)) * cg%idl)
+            dist = pset%pdata%pos - (dom%edge(:, LO) + cell * cg%dl)
 
-            call update_particle_density_array(ip, cg, cell, pset%pdata%outside)
+            if (.not. pset%pdata%outside) &  ! Update particle density array
+                 cg%q(ip)%arr(cell(xdim), cell(ydim), cell(zdim)) = cg%q(ip)%arr(cell(xdim), cell(ydim), cell(zdim)) + one
 
             call update_particle_potential_energy(ig, cg, pset, cell, dist, Mtot)
 
@@ -130,51 +148,16 @@ contains
             pset => pset%nxt
          enddo
 
+         call cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Finish update of particle gravpot & acceleration')
 #endif /* VERBOSE */
+      call ppp_main%stop(potacc_label, PPP_PART)
 
    end subroutine update_particle_gravpot_and_acc
-
-   subroutine locate_particle_in_cell(cg, pos, cell, dist)
-
-      use constants, only: ndims, xdim, zdim, LO
-      use domain,    only: dom
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      type(grid_container),      intent(inout) :: cg
-      real,    dimension(ndims), intent(in)    :: pos
-      integer, dimension(ndims), intent(out)   :: cell
-      real,    dimension(ndims), intent(out)   :: dist
-      integer                                  :: cdim
-
-      do cdim = xdim, zdim
-         cell(cdim) = floor((pos(cdim) - dom%edge(cdim,LO)) * cg%idl(cdim), kind=4)
-         dist(cdim) = pos(cdim) - ( dom%edge(cdim,LO) + cell(cdim) * cg%dl(cdim) )
-      enddo
-
-   end subroutine locate_particle_in_cell
-
-   subroutine update_particle_density_array(ig, cg, cell, poutside)
-
-      use constants, only: ndims, one, xdim, ydim, zdim
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      integer(kind=4),               intent(in)    :: ig
-      type(grid_container), pointer, intent(inout) :: cg
-      integer, dimension(ndims),     intent(in)    :: cell
-      logical,                       intent(in)    :: poutside
-
-      if (.not. poutside) cg%q(ig)%arr(cell(xdim),cell(ydim),cell(zdim)) = cg%q(ig)%point(cell) + one
-
-   end subroutine update_particle_density_array
 
    function phi_pm_part(pos, mass)
 
@@ -221,6 +204,7 @@ contains
 #ifdef NBODY_GRIDDIRECT
    subroutine update_gravpot_from_particles
 
+      use cg_cost_data,     only: I_PARTICLE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: nbgp_n, zero
@@ -238,16 +222,18 @@ contains
       ig = qna%ind(nbgp_n)
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          cg => cgl%cg
 
-            cg%nbgp = zero
+         cg%nbgp = zero
 
-            pset => cg%pset%first
-            do while (associated(pset))
-               call gravpot1b(pset, cg, ig)
-               pset => pset%nxt
-            enddo
+         pset => cg%pset%first
+         do while (associated(pset))
+            call gravpot1b(pset, cg, ig)
+            pset => pset%nxt
+         enddo
 
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -258,6 +244,7 @@ contains
 
    real function find_Mtot() result(Mtot)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: pSUM
@@ -275,6 +262,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          cg => cgl%cg
          pset => cg%pset%first
          do while (associated(pset))
@@ -282,6 +270,7 @@ contains
             !TO DO: include gas
             pset => pset%nxt
          enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -318,7 +307,8 @@ contains
                  d2f_d2_o2(cell, cg, ig, zdim) * dist(zdim)**2 + &
            two * d2f_dd_o2(cell, cg, ig, xdim, ydim) * dist(xdim)*dist(ydim) + &
            two * d2f_dd_o2(cell, cg, ig, xdim, zdim) * dist(xdim)*dist(zdim)
-         pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%point(cell) + dpot + half * d2pot)
+         pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%arr(cell(xdim), cell(ydim), cell(zdim)) + dpot + half * d2pot)
+         !pset%pdata%energy = pset%pdata%mass * (cg%q(ig)%point(cell) + dpot + half * d2pot)
       else
          pset%pdata%energy = -newtong * pset%pdata%mass * Mtot / norm2(pset%pdata%pos(:))
          if ((abs(pset%pdata%energy) < half * pset%pdata%mass * norm2(pset%pdata%vel(:)) **2)) pset%pdata%energy = 0.
@@ -450,9 +440,10 @@ contains
 
    function update_particle_acc_tsc(ig, cg, pos) result (acc)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, CENTER, idm, half, zero
-      use domain,    only: dom
-      use grid_cont, only: grid_container
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, half, zero
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -460,52 +451,70 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       real, dimension(ndims),        intent(in) :: pos
       real, dimension(ndims)                    :: acc
+
       integer                                   :: i, j, k
-      integer(kind=4)                           :: cdim
       integer, dimension(ndims, IM:IP)          :: ijkp
-      integer, dimension(ndims)                 :: cur_ind
-      real,    dimension(ndims)                 :: fxyz, axyz
-      real                                      :: weight, delta_x, weight_tmp
+      real,    dimension(ndims)                 :: axyz
+      real                                      :: weight_x, weight_xy, weight, delta
+      logical                                   :: full_span
 
-      fxyz = zero ! suppress -Wmaybe-uninitialized
+      ! This routine is performance-critical, so every optimization matters
+      if (dom%eff_dim /= ndims) call die("[particle_gravity:update_particle_acc_tsc] Only 3D version is implemented")
+
+      ijkp(:, I0) = nint((pos(:) - cg%fbnd(:,LO)-cg%dl(:)/2.) * cg%idl(:) + int(cg%lhn(:, LO)) + dom%nb, kind=4)
+      ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
+      ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
+      full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
+      ! Unlike mapping, for acceleration we need one extra cell
+      if (any(ijkp(:, IM) < cg%lhn(:, LO)) .or. any(ijkp(:, IP) > cg%lhn(:, HI))) &
+           call die("[particle_gravity:update_particle_acc_tsc] the particle flew too far into ghostcells")
+
+      ! It is possible to write these loops in a more compact way, e.g. without repeating the formulas
+      ! but I found this hand-unrolled version as the fastest.
+
       axyz = zero
-
-      do cdim = xdim, zdim
-         if (dom%has_dir(cdim)) then
-            ijkp(cdim, I0) = nint((pos(cdim) - cg%fbnd(cdim,LO)-cg%dl(cdim)/2.) * cg%idl(cdim) + int(cg%lhn(cdim, LO)) + dom%nb, kind=4)
-            ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cg%lhn(cdim, LO)))
-            ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cg%lhn(cdim, HI)))
-         else
-            ijkp(cdim, IM) = cg%ijkse(cdim, LO)
-            ijkp(cdim, I0) = cg%ijkse(cdim, LO)
-            ijkp(cdim, IP) = cg%ijkse(cdim, HI)
-         endif
-      enddo
-
       do i = ijkp(xdim, IM), ijkp(xdim, IP)
+
+         delta = (pos(xdim) - cg%x(i)) * cg%idl(xdim)
+         weight_x = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, i == ijkp(xdim, I0))  !!! BEWARE hardcoded magic
+
          do j = ijkp(ydim, IM), ijkp(ydim, IP)
-            do k = ijkp(zdim, IM), ijkp(zdim, IP)
 
-               cur_ind(:) = [i, j, k]
-               weight = 1.0
+            delta = (pos(ydim) - cg%y(j)) * cg%idl(ydim)
+            weight_xy = weight_x * merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, j == ijkp(ydim, I0))  !!! BEWARE hardcoded magic
 
-               do cdim = xdim, zdim
-                  if (.not.dom%has_dir(cdim)) cycle
-                  delta_x = ( pos(cdim) - cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * cg%idl(cdim)
+            if (full_span) then  ! aggressive manual unrolling
+               k = ijkp(zdim, I0)
+               delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
+               axyz(:) = axyz(:) + weight_xy * (1.625 - 1.5 * abs(delta + 1.) + delta + half * delta**2) * &
+                       &           [ cg%q(ig)%arr(i-1, j,   k-1) - cg%q(ig)%arr(i+1, j,   k-1), &
+                       &             cg%q(ig)%arr(i,   j-1, k-1) - cg%q(ig)%arr(i,   j+1, k-1), &
+                       &             cg%q(ig)%arr(i,   j,   k-2) - cg%q(ig)%arr(i,   j,   k  ) ]
+               axyz(:) = axyz(:) + weight_xy * (0.75 - delta**2) * &
+                       &           [ cg%q(ig)%arr(i-1, j,   k  ) - cg%q(ig)%arr(i+1, j,   k  ), &
+                       &             cg%q(ig)%arr(i,   j-1, k  ) - cg%q(ig)%arr(i,   j+1, k  ), &
+                       &             cg%q(ig)%arr(i,   j,   k-1) - cg%q(ig)%arr(i,   j,   k+1) ]
+               axyz(:) = axyz(:) + weight_xy * (1.625 - 1.5 * abs(delta - 1.) - delta + half * delta**2) * &
+                       &           [ cg%q(ig)%arr(i-1, j,   k+1) - cg%q(ig)%arr(i+1, j,   k+1), &
+                       &             cg%q(ig)%arr(i,   j-1, k+1) - cg%q(ig)%arr(i,   j+1, k+1), &
+                       &             cg%q(ig)%arr(i,   j,   k  ) - cg%q(ig)%arr(i,   j,   k+2) ]
+            else
+               do k = ijkp(zdim, IM), ijkp(zdim, IP)
+                  delta = (pos(zdim) - cg%z(k)) * cg%idl(zdim)
+                  weight = merge(0.75 - delta**2, 1.125 - 1.5 * abs(delta) + half * delta**2, k == ijkp(zdim, I0))  !!! BEWARE hardcoded magic
 
-                  if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
-                     weight_tmp = 1.125 - 1.5 * abs(delta_x) + half * delta_x**2
-                  else
-                     weight_tmp = 0.75 - delta_x**2
-                  endif
-
-                  weight = weight_tmp * weight
-                  fxyz(cdim) = -(cg%q(ig)%point(cur_ind(:) + idm(cdim,:)) - cg%q(ig)%point(cur_ind(:) - idm(cdim,:)))
+                  ! axyz += weight * fxyz
+                  ! +/-1 in the indices is allowed instead of dom%D_[xyz] because we assumed 3D here
+                  axyz(:) = axyz(:) + weight_xy * weight * &
+                       &              [ cg%q(ig)%arr(i-1, j,   k  ) - cg%q(ig)%arr(i+1, j,   k  ), &
+                       &                cg%q(ig)%arr(i,   j-1, k  ) - cg%q(ig)%arr(i,   j+1, k  ), &
+                       &                cg%q(ig)%arr(i,   j,   k-1) - cg%q(ig)%arr(i,   j,   k+1) ]
                enddo
-               axyz(:) = axyz(:) + fxyz(:) * weight
-            enddo
+            endif
+
          enddo
       enddo
+
       acc(:) = half * axyz(:) * cg%idl(:)
 
    end function update_particle_acc_tsc
