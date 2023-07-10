@@ -685,6 +685,7 @@ contains
       use cg_cost_data,      only: I_MULTIGRID
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
+      use cg_list_dataop,    only: ind_val
       use cg_list_global,    only: all_cg
       use constants,         only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1, PPP_GRAV, PPP_MG
       use dataio_pub,        only: die
@@ -693,13 +694,14 @@ contains
       use grid_cont,         only: grid_container
       use multigridvars,     only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
+      use named_array_list,  only: qna
       use ppp,               only: ppp_main
       use units,             only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 #ifdef NBODY_MULTIGRID
-      use particle_maps,     only: map_particles
+      use constants,         only: nbdn_n
 #endif /* NBODY_MULTIGRID */
 
       implicit none
@@ -735,7 +737,7 @@ contains
          endif
 
 #ifdef NBODY_MULTIGRID
-         call map_particles(source, fpiG)
+         call leaves%q_lin_comb( [ ind_val(source, 1.), ind_val(qna%ind(nbdn_n), fpiG) ], source)
          something_in_particles = .true.
 #endif /* NBODY_MULTIGRID */
       else

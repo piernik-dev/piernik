@@ -72,7 +72,7 @@ module named_array
       generic, public :: init      => array4d_associate
       generic, public :: span      => array4d_span_one_var, array4d_span, array4d_span_one_var_ijkse, array4d_span_ijkse, array4d_span_ijkse8
       generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
-      generic, public :: point     => array4d_point, array4d_point_one_var
+      generic, public :: point     => array4d_point, array4d_point_one_var  ! Beware: use with care due to significant performance overhead
    end type named_array4d
 
    !> \brief A named array for scalar fields
@@ -86,7 +86,7 @@ module named_array
       generic, public :: init      => array3d_associate
       generic, public :: span      => array3d_span, array3d_span_ijkse, array3d_span_ijkse8
       procedure       :: get_sweep => array3d_get_sweep
-      procedure       :: point     => array3d_point
+      procedure       :: point     => array3d_point  ! Beware: use with care due to significant performance overhead
    end type named_array3d
 
 contains
@@ -347,7 +347,13 @@ contains
 
    end function array4d_get_sweep
 
-!> \brief Get a selected value from the rank-3 array
+!>
+!! \brief Get a selected value from the rank-3 array
+!!
+!! This is a very convenient function, but it comes with considerable overhead, compared to direct reference to this%arr.
+!! Use only, where code readability is the priority and impact on performance is negligible or unimportant.
+!! See e.g. particle_func::df_d_o2 for an example of avoiding overhead without ruining readability.
+!<
 
    function array3d_point(this, v) result(p)
 
@@ -362,7 +368,7 @@ contains
       real                                     :: p
 
       if (associated(this%arr)) then
-         p = this%arr(v(xdim),v(ydim),v(zdim))
+         p = this%arr(v(xdim), v(ydim), v(zdim))
       else
          call die("[named_array:array3d_point] this%arr not associated")
          p = -huge(1.) ! suppress use of uninitialized variable warning
@@ -370,7 +376,11 @@ contains
 
    end function array3d_point
 
-!> \brief Get a selected value from the rank-4 array
+!>
+!! \brief Get a selected value from the rank-4 array
+!!
+!! See the performance-related comments to array3d_point.
+!<
 
    function array4d_point(this, v) result(p1d)
 
@@ -393,8 +403,11 @@ contains
 
    end function array4d_point
 
-!> \brief Get a selected vector from the rank-4 array
-
+!>
+!! \brief Get a selected vector from the rank-4 array
+!!
+!! See the performance-related comments to array3d_point.
+!<
    function array4d_point_one_var(this, nn, v) result(p)
 
       use constants,  only: xdim, ydim, zdim

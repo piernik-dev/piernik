@@ -42,13 +42,12 @@ module particle_utils
    public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
-   integer(kind=4), parameter :: npb = 1   !< number of cells between in and phy or between phy and out boundaries
 
 contains
 
    subroutine is_part_in_cg(cg, pos, indomain, in, phy, out, fin)
 
-      use constants,     only: LO, HI, half, ndims, xdim, ydim, zdim, LEFT, RIGHT
+      use constants,     only: LO, HI, half, ndims, xdim, ydim, zdim
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use particle_func, only: particle_in_area, ijk_of_particle
@@ -59,19 +58,11 @@ contains
       real, dimension(ndims),        intent(in)  :: pos
       logical,                       intent(in)  :: indomain
       logical,                       intent(out) :: in, phy, out, fin
-      real, dimension(ndims,2)                   :: bnd_in, bnd_out
       integer(kind=4), dimension(ndims)          :: ijk, lft, rgt
 
-      !There is probably a better way to write this
-      bnd_out(:,LO) = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)-npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)-npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)-npb)]
-      bnd_out(:,HI) = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)+npb), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)+npb), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)+npb)]
-
-      bnd_in(:,LO)  = [cg%coord(LEFT, xdim)%r(cg%ijkse(xdim,LO)+npb), cg%coord(LEFT, ydim)%r(cg%ijkse(ydim,LO)+npb), cg%coord(LEFT, zdim)%r(cg%ijkse(zdim,LO)+npb)]
-      bnd_in(:,HI)  = [cg%coord(RIGHT,xdim)%r(cg%ijkse(xdim,HI)-npb), cg%coord(RIGHT,ydim)%r(cg%ijkse(ydim,HI)-npb), cg%coord(RIGHT,zdim)%r(cg%ijkse(zdim,HI)-npb)]
-
-      in  = particle_in_area(pos, bnd_in)
+      in  = particle_in_area(pos, cg%bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
-      out = particle_in_area(pos, bnd_out)   ! Ghost particle
+      out = particle_in_area(pos, cg%bnd_out)   ! Ghost particle
 
       ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
       lft = 0
@@ -118,6 +109,7 @@ contains
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: ndims
@@ -153,6 +145,7 @@ contains
       indomain = particle_in_area(pos, dom%edge)
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
          toadd = (phy .and. fin) .or. (out .and. .not. (in .or. fin)) ! finest refinement level for partilels in (including outside particles) OR pariticles for all refinement levels in a area of internal boundaries (including fine-coarse)
 #ifdef NBODY_CHECK_PID
@@ -169,6 +162,7 @@ contains
 #endif /* NBODY_CHECK_PID */
          if (toadd) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
          cgfound = cgfound .or. toadd
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound
@@ -201,7 +195,7 @@ contains
       use domain,             only: dom
       use mpisetup,           only: proc
       use particle_func,      only: particle_in_area
-      use particle_types,     only: particle
+      use particle_types,     only: particle, npb
 
       implicit none
 
@@ -246,6 +240,7 @@ contains
    ! Sends leaving particles between processors, and creates ghosts
    subroutine part_leave_cg()
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: I_ONE, PPP_PART
@@ -280,6 +275,7 @@ contains
       do j = FIRST, LAST
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             cg => cgl%cg
                pset => cg%pset%first
                do while (associated(pset))
@@ -287,6 +283,7 @@ contains
                   if (attribute_to_proc(pset, j, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                   pset => pset%nxt
                enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
       enddo
@@ -300,6 +297,7 @@ contains
       do j = FIRST, LAST
          cgl => leaves%first
          do while (associated(cgl))
+            call cgl%cg%costs%start
             cg => cgl%cg
             pset => cg%pset%first
             do while (associated(pset))
@@ -312,6 +310,7 @@ contains
                endif
                pset => pset%nxt
             enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
             cgl => cgl%nxt
          enddo
       enddo
@@ -319,6 +318,7 @@ contains
       !Remove particles out of cg
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          cg => cgl%cg
          pset => cg%pset%first
          do while (associated(pset))
@@ -333,6 +333,7 @@ contains
             pset => pset%nxt
          enddo
 
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
@@ -448,6 +449,7 @@ contains
 
    integer(kind=4) function count_all_particles() result(pcount)
 
+      use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: I_ONE
@@ -461,11 +463,13 @@ contains
       pcount = 0
       cgl => leaves%first
       do while (associated(cgl))
+         call cgl%cg%costs%start
          pset => cgl%cg%pset%first
          do while (associated(pset))
             if (pset%pdata%phy) pcount = pcount + I_ONE
             pset => pset%nxt
          enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
