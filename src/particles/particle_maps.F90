@@ -228,16 +228,16 @@ contains
 
       implicit none
 
-      integer(kind=4),      intent(in) :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,                 intent(in) :: factor !< typically fpiG
+      integer(kind=4),              intent(in) :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,                         intent(in) :: factor !< typically fpiG
 
-      type(cg_list_element), pointer   :: cgl
-      type(particle), pointer          :: pset
-      integer                          :: i, j, k
-      integer, dimension(ndims, IM:IP) :: ijkp
-      real                             :: weight_x, weight_xy, delta, fac
-      character(len=*), parameter      :: map_label = "map_tsc"
-      logical                          :: full_span
+      type(cg_list_element), pointer           :: cgl
+      type(particle), pointer                  :: pset
+      integer                                  :: i, j, k
+      integer(kind=4), dimension(ndims, IM:IP) :: ijkp
+      real                                     :: weight_x, weight_xy, delta, fac
+      character(len=*), parameter              :: map_label = "map_tsc"
+      logical                                  :: full_span
 
       ! This routine is performance-critical, so every optimization matters
       if (dom%eff_dim /= ndims) call die("[particle_maps:map_tsc] Only 3D version is implemented")
