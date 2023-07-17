@@ -113,7 +113,7 @@ contains
       implicit none
 
       if (dom%eff_dim /= ndims) call die("[multigridmultipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
-      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:init_multipole] Only fully periodic case is implemented")
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:init_multipole] Only fully isolated boundaries are implemented")
 
       !fixup multipole moments
       if (mmax > lmax) then
@@ -228,7 +228,7 @@ contains
       call ppp_main%start(mpole_label, PPP_GRAV)
 
       ! Cannot use this check, because we do tricks in multigrid_solve_grav
-      ! if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:multipole_solver] Only fully periodic case is implemented")
+      ! if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:multipole_solver] Only fully isolated boundaries are implemented")
 
       if (associated(ext_bnd_potential)) then
          call ext_bnd_potential
@@ -687,7 +687,7 @@ contains
       real, intent(in) :: y !< absolute y-coordinate of the point
       real, intent(in) :: z !< absolute z-coordinate of the point
 
-      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_xyz] Only fully periodic case is implemented")
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_xyz] Only fully isolated boundaries are implemented")
 
       pot = Q%moments2pot(x, y, z)/fpiG
 
@@ -706,7 +706,7 @@ contains
 
       real, dimension(ndims), intent(in) :: r !< [x, y, z] coordinate of the point
 
-      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_r] Only fully periodic case is implemented")
+      if (grav_bnd /= bnd_isolated) call die("[multigridmultipole:moments2pot_r] Only fully isolated boundaries are implemented")
 
       pot = Q%moments2pot(r(xdim), r(ydim), r(zdim))/fpiG
 
