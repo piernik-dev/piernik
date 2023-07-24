@@ -178,7 +178,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, cr_Z, icr_spc, icr_H1, icr_E, cr_spectral, cr_table
+      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, cr_Z, icr_spc, icr_H1, cr_spectral, cr_table
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, my_deallocate, ma1d
       use global,          only: disallow_CRnegatives
@@ -627,17 +627,10 @@ contains
         write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(icr_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", f_synchIC(j)
         if (master) call printinfo(msg)
 
-        if (j == cr_table(icr_spc(icr_E))) then ! Distinguish electrons and protons-nuclei component cases
+        print *, 'j : ', j , 'mass : ', cr_mass(j), 'Z : ', cr_Z(j)
 
-            K_cresp_paral(j, 1:ncrb) = K_cr_paral(icr_spc(j)) * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
-            K_cresp_perp(j,  1:ncrb) = K_cr_perp(icr_spc(j))  * (p_mid_fix(1:ncrb) / p_diff(j))**K_cre_pow(j)
-
-        else ! Scale nuclei diffusion with respect to proton : all species will have different diffusion
-
-            K_cresp_paral(j, 1:ncrb) = K_cr_paral(icr_spc(j)) * (cr_mass(j)*p_mid_fix(1:ncrb) / (cr_Z(j)*p_diff(j)))**K_cre_pow(j)
-            K_cresp_perp(j,  1:ncrb) = K_cr_perp(icr_spc(j))  * (cr_mass(j)*p_mid_fix(1:ncrb) / (cr_Z(j)*p_diff(j)))**K_cre_pow(j)
-
-        endif
+        K_cresp_paral(j, 1:ncrb) = K_cr_paral(icr_spc(j)) * (cr_mass(j)*p_mid_fix(1:ncrb) / (abs(cr_Z(j))*p_diff(j)))**K_cre_pow(j) ! Scale diffusion of all species to protons.
+        K_cresp_perp(j,  1:ncrb) = K_cr_perp(icr_spc(j))  * (cr_mass(j)*p_mid_fix(1:ncrb) / (abs(cr_Z(j))*p_diff(j)))**K_cre_pow(j)
 
         K_cresp_paral(j, ncrb+1:ncr2b) = K_cresp_paral(j, 1:ncrb)
         K_cresp_perp (j, ncrb+1:ncr2b) = K_cresp_perp (j, 1:ncrb)
