@@ -297,7 +297,7 @@ contains
       tsl_firstcall      = .true.
       use_v2_io          = .true.
       gdf_strict         = .true.
-      nproc_io           = nproc
+      nproc_io           = 1  ! The default was nproc previously but it seems that serial write is often faster, especially on NFS. Use any other value in problem.par to get the parallel write by nproc threads.
       enable_compression = .false.
       gzip_level         = 9
 
