@@ -60,7 +60,7 @@ module ppp_eventlist
       procedure :: cleanup              !< destroy this event list (typically called by publish)
       procedure :: start                !< add a beginning of an interval
       procedure :: stop                 !< add an end of an interval
-      procedure :: cg_cost              !< add a cg-related interval
+      procedure :: single_cg_cost       !< add a cg-related interval
       procedure :: set_bb               !< add the initial event with bigbang time
       procedure, private :: next_event  !< for internal use in start, stop and put
       procedure, private :: expand      !< create next array for events
@@ -164,7 +164,7 @@ contains
 
 !> \brief Add a cg-related interval
 
-   subroutine cg_cost(this, t_start, t_stop, label)
+   subroutine single_cg_cost(this, t_start, t_stop, label)
 
       use constants,  only: PPP_CG
       use mpisetup,   only: bigbang_shift
@@ -186,7 +186,7 @@ contains
       call this%next_event(event(l, t_start + bigbang_shift))
       call this%next_event(event(l, -t_stop - bigbang_shift))
 
-   end subroutine cg_cost
+   end subroutine single_cg_cost
 
 !> \brief Add the initial event with bigbang time
 

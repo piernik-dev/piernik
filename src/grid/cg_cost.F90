@@ -112,7 +112,7 @@ contains
          this%wtime(ind) = this%wtime(ind) + (t - this%wstart)
          ppp_call = .true.
          if (present(ppp)) ppp_call = ppp
-         if (ppp_call) call ppp_main%cg_cost(this%wstart, t, "cg_cost:" // cost_labels(ind))
+         if (ppp_call) call ppp_main%single_cg_cost(this%wstart, t, "cg_cost:" // cost_labels(ind))
       else
          call die("[cg_cost:stop] invalid index")
       endif
