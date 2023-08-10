@@ -226,7 +226,7 @@ contains
 
                   associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  do i_bin = 1, ncrb
+                  do i_bin = 1, ncrb - 1
 
                      if (p_fix(i_bin) > zero) then
 
@@ -265,8 +265,6 @@ contains
 
                         usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
                         usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
-
-
 
                      endif
 
