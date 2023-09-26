@@ -685,7 +685,6 @@ contains
       use cg_cost_data,      only: I_MULTIGRID
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
-      use cg_list_dataop,    only: ind_val
       use cg_list_global,    only: all_cg
       use constants,         only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1, PPP_GRAV, PPP_MG
       use dataio_pub,        only: die
@@ -694,14 +693,15 @@ contains
       use grid_cont,         only: grid_container
       use multigridvars,     only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
-      use named_array_list,  only: qna
       use ppp,               only: ppp_main
       use units,             only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 #ifdef NBODY_MULTIGRID
+      use cg_list_dataop,    only: ind_val
       use constants,         only: nbdn_n
+      use named_array_list,  only: qna
 #endif /* NBODY_MULTIGRID */
 
       implicit none
