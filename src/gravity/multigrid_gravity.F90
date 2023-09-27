@@ -680,7 +680,7 @@ contains
 !! \todo compact the following more (if possible)
 !<
 
-   subroutine init_source(i_sg_dens)
+   subroutine init_source(i_sg_dens, use_particles)
 
       use cg_cost_data,      only: I_MULTIGRID
       use cg_leaves,         only: leaves
@@ -706,20 +706,22 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), optional, intent(in) :: i_sg_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), optional, intent(in) :: i_sg_dens      !< indices to selfgravitating fluids
+      logical, optional,                       intent(in) :: use_particles  !< pass .false. to ignore particles
 
       real                           :: fac
       integer                        :: i, side
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      logical                        :: apply_src_Mcorrection
+      logical                        :: apply_src_Mcorrection, use_p
       character(len=*), parameter :: mgi_label = "grav_MG_init_source"
 
       call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
       call all_cg%set_dirty(source, 0.979*dirtyH1)
       something_in_particles = .false.
-
+      use_p = .true.
+      if (present(use_particles)) use_p = use_particles
       if (present(i_sg_dens)) then
          if (size(i_sg_dens) > 0) then
             cgl => leaves%first
@@ -736,10 +738,12 @@ contains
             call leaves%set_q_value(source, 0.)  ! no selfgravitating fluids => vacuum unless we have particles
          endif
 
+         if (use_p) then
 #ifdef NBODY_MULTIGRID
-         call leaves%q_lin_comb( [ ind_val(source, 1.), ind_val(qna%ind(nbdn_n), fpiG) ], source)
-         something_in_particles = .true.
+            call leaves%q_lin_comb( [ ind_val(source, 1.), ind_val(qna%ind(nbdn_n), fpiG) ], source)
+            something_in_particles = .true.
 #endif /* NBODY_MULTIGRID */
+         endif
       else
          call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation
       endif
@@ -819,7 +823,7 @@ contains
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !<
 
-   subroutine multigrid_solve_grav(i_sg_dens)
+   subroutine multigrid_solve_grav(i_sg_dens, use_particles)
 
       use cg_leaves,         only: leaves
       use constants,         only: sgp_n, tmr_mg
@@ -831,7 +835,8 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_sg_dens      !< indices to selfgravitating fluids
+      logical, optional,             intent(in) :: use_particles  !< pass .false. to ignore particles
 
       integer :: grav_bnd_global
 
@@ -852,13 +857,13 @@ contains
 #endif /* !COSM_RAYS */
       endif
 
-      call init_source(i_sg_dens)
+      call init_source(i_sg_dens, use_particles)
 
       if (grav_bnd_global == bnd_isolated .and. singlepass) then
 
          call multipole_solver
          grav_bnd = bnd_givenval
-         call init_source(i_sg_dens)
+         call init_source(i_sg_dens, use_particles)
          vstat%cprefix = "Gm-"
 
       endif
@@ -873,7 +878,7 @@ contains
 
          vstat%cprefix = "Go-"
          call multipole_solver
-         call init_source
+         call init_source(use_particles=use_particles)
 
          call poisson_solver(outer)
 
