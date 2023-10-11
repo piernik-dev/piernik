@@ -63,8 +63,8 @@ module initcrspectrum
    real            :: q_big                       !< maximal amplitude of q
    real, dimension(:), allocatable :: cfl_cre                     !< CFL parameter  for CR spectrally resolved components! TODO FIXME RENAME ME PLEASE!!!!
    real, dimension(:), allocatable :: cre_eff                     !< fraction of energy passed to CR spectrally resolved components by nucleons (mainly protons)! TODO wat do with cr_eff now?! TODO FIXME RENAME ME PLEASE!!!!
-   real, allocatable, dimension(:) :: s, three_ps, four_ps                !> power-law exponent arrays for transrelativistic limit
-   real, allocatable, dimension(:) :: g_fix, g_mid_fix                                  !> kinetic energy arrays
+   real, allocatable, dimension(:,:) :: g_fix, g_mid_fix                                  !> kinetic energy arrays
+   real, allocatable, dimension(:,:) :: s, three_ps, four_ps                !> power-law exponent arrays for transrelativistic limit
    real, dimension(:,:), allocatable :: K_cresp_paral !< array containing parallel diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:,:), allocatable :: K_cresp_perp  !< array containing perpendicular diffusion coefficients of all CR CRESP components (number density and energy density)
    real, dimension(:), allocatable :: K_cre_pow   !< exponent for power law-like diffusion-energy dependence ! TODO FIXME RENAME ME PLEASE!!!!
@@ -180,7 +180,7 @@ contains
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
       use cr_data,         only: cr_mass, cr_sigma_N, cr_names, cr_Z, icr_spc, icr_H1, cr_spectral, cr_table
       use dataio_pub,      only: printinfo, warn, msg, die, nh
-      use diagnostics,     only: my_allocate_with_index, my_allocate, my_deallocate, ma1d
+      use diagnostics,     only: my_allocate_with_index, my_allocate, my_deallocate, ma1d, ma2d
       use global,          only: disallow_CRnegatives
       use func,            only: emag
       use initcosmicrays,  only: ncrb, ncr2b, ncrn, nspc, K_cr_paral, K_cr_perp, K_crs_paral, K_crs_perp, use_smallecr
@@ -502,12 +502,8 @@ contains
 
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
-      call my_allocate_with_index(g_fix,            ncrb, I_ZERO)
-      call my_allocate_with_index(s,                ncrb, I_ONE )
-      call my_allocate_with_index(three_ps,         ncrb, I_ONE )
-      call my_allocate_with_index(four_ps,          ncrb, I_ONE )
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
-      call my_allocate_with_index(g_mid_fix,        ncrb, I_ONE )
+      !call my_allocate_with_index(g_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
       call my_allocate_with_index(cresp_all_bins,   ncrb, I_ONE )
       call my_allocate_with_index(n_small_bin,      ncrb, I_ONE )
@@ -517,6 +513,13 @@ contains
       call my_allocate_with_index(mom_cre_fix,      ncrb, I_ZERO)
       call my_allocate_with_index(mom_mid_cre_fix,  ncrb, I_ONE )
       call my_allocate_with_index(gamma_beta_c_fix, ncrb, I_ZERO)
+
+      ma2d = [nspc, ncrb]
+      call my_allocate(g_fix, ma2d)
+      call my_allocate(s, ma2d)
+      call my_allocate(three_ps, ma2d)
+      call my_allocate(four_ps, ma2d)
+      !call my_allocate(g_mid_fix, ma2d)
 
       cresp_all_edges = [(i, i = I_ZERO, ncrb)]
       cresp_all_bins  = [(i, i = I_ONE,  ncrb)]
@@ -533,7 +536,7 @@ contains
 
       p_mid_fix = 0.0
       p_mid_fix(2:ncrb-1) = sqrt(p_fix(1:ncrb-2)*p_fix(2:ncrb-1))
-      g_mid_fix(2:ncrb-1) = sqrt(g_fix(1:ncrb-2)*g_fix(2:ncrb-1))
+      !g_mid_fix(2:ncrb-1) = sqrt(g_fix(1:ncrb-2)*g_fix(2:ncrb-1))
       p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
       p_mid_fix(ncrb) = p_mid_fix(ncrb-1) * p_fix_ratio
 
@@ -769,27 +772,31 @@ contains
    subroutine compute_gs
 
       use cresp_variables, only: clight_cresp
-      use cr_data,         only: transrelativistic
+      use cr_data,         only: transrelativistic, cr_mass
       use constants,       only: zero, three, four
-      use initcosmicrays,  only: ncrb
+      use initcosmicrays,  only: ncrb, nspc
 
       implicit none
+
+      integer(kind=4) :: a
 
       s = zero
       three_ps = zero
       four_ps = zero
 
-      if (transrelativistic) then
-         g_fix = sqrt(clight_cresp**2*p_fix**2 + clight_cresp**4) - clight_cresp**2 ! mass should be here, as in crs:
-!         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
-!         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
-      else
-         g_fix = clight_cresp*p_fix
-      endif
+      do a = 1, nspc
 
+         if (transrelativistic) then
+            g_fix(a,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(a)) - cr_mass(a)*clight_cresp**2 ! mass should be here, as in crs:
+   !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
+   !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
+         else
+            g_fix(a,:) = clight_cresp*p_fix
+         endif
 
-      s = log10(g_fix(1:ncrb)/g_fix(0:ncrb-1)) &
-         /log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
+         s(a,:) = log10(g_fix(a,1:ncrb)/g_fix(a,0:ncrb-1))/log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
+
+      enddo
 
       three_ps = three + s
       four_ps  = four + s
