@@ -830,7 +830,7 @@ contains
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !<
 
-   subroutine multigrid_solve_grav(i_sg_dens, q_sg_dens, use_particles)
+   subroutine multigrid_solve_grav(i_sg_dens, q_sg_dens, potential, use_particles)
 
       use cg_leaves,         only: leaves
       use constants,         only: sgp_n, tmr_mg
@@ -844,13 +844,18 @@ contains
 
       integer(kind=4), dimension(:),           intent(in) :: i_sg_dens      !< indices to selfgravitating fluids in cg%u array
       integer(kind=4), dimension(:), optional, intent(in) :: q_sg_dens      !< indices to selfgravitating cg%q fields
+      integer(kind=4), optional,               intent(in) :: potential      !< index to store the potential
       logical, optional,                       intent(in) :: use_particles  !< pass .false. to ignore particles
 
       integer :: grav_bnd_global
+      integer(kind=4) :: i_pot
 
       ts =  set_timer(tmr_mg, .true.)
 
       call all_dirty
+
+      i_pot = qna%ind(sgp_n)
+      if (present(potential)) i_pot = potential
 
       grav_bnd_global = grav_bnd
 
@@ -878,7 +883,7 @@ contains
 
       call poisson_solver(inner)
 
-      call leaves%q_copy(solution, qna%ind(sgp_n))
+      call leaves%q_copy(solution, i_pot)
 
       if (grav_bnd_global == bnd_isolated .and. .not. singlepass) then
 
@@ -890,7 +895,7 @@ contains
 
          call poisson_solver(outer)
 
-         call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
+         call leaves%q_add(solution, i_pot) ! add the "external" part of the potential
 
       endif
 
