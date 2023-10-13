@@ -680,11 +680,12 @@ contains
 !! \todo compact the following more (if possible)
 !<
 
-   subroutine init_source(i_sg_dens, use_particles)
+   subroutine init_source(i_sg_dens, q_sg_dens, use_particles)
 
       use cg_cost_data,      only: I_MULTIGRID
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
+      use cg_list_dataop,    only: ind_val
       use cg_list_global,    only: all_cg
       use constants,         only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero, dirtyH1, PPP_GRAV, PPP_MG
       use dataio_pub,        only: die
@@ -699,29 +700,33 @@ contains
       use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 #ifdef NBODY_MULTIGRID
-      use cg_list_dataop,    only: ind_val
       use constants,         only: nbdn_n
       use named_array_list,  only: qna
 #endif /* NBODY_MULTIGRID */
 
       implicit none
 
-      integer(kind=4), dimension(:), optional, intent(in) :: i_sg_dens      !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), optional, intent(in) :: i_sg_dens      !< indices to selfgravitating fluids in cg%u array
+      integer(kind=4), dimension(:), optional, intent(in) :: q_sg_dens      !< indices to selfgravitating cg%q fields
       logical, optional,                       intent(in) :: use_particles  !< pass .false. to ignore particles
 
       real                           :: fac
       integer                        :: i, side
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      logical                        :: apply_src_Mcorrection, use_p
+      logical                        :: apply_src_Mcorrection, use_p, vacuum
+      integer(kind=4), allocatable, dimension(:) :: q_sg_arr
       character(len=*), parameter :: mgi_label = "grav_MG_init_source"
 
       call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
       call all_cg%set_dirty(source, 0.979*dirtyH1)
+      vacuum = .true.
       something_in_particles = .false.
       use_p = .true.
       if (present(use_particles)) use_p = use_particles
+
+      ! The densities from cg%u
       if (present(i_sg_dens)) then
          if (size(i_sg_dens) > 0) then
             cgl => leaves%first
@@ -734,19 +739,21 @@ contains
                call cg%costs%stop(I_MULTIGRID)
                cgl => cgl%nxt
             enddo
-         else
-            call leaves%set_q_value(source, 0.)  ! no selfgravitating fluids => vacuum unless we have particles
+            vacuum = .false.
          endif
-
-         if (use_p) then
-#ifdef NBODY_MULTIGRID
-            call leaves%q_lin_comb( [ ind_val(source, 1.), ind_val(qna%ind(nbdn_n), fpiG) ], source)
-            something_in_particles = .true.
-#endif /* NBODY_MULTIGRID */
-         endif
-      else
-         call leaves%set_q_value(source, 0.)  ! empty domain for "outer potential" calculation
       endif
+
+      if (vacuum) call leaves%set_q_value(source, 0.)  ! initialize it anyway
+
+      ! particles mapped to density and user-defined fields that contain additional density fields
+      allocate(q_sg_arr(0))
+      if (present(q_sg_dens)) q_sg_arr = [ q_sg_arr, q_sg_dens ]  ! LHS realloc
+#ifdef NBODY_MULTIGRID
+      if (use_p) q_sg_arr = [ q_sg_arr, qna%ind(nbdn_n) ]  ! LHS realloc
+#endif /* NBODY_MULTIGRID */
+      do i = lbound(q_sg_arr, dim=1), ubound(q_sg_arr, dim=1)
+         call leaves%q_lin_comb( [ ind_val(source, 1.), ind_val(q_sg_arr(i), fpiG) ], source)
+      enddo
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
@@ -823,7 +830,7 @@ contains
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !<
 
-   subroutine multigrid_solve_grav(i_sg_dens, use_particles)
+   subroutine multigrid_solve_grav(i_sg_dens, q_sg_dens, use_particles)
 
       use cg_leaves,         only: leaves
       use constants,         only: sgp_n, tmr_mg
@@ -835,8 +842,9 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_sg_dens      !< indices to selfgravitating fluids
-      logical, optional,             intent(in) :: use_particles  !< pass .false. to ignore particles
+      integer(kind=4), dimension(:),           intent(in) :: i_sg_dens      !< indices to selfgravitating fluids in cg%u array
+      integer(kind=4), dimension(:), optional, intent(in) :: q_sg_dens      !< indices to selfgravitating cg%q fields
+      logical, optional,                       intent(in) :: use_particles  !< pass .false. to ignore particles
 
       integer :: grav_bnd_global
 
@@ -857,13 +865,13 @@ contains
 #endif /* !COSM_RAYS */
       endif
 
-      call init_source(i_sg_dens, use_particles)
+      call init_source(i_sg_dens, q_sg_dens, use_particles)
 
       if (grav_bnd_global == bnd_isolated .and. singlepass) then
 
          call multipole_solver
          grav_bnd = bnd_givenval
-         call init_source(i_sg_dens, use_particles)
+         call init_source(i_sg_dens, q_sg_dens, use_particles)
          vstat%cprefix = "Gm-"
 
       endif
@@ -878,7 +886,7 @@ contains
 
          vstat%cprefix = "Go-"
          call multipole_solver
-         call init_source(use_particles=use_particles)
+         call init_source(use_particles = .false.)
 
          call poisson_solver(outer)
 
