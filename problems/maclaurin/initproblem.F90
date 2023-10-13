@@ -916,7 +916,9 @@ contains
       type(axes)                                          :: ax
       type(cg_list_element), pointer                      :: cgl
       type(grid_container),  pointer                      :: cg
-      
+
+      call multigrid_solve_grav_dens(iarr_all_dn, .false.)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -925,7 +927,7 @@ contains
          ax%x = cg%x
          ax%y = cg%y
          ax%z = cg%z
-         call multigrid_solve_grav_dens(iarr_all_dn, .false.)
+         !call multigrid_solve_grav_dens(iarr_all_dn, .false.)
          !cg%q(qna%ind(apot_n))%arr = cg%q(qna%ind(gp_n))%arr
          cg%gp = cg%q(qna%ind(gp_n))%arr
          call ax%deallocate_axes
