@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, &
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, multigrid_solve_grav_dens, init_multigrid_grav_ext, &
         &    unmark_oldsoln, recover_sgpm, recover_sgp, initialize_oldsoln_expanded
 #ifdef HDF5
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
@@ -77,7 +77,7 @@ module multigrid_gravity
 #endif /* !NO_FFT */
 
    ! solution recycling
-   type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
+   type(soln_history), target :: inner, outer, disk                         !< storage for recycling the inner and outer potentials
 
    ! miscellaneous
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
@@ -369,6 +369,7 @@ contains
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       associate (nold => ord_time_extrap + 1)
          call inner%init_history(nold, "i")
+         call disk%init_history(nold, "d")
          if (grav_bnd == bnd_isolated .and. .not. singlepass) call outer%init_history(nold, "o")
       end associate
 
@@ -496,6 +497,7 @@ contains
       call cleanup_multipole
       call vstat%cleanup
       call inner%cleanup_history
+      call disk%cleanup_history
       call outer%cleanup_history
 
    end subroutine cleanup_multigrid_grav
@@ -714,7 +716,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       logical                        :: apply_src_Mcorrection, use_p
-      character(len=*), parameter :: mgi_label = "grav_MG_init_source"
+      character(len=*), parameter    :: mgi_label = "grav_MG_init_source"
 
       call ppp_main%start(mgi_label, PPP_GRAV + PPP_MG)
 
@@ -722,6 +724,7 @@ contains
       something_in_particles = .false.
       use_p = .true.
       if (present(use_particles)) use_p = use_particles
+
       if (present(i_sg_dens)) then
          if (size(i_sg_dens) > 0) then
             cgl => leaves%first
@@ -869,7 +872,6 @@ contains
       endif
 
       call poisson_solver(inner)
-
       call leaves%q_copy(solution, qna%ind(sgp_n))
 
       if (grav_bnd_global == bnd_isolated .and. .not. singlepass) then
@@ -891,6 +893,58 @@ contains
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
+
+   subroutine multigrid_solve_grav_dens(i_sg_dens, use_particles)
+
+      use cg_leaves,         only: leaves
+      use constants,         only: sgp_n, tmr_mg, gp_n
+      use multigrid_helpers, only: all_dirty
+      use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
+      use multipole,         only: multipole_solver, singlepass
+      use named_array_list,  only: qna
+      use timer,             only: set_timer
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(in) :: i_sg_dens      !< indices to selfgravitating fluids
+      logical, optional,             intent(in) :: use_particles  !< pass .false. to ignore particles
+
+      integer :: grav_bnd_global
+
+      ts =  set_timer(tmr_mg, .true.)
+
+      call all_dirty
+
+      grav_bnd_global = grav_bnd
+
+      if (grav_bnd_global == bnd_isolated) then
+         grav_bnd = bnd_dirichlet
+         vstat%cprefix = "Gi-"
+      else
+#ifdef COSM_RAYS
+         vstat%cprefix = "G-"
+#else /* !COSM_RAYS */
+         vstat%cprefix = ""
+#endif /* !COSM_RAYS */
+      endif
+
+      call init_source(i_sg_dens, use_particles)
+      call multipole_solver
+      grav_bnd = bnd_givenval
+      call init_source(i_sg_dens, use_particles)
+      vstat%cprefix = "Gm-"
+
+      call poisson_solver(disk)
+
+      !call leaves%q_copy(solution, qna%ind(sgp_n))
+      call leaves%q_copy(solution, qna%ind(gp_n))
+      !call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
+
+      grav_bnd = grav_bnd_global
+      ts = set_timer(tmr_mg)
+      tot_ts = tot_ts + ts
+
+   end subroutine multigrid_solve_grav_dens
 
 !> \brief Recover sgp field from history
 

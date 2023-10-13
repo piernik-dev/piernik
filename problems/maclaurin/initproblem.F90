@@ -296,6 +296,7 @@ contains
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,            only: dirty_debug, no_dirty_checks
+      use gravity,           only: grav_pot_3d
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
       use mpisetup,          only: master
@@ -310,6 +311,7 @@ contains
       type(grid_container),  pointer :: cg
 
       call compute_analytical_potential
+      grav_pot_3d => grav_pot_dens
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -895,6 +897,41 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine maclaurin2bnd_potential
+    end subroutine maclaurin2bnd_potential
+
+    subroutine grav_pot_dens
+
+      use axes_M,            only: axes
+      use constants,         only: sgp_n, gp_n
+      use cg_leaves,         only: leaves
+      use cg_list,           only: cg_list_element
+      use fluidindex,        only: iarr_all_dn
+      use grid_cont,         only: grid_container
+      use multigrid_gravity, only: multigrid_solve_grav,  multigrid_solve_grav_dens
+      use named_array_list,  only: qna
+      use multipole,         only: multipole_solver
+
+      implicit none
+
+      type(axes)                                          :: ax
+      type(cg_list_element), pointer                      :: cgl
+      type(grid_container),  pointer                      :: cg
+      
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         call ax%allocate_axes(cg%lhn)
+         ax%x = cg%x
+         ax%y = cg%y
+         ax%z = cg%z
+         call multigrid_solve_grav_dens(iarr_all_dn, .false.)
+         !cg%q(qna%ind(apot_n))%arr = cg%q(qna%ind(gp_n))%arr
+         cg%gp = cg%q(qna%ind(gp_n))%arr
+         call ax%deallocate_axes
+         cgl => cgl%nxt
+      enddo
+
+    end subroutine grav_pot_dens
 
 end module initproblem
