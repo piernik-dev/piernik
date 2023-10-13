@@ -673,11 +673,13 @@ contains
       !> \todo call the update of cs_i2 and other vital variables if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
       call all_bnd_vital_q
+
+      call all_cg%enable_prolong
+
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */
 
-      call all_cg%enable_prolong
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
 
       emergency_fix = .false.
