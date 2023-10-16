@@ -778,23 +778,23 @@ contains
 
       implicit none
 
-      integer(kind=4) :: a
+      integer(kind=4) :: i
 
       s = zero
       three_ps = zero
       four_ps = zero
 
-      do a = 1, nspc
+      do i = 1, nspc
 
          if (transrelativistic) then
-            g_fix(a,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(a)) - cr_mass(a)*clight_cresp**2 ! mass should be here, as in crs:
+            g_fix(i,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(i)**2) - cr_mass(i)*clight_cresp**2
    !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
    !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
          else
-            g_fix(a,:) = clight_cresp*p_fix
+            g_fix(i,:) = clight_cresp*p_fix
          endif
 
-         s(a,:) = log10(g_fix(a,1:ncrb)/g_fix(a,0:ncrb-1))/log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
+         s(i,:) = log10(g_fix(i,1:ncrb)/g_fix(i,0:ncrb-1))/log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
 
       enddo
 
