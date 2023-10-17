@@ -102,7 +102,7 @@ contains
 
 !----- main subroutine -----
 
-   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, substeps, p_out)
+   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, i_spc, substeps, p_out)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
       use cr_data,        only: p_bnd
@@ -120,6 +120,7 @@ contains
       real, dimension(1:ncrb),        intent(inout) :: n_inout, e_inout
       type(spec_mod_trms),            intent(in)    :: sptab
       logical,                        intent(inout) :: cfl_cresp_violation
+      integer(kind=4),                intent(in)    :: i_spc
       real, dimension(1:2), optional, intent(inout) :: p_out
       integer(kind=4), optional,      intent(in)    :: substeps
 
@@ -163,7 +164,7 @@ contains
          endif
       endif
 
-      call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
+      call cresp_find_prepare_spectrum(n_inout, e_inout, i_spc, empty_cell)
 
       if (empty_cell) then
          approx_p = e_small_approx_p         !< restore approximation before leaving
@@ -182,7 +183,7 @@ contains
 
       if (approx_p(HI) > 0) then
          if (i_cut(HI) > 1 .and. p_bnd=='mov') then
-            call get_fqp_cutoff(HI, solve_fail_up)
+            call get_fqp_cutoff(HI, i_spc, solve_fail_up)
          else if (i_cut(HI) > 1 .and. p_bnd=='fix') then                                                 !< spectrum cutoff beyond the fixed momentum grid
             p_cut(HI)     = p_fix(i_cut(HI))
             p(i_cut(HI))  = p_fix(i_cut(HI))
@@ -210,7 +211,7 @@ contains
 
       if (approx_p(LO) > 0) then
          if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='mov') then
-            call get_fqp_cutoff(LO, solve_fail_lo)
+            call get_fqp_cutoff(LO, i_spc,solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(LO)     = p_fix(i_cut(LO))
             p(i_cut(LO))  = p_cut(LO)
@@ -257,7 +258,7 @@ contains
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
+         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next, i_spc)
 
 ! Computing e and n at [t+dt]
 
@@ -266,18 +267,18 @@ contains
 
 ! edt(1:ncrb) = e(1:ncrb) *(one-0.5*dt*r(1:ncrb)) - (eflux(1:ncrb) - eflux(0:ncrb-1))/(one+0.5*dt*r(1:ncrb))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-         call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+         call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next, i_spc)                 ! new active bins already received some particles, Ri is needed for those bins too
 
          edt(1:ncrb) = edt(1:ncrb) *(one-dt*r(1:ncrb))
 
          if (allow_unnatural_transfer) then
             if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
-               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_spc, i_cut_next(HI))) then
                   call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
                endif
             endif
             if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncrb)) then
-               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_spc, i_cut_next(LO))) then
                   call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
                endif
             endif
@@ -309,7 +310,7 @@ contains
                endif
             endif
 
-            call ne_to_q(n, e, q, active_bins)  !< begins new step
+            call ne_to_q(n, e, q, active_bins, i_spc)  !< begins new step
             f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)  !< Compute values of distribution function in the new step
          endif
 
@@ -498,7 +499,7 @@ contains
 
    end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
+   subroutine cresp_find_prepare_spectrum(n, e, i_spc, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero, I_ONE
 #ifdef CRESP_VERBOSED
@@ -515,6 +516,7 @@ contains
       integer(kind=4), optional, intent(out)     :: i_up_out
       integer(kind=8), dimension(:), allocatable :: nonempty_bins
       logical, dimension(ncrb)                   :: has_n_gt_zero, has_e_gt_zero
+      integer(kind=4),           intent(in)      :: i_spc
       integer(kind=4)                            :: i, num_has_gt_zero
       integer(kind=4), dimension(LO:HI)          :: approx_p_tmp, pre_i_cut
 
@@ -573,7 +575,7 @@ contains
       approx_p = I_ZERO
       i_cut = pre_i_cut                         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
-      call ne_to_q(n, e, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
+      call ne_to_q(n, e, q, active_bins, i_spc)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
       f = nq_to_f(p(I_ZERO:ncrb-I_ONE), p(I_ONE:ncrb), n(I_ONE:ncrb), q(I_ONE:ncrb), active_bins)  !< Compute values of distribution function f for active left edges at [t]
 
@@ -690,7 +692,7 @@ contains
    end subroutine cresp_find_prepare_spectrum
 !----------------------------------------------------------------------------------------------------
 
-   logical function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
+   logical function assert_active_bin_via_nei(n_in, e_in, i_cutoff, i_spc)
 
       use constants,       only: zero, fpi, one, three
       use cresp_NR_method, only: compute_q
@@ -703,7 +705,7 @@ contains
       implicit none
 
       real,            intent(in) :: n_in, e_in
-      integer(kind=4), intent(in) :: i_cutoff
+      integer(kind=4), intent(in) :: i_cutoff, i_spc
       real                        :: f_one, q_one, q_1m3, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code
 
@@ -719,8 +721,8 @@ contains
          endif
 
          exit_code = .true.
-         alpha = e_in/(n_in * g_fix(i_cutoff-1))
-         q_one = compute_q(alpha, three_ps(i_cutoff-1), exit_code)
+         alpha = e_in/(n_in * g_fix(i_spc,i_cutoff-1))
+         q_one = compute_q(alpha, three_ps(i_spc,i_cutoff-1), exit_code)
          q_1m3 = three - q_one
 
          p_l = p_fix(i_cutoff-1)
@@ -1025,7 +1027,7 @@ contains
 
         if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then  ! Possible bug: len(p_bnd) == idlen == 3
             do co = LO, HI
-                call get_fqp_cutoff(co, exit_code)
+                call get_fqp_cutoff(co, i_spc, exit_code)
                 if (exit_code) then
                 write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
                 call die(msg)
@@ -1104,7 +1106,7 @@ contains
 
         ! Test for consistency of conversion (f,q) <--> (n,e)
         ! Compute power indexes for each bin at [t], from n and ekin
-        call ne_to_q(n, e, q, active_bins)
+        call ne_to_q(n, e, q, active_bins, i_spc)
         ! Compute f on left bin faces at [t]
         f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)
         print *, 'test f =',  f
@@ -1708,7 +1710,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   subroutine ne_to_q(n, e, q, bins)
+   subroutine ne_to_q(n, e, q, bins, i_spc)
 
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
@@ -1721,6 +1723,7 @@ contains
       real, dimension(1:ncrb),       intent(in)  :: n, e
       real, dimension(1:ncrb),       intent(out) :: q
       integer(kind=4), dimension(:), intent(in)  :: bins
+      integer(kind=4),               intent(in)  :: i_spc
       integer                                    :: i, i_active
       real                                       :: alpha_in
       real(kind=8)                               :: three_p_s
@@ -1731,13 +1734,13 @@ contains
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          exit_code = .false.
          i = bins(i_active)
-         three_p_s = three_ps(i)
+         three_p_s = three_ps(i_spc,i)
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
-            alpha_in = e(i)/(n(i)*g_fix(i-1))
+            alpha_in = e(i)/(n(i)*g_fix(i_spc,i-1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
             else
@@ -1863,7 +1866,7 @@ contains
 ! Preparation and computation of boundary momenta and and boundary
 ! distribution function amplitudes value on left bin edge, computing q for indicated cutoff bin (returns f, p, q)
 !---------------------------------------------------------------------------------------------------
-   subroutine get_fqp_cutoff(cutoff, exit_code)
+   subroutine get_fqp_cutoff(cutoff, i_spc, exit_code)
 
       use constants,       only: zero, one, I_ONE, I_TWO, LO, HI
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
@@ -1875,7 +1878,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)  :: cutoff
+      integer(kind=4), intent(in)  :: cutoff, i_spc
       logical,         intent(out) :: exit_code
       integer(kind=4)              :: ipfix, qi
       real, dimension(1:2)         :: x_NR, x_NR_init
@@ -1885,7 +1888,7 @@ contains
       qi    = i_cut(cutoff) + oz(cutoff)
       call assoc_pointers(cutoff)
 
-      alpha = e(qi)/(n(qi) * g_fix(ipfix))
+      alpha = e(qi)/(n(qi) * g_fix(i_spc,ipfix))
       n_in  = n(qi)
       x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
       if (.not. interpolated) then

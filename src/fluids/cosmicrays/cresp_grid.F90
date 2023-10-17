@@ -197,7 +197,7 @@ contains
 #ifdef CRESP_VERBOSED
                      print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
-                     if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, substeps = nssteps)
+                     if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, i_spc, substeps = nssteps)
                     ! if (i_spc == icr_H1 .and. eH1(PRIM))  q_spc_all(:,i_spc) = q_spc
                      if (i_spc == cr_table(icr_C12) .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
                      if (i_spc == cr_table(icr_N14) .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
