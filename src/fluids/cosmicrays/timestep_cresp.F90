@@ -101,7 +101,7 @@ contains
                      if (synch_active(i_spc)) sptab%umag = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC(i_spc)
                      cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
                      cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
-                     call cresp_find_prepare_spectrum(cresp%n, cresp%e, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
+                     call cresp_find_prepare_spectrum(cresp%n, cresp%e, i_spc, empty_cell, i_up_max_tmp) ! needed for synchrotron timestep
                      i_up_max = max(i_up_max, i_up_max_tmp)
 
                      sptab%ub = sptab%umag + sptab%ucmb  ! prepare term for synchrotron + IC losses
@@ -203,7 +203,7 @@ contains
 
       empty_cell = .false.
 
-      call cresp_find_prepare_spectrum(cresp_n, cresp_e, empty_cell, i_up_cell) ! needed for synchrotron timestep
+      call cresp_find_prepare_spectrum(cresp_n, cresp_e, i_spc, empty_cell, i_up_cell) ! needed for synchrotron timestep
 
       if (.not. empty_cell) then
          if (synch_active(i_spc)) call cresp_timestep_synchrotron_IC(i_spc, p_loss_terms%ub, i_up_cell)
