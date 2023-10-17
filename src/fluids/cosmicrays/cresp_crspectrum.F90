@@ -1580,7 +1580,7 @@ contains
       integer(kind=4), dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
       integer(kind=4),               intent(in) :: i_spc
       real,    dimension(1:ncrb-1)      :: pimh, pimth, fimh, fimth, gimh, gimth  ! *imh = i_minus_half, *imth = i_minus_third
-      real,    dimension(1:ncrb-1)      :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
+      real,    dimension(1:ncrb-1)      :: dn_upw, de_upw, qi, qim1, three_ps_i, three_ps_im1  ! *im1 = i_minus_one
 
       pimh(1:ncrb-1) = p(1:ncrb-1)
       pimth(1:ncrb-1) = p(0:ncrb-2)
@@ -1590,6 +1590,9 @@ contains
 
       gimh(1:ncrb-1)  = g_fix(i_spc,1:ncrb-1)
       gimth(1:ncrb-1) = g_fix(i_spc,0:ncrb-2)
+
+      three_ps_i(1:ncrb-1)  = three_ps(i_spc,1:ncrb-1)
+      three_ps_im1(1:ncrb-1) = three_ps(i_spc,0:ncrb-2)
 
       qi(1:ncrb-1)  = q(2:ncrb)
       qim1(1:ncrb-1) = q(1:ncrb-1)
@@ -1608,8 +1611,8 @@ contains
       nflux(ce) = - dn_upw(ce)
 
       de_upw(ce) = fpcc * fimh(ce) *gimh(ce)*pimh(ce)**three
-      where (abs(qi(ce+1) - three_ps(i_spc,ce+1)) > eps)
-         de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(three_ps(i_spc,ce+1)-qi(ce+1)) - one)/(three_ps(i_spc,ce+1) - qi(ce+1))
+      where (abs(qi(ce) - three_ps(i_spc,ce)) > eps)
+         de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(three_ps_i(ce)-qi(ce)) - one)/(three_ps_i(ce) - qi(ce))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
       endwhere
@@ -1645,7 +1648,7 @@ contains
 
       de_upw(he) = fpcc * fimth(he) * gimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**(qim1(he) - s(i_spc,he))
       where (abs(qi(he) - three_ps(i_spc,he)) > eps)
-         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three_ps(i_spc,he)-qim1(he)) - one)/(three_ps(i_spc,he) - qim1(he))
+         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three_ps_im1(he)-qim1(he)) - one)/(three_ps_im1(he) - qim1(he))
       elsewhere
          de_upw(he) = de_upw(he)*log(pimh(he)/p_upw(he))
       endwhere
