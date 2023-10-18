@@ -503,10 +503,15 @@ contains
 ! arrays initialization
       call my_allocate_with_index(p_fix,            ncrb, I_ZERO)
       call my_allocate_with_index(p_mid_fix,        ncrb, I_ONE )
-      !call my_allocate_with_index(g_mid_fix,        ncrb, I_ONE )
       call my_allocate_with_index(cresp_all_edges,  ncrb, I_ZERO)
       call my_allocate_with_index(cresp_all_bins,   ncrb, I_ONE )
       call my_allocate_with_index(n_small_bin,      ncrb, I_ONE )
+
+      call my_allocate_with_index(g_fix,       nspc, ncrb, I_ONE, I_ZERO )
+      call my_allocate_with_index(g_mid_fix,   nspc, ncrb, I_ONE, I_ONE )
+      call my_allocate_with_index(s,           nspc, ncrb, I_ONE, I_ONE )
+      call my_allocate_with_index(three_ps,    nspc, ncrb, I_ONE, I_ONE )
+      call my_allocate_with_index(four_ps,     nspc, ncrb, I_ONE, I_ONE )
 
       call my_allocate_with_index(Gamma_fix,        ncrb, I_ZERO)
       call my_allocate_with_index(Gamma_mid_fix,    ncrb, I_ONE )
@@ -514,11 +519,11 @@ contains
       call my_allocate_with_index(mom_mid_cre_fix,  ncrb, I_ONE )
       call my_allocate_with_index(gamma_beta_c_fix, ncrb, I_ZERO)
 
-      ma2d = [nspc, ncrb]
-      call my_allocate(g_fix, ma2d)
-      call my_allocate(s, ma2d)
-      call my_allocate(three_ps, ma2d)
-      call my_allocate(four_ps, ma2d)
+      !ma2d = [nspc, ncrb]
+      !call my_allocate(g_fix, ma2d)
+      !call my_allocate(s, ma2d)
+      !call my_allocate(three_ps, ma2d)
+      !call my_allocate(four_ps, ma2d)
       !call my_allocate(g_mid_fix, ma2d)
 
       cresp_all_edges = [(i, i = I_ZERO, ncrb)]
@@ -778,39 +783,42 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i
+      integer(kind=4) :: i_spc
 
       s = zero
       three_ps = zero
       four_ps = zero
 
-      do i = 1, nspc
-
-         if (transrelativistic) then
-            g_fix(i,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(i)**2) - cr_mass(i)*clight_cresp**2
-   !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
-   !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
-         else
-            g_fix(i,:) = clight_cresp*p_fix
-         endif
-
-         s(i,:) = log10(g_fix(i,1:ncrb)/g_fix(i,0:ncrb-1))/log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
-
-      enddo
-
-      three_ps = three + s
-      four_ps  = four + s
-
-# ifdef CRESP_VERBOSED
       print *, 'In compute_gs'
       print *, 'sizes(s):   ', lbound(s),  ubound(s), size(s)
       print *, 'sizes(p):   ', lbound(p_fix),  ubound(p_fix), size(p_fix)
       print *, 'sizes(g_fix):', lbound(g_fix),  ubound(g_fix), size(g_fix)
       print *, 'bins =', ncrb
-      print *, 'p =', p_fix
-      print *, 'g_fix =', g_fix
-      print *, 's =', s
+
+      do i_spc = 1, nspc
+
+         if (transrelativistic) then
+            g_fix(i_spc,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(i_spc)**2) - cr_mass(i_spc)*clight_cresp**2
+   !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
+   !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
+         else
+            g_fix(i_spc,:) = clight_cresp*p_fix
+         endif
+
+         s(i_spc,:) = log10(g_fix(i_spc,1:ncrb)/g_fix(i_spc,0:ncrb-1))/log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
+
+#ifdef CRESP_VERBOSED
+
+         print *, 'p_fix =', p_fix
+         print *, 'g_fix(',i_spc,') = ', g_fix(i_spc,:)
+         print *, 's (',i_spc,') = ', s(i_spc,:)
+
 #endif
+
+      enddo
+
+      three_ps = three + s
+      four_ps  = four + s
 
    end subroutine compute_gs
 
