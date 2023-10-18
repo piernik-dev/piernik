@@ -108,12 +108,14 @@ contains
 
    subroutine init(this)
 
-      use constants,                          only: base_level_id
-      use refinement,                         only: refine_points, refine_boxes, refine_zcyls, refine_vars, inactive_name, jeans_ref, jeans_plot
+      use constants,                          only: base_level_id, I_ONE
+      use refinement,                         only: refine_points, refine_boxes, refine_zcyls, refine_vars, inactive_name, &
+           &                                        jeans_ref, jeans_plot, nbody_ref
       use unified_ref_crit_geometrical_box,   only: urc_box
       use unified_ref_crit_geometrical_point, only: urc_point
       use unified_ref_crit_geometrical_zcyl,  only: urc_zcyl
       use unified_ref_crit_Jeans,             only: urc_jeans
+      use unified_ref_crit_nbody,             only: urc_nbody
       use unified_ref_crit_var,               only: decode_urcv
 
       implicit none
@@ -124,6 +126,7 @@ contains
       type(urc_point), pointer :: urcp
       type(urc_zcyl),  pointer :: urczc
       type(urc_jeans), pointer :: urcj
+      type(urc_nbody), pointer :: urcn
       class(urc),      pointer :: p_urc
 
       integer :: ip
@@ -141,6 +144,14 @@ contains
          allocate(urcj)
          urcj = urc_jeans(jeans_ref, jeans_plot)
          p_urc => urcj
+         call this%add(p_urc)
+      endif
+
+      ! add particle count criterion
+      if (nbody_ref < huge(I_ONE) .and. nbody_ref > 0) then
+         allocate(urcn)
+         urcn = urc_nbody(nbody_ref)
+         p_urc => urcn
          call this%add(p_urc)
       endif
 
@@ -265,6 +276,7 @@ contains
       use named_array_list,       only: qna, wna
       use mpisetup,               only: master
       use unified_ref_crit_Jeans, only: urc_jeans
+      use unified_ref_crit_nbody, only: urc_nbody
       use unified_ref_crit_user,  only: urc_user
       use unified_ref_crit_var,   only: urc_var
 
@@ -297,6 +309,13 @@ contains
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field("nJ")
                   write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] Jeans refinement criterion is stored in array '", trim(ref_n), "'"
+                  if (master) call printinfo(msg)
+               endif
+            class is (urc_nbody)
+               ! unused at the moment of implementation
+               if (p%plotfield .and. p%iplot == INVALID) then
+                  p%iplot = new_ref_field("nparticles")
+                  write(msg, '(3a)') "[unified_ref_crit_list:create_plotfields] particle count criterion is stored in array '", trim(ref_n), "'"
                   if (master) call printinfo(msg)
                endif
             class is (urc_user)
