@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 128, 128, 32
+    n_d = 64, 64, 32
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
@@ -10,8 +10,8 @@
     xmax   = 2.
     ymin   =-2.
     ymax   = 2.
-    zmin   =-0.5
-    zmax   = 0.5
+    zmin   =-1.
+    zmax   = 1.
  /
 
  $RESTART_CONTROL
@@ -21,14 +21,14 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
-    nend   = 5
+    tend   = 0.4
+!    nend   = 5
  /
 
  $OUTPUT_CONTROL
     problem_name = 'nbody'
     run_id =  'tst'
-    dt_hdf  = 1.0
+    dt_hdf  = 1.0e-1
     dt_res  = 0.0
     dt_log  = 0.0
     dt_tsl  = 0.0
@@ -61,7 +61,7 @@
 
  $PROBLEM_CONTROL
     blob_mass      = 1.
-    blob_particles = 1000000
+    blob_particles = 100000
     blob_center    = 0., 1., 0.
     blob_size      = 1.
     blob_velocity  = 1., 0., 0.
@@ -73,6 +73,7 @@
  /
 
  $AMR
+    bsize = 3*16
  /
 
  $PARTICLES
@@ -87,6 +88,6 @@
  /
 
  $BALANCE
-   verbosity = 2
+   verbosity = 3
    verbosity_nstep = 1
  /
