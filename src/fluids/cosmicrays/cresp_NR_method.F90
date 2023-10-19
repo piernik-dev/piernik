@@ -36,7 +36,7 @@ module cresp_NR_method
    implicit none
 
    private
-   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps, q_tab, alpha_q_tab
+   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps, q_tab, alpha_q_tab, lin_interpolation_1D
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
@@ -336,7 +336,7 @@ contains
             print *, 'alpha_q_tab(i=',i,',j=',j,'): ', alpha_q_tab(i,j,:)
          enddo
       enddo
-      stop
+      !stop
 
 
       q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big

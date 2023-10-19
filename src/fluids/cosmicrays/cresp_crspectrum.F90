@@ -1720,7 +1720,7 @@ contains
 
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
-      use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab
+      use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
       use initcosmicrays,  only: ncrb
       use initcrspectrum,  only: e_small, g_fix, three_ps
 
@@ -1731,13 +1731,13 @@ contains
       real, dimension(1:ncrb)                    :: q_NR
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer(kind=4),               intent(in)  :: i_spc
-      integer                                    :: i, i_active
+      integer                                    :: i, i_active, j
       real                                       :: alpha_in, base
       real(kind=8)                               :: three_p_s
       logical                                    :: exit_code
 
       q = zero
-
+      print *, 'i_spc : ', i_spc
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          exit_code = .false.
          i = bins(i_active)
@@ -1750,7 +1750,18 @@ contains
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*g_fix(i_spc,i-1))
-            q(i) = q_tab(minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1))
+            print *, 'minval of delta alpha : ', minval(alpha_in - alpha_q_tab(:,i_spc,i))
+            j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
+            print *, 'j : ', j
+            print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
+            print *, 'alpha_q_tab(j-1) : ', alpha_q_tab(j-1,i_spc,i)
+            print *, 'alpha_q_tab(j+1) : ', alpha_q_tab(j+1,i_spc,i)
+            print *, 'q_tab(j) : ',   q_tab(j)
+            print *, 'q_tab(j-1) : ', q_tab(j-1)
+            print *, 'q_tab(j+1) : ', q_tab(j+1)
+            print *, 'alpha : ', alpha_in
+
+            q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                q_NR(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
             else
