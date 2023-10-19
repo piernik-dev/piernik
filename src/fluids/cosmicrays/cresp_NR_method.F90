@@ -889,7 +889,7 @@ contains
       real :: weight, lin_interpolation_1D
 
       weight   = (arg_mid - arg(1)) / (arg(2) - arg(1))
-      lin_interpolation_1D =  fun(1) * (one - weight) + fun(2) * (one - weight)
+      lin_interpolation_1D =  fun(1) * (one - weight) + fun(2) * weight
 
    end function lin_interpolation_1D
 !----------------------------------------------------------------------------------------------------
