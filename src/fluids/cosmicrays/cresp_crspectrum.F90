@@ -182,9 +182,9 @@ contains
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
       if (approx_p(HI) > 0) then
-         if (i_cut(HI) > 1 .and. p_bnd=='mov') then
+         if (i_cut(HI) > 1 .and. p_bnd=='moving') then
             call get_fqp_cutoff(HI, i_spc, solve_fail_up)
-         else if (i_cut(HI) > 1 .and. p_bnd=='fix') then                                                 !< spectrum cutoff beyond the fixed momentum grid
+         else if (i_cut(HI) > 1 .and. p_bnd=='fixed') then                                                 !< spectrum cutoff beyond the fixed momentum grid
             p_cut(HI)     = p_fix(i_cut(HI))
             p(i_cut(HI))  = p_fix(i_cut(HI))
             solve_fail_up = .false.
@@ -210,7 +210,7 @@ contains
       endif
 
       if (approx_p(LO) > 0) then
-         if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='mov') then
+         if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='moving') then
             call get_fqp_cutoff(LO, i_spc,solve_fail_lo)
          else                                                  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(LO)     = p_fix(i_cut(LO))
