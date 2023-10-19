@@ -36,13 +36,14 @@ module cresp_NR_method
    implicit none
 
    private
-   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps
+   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps, q_tab, alpha_q_tab
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
    real                                      :: alpha, p_ratio_4_q, n_in
-   real, allocatable, dimension(:)           :: alpha_tab_q, q_grid
+   real, allocatable, dimension(:)           :: alpha_tab_q, q_tab, q_grid
    real, allocatable, dimension(:,:)         :: alpha_tab, n_tab
+   real, allocatable, dimension(:,:,:)       :: alpha_q_tab
    integer(kind=4)                           :: helper_arr_dim
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
@@ -141,7 +142,7 @@ contains
       func_check = .false.
 
       do i = 1, NR_iter_limit
-         fun1D_val = alpha_to_q(x, three_p_s) - alpha
+         fun1D_val = alpha_to_q(x, three_p_s, p_ratio_4_q) - alpha
          if ((abs(fun1D_val) <= tol_f_1D) .and. (abs(delta) <= tol_f_1D)) then ! delta <= tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
             exit_code = .false.
             return
@@ -185,7 +186,7 @@ contains
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
-      derivative_1D = half * (alpha_to_q(x+dx,three_p_s) - alpha_to_q(x-dx,three_p_s))/dx
+      derivative_1D = half * (alpha_to_q(x+dx,three_p_s, p_ratio_4_q) - alpha_to_q(x-dx,three_p_s, p_ratio_4_q))/dx
 
    end function derivative_1D
 
@@ -259,17 +260,18 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine init_smap_array_values(hdr_init)
 
-      use constants,       only: zero, half, one, three, I_ONE, big, small, LO, HI
+      use constants,       only: zero, half, one, two, three, I_ONE, big, small, LO, HI
       use cresp_helpers,   only: map_header
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: die
-      use initcrspectrum,  only: arr_dim_a, arr_dim_n, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big
+      use initcrspectrum,  only: arr_dim_a, arr_dim_n, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big, three_ps, p_fix
+      use initcosmicrays,  only: ncrb, nspc
 
       implicit none
 
-      real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
+      real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx, base
       real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
-      integer(kind=4)    :: i, j, ilim = 0, qmaxiter = 100
+      integer(kind=4)    :: i, j, k,ilim = 0, qmaxiter = 100
       type(map_header), dimension(2), intent(inout) :: hdr_init
 
 
@@ -321,6 +323,21 @@ contains
          n_tab(HI, i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim_n) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim_n-1)*real(i-1))
       enddo
 
+      do i = 1, arr_dim_q
+         q_tab(i) = ind_to_flog(i, q_big, three*q_big, arr_dim_q) ! We tabulate q
+         q_tab(i) = q_tab(i) - two*q_big
+         print *, 'q_tab (i=',i,') : ', q_tab(i)
+         do j = 1, nspc
+            do k = 1, ncrb
+               alpha_q_tab(i,j,k)=alpha_to_q(q_tab(i), three_ps(j,k), p_fix(k)/p_fix(k-1))
+               !print *, 'p_ratio : ', p_fix(k)/p_fix(k-1)
+            enddo
+            !stop
+            print *, 'alpha_q_tab(i=',i,',j=',j,'): ', alpha_q_tab(i,j,:)
+         enddo
+      enddo
+      stop
+
 
       q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
 
@@ -341,7 +358,7 @@ contains
 #ifdef CRESP_VERBOSED
 
       print *, a_min_q, a_max_q, p_fix_ratio, epsilon(one), j, ilim, qmaxiter
-      stop
+      !stop
 
       do i = 1, arr_dim_q
          print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
@@ -1006,7 +1023,7 @@ contains
 
    end subroutine q_control
 !----------------------------------------------------------------------------------------------------
-   real function alpha_to_q(x, three_p_s) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
+   real function alpha_to_q(x, three_p_s, p_ratio_4_q) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
       use constants,      only: one, three
       use initcrspectrum, only: q_eps
@@ -1014,7 +1031,7 @@ contains
       implicit none
 
       real, intent(in) :: x
-      real             :: q_in3, q_in4
+      real             :: q_in3, q_in4, p_ratio_4_q
       real(kind=8)     :: three_p_s
 
       q_in3 = three - x
@@ -1491,19 +1508,25 @@ contains
 
       use constants,      only: HI, I_ONE
       use cresp_helpers,  only: allocate_smaps
-      use diagnostics,    only: ma2d, my_allocate, my_allocate_with_index
+      use diagnostics,    only: ma2d, ma3d, my_allocate, my_allocate_with_index
       use initcrspectrum, only: arr_dim_a, arr_dim_n, arr_dim_q
+      use initcosmicrays, only: ncrb, nspc
 
       implicit none
 
       if (.not. allocated(alpha_tab_q)) call my_allocate_with_index(alpha_tab_q, arr_dim_q, I_ONE)
       if (.not. allocated(q_grid))      call my_allocate_with_index(q_grid,      arr_dim_q, I_ONE)
+      if (.not. allocated(q_tab))       call my_allocate_with_index(q_tab,       arr_dim_q, I_ONE)
 
       ma2d = [HI, arr_dim_a]
       if (.not. allocated(alpha_tab))   call my_allocate(alpha_tab, ma2d)
 
       ma2d = [HI, arr_dim_n]
       if (.not. allocated(n_tab))       call my_allocate(n_tab, ma2d)
+
+      ma3d = [arr_dim_q, nspc, ncrb]
+
+      if (.not. allocated(alpha_q_tab)) call my_allocate(alpha_q_tab, ma3d)
 
       call allocate_smaps(arr_dim_a, arr_dim_n)
 
@@ -1520,6 +1543,8 @@ contains
       call my_deallocate(q_grid)
       call my_deallocate(alpha_tab)
       call my_deallocate(n_tab)
+      call my_deallocate(q_tab)
+      call my_deallocate(alpha_q_tab)
       call deallocate_smaps
 
    end subroutine deallocate_all_smaps
