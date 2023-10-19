@@ -1720,7 +1720,7 @@ contains
 
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
-      use cresp_NR_method, only: compute_q
+      use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab
       use initcosmicrays,  only: ncrb
       use initcrspectrum,  only: e_small, g_fix, three_ps
 
@@ -1728,10 +1728,11 @@ contains
 
       real, dimension(1:ncrb),       intent(in)  :: n, e
       real, dimension(1:ncrb),       intent(out) :: q
+      real, dimension(1:ncrb)                    :: q_NR
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer(kind=4),               intent(in)  :: i_spc
       integer                                    :: i, i_active
-      real                                       :: alpha_in
+      real                                       :: alpha_in, base
       real(kind=8)                               :: three_p_s
       logical                                    :: exit_code
 
@@ -1741,22 +1742,30 @@ contains
          exit_code = .false.
          i = bins(i_active)
          three_p_s = three_ps(i_spc,i)
+         base = p(i)/p(i-1)
+         print *, 'i = ', i
          if (e(i) > e_small .and. p(i-1) > zero) then
             exit_code = .true.
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*g_fix(i_spc,i-1))
+            q(i) = q_tab(minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1))
             if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
-               q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
+               q_NR(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
             else
-               q(i) = compute_q(alpha_in, three_p_s, exit_code)
+               q_NR(i) = compute_q(alpha_in, three_p_s, exit_code)
             endif
+
+            print *, 'q : ', q(i)
+            print *, 'q_NR : ', q_NR(i)
+            print *, 'Test difference : Delta q = ', abs(q(i) - q_NR(i))
          else
             q(i) = zero
          endif
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
+      stop
 
       !print *, 'q : ', q
 
