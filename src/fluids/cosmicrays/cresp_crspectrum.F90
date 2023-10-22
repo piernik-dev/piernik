@@ -182,15 +182,15 @@ contains
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
 
       if (approx_p(HI) > 0) then
-         if (i_cut(HI) > 1 .and. p_bnd=='moving') then
+         if (i_cut(HI) > 1 .and. p_bnd=='mov') then
             call get_fqp_cutoff(HI, i_spc, solve_fail_up)
-         else if (i_cut(HI) > 1 .and. p_bnd=='fixed') then                                                 !< spectrum cutoff beyond the fixed momentum grid
+         else if (i_cut(HI) > 1 .and. p_bnd=='fix') then  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(HI)     = p_fix(i_cut(HI))
             p(i_cut(HI))  = p_fix(i_cut(HI))
             solve_fail_up = .false.
          endif
 
-         if (solve_fail_up) then                               !< exit_code support
+         if (solve_fail_up) then !< exit_code support
             if (i_cut(HI) < ncrb) then
                if (allow_unnatural_transfer) call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
                call decr_vec(active_bins, num_active_bins)
@@ -210,9 +210,9 @@ contains
       endif
 
       if (approx_p(LO) > 0) then
-         if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='moving') then
+         if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='mov') then
             call get_fqp_cutoff(LO, i_spc,solve_fail_lo)
-         else                                                  !< spectrum cutoff beyond the fixed momentum grid
+         else if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='fix') then !< spectrum cutoff beyond the fixed momentum grid
             p_cut(LO)     = p_fix(i_cut(LO))
             p(i_cut(LO))  = p_cut(LO)
             solve_fail_lo = .false.
@@ -831,6 +831,8 @@ contains
       p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
+      print *, 'p_cut : ', p_cut
+      print *, 'p_cut_next : ', p_cut_next
       i_cut_next = get_i_cut(p_cut_next)
       i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
       i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
@@ -1025,7 +1027,7 @@ contains
                 call die(msg)
         end select
 
-        if (e_small_approx_init_cond > 0 .and. p_bnd=='moving') then  ! Possible bug: len(p_bnd) == idlen == 3
+        if (e_small_approx_init_cond > 0 .and. p_bnd=='mov') then  ! Possible bug: len(p_bnd) == idlen == 3
             do co = LO, HI
                 call get_fqp_cutoff(co, i_spc, exit_code)
                 if (exit_code) then
@@ -1411,6 +1413,8 @@ contains
       integer(kind=4)                    :: side
 
       do side = LO, HI
+         print *, 'side : ', side, 'pc(side) : ', pc(side), 'p_fix(1) : ', p_fix(1)
+
          gic(side) = int(floor(log10(pc(side)/p_fix(1))/w), kind=4) + side
          gic(side) = max(gic(side), side - I_ONE   )
          gic(side) = min(gic(side), ncrb - oz(side))
@@ -1757,7 +1761,6 @@ contains
             print *, 'alpha_q_tab(j-1) : ', alpha_q_tab(j-1,i_spc,i)
             print *, 'alpha_q_tab(j+1) : ', alpha_q_tab(j+1,i_spc,i)
             print *, 'q_tab(j) : ',   q_tab(j)
-            print *, 'q_tab(j-1) : ', q_tab(j-1)
             print *, 'q_tab(j+1) : ', q_tab(j+1)
             print *, 'alpha : ', alpha_in
 
@@ -1776,7 +1779,7 @@ contains
          endif
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
-      stop
+      !stop
 
       !print *, 'q : ', q
 
