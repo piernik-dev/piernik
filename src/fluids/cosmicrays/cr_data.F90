@@ -89,10 +89,10 @@ module cr_data
    logical, dimension(PRES:PRIM)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    logical,                                dimension(nicr) :: ePRIM              !< table of all PRIMARY presences
-   logical, parameter                                      :: transrelativistic = .false. !< Logical for transrelativistic limit of momentum in CRESP
+   logical, parameter                                      :: transrelativistic = .true. !< Logical for transrelativistic limit of momentum in CRESP
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
-   character(len=idlen), parameter                         :: p_bnd =  'mov'  !, 'fixed'! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
+   !character(len=idlen), parameter                         :: p_bnd =  'fix'  !, 'fixed'! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
    integer,                   allocatable, dimension(:)    :: cr_table           !< table of cr_data indices for CR species
    integer,                   allocatable, dimension(:)    :: cr_index           !< table of flind indices for CR species
    real,                      allocatable, dimension(:)    :: cr_mass            !< table of mass numbers for CR species

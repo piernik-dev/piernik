@@ -105,14 +105,13 @@ contains
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, i_spc, substeps, p_out)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
-      use cr_data,        only: p_bnd
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use diagnostics,    only: decr_vec
       use global,         only: disallow_CRnegatives
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms, p_bnd
 
       implicit none
 
@@ -927,12 +926,11 @@ contains
    subroutine cresp_init_state(init_n, init_e)
 
       use constants,       only: zero, I_ZERO, I_ONE
-      use cr_data,         only: p_bnd
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncrb, nspc
       use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g_fix, three_ps
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g_fix, three_ps, p_bnd
       use mpisetup,        only: master
 
       implicit none
@@ -1027,14 +1025,21 @@ contains
                 call die(msg)
         end select
 
-        if (e_small_approx_init_cond > 0 .and. p_bnd=='mov') then  ! Possible bug: len(p_bnd) == idlen == 3
+        if (e_small_approx_init_cond > 0) then  ! Possible bug: len(p_bnd) == idlen == 3
             do co = LO, HI
-                call get_fqp_cutoff(co, i_spc, exit_code)
-                if (exit_code) then
-                write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
-                call die(msg)
+                if (p_bnd=='mov') then
+                  call get_fqp_cutoff(co, i_spc, exit_code)
+                  if (exit_code) then
+                  write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
+                  call die(msg)
+                  endif
+                else if (p_bnd=='fix') then
+                  p_cut(co)     = p_fix(i_cut(co))
+                  p(i_cut(co))  = p_fix(i_cut(co))
                 endif
+                print *, 'p_cut(',co,') : ', p_cut(co)
             enddo
+            stop
 
             if (allow_source_spectrum_break) then
 

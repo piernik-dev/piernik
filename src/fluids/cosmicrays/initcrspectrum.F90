@@ -218,7 +218,7 @@ contains
       p_up_init(:)      = 7.5e2
       p_br_def(:)       = p_lo_init(:)
       initial_spectrum  = "powl"
-      p_bnd             = 'fixed'
+      p_bnd             = 'fix'
       f_init(:)         = 1.0
       q_init(:)         = 4.1
       q_br_def(:)       = q_init(:)
