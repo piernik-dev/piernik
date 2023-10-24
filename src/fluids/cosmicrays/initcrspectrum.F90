@@ -178,7 +178,7 @@ contains
    subroutine init_cresp
 
       use constants,       only: cbuff_len, I_ZERO, I_ONE, zero, one, three, ten, half, logten, LO, HI
-      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, cr_Z, icr_spc, icr_H1, cr_spectral, cr_table
+      use cr_data,         only: cr_mass, cr_sigma_N, cr_names, cr_Z, icr_spc, icr_H1, cr_spectral, cr_table, eCRSP
       use dataio_pub,      only: printinfo, warn, msg, die, nh
       use diagnostics,     only: my_allocate_with_index, my_allocate, my_deallocate, ma1d, ma2d
       use global,          only: disallow_CRnegatives
@@ -218,7 +218,7 @@ contains
       p_up_init(:)      = 7.5e2
       p_br_def(:)       = p_lo_init(:)
       initial_spectrum  = "powl"
-      p_bnd             = 'fix'
+      p_bnd             = 'mov'
       f_init(:)         = 1.0
       q_init(:)         = 4.1
       q_br_def(:)       = q_init(:)
@@ -258,11 +258,13 @@ contains
       icomp_active(:)      = .false.
       cre_active(:)        = 0.0
 
-      if (cr_spectral(cr_table(icr_H1))) then
+      if (eCRSP(icr_H1)) then
+         if (cr_spectral(cr_table(icr_H1))) then
          ! cre_active(findloc(icr_spc, icr_H1)) = 1.0
          ! Since gfortran < 9.0 did not support the intrinsic findloc, I suggest to write it in some other way
          ! until we migrate Jenkins server to something less ancient.
-         where (icr_spc(:) == icr_H1) cre_active(:) = 1.0
+            where (icr_spc(:) == icr_H1) cre_active(:) = 1.0
+         endif
       endif
 
       if (size(synch_active) > 1) synch_active(2:) = .false. ! non relevant for hadronic species by default
