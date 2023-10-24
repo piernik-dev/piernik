@@ -1039,7 +1039,7 @@ contains
                 endif
                 print *, 'p_cut(',co,') : ', p_cut(co)
             enddo
-            stop
+            !stop
 
             if (allow_source_spectrum_break) then
 
@@ -1727,6 +1727,7 @@ contains
 
    subroutine ne_to_q(n, e, q, bins, i_spc)
 
+      use cr_data,         only: cr_table, icr_E
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
@@ -1759,32 +1760,34 @@ contains
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*g_fix(i_spc,i-1))
-            print *, 'minval of delta alpha : ', minval(alpha_in - alpha_q_tab(:,i_spc,i))
-            j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
-            print *, 'j : ', j
-            print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
-            print *, 'alpha_q_tab(j-1) : ', alpha_q_tab(j-1,i_spc,i)
-            print *, 'alpha_q_tab(j+1) : ', alpha_q_tab(j+1,i_spc,i)
-            print *, 'q_tab(j) : ',   q_tab(j)
-            print *, 'q_tab(j+1) : ', q_tab(j+1)
-            print *, 'alpha : ', alpha_in
-
-            q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
-            if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
-               q_NR(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
+            if (i_spc == cr_table(icr_E)) then
+               if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
+                  q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
+               else
+                  q(i) = compute_q(alpha_in, three_p_s, exit_code)
+               endif
             else
-               q_NR(i) = compute_q(alpha_in, three_p_s, exit_code)
-            endif
+               !print *, 'minval of delta alpha : ', minval(alpha_in - alpha_q_tab(:,i_spc,i))
+               j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
+               !print *, 'j : ', j
+               !print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
+               !print *, 'alpha_q_tab(j-1) : ', alpha_q_tab(j-1,i_spc,i)
+               !print *, 'alpha_q_tab(j+1) : ', alpha_q_tab(j+1,i_spc,i)
+               !print *, 'q_tab(j) : ',   q_tab(j)
+               !print *, 'q_tab(j+1) : ', q_tab(j+1)
+               !print *, 'alpha : ', alpha_in
 
+               q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+
+            endif
             print *, 'q : ', q(i)
-            print *, 'q_NR : ', q_NR(i)
-            print *, 'Test difference : Delta q = ', abs(q(i) - q_NR(i))
+            !print *, 'q_NR : ', q_NR(i)
+            !print *, 'Test difference : Delta q = ', abs(q(i) - q_NR(i))
          else
             q(i) = zero
          endif
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
-      !stop
 
       !print *, 'q : ', q
 
