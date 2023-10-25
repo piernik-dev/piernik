@@ -15,8 +15,8 @@ from colored_io import prtinfo, prtwarn, read_var, die
 e_small = 1.e-6
 eps = 1.0e-15
 ncrb = 45
-p_min_fix = 1.0
-p_max_fix = 1.0e6
+p_min_fix = 1.0e-2
+p_max_fix = 1.0e2
 cre_eff = 0.01
 q_big = 30.
 f_init = 0.00235  # 0.019# 0.025 # 1.0
@@ -131,12 +131,12 @@ def nr_get_q(q_start: float, three_p_s: float, e_to_npc_ratio: float, p_ratio: f
 # function used to find q: ----------------------
 
 
-def spectral_slope_root_function(x: float, three_p_s: float, e2npc_ratio: float, p_ratio: float) -> float:
+def spectral_slope_root_function(x: float, three_p_s: float, s: float, e2npc_ratio: float, p_ratio: float) -> float:
     if abs(x - 3.0) < q_eps:
-        root_function_value = -e2npc_ratio + (-1.0 + p_ratio) / log(p_ratio)
+        root_function_value = -e2npc_ratio + (-1.0 + p_ratio**s) / (s*log(p_ratio))
     elif abs(x - three_p_s) < q_eps:
-        root_function_value = -e2npc_ratio + \
-            p_ratio * log(p_ratio) / (p_ratio - 1.0)
+        root_function_value = -e2npc_ratio - \
+            s * log(p_ratio) / (p_ratio**s - 1.0)
     else:
         root_function_value = -e2npc_ratio + ((3.0 - x) / (three_p_s - x)) * \
             ((p_ratio**(three_p_s - x) - 1.0) / (p_ratio**(3.0 - x) - 1.0))
@@ -205,6 +205,20 @@ def fill_q_grid():
             previous_solution = x
     return
 
+def fill_q_alpha_tab(three_p_s: float, s: float, p_range: float):
+    q_tab=[]
+    alpha_q_tab=[]
+    q_tab = zeros(arr_dim_q)
+    alpha_q_tab = zeros([arr_dim_q, ncrb-1])
+    q_min = q_big
+    for i in range(arr_dim_q):
+        q_tab[i] = q_big*10**(((log10(3*q_big/q_big))/float(arr_dim_q-1))*float(i-1))
+        q_tab[i] = q_tab[i] - 2*q_big
+        for j in range(ncrb-1):
+            alpha_q_tab[i,j] = spectral_slope_root_function(q_tab[i], three_p_s[j], s[j], 0.0, p_range[j]/p_range[j-1])
+
+    print('q_tab: ', q_tab)
+    return
 
 def interpolate_q(e2npc_ratio: float) -> float:
     global arr_dim_q, e2npc_tab_q, q_grid
@@ -468,7 +482,7 @@ def detect_active_bins_new(n_in, e_in):
 # ------------------------------------------
 
 
-def crs_initialize(parameter_names, parameter_values):
+def crs_initialize(parameter_names, parameter_values, plot_field):
 
     try:
         for i in range(len(parameter_names)):
@@ -477,12 +491,46 @@ def crs_initialize(parameter_names, parameter_values):
     except:
         die("Exiting: len(names) not equal len(values)")
 
-    global p_fix_ratio, p_fix, g_fix, s_nr
+    global cr_mass, p_fix_ratio, p_fix, g_fix, s_nr, three_ps
 
+    print('plot_field (in crs_initialize) : ', plot_field)
+    mass_em = 0.0005446300222286791
+    mass_pp = 1.0
+    mass_Li7 = 7.0
+    mass_C12 = 12.0
+    mass_O16 = 16.0
+    mass_Be9 = 9.0
+    mass_Be10 = 10.0
+    mass_B10 = 10.0
+    mass_B11 = 11.0
+    mass = 0.0
+
+    print('plot_field(3-6) : ', plot_field[3:6])
+
+    if (plot_field[3]=='e'):
+        mass = mass_e
+    elif (plot_field[3]=='p'):
+        mass = mass_pp
+    elif (plot_field[3:6]=='Li7'):
+        mass = mass_Li7
+    elif (plot_field[3:6]=='C12'):
+        mass = mass_C12
+    elif (plot_field[3:6]=='O16'):
+        mass = mass_O16
+    elif (plot_field[3:6]=='Be9'):
+        mass = mass_Be9
+    elif (plot_field[3:7]=='Be10'):
+        mass = mass_Be10
+    elif (plot_field[3:6]=='B10'):
+        mass = mass_B10
+    elif (plot_field[3:6]=='B11'):
+        mass = mass_B11
+
+    print('mass : ', mass)
     edges = []
     p_fix = []
     g_fix = []
-    s = []
+    s_nr = []
     edges[0:ncrb] = range(0, ncrb + 1, 1)
     p_fix[0:ncrb] = zeros(ncrb + 1)
     g_fix[0:ncrb] = zeros(ncrb + 1)
@@ -494,7 +542,7 @@ def crs_initialize(parameter_names, parameter_values):
         p_fix[ncrb] = (sqrt(p_fix[ncrb - 2] * p_fix[ncrb - 1])) * p_fix_ratio
         p_fix = asfarray(p_fix)
 
-    g_fix = sqrt(p_fix**2 * c**2 + m**2 * c**4) - m * c**2
+    g_fix = sqrt(p_fix**2 * c**2 + mass**2 * c**4) - mass * c**2
 
     print('p_fix : ', p_fix)
     print('g_fix : ', g_fix)
@@ -527,7 +575,11 @@ def crs_initialize(parameter_names, parameter_values):
 
     s_nr = log10(grn / gln) / log10(prn / pln)
 
+    fill_q_alpha_tab(3.0+s_nr,s_nr,p_fix)
+
     print('s_nr : ', s_nr)
+
+
 
     global clean_plot
     clean_plot = True
