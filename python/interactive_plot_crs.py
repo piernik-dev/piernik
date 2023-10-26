@@ -560,7 +560,7 @@ if f_run is True:
 
     print("")
 
-    crs_initialize(var_names, var_array)
+    crs_initialize(var_names, var_array, plot_field)
 
     mplot = yt_data_plot.plots[frbuffer_plot_field]
 

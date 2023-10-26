@@ -1,7 +1,7 @@
 # !/usr/bin/python
 from pylab import zeros, sqrt, size
 import matplotlib.pyplot as plt
-from numpy import log10, log, pi, asfarray, array, linspace, sign, around, sqrt
+from numpy import log10, log, pi, asfarray, array, linspace, sign, around, sqrt, argmin
 import h5py
 import os
 import sys
@@ -18,7 +18,7 @@ ncrb = 45
 p_min_fix = 1.0e-2
 p_max_fix = 1.0e2
 cre_eff = 0.01
-q_big = 30.
+q_big = 20.
 f_init = 0.00235  # 0.019# 0.025 # 1.0
 q_init = 4.1
 
@@ -27,7 +27,16 @@ arr_dim_q = 1000
 helper_arr_dim = int(arr_dim_q / 20)
 
 c = 1.0  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
-m = 1.0
+mass = 0.0
+mass_em = 0.0005446300222286791
+mass_pp = 1.0
+mass_Li7 = 7.0
+mass_C12 = 12.0
+mass_O16 = 16.0
+mass_Be9 = 9.0
+mass_Be10 = 10.0
+mass_B10 = 10.0
+mass_B11 = 11.0
 
 first_run = True
 got_q_tabs = False
@@ -37,6 +46,7 @@ highlighted = False
 plotted_init_slope = False
 verbosity_1 = True
 verbosity_2 = False
+transrelativistic = True
 
 global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, par_plot_legend, \
     par_plot_e_small, par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, tightened, par_legend_loc
@@ -106,6 +116,7 @@ def nr_get_q(q_start: float, three_p_s: float, e_to_npc_ratio: float, p_ratio: f
     tol_f = 1.0e-9
     x = q_start
     df = 1.0
+    s = three_p_s - 3.0
     # print('three_p_s : ', three_p_s)
     for i in range(iter_limit):
         if abs(x) >= q_big:
@@ -114,11 +125,11 @@ def nr_get_q(q_start: float, three_p_s: float, e_to_npc_ratio: float, p_ratio: f
             break
         dx = min(x * 1e-3, 10e-2)
         dx = sign(dx) * max(abs(dx), 1.0e-10)
-        df = 0.5 * (spectral_slope_root_function(x + dx, three_p_s, e_to_npc_ratio, p_ratio) -
-                    spectral_slope_root_function(x - dx, three_p_s, e_to_npc_ratio, p_ratio)) / dx
+        df = 0.5 * (spectral_slope_root_function(x + dx, three_p_s, s, e_to_npc_ratio, p_ratio) -
+                    spectral_slope_root_function(x - dx, three_p_s, s, e_to_npc_ratio, p_ratio)) / dx
         delta = - \
             spectral_slope_root_function(
-                x, three_p_s, e_to_npc_ratio, p_ratio) / df
+                x, three_p_s, s, e_to_npc_ratio, p_ratio) / df
         if abs(delta) <= tol_f:
             q_not_found = False
             return x, q_not_found
@@ -127,6 +138,19 @@ def nr_get_q(q_start: float, three_p_s: float, e_to_npc_ratio: float, p_ratio: f
     nr_get_q = x
 
     return nr_get_q, q_not_found
+
+def intpol_get_q(i_bin: int, e_to_ng_ratio: float) -> float:
+
+    #print('i_bin : ', i_bin)
+
+    j = argmin(abs(e_to_ng_ratio - alpha_q_tab[:,i_bin]))
+    #print("e_to_ng : ", e_to_ng_ratio, 'alpha_q_tab(j;ibin) : ', alpha_q_tab[j,i_bin])
+    print('alpha_q_tab(:;ibin=',i_bin,') : ', alpha_q_tab[:,i_bin])
+    weight   = (e_to_ng_ratio - alpha_q_tab[j,i_bin]) / (alpha_q_tab[j+1,i_bin] - alpha_q_tab[j,i_bin])
+    intpol_get_q = q_tab[j] * (1 - weight) + q_tab[j+1] * weight
+    print('q[j]: ', q_tab[j], 'q[j+1]: ', q_tab[j+1],' q_interpolated: ', intpol_get_q )
+
+    return intpol_get_q
 
 # function used to find q: ----------------------
 
@@ -206,6 +230,7 @@ def fill_q_grid():
     return
 
 def fill_q_alpha_tab(three_p_s: float, s: float, p_range: float):
+    global q_tab, alpha_q_tab
     q_tab=[]
     alpha_q_tab=[]
     q_tab = zeros(arr_dim_q)
@@ -215,9 +240,10 @@ def fill_q_alpha_tab(three_p_s: float, s: float, p_range: float):
         q_tab[i] = q_big*10**(((log10(3*q_big/q_big))/float(arr_dim_q-1))*float(i-1))
         q_tab[i] = q_tab[i] - 2*q_big
         for j in range(ncrb-1):
+            #print('j : ', j)
             alpha_q_tab[i,j] = spectral_slope_root_function(q_tab[i], three_p_s[j], s[j], 0.0, p_range[j]/p_range[j-1])
 
-    print('q_tab: ', q_tab)
+    #print('q_tab: ', q_tab)
     return
 
 def interpolate_q(e2npc_ratio: float) -> float:
@@ -450,8 +476,12 @@ def detect_active_bins_new(n_in, e_in):
         exit_code = False
         if (q_explicit is True):
             print('active bins call : ')
-            q_tmp, exit_code = nr_get_q(
-                q_tmp, 3 + s_nr[i], e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
+            if (mass==mass_em):
+                q_tmp, exit_code = nr_get_q(
+                    q_tmp, 3 + s_nr[i], e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
+            else:
+                q_tmp = intpol_get_q(i, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]))
+            print('q_tmp, exit_code : ', q_tmp, exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
             q_tmp = interpolate_q(
@@ -494,37 +524,27 @@ def crs_initialize(parameter_names, parameter_values, plot_field):
     global cr_mass, p_fix_ratio, p_fix, g_fix, s_nr, three_ps
 
     print('plot_field (in crs_initialize) : ', plot_field)
-    mass_em = 0.0005446300222286791
-    mass_pp = 1.0
-    mass_Li7 = 7.0
-    mass_C12 = 12.0
-    mass_O16 = 16.0
-    mass_Be9 = 9.0
-    mass_Be10 = 10.0
-    mass_B10 = 10.0
-    mass_B11 = 11.0
-    mass = 0.0
 
     print('plot_field(3-6) : ', plot_field[3:6])
-
-    if (plot_field[3]=='e'):
-        mass = mass_e
-    elif (plot_field[3]=='p'):
-        mass = mass_pp
-    elif (plot_field[3:6]=='Li7'):
-        mass = mass_Li7
-    elif (plot_field[3:6]=='C12'):
-        mass = mass_C12
-    elif (plot_field[3:6]=='O16'):
-        mass = mass_O16
-    elif (plot_field[3:6]=='Be9'):
-        mass = mass_Be9
-    elif (plot_field[3:7]=='Be10'):
-        mass = mass_Be10
-    elif (plot_field[3:6]=='B10'):
-        mass = mass_B10
-    elif (plot_field[3:6]=='B11'):
-        mass = mass_B11
+    if (transrelativistic):
+        if (plot_field[3]=='e'):
+            mass = mass_em
+        elif (plot_field[3]=='p'):
+            mass = mass_pp
+        elif (plot_field[3:6]=='Li7'):
+            mass = mass_Li7
+        elif (plot_field[3:6]=='C12'):
+            mass = mass_C12
+        elif (plot_field[3:6]=='O16'):
+            mass = mass_O16
+        elif (plot_field[3:6]=='Be9'):
+            mass = mass_Be9
+        elif (plot_field[3:7]=='Be10'):
+            mass = mass_Be10
+        elif (plot_field[3:6]=='B10'):
+            mass = mass_B10
+        elif (plot_field[3:6]=='B11'):
+            mass = mass_B11
 
     print('mass : ', mass)
     edges = []
@@ -578,8 +598,6 @@ def crs_initialize(parameter_names, parameter_values, plot_field):
     fill_q_alpha_tab(3.0+s_nr,s_nr,p_fix)
 
     print('s_nr : ', s_nr)
-
-
 
     global clean_plot
     clean_plot = True
@@ -691,8 +709,11 @@ def crs_plot_main(plot_var, ncrs, ecrs, time, location, **kwargs):
             print('s_nr : ', s_nr)
             print('i+i_lo : ', i + i_lo)
             print('s_nr(i+i_lo) : ', s_nr[i + i_lo])
-            q_tmp, exit_code = nr_get_q(
-                q_tmp, 3 + s_nr[i + i_lo], ecrs[i + i_lo] / (ncrs[i + i_lo] * gln[i + i_lo]), prn[i + i_lo] / pln[i + i_lo], exit_code)
+            if (mass==mass_em):
+                q_tmp, exit_code = nr_get_q(
+                    q_tmp, 3 + s_nr[i + i_lo], ecrs[i + i_lo] / (ncrs[i + i_lo] * gln[i + i_lo]), prn[i + i_lo] / pln[i + i_lo], exit_code)
+            else:
+                q_tmp = intpol_get_q(i + i_lo, ecrs[i + i_lo] / (ncrs[i + i_lo] * gln[i + i_lo]))
             print('q_tmp, exit_code : ', q_tmp, exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
