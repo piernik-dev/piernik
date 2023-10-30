@@ -184,7 +184,7 @@ contains
    subroutine cr_spallation_sources(u_cell,dt_doubled, q_spc_all)
 
       use constants,        only: one, zero
-      use initcrspectrum,   only: spec_mod_trms, p_fix
+      use initcrspectrum,   only: spec_mod_trms, p_fix, three_ps
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
       use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass
       use initcosmicrays,   only: nspc
@@ -233,7 +233,7 @@ contains
                         if (p_fix(i_bin+1) > zero) then
 
                            Q_ratio_1(i_bin) = Q_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1))
-                           S_ratio_1(i_bin) = S_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1)) !TODO print values of ratio in the last bin
+                           S_ratio_1(i_bin) = S_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1), three_ps(cr_table(icr_sec(i_sec)),i_bin), three_ps(cr_table(icr_prim(i_prim)), i_bin)) !TODO print values of ratio in the last bin
 
                            Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
 
@@ -317,20 +317,24 @@ contains
 
    end function Q_ratio
 
-   function S_ratio(A_prim, A_sec, q_l, p_L, p_R)
+   function S_ratio(A_prim, A_sec, q_l, p_L, p_R, three_ps_l_prim, three_ps_l_sec)
 
       use constants,      only: zero, one, four
       use initcrspectrum, only: eps
 
       implicit none
 
-      real :: A_prim, A_sec, q_l, p_L, p_R
+      real :: A_prim, A_sec, q_l, p_L, p_R, three_ps_l_prim, three_ps_l_sec
       real :: S_ratio
 
       S_ratio = zero
 
-      if (abs(q_l - four) > eps) then
-         S_ratio = ((A_prim/A_sec)**(four-q_l)-one)/((p_R/p_L)**(four-q_l)-one)
+      if (abs(q_l - three_ps_l_prim) > eps .and. abs(q_l - three_ps_l_sec) > eps) then
+         S_ratio = ((A_prim/A_sec)**(three_ps_l_prim-q_l)-one)/((p_R/p_L)**(three_ps_l_sec-q_l)-one)
+      else if (abs(q_l - three_ps_l_sec) > eps .and. abs(q_l - three_ps_l_prim) < eps) then
+         S_ratio = log(A_prim/A_sec)*(three_ps_l_sec-q_l)/((p_R/p_L)**(three_ps_l_sec-q_l)-one)
+      else if (abs(q_l - three_ps_l_sec) < eps .and. abs(q_l - three_ps_l_prim) > eps) then
+         S_ratio = ((A_prim/A_sec)**(three_ps_l_prim-q_l)-one)/(log(p_R/p_L)*(three_ps_l_prim-q_l))
       else
          S_ratio = log(A_prim/A_sec)/log(p_R/p_L)
       endif
