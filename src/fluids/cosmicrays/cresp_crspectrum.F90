@@ -830,8 +830,8 @@ contains
       p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
 ! Compute likely cut-off indices after current timestep
-      print *, 'p_cut : ', p_cut
-      print *, 'p_cut_next : ', p_cut_next
+      !print *, 'p_cut : ', p_cut
+      !print *, 'p_cut_next : ', p_cut_next
       i_cut_next = get_i_cut(p_cut_next)
       i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
       i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
@@ -1418,7 +1418,7 @@ contains
       integer(kind=4)                    :: side
 
       do side = LO, HI
-         print *, 'side : ', side, 'pc(side) : ', pc(side), 'p_fix(1) : ', p_fix(1)
+         !print *, 'side : ', side, 'pc(side) : ', pc(side), 'p_fix(1) : ', p_fix(1)
 
          gic(side) = int(floor(log10(pc(side)/p_fix(1))/w), kind=4) + side
          gic(side) = max(gic(side), side - I_ONE   )
@@ -1449,10 +1449,10 @@ contains
       real,    dimension(1:ncrb)        :: fq_to_e
 
       fq_to_e = zero
-      print *, 'g_l(bins) : ', g_l(bins)
-      print *, 'p_l(bins) : ', p_l(bins)
-      print *, 'three_p_s(bins) : ', three_ps(i_spc,bins)
-      print *, 'q(bins)   : ', q(bins)
+      !print *, 'g_l(bins) : ', g_l(bins)
+      !print *, 'p_l(bins) : ', p_l(bins)
+      !print *, 'three_p_s(bins) : ', three_ps(i_spc,bins)
+      !print *, 'q(bins)   : ', q(bins)
       e_bins = fpcc * f_l(bins) * g_l(bins) * p_l(bins)**three
       where (abs(q(bins) - three_ps(i_spc,bins)) > eps)
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(three_ps(i_spc,bins) - q(bins)) - one)/(three_ps(i_spc,bins) - q(bins))
@@ -1462,9 +1462,9 @@ contains
 
       fq_to_e(bins) = e_bins
 
-      print *, 'Hello ! '
+      !print *, 'Hello ! '
 
-      print *, 'fq_to_e : ', fq_to_e(bins)
+      !print *, 'fq_to_e : ', fq_to_e(bins)
 
    end function fq_to_e
 !-------------------------------------------------------------------------------------------------
@@ -1732,7 +1732,7 @@ contains
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small, g_fix, three_ps
+      use initcrspectrum,  only: e_small, g_fix, three_ps, arr_dim_q
 
       implicit none
 
@@ -1747,14 +1747,15 @@ contains
       logical                                    :: exit_code
 
       q = zero
-      print *, 'i_spc : ', i_spc
+      !print *, 'i_spc : ', i_spc
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          exit_code = .false.
          i = bins(i_active)
          three_p_s = three_ps(i_spc,i)
          base = p(i)/p(i-1)
-         print *, 'i = ', i
+         !print *, 'i = ', i
          if (e(i) > e_small .and. p(i-1) > zero) then
+            !print *, 'e(i) > e_small'
             exit_code = .true.
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
@@ -1770,17 +1771,22 @@ contains
                !print *, 'minval of delta alpha : ', minval(alpha_in - alpha_q_tab(:,i_spc,i))
                j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
                !print *, 'j : ', j
+               !print *, 'alpha : ', alpha_in
                !print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
                !print *, 'alpha_q_tab(j-1) : ', alpha_q_tab(j-1,i_spc,i)
                !print *, 'alpha_q_tab(j+1) : ', alpha_q_tab(j+1,i_spc,i)
                !print *, 'q_tab(j) : ',   q_tab(j)
                !print *, 'q_tab(j+1) : ', q_tab(j+1)
-               !print *, 'alpha : ', alpha_in
 
-               q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+               if (j .ne. arr_dim_q) then
+                  if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .lt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+                  if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .gt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
+               else
+                  q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
+               endif
 
             endif
-            print *, 'q : ', q(i)
+            !print *, 'q : ', q(i)
             !print *, 'q_NR : ', q_NR(i)
             !print *, 'Test difference : Delta q = ', abs(q(i) - q_NR(i))
          else
