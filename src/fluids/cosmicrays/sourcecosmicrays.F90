@@ -184,9 +184,9 @@ contains
    subroutine cr_spallation_sources(u_cell,dt_doubled, q_spc_all)
 
       use constants,        only: one, zero
-      use initcrspectrum,   only: spec_mod_trms, p_fix, g_fix, three_ps
+      use initcrspectrum,   only: spec_mod_trms, p_fix, three_ps
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
-      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, transrelativistic
+      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass !, transrelativistic
       use initcosmicrays,   only: nspc
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
@@ -230,7 +230,7 @@ contains
 
                   do i_bin = 1, ncrb - 1
 
-                     if (transrelativistic) velocity(i_bin) = clight*sqrt(1 - 1/(1+g_fix(cr_table(icr_prim(i_prim)),i_bin))**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime
+                     !if (transrelativistic) velocity(i_bin) = clight*sqrt(1 - 1/(1+g_fix(cr_table(icr_prim(i_prim)),i_bin))**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime
 
                      if (p_fix(i_bin) > zero) then
 
@@ -323,7 +323,7 @@ contains
 
    function S_ratio(A_prim, A_sec, q_l, p_L, p_R, three_ps_l_prim, three_ps_l_sec)
 
-      use constants,      only: zero, one, four
+      use constants,      only: zero, one
       use initcrspectrum, only: eps
 
       implicit none

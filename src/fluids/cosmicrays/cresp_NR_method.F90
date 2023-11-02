@@ -269,7 +269,7 @@ contains
 
       implicit none
 
-      real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx, base
+      real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
       integer(kind=4)    :: i, j, k,ilim = 0, qmaxiter = 100
       type(map_header), dimension(2), intent(inout) :: hdr_init

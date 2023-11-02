@@ -930,7 +930,7 @@ contains
       use dataio_pub,      only: warn, msg, die, printinfo
       use initcosmicrays,  only: ncrb, nspc
       use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g_fix, three_ps, p_bnd
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g_fix, p_bnd
       use mpisetup,        only: master
 
       implicit none
@@ -1151,7 +1151,7 @@ contains
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, g_fix, three_ps
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, g_fix
 
       implicit none
 
@@ -1194,7 +1194,7 @@ contains
       use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, g_fix, three_ps
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, g_fix
 
       implicit none
 
@@ -1267,7 +1267,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init, g_fix, three_ps
+      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init, g_fix
 
       implicit none
 
@@ -1292,7 +1292,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init, g_fix, three_ps
+      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init, g_fix
 
       implicit none
 
@@ -1314,7 +1314,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init, g_fix, three_ps
+      use initcrspectrum, only: p_fix, q_init, g_fix
 
       implicit none
 
@@ -1343,7 +1343,7 @@ contains
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init, g_fix, three_ps
+      use initcrspectrum, only: p_fix, q_init, g_fix
 
       implicit none
 
@@ -1370,7 +1370,7 @@ contains
 
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: f_init, p_init, g_fix, three_ps
+      use initcrspectrum,  only: f_init, p_init, g_fix
 
       implicit none
 
@@ -1738,7 +1738,6 @@ contains
 
       real, dimension(1:ncrb),       intent(in)  :: n, e
       real, dimension(1:ncrb),       intent(out) :: q
-      real, dimension(1:ncrb)                    :: q_NR
       integer(kind=4), dimension(:), intent(in)  :: bins
       integer(kind=4),               intent(in)  :: i_spc
       integer                                    :: i, i_active, j
