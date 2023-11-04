@@ -1727,7 +1727,7 @@ contains
 
    subroutine ne_to_q(n, e, q, bins, i_spc)
 
-      use cr_data,         only: cr_table, icr_E
+      use cr_data,         only: cr_table, icr_E, transrelativistic
       use constants,       only: zero, I_ONE
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
@@ -1760,7 +1760,7 @@ contains
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
             alpha_in = e(i)/(n(i)*g_fix(i_spc,i-1))
-            if (i_spc == cr_table(icr_E)) then
+            if (transrelativistic .eqv. .false.) then
                if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
                   q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
                else
@@ -1778,8 +1778,12 @@ contains
                !print *, 'q_tab(j+1) : ', q_tab(j+1)
 
                if (j .ne. arr_dim_q) then
-                  if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .lt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
-                  if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .gt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
+                  if(j .ne. 1) then
+                     if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .lt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+                     if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .gt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
+                  else
+                     q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+                  endif
                else
                   q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
                endif
