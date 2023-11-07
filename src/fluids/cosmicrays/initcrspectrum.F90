@@ -218,11 +218,11 @@ contains
       p_up_init(:)      = 7.5e2
       p_br_def(:)       = p_lo_init(:)
       initial_spectrum  = "powl"
-      p_bnd             = 'mov'
+      p_bnd             = 'fix'
       f_init(:)         = 1.0
       q_init(:)         = 4.1
       q_br_def(:)       = q_init(:)
-      q_big             = 30.0d0
+      q_big             = 20.0d0
       p_br_init_lo(:)   = p_br_def(:) ! < in case it was not provided "powl" can be assumed
       p_br_init_up(:)   = p_br_def(:) ! < in case it was not provided "powl" can be assumed
       q_br_init(:)      = q_br_def(:) ! < in case it was not provided "powl" can be assumed
