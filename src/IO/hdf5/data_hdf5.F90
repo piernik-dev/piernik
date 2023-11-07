@@ -766,6 +766,9 @@ contains
          enddo
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
+
+         ! It seems that the fastest implementation would use _at most_ single thread per node.
+
          if (can_i_write) then
             ! write own
             n = 0

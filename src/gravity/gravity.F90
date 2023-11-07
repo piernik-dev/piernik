@@ -72,6 +72,7 @@ module gravity
    logical                    :: restart_gpot, restart_hgpot, restart_gp, restart_sgp, restart_sgpm !< if .true. then write this grav part to the restart files
    logical                    :: need_update           !< a flag to indicate that source_terms_grav needs to be called (e.g. because psolver skipped this)
 
+   integer(kind=4)            :: ig_rk2_1, ig_rk2_2    !< indices to gravitational potential fields for different stages of the RK scheme
 #ifdef SELF_GRAV
    integer(kind=4) :: i_sgp, i_sgpm
 #endif /* SELF_GRAV */
@@ -170,10 +171,10 @@ contains
       use constants,        only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
       use dataio_pub,       only: printinfo, warn, die, code_progress, nh
       use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
+      use named_array_list, only: qna
       use units,            only: newtong
 #ifdef SELF_GRAV
       use constants,        only: sgp_n, sgpm_n
-      use named_array_list, only: qna
 #endif /* SELF_GRAV */
 #ifdef NBODY
       use constants,        only: gp1b_n, nbdn_n, prth_n
@@ -339,6 +340,9 @@ contains
       call all_cg%reg_var(nbgp_n)
 #endif /* NBODY_GRIDDIRECT */
 #endif /* NBODY */
+
+      ig_rk2_1 = qna%ind(hgpot_n)
+      ig_rk2_2 = qna%ind(gpot_n)
 
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
@@ -994,11 +998,10 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,        only: idm2, ndims, pdims, ydim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2, INVALID
+      use constants,        only: idm2, ndims, pdims, ydim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, NORMAL, ORTHO1, ORTHO2, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna
 
       implicit none
 
@@ -1018,9 +1021,9 @@ contains
       ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver, not istep
       select case (istep)
       case (RK2_1)
-         ig = qna%ind(hgpot_n)
+         ig = ig_rk2_1
       case (RK2_2, EULER)
-         ig = qna%ind(gpot_n)
+         ig = ig_rk2_2
       case default
          call die("[gravity:grav_pot2accel_ord2] Unsupported substep")
          ig = INVALID  ! suppress compiler warning
@@ -1045,11 +1048,10 @@ contains
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,        only: idm2, ndims, pdims, ydim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2, INVALID
+      use constants,        only: idm2, ndims, pdims, ydim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, NORMAL, ORTHO1, ORTHO2, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna
 
       implicit none
 
@@ -1069,9 +1071,9 @@ contains
 
       select case (istep)
       case (RK2_1)
-         ig = qna%ind(hgpot_n)
+         ig = ig_rk2_1
       case (RK2_2, EULER)
-         ig = qna%ind(gpot_n)
+         ig = ig_rk2_2
       case default
          call die("[gravity:grav_pot2accel_ord4] Unsupported substep")
          ig = INVALID  ! suppress compiler warning

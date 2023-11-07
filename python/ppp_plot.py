@@ -90,7 +90,7 @@ class PPP_Node:
     def print(self, indent=0):  # need to filter through parent range
         try:
             for _ in range(min(len(self.start), len(self.stop))):
-                print("  " * indent + "'" + self.label + "' %.6f %.6f" % (self.start[_] - t_bias, self.stop[_] - self.start[_]))
+                print("  " * indent + "'" + self.label + "' %.7f %.7f" % (self.start[_] - t_bias, self.stop[_] - self.start[_]))
         except TypeError:
             print("  " * indent + "'" + self.label + "' TypeError: ", self.start, self.stop)
         for i in self.children:
@@ -300,7 +300,7 @@ class PPPset:
                 skip_cnt, skip_val = 0, 0.
                 for e in sorted(ed.items(), key=lambda x: x[1][1] - x[1][2], reverse=True):
                     if (e[1][1] - e[1][2]) / self.run[f].total_time > args.cutsmall[0] / 100.:
-                        print("%-*s %20.6f %8s %15d%s \033[97m%20.6f\033[0m %10.2f" % (ml, e[0], e[1][1] / len(set(self.run[f].sel_proc)),
+                        print("%-*s %20.7f %8s %15d%s \033[97m%20.7f\033[0m %10.2f" % (ml, e[0], e[1][1] / len(set(self.run[f].sel_proc)),
                                                                                        ("" if e[1][2] == 0. else "%8.2f" % ((100 * e[1][2] / e[1][1]) if e[1][1] > 0. else 0.)),
                                                                                        e[1][0] / len(set(self.run[f].sel_proc)),
                                                                                        " " if e[1][0] % len(set(self.run[f].sel_proc)) == 0 else "+",
@@ -310,7 +310,7 @@ class PPPset:
                         skip_cnt += 1
                         skip_val += e[1][1] - e[1][2]
                 if skip_cnt > 0:
-                    print("# (skipped %d timers that contributed %.6f seconds of non-child time = %.2f%% of total time)" % (skip_cnt, skip_val / len(set(self.run[f].sel_proc)), 100. * skip_val / self.run[f].total_time))
+                    print("# (skipped %d timers that contributed %.7f seconds of non-child time = %.2f%% of total time)" % (skip_cnt, skip_val / len(set(self.run[f].sel_proc)), 100. * skip_val / self.run[f].total_time))
 
     def print_gnuplot(self):
         self.descr = ""
