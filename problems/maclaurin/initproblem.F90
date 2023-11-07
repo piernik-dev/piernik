@@ -26,11 +26,17 @@
 !
 #include "piernik.h"
 
-!> \brief Implementation of selfgravitating spheroid, for which an analytical solution of the gravitational potential is known.
+!>
+!! \brief Implementation of selfgravitating distributions, for which an analytical solution of the gravitational potential is known.
+!!
+!! \details The analytical cases implemented so far:
+!! * Maclaurin spheroid with a1 as equatorial radius and e as polar eccentricity of the spheroid (e>0 gives oblate object, e<0 gives prolate object)
+!! * Plummersphere with a1 as the Plummer radius and e ignored
+!<
 
 module initproblem
 
-   use constants, only: dsetnamelen
+   use constants, only: dsetnamelen, cbuff_len
 
    implicit none
 
@@ -38,18 +44,19 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
-   real :: x0     !< X-position of the spheroid
-   real :: y0     !< Y-position of the spheroid
-   real :: z0     !< Z-position of the spheroid
-   real :: d0     !< density of the spheroid
-   real :: a1     !< equatorial radius of the spheroid
-   real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
-   real :: ref_thr   !< refinement threshold
-   real :: ref_eps   !< smoother filter
-   integer(kind=4) :: nsub !< subsampling on the grid
-   logical :: analytical_ext_pot  !< If .true. then bypass multipole solver and use analutical potential for external boundaries (debugging/developing only)
+   real :: x0                         !< X-position of the center
+   real :: y0                         !< Y-position of the center
+   real :: z0                         !< Z-position of the center
+   real :: d0                         !< central density
+   real :: a1                         !< equatorial radius of the Maclaurin spheroid, Plummer radius, ...
+   real :: e                          !< polar eccentricity of the spheroid (e>0 gives oblate object, e<0 gives prolate object), ignored for Plummer
+   real :: ref_thr                    !< refinement threshold
+   real :: ref_eps                    !< smoother filter
+   integer(kind=4) :: nsub            !< subsampling on the grid
+   logical :: analytical_ext_pot      !< if .true. then bypass multipole solver and use analytical potential for external boundaries (debugging/developing only)
+   character(len=cbuff_len) :: model  !< one of ("Maclaurin", "Plummer")
 
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, ref_eps, nsub, analytical_ext_pot
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, ref_eps, nsub, analytical_ext_pot, model
 
    ! private data
    real :: d1 !< ambient density
@@ -59,6 +66,11 @@ module initproblem
    character(len=dsetnamelen), parameter :: asrc_n = "asrc"   !< name of the source field used for "ares" calculation (auxiliary space)
    character(len=dsetnamelen), parameter :: ares_n = "ares"   !< name of the numerical residuum with respect to analytical potential field
    character(len=dsetnamelen), parameter :: mpole_n = "mpole" !< name of the potential recovered solely from multipole moments
+   integer :: i_model
+
+   enum, bind(C)
+      enumerator :: MACLAURIN, PLUMMER
+   end enum
 
 contains
 
@@ -87,12 +99,12 @@ contains
    subroutine read_problem_par
 
       use cg_list_global,        only: all_cg
-      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI, cbuff_len, INVALID
       use dataio_pub,            only: die, warn, msg, printinfo, nh
       use domain,                only: dom
       use fluidindex,            only: iarr_all_dn
       use global,                only: smalld
-      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,              only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use multigridvars,         only: ord_prolong
       use named_array_list,      only: wna
       use unified_ref_crit_list, only: urc_list
@@ -122,6 +134,8 @@ contains
       ref_eps      = 0.01   !< refinement smoothing factor
 
       analytical_ext_pot = .false.
+
+      model = "Maclaurin"
 
       if (master) then
 
@@ -154,11 +168,14 @@ contains
 
          lbuff(1) = analytical_ext_pot
 
+         cbuff(1) = model
+
       endif
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
       call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -175,20 +192,37 @@ contains
 
          analytical_ext_pot = lbuff(1)
 
+         model        = cbuff(1)
+
       endif
 
-      if (analytical_ext_pot) ext_bnd_potential => maclaurin2bnd_potential
+      select case (trim(model))
+         case ("Maclaurin", "maclaurin", "ml")
+            i_model = MACLAURIN
+         case ("Plummer", "plummer")
+            i_model = PLUMMER
+         case default
+            i_model = INVALID
+      end select
+      if (i_model == INVALID) call die("[initproblem:read_problem_par] unrecognized potential model '" // trim(model) // "'")
+
+      if (analytical_ext_pot .and. i_model == MACLAURIN) ext_bnd_potential => maclaurin2bnd_potential
+      ! ToDo: implement plummer2bnd_potential
 
       if (a1 <= 0.) then ! point-like source
          a1 = 0.
          e = 0.
       endif
 
-      if (abs(e) >= 1.) call die("[initproblem:read_problem_par] |e|>=1.")
-      if (e >= 0.) then            ! vertical axis
-         a3 = a1 * sqrt(1. - e**2) ! oblate Maclaurin spheroid
+      if (i_model == MACLAURIN) then
+         if (abs(e) >= 1.) call die("[initproblem:read_problem_par] |e|>=1.")
+         if (e >= 0.) then            ! vertical axis
+            a3 = a1 * sqrt(1. - e**2) ! oblate Maclaurin spheroid
+         else
+            a3 = a1 / sqrt(1. - e**2) ! prolate spheroid
+         endif
       else
-         a3 = a1 / sqrt(1. - e**2) ! prolate spheroid
+         a3 = a1
       endif
       p0 = 100.*tiny(d1)           ! pressure
 
@@ -208,7 +242,14 @@ contains
 
       if (master) then
          if (a1 > 0.) then
-            write(msg, '(3(a,g12.5),a)')"[initproblem:problem_initial_conditions] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+            select case (i_model)
+               case (MACLAURIN)
+                  write(msg, '(3(a,g12.5),a)')"[initproblem:problem_initial_conditions] Set up Maclaurin spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+               case (PLUMMER)
+                  write(msg, '(a,g12.5)')"[initproblem:problem_initial_conditions] Set up Plummer sphere with a = ", a1
+               case default
+                  write(msg, '(a)')"[initproblem:problem_initial_conditions] No idea what's going on"
+            end select
          else
             write(msg, '(a)')"[initproblem:problem_initial_conditions] Set up point-like mass"
          endif
@@ -233,9 +274,12 @@ contains
       ! Set up automatic refinement criteria on densities
       do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
-!         call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, 0., "grad", .true.)
-         call urc_list%add_user_urcv(wna%fi, id, ref_thr, ref_eps, "Loechner", .true.)
-
+         select case (i_model)
+            case (MACLAURIN)
+               call urc_list%add_user_urcv(wna%fi, id, ref_thr, ref_eps, "Loechner", .true.)
+            case (PLUMMER)
+               call urc_list%add_user_urcv(wna%fi, id, ref_thr*d0, 0., "grad", .true.)
+         end select
       enddo
 
    end subroutine read_problem_par
@@ -265,7 +309,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      call compute_maclaurin_potential
+      call compute_analytical_potential
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -298,11 +342,16 @@ contains
                                     rr = 0.
                               end select
 
-                              if (rr <= 1.) then
-                                 dm = dm + d0
-                              else
-                                 dm = dm + d1
-                              endif
+                              select case (i_model)
+                                 case (MACLAURIN)
+                                    if (rr <= 1.) then
+                                       dm = dm + d0
+                                    else
+                                       dm = dm + d1
+                                    endif
+                                 case (PLUMMER)
+                                    dm = dm + d0 * (1. + rr) ** (-5./2.)
+                              end select
 
                            enddo
                         enddo
@@ -417,8 +466,86 @@ contains
    end subroutine problem_initial_conditions_attrs
 #endif /* HDF5 */
 
+!> \brief wrapper for analytical models
+
+   subroutine compute_analytical_potential
+
+      implicit none
+
+      select case (i_model)
+         case (MACLAURIN)
+            call compute_maclaurin_potential
+         case (PLUMMER)
+            call compute_plummer_potential
+      end select
+
+   contains
+
+      subroutine compute_plummer_potential
+
+         use cg_leaves,        only: leaves
+         use cg_list,          only: cg_list_element
+         use constants,        only: pi, GEO_XYZ, GEO_RPZ, PPP_PROB
+         use dataio_pub,       only: die
+         use domain,           only: dom
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
+         use ppp,              only: ppp_main
+         use units,            only: newtong
+
+         implicit none
+
+         integer                        :: i, j, k, apot_i
+         real                           :: r2
+         real                           :: x02, y02, z02, cdphi
+         type(cg_list_element), pointer :: cgl
+         type(grid_container),  pointer :: cg
+         character(len=*), parameter    :: cpp_label = "compute_plummer_potential"
+
+         call ppp_main%start(cpp_label, PPP_PROB)
+
+         apot_i = qna%ind(apot_n)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            do k = cg%ks, cg%ke
+               z02 = (cg%z(k)-z0)**2
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           y02 = (cg%y(j)-y0)**2
+                           x02 = (cg%x(i)-x0)**2
+                           r2 = x02 + y02 + z02
+                        case (GEO_RPZ)
+                           cdphi = cos(cg%y(j)-y0)
+                           r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi) + z02
+                           x02 = r2 * cdphi**2
+                           y02 = r2 - x02
+                        case default
+                           call die("[initproblem:compute_plummer_potential] Invalid dom%geometry_type.")
+                           r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
+                     end select
+
+                     cg%q(apot_i)%arr(i, j, k) = - 4./3. * pi * newtong * d0 * a1**3 / sqrt(r2 + a1**2)
+
+                  enddo
+               enddo
+            enddo
+
+            cgl => cgl%nxt
+         enddo
+
+         call ppp_main%stop(cpp_label, PPP_PROB)
+
+      end subroutine compute_plummer_potential
+
+   end subroutine compute_analytical_potential
+
 !>
-!! \brief Calculate analytical potential for given spheroid.
+!! \brief Calculate analytical potential for given Maclaurin spheroid.
 !!
 !! \details We assume that the spheroid is fully contained in the computational domain here.
 !! Oblate potential formula from Ricker_2008ApJS..176..293R
@@ -445,7 +572,7 @@ contains
       real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      character(len=*), parameter :: cmp_label = "compute_maclaurin_potential"
+      character(len=*), parameter    :: cmp_label = "compute_maclaurin_potential"
 
       call ppp_main%start(cmp_label, PPP_PROB)
 
