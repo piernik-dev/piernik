@@ -226,7 +226,7 @@ contains
       p_br_init_lo(:)   = p_br_def(:) ! < in case it was not provided "powl" can be assumed
       p_br_init_up(:)   = p_br_def(:) ! < in case it was not provided "powl" can be assumed
       q_br_init(:)      = q_br_def(:) ! < in case it was not provided "powl" can be assumed
-      p_diff(:)         = 10000.0
+      p_diff(:)         = 10.0
       cfl_cre(:)        = 0.1
       cre_eff(:)        = 0.01
       K_cre_pow(:)      = 0.
