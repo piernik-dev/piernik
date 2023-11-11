@@ -323,6 +323,9 @@ contains
          n_tab(HI, i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim_n) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim_n-1)*real(i-1))
       enddo
 
+      q_tab = q_big
+      alpha_q_tab = zero
+
       do i = 1, arr_dim_q
          q_tab(i) = ind_to_flog(i, q_big, three*q_big, arr_dim_q) ! We tabulate q
          q_tab(i) = q_tab(i) - two*q_big
@@ -336,6 +339,8 @@ contains
             print *, 'alpha_q_tab(i=',i,',j=',j,'): ', alpha_q_tab(i,j,:)
          enddo
       enddo
+      !print *, 'q_tab : ', q_tab
+      !print *, 'alpha_q_tab : ', alpha_q_tab
       !stop
 
 
@@ -1452,9 +1457,11 @@ contains
       call piernik_MPI_Bcast(f_ratios_lo)
       call piernik_MPI_Bcast(f_ratios_up)
       call piernik_MPI_Bcast(q_grid)
+      call piernik_MPI_Bcast(q_tab)
       call piernik_MPI_Bcast(n_tab)
       call piernik_MPI_Bcast(alpha_tab)
       call piernik_MPI_Bcast(alpha_tab_q)
+      call piernik_MPI_Bcast(alpha_q_tab)
 
       do i = LO, HI
          call piernik_MPI_Bcast(hdr_share(i)%s_dim1)
