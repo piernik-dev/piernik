@@ -184,7 +184,7 @@ contains
    subroutine cr_spallation_sources(u_cell,dt_doubled, q_spc_all)
 
       use constants,        only: one, zero
-      use initcrspectrum,   only: spec_mod_trms, p_fix, three_ps, g_fix
+      use initcrspectrum,   only: spec_mod_trms, p_fix, p_mid_fix, three_ps, g_fix
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
       use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, transrelativistic
       use initcosmicrays,   only: nspc
@@ -224,55 +224,67 @@ contains
 
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
 
+         print *, 'cr_prim : ', cr_table(icr_prim(i_prim))
+
                do i_sec = 1, ncrsp_sec
 
                   associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  do i_bin = 1, ncrb - 1
+                  print *, 'cr_sec : ', cr_table(icr_sec(i_sec))
 
-                     if (transrelativistic) velocity(i_bin) = clight*p_fix(i_bin)/sqrt(cr_mass(icr_prim(i_prim))**2 + p_fix(i_bin)**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime
+                  if (cr_sigma(cr_prim, cr_sec) .gt. zero) then
 
-                     if (p_fix(i_bin) > zero) then
+                     do i_bin = 1, ncrb - 1
 
-                        if (p_fix(i_bin+1) > zero) then
+                        if (transrelativistic) velocity(i_bin) = clight*p_mid_fix(i_bin)/sqrt(cr_mass(icr_prim(i_prim))**2 + p_mid_fix(i_bin)**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime
 
-                           Q_ratio_1(i_bin) = Q_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1))
-                           S_ratio_1(i_bin) = S_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1), g_fix(cr_table(icr_prim(i_prim)),i_bin), g_fix(cr_table(icr_sec(i_sec)),i_bin), three_ps(cr_table(icr_prim(i_prim)),i_bin), three_ps(cr_table(icr_sec(i_sec)), i_bin)) !TODO print values of ratio in the last bin
+                        if (p_fix(i_bin) > zero) then
 
-                           Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
+                           if (p_fix(i_bin+1) > zero) then
 
-                           S_ratio_2(i_bin) = one - S_ratio_1(i_bin)
+                              Q_ratio_1(i_bin) = Q_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1))
+                              S_ratio_1(i_bin) = S_ratio(cr_mass(cr_table(icr_prim(i_prim))), cr_mass(cr_table(icr_sec(i_sec))),q_spc_all(i_bin,cr_table(icr_prim(i_prim))),p_fix(i_bin),p_fix(i_bin+1), three_ps(cr_table(icr_prim(i_prim)),i_bin)) !TODO print values of ratio in the last bin
+
+                              Q_ratio_2(i_bin) = one - Q_ratio_1(i_bin)
+
+                              S_ratio_2(i_bin) = one - S_ratio_1(i_bin)
+
+                           endif
 
                         endif
 
-                     endif
+                     enddo
+                     print *, 'Q_ratio : ', Q_ratio_1
+                     print *, 'S_ratio : ', S_ratio_1
 
-                  enddo
+                     dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_n(cr_prim,:))
+                     dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_e(cr_prim,:))
 
-                  dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_n(cr_prim,:))
-                  dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_e(cr_prim,:))
+                     print *, 'dcr_n : ', dcr_n
+                     print *, 'dcr_e : ', dcr_e
 
-                  dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
-                  dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
+                     dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
+                     dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
 
-                  usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n(:)
-                  usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e(:)
+                     usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n(:)
+                     usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e(:)
 
-                  do i_bin = 1, ncrb
+                     do i_bin = 1, ncrb
 
-                     if (i_bin == ncrb) then
+                        if (i_bin == ncrb) then
 
-                        usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
-                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
+                           usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
+                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
 
-                     else
+                        else
 
-                        usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
-                        usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
+                           usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
+                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
 
-                     endif
+                        endif
 
-                  enddo
+                     enddo
+                  endif
 
                end associate
                enddo
@@ -321,26 +333,22 @@ contains
 
    end function Q_ratio
 
-   function S_ratio(A_prim, A_sec, q_l, p_L, p_R, g_l_prim, g_l_sec, three_ps_l_prim, three_ps_l_sec)
+   function S_ratio(A_prim, A_sec, q_l, p_L, p_R, three_ps_l)
 
       use constants,      only: zero, one
       use initcrspectrum, only: eps
 
       implicit none
 
-      real :: A_prim, A_sec, q_l, p_L, p_R, g_l_prim, g_l_sec, three_ps_l_prim, three_ps_l_sec
+      real :: A_prim, A_sec, q_l, p_L, p_R, three_ps_l
       real :: S_ratio
 
-      S_ratio = g_l_sec/g_l_prim
+      S_ratio = zero
 
-      if (abs(q_l - three_ps_l_prim) > eps .and. abs(q_l - three_ps_l_sec) > eps) then
-         S_ratio = S_ratio * ((A_prim/A_sec)**(three_ps_l_sec-q_l)-one)/((p_R/p_L)**(three_ps_l_prim-q_l)-one)
-      else if (abs(q_l - three_ps_l_prim) > eps .and. abs(q_l - three_ps_l_sec) < eps) then
-         S_ratio = S_ratio * log(A_prim/A_sec)*(three_ps_l_prim-q_l)/((p_R/p_L)**(three_ps_l_prim-q_l)-one)
-      else if (abs(q_l - three_ps_l_prim) < eps .and. abs(q_l - three_ps_l_sec) > eps) then
-         S_ratio = S_ratio * ((A_prim/A_sec)**(three_ps_l_sec-q_l)-one)/(log(p_R/p_L)*(three_ps_l_sec-q_l))
+      if (abs(q_l - three_ps_l) > eps) then
+         S_ratio = ((A_prim/A_sec)**(three_ps_l-q_l)-one)/((p_R/p_L)**(three_ps_l-q_l)-one)
       else
-         S_ratio = S_ratio * log(A_prim/A_sec)/log(p_R/p_L)
+         S_ratio = log(A_prim/A_sec)/log(p_R/p_L)
       endif
 
    end function S_ratio
