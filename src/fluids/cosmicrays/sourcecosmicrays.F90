@@ -234,6 +234,11 @@ contains
 
                   if (cr_sigma(cr_prim, cr_sec) .gt. zero) then
 
+                     Q_ratio_1 = 0.0
+                     S_ratio_1 = 0.0
+                     Q_ratio_2 = 0.0
+                     S_ratio_2 = 0.0
+
                      do i_bin = 1, ncrb - 1
 
                         if (transrelativistic) velocity(i_bin) = clight*p_mid_fix(i_bin)/sqrt(cr_mass(icr_prim(i_prim))**2 + p_mid_fix(i_bin)**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime

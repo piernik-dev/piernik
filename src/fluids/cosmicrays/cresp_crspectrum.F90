@@ -179,7 +179,11 @@ contains
 ! We pass values of external n_inout and e_inout to n and e after these've been preprocessed
       n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
+      print *, 'n_inout : ', n_inout
+      print *, 'e_inout : ', e_inout
 
+      print *, 'n : ', n
+      print *, 'e : ', e
       if (approx_p(HI) > 0) then
          if (i_cut(HI) > 1 .and. p_bnd=='mov') then
             call get_fqp_cutoff(HI, i_spc, solve_fail_up)
@@ -1732,7 +1736,7 @@ contains
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small, g_fix, three_ps, arr_dim_q
+      use initcrspectrum,  only: e_small, g_fix, three_ps, arr_dim_q, q_big
 
       implicit none
 
@@ -1767,8 +1771,8 @@ contains
                   q(i) = compute_q(alpha_in, three_p_s, exit_code)
                endif
             else
-               !print *, 'minval of delta alpha : ', minval(alpha_in - alpha_q_tab(:,i_spc,i))
-               j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
+               !print *, 'alpha : ', alpha_q_tab
+               !j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
                !print *, 'j : ', j
                !print *, 'alpha : ', alpha_in
                !print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
@@ -1782,10 +1786,10 @@ contains
                      if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .lt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
                      if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .gt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
                   else
-                     q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+                     q(i) = - q_big
                   endif
                else
-                  q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
+                  q(i) = q_big
                endif
 
             endif
@@ -1798,7 +1802,7 @@ contains
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
-      !print *, 'q : ', q
+      print *, 'q : ', q
 
    end subroutine ne_to_q
 

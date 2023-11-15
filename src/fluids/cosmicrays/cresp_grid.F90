@@ -181,8 +181,12 @@ contains
 
                   do i_spc = 1, nspc
 
+                     print *, 'i_spc : ', i_spc
+
                      cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)  !TODO OPTIMIZE ME PLEASE !!
                      cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
+                     print *, 'n: ', cresp%n
+                     print *, 'e: ', cresp%e
                      if (synch_active(i_spc)) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC(i_spc), u_b_max)    !< WARNING assusmes that b is in mGs
                      if (adiab_active(i_spc)) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
                      if (icomp_active(i_spc)) sptab%ucmb = enden_CMB(redshift) * f_synchIC(i_spc)
@@ -194,6 +198,8 @@ contains
                         dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
                         nssteps_max = max(n_substeps_max, nssteps)
                      endif
+                     print *, 'n (after timestep routines): ', cresp%n
+                     print *, 'e (after timestep routines): ', cresp%e
 #ifdef CRESP_VERBOSED
                      print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
