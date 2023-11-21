@@ -329,14 +329,14 @@ contains
       do i = 1, arr_dim_q
          q_tab(i) = ind_to_flog(i, q_big, three*q_big, arr_dim_q) ! We tabulate q
          q_tab(i) = q_tab(i) - two*q_big
-         print *, 'q_tab (i=',i,') : ', q_tab(i)
+         !print *, 'q_tab (i=',i,') : ', q_tab(i)
          do j = 1, nspc
             do k = 1, ncrb
                alpha_q_tab(i,j,k)=alpha_to_q(q_tab(i), three_ps(j,k), p_fix(k)/p_fix(k-1))
                !print *, 'p_ratio : ', p_fix(k)/p_fix(k-1)
             enddo
             !stop
-            print *, 'alpha_q_tab(i=',i,',j=',j,'): ', alpha_q_tab(i,j,:)
+            !print *, 'alpha_q_tab(i=',i,',j=',j,'): ', alpha_q_tab(i,j,:)
          enddo
       enddo
       !print *, 'q_tab : ', q_tab

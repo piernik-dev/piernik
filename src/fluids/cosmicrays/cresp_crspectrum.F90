@@ -179,11 +179,11 @@ contains
 ! We pass values of external n_inout and e_inout to n and e after these've been preprocessed
       n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
-      print *, 'n_inout : ', n_inout
-      print *, 'e_inout : ', e_inout
+      !print *, 'n_inout : ', n_inout
+      !print *, 'e_inout : ', e_inout
 
-      print *, 'n : ', n
-      print *, 'e : ', e
+      !print *, 'n : ', n
+      !print *, 'e : ', e
       if (approx_p(HI) > 0) then
          if (i_cut(HI) > 1 .and. p_bnd=='mov') then
             call get_fqp_cutoff(HI, i_spc, solve_fail_up)
@@ -312,6 +312,9 @@ contains
                   return
                endif
             endif
+            !print *, 'n(before neq):', n
+            !print *, 'e(before neq):', e
+
 
             call ne_to_q(n, e, q, active_bins, i_spc)  !< begins new step
             f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)  !< Compute values of distribution function in the new step
@@ -712,7 +715,7 @@ contains
       real                        :: f_one, q_one, q_1m3, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code
 
-      print *, "salut tout l'monde ! "
+      !print *, "salut tout l'monde ! "
 
       assert_active_bin_via_nei = .false.
 
@@ -959,10 +962,15 @@ contains
       init_e = zero
       init_n = zero
 
+      print *, 'p_init: ', p_init
+
       do i_spc = 1, nspc
+         print *, 'i_spc (in init_state): ', i_spc
         f = zero ; q = zero ; p = zero ; n = zero ; e = zero
 
 ! reading initial values of p_cut
+        print *, 'p_cut: ', p_cut
+        !print *, 'p_init: ', p_i
         p_cut = p_init(:,i_spc)
 
         p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
@@ -1034,8 +1042,8 @@ contains
                 if (p_bnd=='mov') then
                   call get_fqp_cutoff(co, i_spc, exit_code)
                   if (exit_code) then
-                  write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
-                  call die(msg)
+                     write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
+                     call die(msg)
                   endif
                 else if (p_bnd=='fix') then
                   p_cut(co)     = p_fix(i_cut(co))
@@ -1732,7 +1740,7 @@ contains
    subroutine ne_to_q(n, e, q, bins, i_spc)
 
       use cr_data,         only: cr_table, icr_E, transrelativistic
-      use constants,       only: zero, I_ONE
+      use constants,       only: zero, one, I_ONE
       use dataio_pub,      only: warn
       use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
       use initcosmicrays,  only: ncrb
@@ -1750,6 +1758,7 @@ contains
       logical                                    :: exit_code
 
       q = zero
+      j = one
       !print *, 'i_spc : ', i_spc
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          exit_code = .false.
@@ -1772,7 +1781,7 @@ contains
                endif
             else
                !print *, 'alpha : ', alpha_q_tab
-               !j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
+               j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
                !print *, 'j : ', j
                !print *, 'alpha : ', alpha_in
                !print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
@@ -1802,7 +1811,7 @@ contains
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
 
-      print *, 'q : ', q
+      !print *, 'q : ', q
 
    end subroutine ne_to_q
 
@@ -1939,8 +1948,11 @@ contains
       call assoc_pointers(cutoff)
 
       alpha = e(qi)/(n(qi) * g_fix(i_spc,ipfix))
+      print *, 'alpha: ', alpha
       n_in  = n(qi)
+      print *, 'n_in:', n_in
       x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
+      print *, 'x_NR:', x_NR
       if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(cutoff) = fail_count_interpol(cutoff) + 1
@@ -1977,6 +1989,10 @@ contains
       end select
       p(i_cut(cutoff)) = p_cut(cutoff)
       q(qi)            = q_ratios(x_NR(I_TWO), x_NR(I_ONE))
+
+      print *, 'in get_cutoff: '
+      print *, 'p: ', p(i_cut(cutoff))
+      print *, 'q: ', q(qi)
 
       if (abs(q(qi)) > q_big) q(qi) = sign(one, q(qi)) * q_big
 #ifdef CRESP_VERBOSED

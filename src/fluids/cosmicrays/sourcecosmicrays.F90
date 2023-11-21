@@ -224,13 +224,13 @@ contains
 
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
 
-         print *, 'cr_prim : ', cr_table(icr_prim(i_prim))
+         !print *, 'cr_prim : ', cr_table(icr_prim(i_prim))
 
                do i_sec = 1, ncrsp_sec
 
                   associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  print *, 'cr_sec : ', cr_table(icr_sec(i_sec))
+                  !print *, 'cr_sec : ', cr_table(icr_sec(i_sec))
 
                   if (cr_sigma(cr_prim, cr_sec) .gt. zero) then
 
@@ -259,14 +259,14 @@ contains
                         endif
 
                      enddo
-                     print *, 'Q_ratio : ', Q_ratio_1
-                     print *, 'S_ratio : ', S_ratio_1
+                     !print *, 'Q_ratio : ', Q_ratio_1
+                     !print *, 'S_ratio : ', S_ratio_1
 
                      dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_n(cr_prim,:))
                      dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_e(cr_prim,:))
 
-                     print *, 'dcr_n : ', dcr_n
-                     print *, 'dcr_e : ', dcr_e
+                     !print *, 'dcr_n : ', dcr_n
+                     !print *, 'dcr_e : ', dcr_e
 
                      dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
                      dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available

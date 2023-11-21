@@ -179,14 +179,24 @@ contains
 
                   sptab%ud = 0.0 ; sptab%ub = 0.0; sptab%umag = 0.0
 
+                  !print *, 'cresp%n: ', cresp%n
+                  !print *, 'cresp%e: ', cresp%e
+
+                  !print *, 'cg%u(iarr_crspc2_n(,:), i, j, k):', cg%u(iarr_crspc2_n(:,:), i, j, k)
+
                   do i_spc = 1, nspc
 
-                     print *, 'i_spc : ', i_spc
+                     !print *, 'i_spc (in cresp_update_grid) : ', i_spc
+
+                     !print *, 'iarr_crspc2_n(i_spc,:)', iarr_crspc2_n(i_spc,:)
+                     !print *, 'iarr_crspc2_e(i_spc,:)', iarr_crspc2_e(i_spc,:)
+                     !print *, 'cg%u(iarr_crspc2_n(',i_spc,':), i, j, k):', cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
+                     !print *, 'cg%u(iarr_crspc2_e(',i_spc,':), i, j, k):', cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
 
                      cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)  !TODO OPTIMIZE ME PLEASE !!
                      cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
-                     print *, 'n: ', cresp%n
-                     print *, 'e: ', cresp%e
+                     !print *, 'n: ', cresp%n
+                     !print *, 'e: ', cresp%e
                      if (synch_active(i_spc)) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC(i_spc), u_b_max)    !< WARNING assusmes that b is in mGs
                      if (adiab_active(i_spc)) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
                      if (icomp_active(i_spc)) sptab%ucmb = enden_CMB(redshift) * f_synchIC(i_spc)
@@ -198,8 +208,8 @@ contains
                         dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
                         nssteps_max = max(n_substeps_max, nssteps)
                      endif
-                     print *, 'n (after timestep routines): ', cresp%n
-                     print *, 'e (after timestep routines): ', cresp%e
+                     !print *, 'n (after timestep routines): ', cresp%n
+                     !print *, 'e (after timestep routines): ', cresp%e
 #ifdef CRESP_VERBOSED
                      print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
@@ -225,6 +235,9 @@ contains
 
                      cg%u(iarr_crspc2_n(i_spc,:), i, j, k) = cresp%n
                      cg%u(iarr_crspc2_e(i_spc,:), i, j, k) = cresp%e
+
+                     !print *, 'cg%u(iarr_crspc2_n(',i_spc,':), i, j, k)(end of the loop)(:', cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
+                     !print *, 'cg%u(iarr_crspc2_e(',i_spc,':), i, j, k)(end of the loop)(:', cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
 
                      if (dfpq%any_dump) then
                         if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
