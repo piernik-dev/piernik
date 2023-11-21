@@ -369,7 +369,7 @@ contains
          rbuff(12*nspc+15) = q_eps
          rbuff(12*nspc+16) = b_max_db
 
-         rbuff(28) = redshift
+         rbuff(12*nspc+17) = redshift
 
          cbuff(1)  = initial_spectrum
          cbuff(2)  = p_bnd
@@ -445,9 +445,7 @@ contains
          q_eps                = rbuff(12*nspc+15)
          b_max_db             = rbuff(12*nspc+16)
 
-         q_eps                = rbuff(12*nspc+17)
-         b_max_db             = rbuff(12*nspc+18)
-         redshift             = rbuff(12*nspc+19)
+         redshift             = rbuff(12*nspc+17)
 
 
          initial_spectrum      = trim(cbuff(1))
