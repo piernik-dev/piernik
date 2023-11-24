@@ -89,7 +89,7 @@ module cr_data
    logical, dimension(PRES:PRIM)                           :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    logical,                                dimension(nicr) :: ePRIM              !< table of all PRIMARY presences
-   logical, parameter                                      :: transrelativistic = .true. !< Logical for transrelativistic limit of momentum in CRESP
+   logical, parameter                                      :: transrelativistic = .false. !< Logical for transrelativistic limit of momentum in CRESP
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
    !character(len=idlen), parameter                         :: p_bnd =  'fix'  !, 'fixed'! impose momentum boundaries to be fixed along time, or able to move  ! BEWARE: src/fluids/cosmicrays/initcrspectrum.F90 also exports some variable named "p_bnd"
@@ -141,7 +141,8 @@ module cr_data
 
    real, parameter :: sigma_O16_Li7  = 9.5 !< mbarn
    real, parameter :: sigma_O16_Be9  = 4.5 !< mbarn
-   real, parameter :: sigma_O16_B11  = 0.   !< mbarn
+   real, parameter :: sigma_O16_Be10 = 2   !< mbarn
+   real, parameter :: sigma_O16_B11  = 0.  !< mbarn
 
    real, parameter :: sigma_P_P      = 25. !< mbarn
 
@@ -171,7 +172,9 @@ contains
 !! <tr><td>eH1  </td><td>.true.           </td><td>2 logical values</td><td>\copydoc cr_data::eh1  </td></tr>
 !! <tr><td>eLi7 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::eli7 </td></tr>
 !! <tr><td>eBe9 </td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::ebe9 </td></tr>
-!! <tr><td>eB11</td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::eB11</td></tr>
+!! <tr><td>eBe10</td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::ebe10</td></tr>
+!! <tr><td>eB10 </td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::eB10 </td></tr>
+!! <tr><td>eB11 </td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::eB11 </td></tr>
 !! <tr><td>eC12 </td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::ec12 </td></tr>
 !! <tr><td>eN14 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::en14 </td></tr>
 !! <tr><td>eO16 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::eo16 </td></tr>
@@ -424,6 +427,8 @@ contains
          cr_primary(cr_table(icr_O16)) = primary_O16
          if (eCRSP(icr_Li7 )) cr_sigma(cr_table(icr_O16), cr_table(icr_Li7 )) = sigma_O16_Li7
          if (eCRSP(icr_Be9 )) cr_sigma(cr_table(icr_O16), cr_table(icr_Be9 )) = sigma_O16_Be9
+         if (eCRSP(icr_Be10)) cr_sigma(cr_table(icr_O16), cr_table(icr_Be10)) = sigma_O16_Be10
+         if (eCRSP(icr_B10)) cr_sigma(cr_table(icr_O16), cr_table(icr_B10)) = sigma_O16_Be10
          if (eCRSP(icr_B11)) cr_sigma(cr_table(icr_O16), cr_table(icr_B11)) = sigma_O16_B11
       endif
       cr_sigma = cr_sigma * mbarn
