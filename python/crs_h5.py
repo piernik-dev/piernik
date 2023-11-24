@@ -46,7 +46,7 @@ highlighted = False
 plotted_init_slope = False
 verbosity_1 = True
 verbosity_2 = False
-transrelativistic = True
+transrelativistic = False
 
 global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, par_plot_legend, \
     par_plot_e_small, par_plot_color, par_plot_width, par_fixed_dims, i_plot, xkcd_colors, use_color_list, tightened, par_legend_loc
@@ -161,12 +161,10 @@ def intpol_get_q(i_bin: int, e_to_ng_ratio: float) -> float:
                 intpol_get_q = q_tab[j-1] * (1 - weight) + q_tab[j] * weight
         else:
             print('j = 0')
-            weight   = (e_to_ng_ratio - alpha_q_tab[j,i_bin]) / (alpha_q_tab[j+1,i_bin] - alpha_q_tab[j,i_bin])
-            intpol_get_q = q_tab[j] * (1 - weight) + q_tab[j+1] * weight
+            intpol_get_q = - q_big
     else:
         print('j = arr_dim_q')
-        weight   = (e_to_ng_ratio - alpha_q_tab[j-1,i_bin]) / (alpha_q_tab[j,i_bin] - alpha_q_tab[j-1,i_bin])
-        intpol_get_q = q_tab[j-1] * (1 - weight) + q_tab[j] * weight
+        intpol_get_q = q_big
 
 
     #print('q[j]: ', q_tab[j], 'q[j+1]: ', q_tab[j+1],' q_interpolated: ', intpol_get_q )
@@ -492,7 +490,15 @@ def detect_active_bins_new(n_in, e_in):
     grn = g_fix[1:ncrb]
     num_active_bins = 0
 
-    for i in range(0, min(i_up_tmp - i_lo_tmp + 1, ncrb - 1)):
+    print('e_in(): ', e_in)
+    print('n_in(): ', n_in)
+    print('gln(): ',  gln)
+
+    for i in range(0, min(i_up_tmp - i_lo_tmp + 1, ncrb - 2)):
+        print('i: ',i)
+        print('e_in(',i,'+',i_lo_tmp,'): ', e_in[i+i_lo_tmp])
+        print('n_in(',i,'+',i_lo_tmp,'): ', n_in[i+i_lo_tmp])
+        print('gln(',i,'+',i_lo_tmp-1,'): ',  gln[i+i_lo_tmp-1])
         q_tmp = 3.5
         exit_code = False
         if (q_explicit is True):
@@ -501,7 +507,7 @@ def detect_active_bins_new(n_in, e_in):
                 q_tmp, exit_code = nr_get_q(
                     q_tmp, 3 + s_nr[i], e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]), prn[i + i_lo_tmp] / pln[i + i_lo_tmp], exit_code)
             else:
-                q_tmp = intpol_get_q(i, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp]))
+                q_tmp = intpol_get_q(i, e_in[i + i_lo_tmp] / (n_in[i + i_lo_tmp] * gln[i + i_lo_tmp-1]))
             print('q_tmp, exit_code : ', q_tmp, exit_code)
         else:
             # this instruction is duplicated, TODO return it via detect_active_bins_new()
@@ -574,8 +580,8 @@ def crs_initialize(parameter_names, parameter_values, plot_field):
     p_fix = []
     g_fix = []
     s_nr = []
-    p_lo_init = 1.0e-2
-    p_up_init = 1.0e5
+    p_lo_init = 5.0e-3
+    p_up_init = 1.0e6
     edges[0:ncrb] = range(0, ncrb + 1, 1)
     p_fix[0:ncrb] = zeros(ncrb + 1)
     g_fix[0:ncrb] = zeros(ncrb + 1)
