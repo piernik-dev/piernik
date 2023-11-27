@@ -822,7 +822,7 @@ contains
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, cresp_all_bins, cresp_all_edges
+      use initcrspectrum, only: p_fix, cresp_all_bins, cresp_all_edges, p_bnd
 
       implicit none
 
@@ -836,22 +836,36 @@ contains
 ! Compute p_cut at [t+dt] (update p_range)
       p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
+
+      if (p_bnd == 'fix') then
+
+         p_cut_next(LO) = max(p_cut(LO), p_cut_next(LO))
+         p_cut_next(HI) = min(p_cut(HI), p_cut_next(HI))
+
+      else if (p_bnd == 'mov') then
 ! Compute likely cut-off indices after current timestep
+         i_cut_next = get_i_cut(p_cut_next)
+         i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
+         i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
+
+         i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
+         i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
+
+         if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
+            dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
+            return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
+         endif
+
+! Detect changes in positions of lower an upper cut-ofs
+         del_i = i_cut_next - i_cut
+
+      endif
+
       !print *, 'p_cut : ', p_cut
       !print *, 'p_cut_next : ', p_cut_next
-      i_cut_next = get_i_cut(p_cut_next)
-      i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
-      i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
 
-      i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
-      i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
 
-      if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
-         dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
-         return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
-      endif
-! Detect changes in positions of lower an upper cut-ofs
-      del_i = i_cut_next - i_cut
+
 
 ! Construct index arrays for fixed edges between p_cut(LO) and p_cut(HI), active edges after timestep
       call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO) + I_ONE, i_cut_next(HI) - I_ONE])
@@ -1948,11 +1962,11 @@ contains
       call assoc_pointers(cutoff)
 
       alpha = e(qi)/(n(qi) * g_fix(i_spc,ipfix))
-      print *, 'alpha: ', alpha
+      !print *, 'alpha: ', alpha
       n_in  = n(qi)
-      print *, 'n_in:', n_in
+      !print *, 'n_in:', n_in
       x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
-      print *, 'x_NR:', x_NR
+      !print *, 'x_NR:', x_NR
       if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(cutoff) = fail_count_interpol(cutoff) + 1
@@ -1990,9 +2004,9 @@ contains
       p(i_cut(cutoff)) = p_cut(cutoff)
       q(qi)            = q_ratios(x_NR(I_TWO), x_NR(I_ONE))
 
-      print *, 'in get_cutoff: '
-      print *, 'p: ', p(i_cut(cutoff))
-      print *, 'q: ', q(qi)
+      !print *, 'in get_cutoff: '
+      !print *, 'p: ', p(i_cut(cutoff))
+      !print *, 'q: ', q(qi)
 
       if (abs(q(qi)) > q_big) q(qi) = sign(one, q(qi)) * q_big
 #ifdef CRESP_VERBOSED
