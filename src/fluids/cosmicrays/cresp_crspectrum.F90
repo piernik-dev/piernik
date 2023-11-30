@@ -1190,9 +1190,9 @@ contains
       ic = get_i_cut(p_init(:,i_spc))
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      !p_range_add(ic(LO)) = p_init(LO, i_spc)
-      !p_range_add(ic(HI)) = p_init(HI, i_spc)
-      print *, 'p_range_add : ', p_range_add
+      p_range_add(ic(LO)) = p_init(LO, i_spc)
+      p_range_add(ic(HI)) = p_init(HI, i_spc)
+      !print *, 'p_range_add : ', p_range_add
       if (.not.allocated(act_edges)) allocate(act_edges(ic(HI) - ic(LO)  ))
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
       act_edges = cresp_all_edges(ic(LO)  :ic(HI))
