@@ -65,8 +65,8 @@ contains
       out = particle_in_area(pos, cg%bnd_out)   ! Ghost particle
 
       ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
-      ijk = max(ijk, cg%ijkse(:,LO))
-      ijk = min(ijk, cg%ijkse(:,HI))
+      ijk = max(ijk, int(cg%ijkse(:,LO), kind=8))
+      ijk = min(ijk, int(cg%ijkse(:,HI), kind=8))
       fin = cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))
 
       if (indomain) return
