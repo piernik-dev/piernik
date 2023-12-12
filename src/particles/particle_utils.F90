@@ -58,7 +58,7 @@ contains
       real, dimension(ndims),        intent(in)  :: pos
       logical,                       intent(in)  :: indomain
       logical,                       intent(out) :: in, phy, out, fin
-      integer(kind=4), dimension(ndims)          :: ijk
+      integer(kind=8), dimension(ndims)          :: ijk
 
       in  = particle_in_area(pos, cg%bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
