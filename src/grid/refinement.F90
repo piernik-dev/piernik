@@ -36,7 +36,8 @@ module refinement
 
    private
    public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
-        &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot
+        &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot, &
+        &    nbody_ref
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
@@ -79,12 +80,16 @@ module refinement
    real    :: jeans_ref   !< minimum resolution in cells per Jeans wavelengths
    logical :: jeans_plot  !<create a 3D array to keep the value of Jeans resolution
 
+   ! \brief Parameter for particle-based refinement
+   integer(kind=4) :: nbody_ref  !< maximum allowed number of particles per cg
+
    character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterion
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
    namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
-        &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot
+        &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot, &
+        &         nbody_ref
 
 contains
 
@@ -106,13 +111,14 @@ contains
 !!   <tr><td> refine_vars(10)     </td><td> none    </td><td> 2*string, 3*real </td><td> \copydoc refinement::refine_vars         </td></tr>
 !!   <tr><td> jeans_ref           </td><td> 0.      </td><td> real             </td><td> \copydoc refinement::jeans_ref           </td></tr>
 !!   <tr><td> jeans_plot          </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::jeans_plot          </td></tr>
+!!   <tr><td> nbody_ref           </td><td> INVALID </td><td> integer          </td><td> \copydoc refinement::nbody_ref           </td></tr>
 !!   <tr><td> prefer_n_bruteforce </td><td> .false. </td><td> logical          </td><td> \copydoc refinement::prefer_n_bruteforce </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_refinement
 
-      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor, INVALID
       use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -139,6 +145,7 @@ contains
       refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., .false.)
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
+      nbody_ref = INVALID
 
       if (2*n_ref_auto_param              > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
       if (10+3*nshapes                    > ubound(ibuff, dim=1)) call die("[refinement:init_refinement] increase ibuff size")
@@ -174,7 +181,9 @@ contains
          ibuff(1) = level_min
          ibuff(2) = level_max
          ibuff(3) = n_updAMR
-         ibuff(4:3+ndims) = bsize
+         ibuff(4) = nbody_ref
+         ibuff(5:4+ndims) = bsize
+         ! it is safe because 4+ndims < 11
          ibuff(11          :10+  nshapes) = refine_points(:)%level
          ibuff(11+  nshapes:10+2*nshapes) = refine_boxes (:)%level
          ibuff(11+2*nshapes:10+3*nshapes) = refine_zcyls (:)%level
@@ -222,7 +231,8 @@ contains
          level_min = ibuff(1)
          level_max = ibuff(2)
          n_updAMR  = ibuff(3)
-         bsize     = ibuff(4:3+ndims)
+         nbody_ref = ibuff(4)
+         bsize     = ibuff(5:4+ndims)
          refine_points(:)%level = ibuff(11          :10+  nshapes)
          refine_boxes (:)%level = ibuff(11+  nshapes:10+2*nshapes)
          refine_zcyls (:)%level = ibuff(11+2*nshapes:10+3*nshapes)
