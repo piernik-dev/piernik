@@ -39,7 +39,7 @@ You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
   to fix the warnings
 
 * OpenMPI refuses to run on all threads of a CPU with SMT/HT. Override with `--use-hwthread-cpus` or `--oversubscribe` (only when necessary).
-* If the wrapper `h5pfc` complains about "Nonexistent include directory" you may need to edit it (as a sudoer/root) and fix the `includedir` shell variable (seen in Fedora 37).
+* If the wrapper `h5pfc` complains about "Nonexistent include directory" you may need to edit it (as a sudoer/root) and fix the `includedir` shell variable (seen in Fedora 37 and later).
 
 ### older Fedora releases (24 .. 31)
 
