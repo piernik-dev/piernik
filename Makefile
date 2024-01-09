@@ -70,16 +70,19 @@ clean:
 	@CL=1 $(MAKE) -k all
 
 allsetup:
-	for i in $$( find problems/* -type d ) ; do \
-		if [ ! -e $$i/OBSOLETE ] ; then \
-			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
-				nm=$$( basename $$i ); \
-			else \
-				nm="../"$$i; \
-			fi; \
-			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90}; \
+	( for i in $$( find problems/* -type d ) ; do \
+		if [ ! -e $$i/.skipauto ] ; then \
+			pnm=$$( echo $$i | sed 's-^problems/--' ); \
+			onm=$${pnm//\//___}; \
+			./setup $$pnm -o "A_"$$onm --nocompile && \
+				for f in .setup.call Makefile env.dat version.F90 ; do \
+					of="obj_A_"$$onm"/"$$f; \
+					[ -f $$of ] && sed -i 's/ --nocompile//' $$of; \
+				done & \
+			sleep .1; \
 		fi; \
-	done
+	done; \
+	wait )
 
 qa:
 	./bin/qa.py $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" )

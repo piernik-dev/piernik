@@ -24,14 +24,14 @@ except ImportError:
 
 columns = 90
 
-is_f90 = re.compile("\.f90$", re.IGNORECASE)
-is_header = re.compile("\.h$", re.IGNORECASE)
+is_f90 = re.compile(r"\.f90$", re.IGNORECASE)
+is_header = re.compile(r"\.h$", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
 overriding = re.compile(r'overrides', re.IGNORECASE).search
 have_use = re.compile(r"^\s*use\s", re.IGNORECASE).search
 have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
-cpp_junk = re.compile("(?!#define\s_)", re.IGNORECASE)
+cpp_junk = re.compile(r"(?!#define\s_)", re.IGNORECASE)
 
 
 head_block1 = '''ifneq (,$(findstring h5pfc, $(F90)))
@@ -105,7 +105,7 @@ env.dat: piernik.def *.h $(SRCS_V)
 '''
 
 head_block2 = '''
-\tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
+\tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\\// d" ) > env.dat
 \t@$(ECHO) "Recent history:" >> env.dat
 \t@git log -5 --decorate --graph 2> /dev/null | sed -e 's/"//g' >> env.dat
 
@@ -304,7 +304,7 @@ def setup_piernik(data=None):
                     cppflags += ' -D' + flag
 
     # parse compiler
-    if (not re.search('\.in$', options.compiler)):
+    if (not re.search(r'\.in$', options.compiler)):
         compiler = options.compiler + '.in'
     else:
         compiler = options.compiler

@@ -1,0 +1,93 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 32
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =-2.
+    xmax   = 2.
+    ymin   =-2.
+    ymax   = 2.
+    zmin   =-1.
+    zmax   = 1.
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.4
+!    nend   = 5
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'nbody'
+    run_id =  'tst'
+    dt_hdf  = 1.0e-1
+    dt_res  = 0.0
+    dt_log  = 0.0
+    dt_tsl  = 0.0
+    vars(1:) = "dens", "gpot", "nbdn", "prth", "v", "velx", "vely", "velz"
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-10
+    smallei= 1.e-10
+    dt_initial = 1e-4
+    integration_order = 2
+    limiter= 'vanleer'
+    !cflcontrol = 'none'
+    solver_str = "Riemann"
+ /
+
+ $GRAVITY
+   external_gp = 'ptmass'
+   ptmass = 1.0
+   r_smooth = .3
+ /
+
+ $MULTIGRID_GRAVITY
+    ord_time_extrap = 1
+    grav_bnd_str = "isolated"
+    mpole_solver = "3D"
+    mpole_level = -1
+ /
+
+ $PROBLEM_CONTROL
+    blob_mass      = 1.
+    blob_particles = 100000
+    blob_center    = 0., 1., 0.
+    blob_size      = 1.
+    blob_velocity  = 1., 0., 0.
+ /
+
+ $MULTIGRID_SOLVER
+   stdout = .true.
+   ! dirty_debug = .true.
+ /
+
+ $AMR
+    bsize = 3*16
+ /
+
+ $PARTICLES
+   time_integrator      = 'leapfrog2'
+   interpolation_scheme = 'tsc'
+   acc_interp_method    = 'tsc'
+   lf_c                 = 1.0
+ /
+
+ $PROFILING
+   use_profiling = .true.
+ /
+
+ $BALANCE
+   verbosity = 3
+   verbosity_nstep = 1
+ /
