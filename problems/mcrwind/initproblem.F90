@@ -350,19 +350,22 @@ contains
       integer                                             :: k
 
       real, parameter :: f1 = 3.23e8, f2 = -4.4e-9, f3 = 1.7e-9
-      real            :: r1, r22, r32, s4, s5
+      real            :: r1, r22, r32, s4, s5, h
+
 
       r1  = 4.9*kpc
       r22 = (0.2*kpc)**2
       r32 = (2.2*kpc)**2
       s4  = f2 * exp(-(r_gc-r_gc_sun)/(r1))
       s5  = f3 * (r_gc_sun**2 + r32)/(r_gc**2 + r32)
+      h   = 3*kpc
 
 !      grav = f1 * ((s4 * xsw/sqrt(xsw**2+r22)) - (s5 * xsw/kpc) )
 !!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid and flat rotation F'98: eq.(36)
 
       do k = lhn(zdim,LO), lhn(zdim,HI)
          gp(:,:,k) = -f1 * (s4 * sqrt(ax%z(k)**2+r22) - s5 * half * ax%z(k)**2 / kpc)
+         if (ax%z(k) .gt. h) gp(:,:,k) = gp(:,:,k)/cosh(((abs(ax%z(k))-h)/h))**6 !In mcrwind_cresp with multispecies: smoothing the gravitational potential outside of z = +-h = 3kpc
       enddo
       return
 
