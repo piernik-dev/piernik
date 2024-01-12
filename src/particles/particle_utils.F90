@@ -149,7 +149,7 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
          call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
-         toadd = (phy .and. fin) .or. (out .and. .not. (in .or. fin)) ! finest refinement level for partilels in (including outside particles) OR pariticles for all refinement levels in a area of internal boundaries (including fine-coarse)
+         toadd = out .and. fin
 #ifdef NBODY_CHECK_PID
          if (toadd) then
             pset => cgl%cg%pset%first
