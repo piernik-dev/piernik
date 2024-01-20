@@ -11,55 +11,54 @@ typ1 = np.dtype([('name', 'a50'), ('beg', 'i'), ('end', 'i'), ('type', 'a4')])
 
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
 # if function it can have a type next goes subroutine or function or type
-test_for_routines = re.compile('''
+test_for_routines = re.compile(r'''
       ^\s{0,12}(|end|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
       (|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
       (subroutine|function|type(,|\s))
    ''', re.VERBOSE)
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
 # next goes subroutine or function or type
-test_for_interfaces = re.compile('''
+test_for_interfaces = re.compile(r'''
       ^\s{0,12}(|end|abstract)\s
       interface
    ''', re.VERBOSE)
 # test_for_routines  = re.compile('''
 #       ^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))
 #   ''',re.VERBOSE)
-module_body = re.compile(
-    '''^(module|contains|program)''', re.VERBOSE)
-just_end = re.compile('''^\s{0,9}end''', re.IGNORECASE)
+module_body = re.compile(r'''^(module|contains|program)''', re.VERBOSE)
+just_end = re.compile(r'''^\s{0,9}end''', re.IGNORECASE)
 
-have_implicit = re.compile('''implicit\snone''', re.IGNORECASE)
-have_privpub = re.compile('''^\s{0,9}(public|private)''', re.VERBOSE)
-have_pub = re.compile('''^\s{0,9}public''', re.VERBOSE)
-have_priv = re.compile('''^\s{0,9}private\s::''', re.VERBOSE)
-remove_warn = re.compile('''(?!.*QA_WARN .+)''', re.VERBOSE)
-have_global_public = re.compile('''^\s{0,9}public(?!.*::)''', re.VERBOSE)
-depr_syntax_1 = re.compile('''^\s{1,12}(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,))(?!.*::)''', re.IGNORECASE)
-depr_syntax_2 = re.compile('''^\s{1,12}use[\s](?!.*only)''', re.IGNORECASE)
-depr_syntax_3 = re.compile('''^\s{1,12}character(?![(])''', re.IGNORECASE)
-is_function = re.compile('''(?i)\sfunction\s''', re.IGNORECASE)
-not_function = re.compile('''(?!.*function)''', re.IGNORECASE)
-tab_char = re.compile('\t')
-has_use = re.compile("^\s{1,12}use\s", re.IGNORECASE)
-have_label = re.compile('^[0-9]', re.VERBOSE)
-crude_write = re.compile("write *\( *\*", re.IGNORECASE)
-magic_integer = re.compile("\(len=[1-9]", re.IGNORECASE)
-continuation = re.compile('&$', re.VERBOSE)
-implicit_save = re.compile('''(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,)).*::.*=(|\s|)[0-9]''', re.IGNORECASE)
-not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
+have_implicit = re.compile(r'''implicit\snone''', re.IGNORECASE)
+have_privpub = re.compile(r'''^\s{0,9}(public|private)''', re.VERBOSE)
+have_pub = re.compile(r'''^\s{0,9}public''', re.VERBOSE)
+have_priv = re.compile(r'''^\s{0,9}private\s::''', re.VERBOSE)
+remove_warn = re.compile(r'''(?!.*QA_WARN .+)''', re.VERBOSE)
+have_global_public = re.compile(r'''^\s{0,9}public(?!.*::)''', re.VERBOSE)
+depr_syntax_1 = re.compile(r'''^\s{1,12}(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,))(?!.*::)''', re.IGNORECASE)
+depr_syntax_2 = re.compile(r'''^\s{1,12}use[\s](?!.*only)''', re.IGNORECASE)
+depr_syntax_3 = re.compile(r'''^\s{1,12}character(?![(])''', re.IGNORECASE)
+is_function = re.compile(r'''(?i)\sfunction\s''', re.IGNORECASE)
+not_function = re.compile(r'''(?!.*function)''', re.IGNORECASE)
+tab_char = re.compile(r'\t')
+has_use = re.compile(r"^\s{1,12}use\s", re.IGNORECASE)
+have_label = re.compile(r'^[0-9]', re.VERBOSE)
+crude_write = re.compile(r"write *\( *\*", re.IGNORECASE)
+magic_integer = re.compile(r"\(len=[1-9]", re.IGNORECASE)
+continuation = re.compile(r'&$', re.VERBOSE)
+implicit_save = re.compile(r'''(?:real(?:\s|,)|integer(?:\s|,)|logical(?:\s|,|\()|character(?:\s|,)).*::.*=(|\s|)[0-9]''', re.IGNORECASE)
+not_param_nor_save = re.compile(r"(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
-    re.compile("^([\s0-9]*)end\s{1,}do", re.IGNORECASE), r"\1enddo",
-    re.compile("^([\s0-9]*)end\s{1,}if", re.IGNORECASE), r"\1endif",
-    re.compile("^([\s0-9]*)end\s{1,}while", re.IGNORECASE), r"\1endwhile",
-    re.compile("^([\s0-9]*)end\s{1,}where", re.IGNORECASE), r"\1endwhere",
-    re.compile("only\s{1,}:", re.IGNORECASE), "only:",
-    re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
-    re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
-    re.compile("\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
-    re.compile("\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
-    re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
+    re.compile(r"^([\s0-9]*)end\s{1,}do", re.IGNORECASE), r"\1enddo",
+    re.compile(r"^([\s0-9]*)end\s{1,}if", re.IGNORECASE), r"\1endif",
+    re.compile(r"^([\s0-9]*)end\s{1,}while", re.IGNORECASE), r"\1endwhile",
+    re.compile(r"^([\s0-9]*)end\s{1,}where", re.IGNORECASE), r"\1endwhere",
+    re.compile(r"only\s{1,}:", re.IGNORECASE), "only:",
+    re.compile(r"\sif(|\s{2,})\(", re.IGNORECASE), " if (",
+    re.compile(r"\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
+    re.compile(r"\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
+    re.compile(r"\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
+    re.compile(r"\scase(|\s{2,})\(", re.IGNORECASE), " case ("
 ]
 
 
@@ -366,7 +365,7 @@ def qa_false_refs(lines, name, store, fname):
         # remove operator keyword from import
         for ino, item in enumerate(to_check):
             try:
-                new_item = re.search('operator\((.+?)\)', item).group(1)
+                new_item = re.search(r'operator\((.+?)\)', item).group(1)
             except AttributeError:
                 new_item = item
             to_check[ino] = new_item
