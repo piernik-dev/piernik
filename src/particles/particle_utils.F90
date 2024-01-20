@@ -153,7 +153,10 @@ contains
 #endif /* NBODY_CHECK_PID */
          if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
          cgfound = cgfound .or. (phy .or. out)
-         call cgl%cg%costs%stop(I_PARTICLE)
+         call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
+         ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
+         ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
+         ! Collecting of the cg costs for load balancing putposes will still work.
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound

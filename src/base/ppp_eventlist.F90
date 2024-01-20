@@ -55,6 +55,7 @@ module ppp_eventlist
       type(eventarray), dimension(ev_arr_num) :: arrays  !< separate arrays to avoid lhs-reallocation
       integer :: arr_ind                !< currently used array
       integer :: ind                    !< first unused entry in currently used array
+      logical :: overflown              !< emergency flag to turn off collecting more events
    contains
       procedure :: init                 !< create new event list
       procedure :: cleanup              !< destroy this event list (typically called by publish)
@@ -81,6 +82,7 @@ contains
 
       if (.not. use_profiling) return
 
+      this%overflown = .false.
       this%ind = 1
       this%arr_ind = 1
       this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
@@ -187,6 +189,7 @@ contains
 
    subroutine next_event(this, ev)
 
+      use dataio_pub, only: warn
       use ppp_events, only: event
 
       implicit none
@@ -194,10 +197,17 @@ contains
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
       type(event),      intent(in)    :: ev     !< an event to be stored
 
+      if (this%overflown) return
+
       this%arrays(this%arr_ind)%ev_arr(this%ind) = ev
       this%ind = this%ind + 1
       if (this%ind > ubound(this%arrays(this%arr_ind)%ev_arr, dim=1)) then
-         call this%expand
+         if (this%arr_ind >= ev_arr_num) then
+            call warn("[ppp_eventlist:next_event] Run out of space allowed by ev_arr_num on '" // trim(ev%label) // "'")
+            this%overflown = .true.
+         else
+            call this%expand
+         endif
       else
          this%arrays(this%arr_ind)%ev_arr(this%ind)%wtime = 0.
       endif
@@ -217,7 +227,7 @@ contains
 
    subroutine expand(this)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: warn
 
       implicit none
 
@@ -225,7 +235,7 @@ contains
 
       integer, parameter :: grow_factor = 2  !< each next array should be bigger
 
-      if (this%arr_ind >= ev_arr_num) call die("[ppp_eventlist:expand] Cannot add more arrays (ev_arr_num exceeded)")
+      if (this%arr_ind >= ev_arr_num) call warn("[ppp_eventlist:expand] Adding arrays beyond ev_arr_num limit")
 
       call this%arrays(this%arr_ind + 1)%init(grow_factor*size(this%arrays(this%arr_ind)%ev_arr))
 
@@ -267,6 +277,12 @@ contains
       end enum
 
       if (.not. use_profiling) return
+
+      if (this%overflown) then
+         call printinfo("[ppp_eventlist:publish] Profile timings have overflown the allowed buffers and thus are partially broken. Skipping.")
+         call this%cleanup
+         return
+      endif
 
       if (master) then
          if (disable_mask /= 0) then
