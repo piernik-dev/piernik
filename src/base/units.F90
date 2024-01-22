@@ -73,7 +73,7 @@ module units
    implicit none
 
    public                                                ! QA_WARN no secrets are kept here
-   private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs, kB_cgs  ! QA_WARN don't use those vars outside units!
+   private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs!, kB_cgs  ! QA_WARN don't use those vars outside units!
 
    character(len=cbuff_len) :: units_set                 !< type of units set
    character(len=cbuff_len) :: s_len_u                   !< name of length unit
@@ -152,6 +152,7 @@ module units
    real, protected :: Lsun                                  !< luminosity of Sun
    real, protected :: Mearth                                !< mass of Earth
    real, protected :: earthradius                           !< radius of Earth
+   real, protected :: TempHalo                              !< Initial temperature of the halo
 
 contains
 !>
@@ -399,6 +400,7 @@ contains
       Lsun       = 3.826e33*erg/sek         !< luminosity of Sun
       Mearth     = 5.977e27*gram            !< mass of Earth
       earthradius= 6378.17*km               !< radius of Earth
+      TempHalo   = 1.0e6*kelvin             !< Initial mass of the halo in Kelvin
 
       ! Following physical constants are used in various modules.
       ! They need to have some sane values.
