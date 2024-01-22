@@ -159,6 +159,7 @@ contains
       use global,         only: smalld
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use units,          only: kboltz, kB_cgs, TempHalo, mp
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
@@ -212,7 +213,7 @@ contains
 #endif /* SHEAR */
                   cg%b(:,i,j,k) = b0 * sqrt(cg%u(fl%idn,i,j,k) / d0) * b_n / sqrt(sum(b_n**2))
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k) = fl%cs2 / fl%gam_1 * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                  cg%u(fl%ien,i,j,k) = max(fl%cs2 / fl%gam_1 * cg%u(fl%idn,i,j,k),kboltz*TempHalo/(mp * fl%gam_1) * cg%u(fl%idn,i,j,k)) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                                      & emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
@@ -223,6 +224,18 @@ contains
                enddo
             enddo
          enddo
+
+         print *, 'energy at the center: ', fl%cs2 / fl%gam_1 * cg%u(fl%idn,0,0,0)
+         print *, 'energy at the center with halo temperature of 1e6 K: ', kboltz*TempHalo/(mp * fl%gam_1) * cg%u(fl%idn,0,0,0)
+         print *, 'Kb: ', kboltz
+         print *, 'mp: ', mp
+         print *, 'Kb in cgs: ', kB_cgs
+         print *, 'Temperature of the halo: ', TempHalo
+         print *, 'Thermal energy of the halo: ', kboltz*TempHalo
+         print *, 'Thermal energy of the halo with Kb in cgs: ', kB_cgs*TempHalo
+         print *, 'Sound speed associated with halo temperature: ', kboltz*TempHalo/mp
+         print *, 'Sound speed associated with halo temperature in cgs: ', kb_cgs*TempHalo/mp
+         !stop
 
          cgl => cgl%nxt
       enddo
@@ -365,6 +378,8 @@ contains
 
       do k = lhn(zdim,LO), lhn(zdim,HI)
          gp(:,:,k) = -f1 * (s4 * sqrt(ax%z(k)**2+r22) - s5 * half * ax%z(k)**2 / kpc)
+         if (k == 5) print *, 'ax%z(k): ', ax%z(k)
+         if (k == 5) print *, 'abs(ax%z(k)): ', abs(ax%z(k))
          if (abs(ax%z(k)) .gt. h) gp(:,:,k) = gp(:,:,k)/cosh(((abs(ax%z(k))-h)/h))**3.5 !In mcrwind_cresp with multispecies: smoothing the gravitational potential outside of z = +-h = 3kpc
       enddo
       return
