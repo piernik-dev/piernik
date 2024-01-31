@@ -189,7 +189,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: i, j
+      integer(kind=4) :: i, j, k
       real, dimension(:), allocatable ::  p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, initial_spectrum, p_bnd, p_min_fix, p_max_fix,  &
@@ -544,6 +544,7 @@ contains
       !g_mid_fix(2:ncrb-1) = sqrt(g_fix(1:ncrb-2)*g_fix(2:ncrb-1))
       p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
       p_mid_fix(ncrb) = p_mid_fix(ncrb-1) * p_fix_ratio
+      print *, 'p_mid_fix: ', p_mid_fix
 
 !> set Gamma arrays, analogically to p_fix arrays, that will be constructed using Gamma arrays
       Gamma_fix            = one             !< Gamma factor obviously cannot be lower than 1
@@ -635,10 +636,24 @@ contains
         write (msg, *) "[initcrspectrum:init_cresp] CR ", cr_names(icr_spc(j)), ": 4/3 * sigma_N / ( m * c ) = ", f_synchIC(j)
         if (master) call printinfo(msg)
 
-        print *, 'j : ', j , 'mass : ', cr_mass(j), 'Z : ', cr_Z(j)
+        print *, 'j : ',j, 'icr_spc(j): ', icr_spc(j) , 'mass : ', cr_mass(icr_spc(j)), 'Z : ', cr_Z(icr_spc(j))
 
-        K_cresp_paral(j, 1:ncrb) = K_cr_paral(icr_spc(j)) * (cr_mass(j)*p_mid_fix(1:ncrb) / (abs(cr_Z(j))*p_diff(j)))**K_cre_pow(j) ! Scale diffusion of all species to protons.
-        K_cresp_perp(j,  1:ncrb) = K_cr_perp(icr_spc(j))  * (cr_mass(j)*p_mid_fix(1:ncrb) / (abs(cr_Z(j))*p_diff(j)))**K_cre_pow(j)
+
+        K_cresp_paral(j, 1:ncrb) = K_cr_paral(j) * (cr_mass(icr_spc(j))*p_mid_fix(1:ncrb) / (abs(cr_Z(icr_spc(j)))*p_diff(j)))**K_cre_pow(j) ! Scale diffusion of all species to protons.
+        !print *, 'K_cresp_paral(',j,'):',  K_cresp_paral(j, 1:ncrb)
+        !print *, 'K_cr_paral(',icr_spc(j),'):', K_cr_paral(icr_spc(j))
+        !print *, 'K_cr_paral(',j,'):', K_cr_paral(j)
+        do k = 1, ncrb
+            if (K_cresp_paral(j,k) .lt. K_cr_paral(j)) K_cresp_paral(j, k) = K_cr_paral(j)
+        enddo
+        K_cresp_perp(j,  1:ncrb) = K_cr_perp(j)  * (cr_mass(icr_spc(j))*p_mid_fix(1:ncrb) / (abs(cr_Z(icr_spc(j)))*p_diff(j)))**K_cre_pow(j)
+
+
+
+        print *, 'K_cresp_paral(',j,'):',  K_cresp_paral(j, 1:ncrb)
+        !print *, 'K_cr_paral(',icr_spc(j),'):', K_cr_paral(icr_spc(j))
+        print *, 'K_cr_paral(',j,'):', K_cr_paral(j)
+
 
         K_cresp_paral(j, ncrb+1:ncr2b) = K_cresp_paral(j, 1:ncrb)
         K_cresp_perp (j, ncrb+1:ncr2b) = K_cresp_perp (j, 1:ncrb)
