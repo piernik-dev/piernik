@@ -60,6 +60,7 @@ module ppp_eventlist
       procedure :: cleanup              !< destroy this event list (typically called by publish)
       procedure :: start                !< add a beginning of an interval
       procedure :: stop                 !< add an end of an interval
+      procedure :: single_cg_cost       !< add a cg-related interval
       procedure :: set_bb               !< add the initial event with bigbang time
       procedure, private :: next_event  !< for internal use in start, stop and put
       procedure, private :: expand      !< create next array for events
@@ -161,8 +162,33 @@ contains
 
    end subroutine stop
 
-!> \brief Add the initial event with bigbang time
+!> \brief Add a cg-related interval
 
+   subroutine single_cg_cost(this, t_start, t_stop, label)
+
+      use constants,  only: PPP_CG
+      use mpisetup,   only: bigbang_shift
+      use ppp_events, only: event
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this     !< an object invoking the type-bound procedure
+      real,             intent(in)    :: t_start  !< start of the interval
+      real,             intent(in)    :: t_stop   !< stop of the interval
+      character(len=*), intent(in)    :: label    !< event label
+
+      character(len=cbuff_len) :: l
+
+      if (.not. use_profiling) return
+      if (iand(PPP_CG, disable_mask) /= 0) return
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
+
+      call this%next_event(event(l, t_start + bigbang_shift))
+      call this%next_event(event(l, -t_stop - bigbang_shift))
+
+   end subroutine single_cg_cost
+
+!> \brief Add the initial event with bigbang time
 
    subroutine set_bb(this, label)
 

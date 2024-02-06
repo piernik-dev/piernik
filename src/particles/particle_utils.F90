@@ -133,6 +133,7 @@ contains
       if (present(tdyn))  tdyn1  = tdyn
       cgfound = .false.
 
+      ! ToDo: OPT: Precompute list of possible cg using SFC_id, use direct loop as a fallback, perhaps with warning.
       indomain = particle_in_area(pos, dom%edge)
       cgl => leaves%first
       do while (associated(cgl))
@@ -153,7 +154,10 @@ contains
 #endif /* NBODY_CHECK_PID */
          if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
          cgfound = cgfound .or. (phy .or. out)
-         call cgl%cg%costs%stop(I_PARTICLE)
+         call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
+         ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
+         ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
+         ! Collecting of the cg costs for load balancing putposes will still work.
          cgl => cgl%nxt
       enddo
       if (present(success)) success = cgfound
@@ -229,6 +233,8 @@ contains
    end function attribute_to_proc
 
    ! Sends leaving particles between processors, and creates ghosts
+   ! OPT: It looks like operations here will cost about O(proc * number_of_cg * number_of_particles).
+   !      At least O(proc * number_of_cg) can be reduced by efficient use of SFC_id and oct-trees.
    subroutine part_leave_cg()
 
       use cg_cost_data,   only: I_PARTICLE
@@ -253,7 +259,8 @@ contains
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset
-      character(len=*), parameter            :: ts_label = "leave_cg"
+      character(len=*), parameter            :: ts_label = "leave_cg", cnt_label = "cnt_part", snd_label = "send_part_prep", &
+           &                                    del_label = "detach_part", add_label = "add_part"
 
       if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
 
@@ -262,7 +269,10 @@ contains
       nsend = 0
       nrecv = 0
 
+      ! ToDo: OPT: Precompute list of possible cg and processes using SFC_id, use direct loop as a fallback, perhaps with warning.
+      ! It would be useful to have browsable oct-tree of cg in dot or somewhere.
       !Count number of particles to be sent
+      call ppp_main%start(cnt_label, PPP_PART)
       do j = FIRST, LAST
          cgl => leaves%first
          do while (associated(cgl))
@@ -280,8 +290,10 @@ contains
       enddo
       nchcg = nsend(proc)
       nsend(proc) = 0
+      call ppp_main%stop(cnt_label, PPP_PART)
 
       !Store data of particles to be sent
+      call ppp_main%start(snd_label, PPP_PART)
       allocate(part_send(sum(nsend) * npf), part_chcg(nchcg * npf))
       ind = 1
       inc = 1
@@ -305,8 +317,10 @@ contains
             cgl => cgl%nxt
          enddo
       enddo
+      call ppp_main%stop(snd_label, PPP_PART)
 
       !Remove particles out of cg
+      call ppp_main%start(del_label, PPP_PART)
       cgl => leaves%first
       do while (associated(cgl))
          call cgl%cg%costs%start
@@ -327,6 +341,7 @@ contains
          call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
+      call ppp_main%stop(del_label, PPP_PART)
 
       !Exchange information about particles numbers to be sent / received
       call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
@@ -344,6 +359,7 @@ contains
 
       call MPI_Alltoallv(part_send, counts, disps, MPI_DOUBLE_PRECISION, part_recv, countr, dispr, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, err_mpi)
 
+      call ppp_main%start(add_label, PPP_PART)
       !Add particles in cgs
       ind = 1
       do j = FIRST, LAST
@@ -353,11 +369,14 @@ contains
             enddo
          endif
       enddo
+      call ppp_main%stop(add_label, PPP_PART)
       inc = 1
       if (nchcg /= 0) then
+         call ppp_main%start(add_label, PPP_PART)
          do i = 1, nchcg
             call unpack_single_part_fields(inc, part_chcg(inc:inc+npf-1))
          enddo
+         call ppp_main%stop(add_label, PPP_PART)
       endif
 
       deallocate(part_send, part_recv, part_chcg)
@@ -433,7 +452,7 @@ contains
       pset => cg%pset%first
       do while (associated(pset))
          if (pset%pdata%phy) n_part = n_part + I_ONE
-      pset => pset%nxt
+         pset => pset%nxt
       enddo
 
    end function count_cg_particles
