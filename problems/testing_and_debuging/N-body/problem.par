@@ -85,9 +85,15 @@
 
  $PROFILING
    use_profiling = .true.
+   watch_cg = .true.
+   xxl = .true.
  /
 
  $BALANCE
    verbosity = 3
    verbosity_nstep = 1
+ /
+
+ $MEMORY
+   max_mem = 1000000
  /

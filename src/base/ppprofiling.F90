@@ -97,6 +97,7 @@ module ppp
    logical :: watch_problem    !< watch timers related to problem
    logical :: watch_debug      !< watch timers related to debugging
    logical :: watch_aux        !< watch auxiliary timers
+   logical :: xxl              !< allow for significantly bigger number of collected events (at your own risk)
 
    integer, save :: umsg_request = 0  !< turn on profiling for next umsg_request steps (read from msg file)
 
@@ -125,6 +126,7 @@ contains
 !! <tr><td>watch_problem  </td><td>.true.   </td><td>logical value  </td><td>\copydoc ppp::watch_problem   </td></tr>
 !! <tr><td>watch_debug    </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_debug     </td></tr>
 !! <tr><td>watch_aux      </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::watch_aux       </td></tr>
+!! <tr><td>xxl            </td><td>.false.  </td><td>logical value  </td><td>\copydoc ppp::xxl             </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -139,7 +141,7 @@ contains
 
       implicit none
 
-      namelist /PROFILING/ use_profiling, &
+      namelist /PROFILING/ use_profiling, xxl, &
            &               watch_io, watch_multigrid, watch_gravity, watch_cr, &
            &               watch_particles, watch_MPI, watch_AMR, watch_cg, &
            &               watch_magnetic, watch_problem, watch_debug, watch_aux
@@ -157,6 +159,7 @@ contains
       watch_problem   = .true.
       watch_debug     = .false.
       watch_aux       = .false.
+      xxl             = .false.
 
       if (master) then
 
@@ -189,6 +192,7 @@ contains
          lbuff(12) = watch_problem
          lbuff(13) = watch_debug
          lbuff(14) = watch_aux
+         lbuff(15) = xxl
 
       endif
 
@@ -209,6 +213,7 @@ contains
          watch_problem   = lbuff(12)
          watch_debug     = lbuff(13)
          watch_aux       = lbuff(14)
+         xxl             = lbuff(15)
 
       endif
 
@@ -228,7 +233,7 @@ contains
 
       write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile.ascii'
 
-      call ppp_main%init("main")
+      call ppp_main%init("main", xxl)
 
    end subroutine init_profiling
 
@@ -261,7 +266,7 @@ contains
 
       if (.not. use_profiling) then  ! turn on ppp_main profiling
          use_profiling = .true.
-         call ppp_main%init("main")
+         call ppp_main%init("main", xxl)
          if (master) call printinfo("[ppprofiling:update_profiling] Start PPP")
       endif
 
