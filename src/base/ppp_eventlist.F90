@@ -46,20 +46,24 @@ module ppp_eventlist
    integer :: profile_lun                 !< logical unit number for profile file
    integer(kind=4) :: disable_mask        !< logical mask for disabled events
 
-   integer, parameter :: ev_arr_num = 10  !< number of allowed event arrays
+   integer, parameter :: ev_arr_num = 10  !< number of event arrays allowed by default (bigger profiles may be difficult to handle)
+   integer, parameter :: insane_arr_num = 2*ev_arr_num  !< as every next array is 2 times bigger, this allows for collecting 1024 times more events at the expense of RAM
 
    !> \brief list of events based on arrays of events, cheap to expand, avoid reallocation
    type eventlist
       private
       character(len=cbuff_len) :: label  !< label used to identify the event list
-      type(eventarray), dimension(ev_arr_num) :: arrays  !< separate arrays to avoid lhs-reallocation
+      type(eventarray), dimension(insane_arr_num) :: arrays  !< separate arrays to avoid lhs-reallocation
       integer :: arr_ind                !< currently used array
       integer :: ind                    !< first unused entry in currently used array
+      logical :: overflown              !< emergency flag to turn off collecting more events
+      logical :: xxl                    !< ignore ev_arr_num and use insane_arr_num instead (at your own risk)
    contains
       procedure :: init                 !< create new event list
       procedure :: cleanup              !< destroy this event list (typically called by publish)
       procedure :: start                !< add a beginning of an interval
       procedure :: stop                 !< add an end of an interval
+      procedure :: single_cg_cost       !< add a cg-related interval
       procedure :: set_bb               !< add the initial event with bigbang time
       procedure, private :: next_event  !< for internal use in start, stop and put
       procedure, private :: expand      !< create next array for events
@@ -70,21 +74,29 @@ contains
 
 !> \brief Create new event list
 
-   subroutine init(this, label)
+   subroutine init(this, label, xxl)
+
+      use dataio_pub, only: warn
 
       implicit none
 
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
       character(len=*), intent(in)    :: label  !< event list label
+      logical,          intent(in)    :: xxl    !< if .true. then ignore ev_arr_num until insane_arr_num is reached (risk of OOM)
 
       integer, parameter :: ev_arr_len = 1024  ! starting size of the array of events
 
       if (.not. use_profiling) return
 
+      this%xxl = xxl
+      this%overflown = .false.
       this%ind = 1
       this%arr_ind = 1
       this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%arrays(this%arr_ind)%init(ev_arr_len)
+
+      if (this%xxl) call warn("[ppp_eventlist:init] XXL profiling enabled")
+      ! To prevent running into OOM consider setting max_mem from MEMORY namelist.
 
    end subroutine init
 
@@ -161,8 +173,33 @@ contains
 
    end subroutine stop
 
-!> \brief Add the initial event with bigbang time
+!> \brief Add a cg-related interval
 
+   subroutine single_cg_cost(this, t_start, t_stop, label)
+
+      use constants,  only: PPP_CG
+      use mpisetup,   only: bigbang_shift
+      use ppp_events, only: event
+
+      implicit none
+
+      class(eventlist), intent(inout) :: this     !< an object invoking the type-bound procedure
+      real,             intent(in)    :: t_start  !< start of the interval
+      real,             intent(in)    :: t_stop   !< stop of the interval
+      character(len=*), intent(in)    :: label    !< event label
+
+      character(len=cbuff_len) :: l
+
+      if (.not. use_profiling) return
+      if (iand(PPP_CG, disable_mask) /= 0) return
+      l = label(1:min(cbuff_len, len_trim(label, kind=4)))
+
+      call this%next_event(event(l, t_start + bigbang_shift))
+      call this%next_event(event(l, -t_stop - bigbang_shift))
+
+   end subroutine single_cg_cost
+
+!> \brief Add the initial event with bigbang time
 
    subroutine set_bb(this, label)
 
@@ -187,6 +224,7 @@ contains
 
    subroutine next_event(this, ev)
 
+      use dataio_pub, only: warn
       use ppp_events, only: event
 
       implicit none
@@ -194,10 +232,22 @@ contains
       class(eventlist), intent(inout) :: this   !< an object invoking the type-bound procedure
       type(event),      intent(in)    :: ev     !< an event to be stored
 
+      if (this%overflown) return
+
       this%arrays(this%arr_ind)%ev_arr(this%ind) = ev
       this%ind = this%ind + 1
       if (this%ind > ubound(this%arrays(this%arr_ind)%ev_arr, dim=1)) then
-         call this%expand
+         if ((this%arr_ind >= ev_arr_num) .and. .not. this%xxl) then
+            call warn("[ppp_eventlist:next_event] Run out of space allowed by ev_arr_num on '" // trim(ev%label) // "'")
+            this%overflown = .true.
+         else
+            if (this%arr_ind >= insane_arr_num) then
+               call warn("[ppp_eventlist:next_event] Run out of space allowed by insane_arr_num on '" // trim(ev%label) // "'")
+               this%overflown = .true.
+            else
+               call this%expand
+            endif
+         endif
       else
          this%arrays(this%arr_ind)%ev_arr(this%ind)%wtime = 0.
       endif
@@ -210,14 +260,11 @@ contains
 !! \details Adding arrays should be cheaper than resizing existing ones.
 !! The size of new array is double of the size of previous one to
 !! prevent frequent, fragmented allocations on busy counters.
-!!
-!! \todo implement maximum of the log size and then politely give up instead of die()
-!! when the size is exceeded.
 !<
 
    subroutine expand(this)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: warn
 
       implicit none
 
@@ -225,7 +272,9 @@ contains
 
       integer, parameter :: grow_factor = 2  !< each next array should be bigger
 
-      if (this%arr_ind >= ev_arr_num) call die("[ppp_eventlist:expand] Cannot add more arrays (ev_arr_num exceeded)")
+      if (this%arr_ind >= ev_arr_num) &
+           call warn("[ppp_eventlist:expand] Adding arrays beyond ev_arr_num limit for '" // &
+           &         trim(this%arrays(this%arr_ind)%ev_arr(this%ind-1)%label) // "'")
 
       call this%arrays(this%arr_ind + 1)%init(grow_factor*size(this%arrays(this%arr_ind)%ev_arr))
 
@@ -238,12 +287,10 @@ contains
 !>
 !! \brief Write the collected data to a log file and clear the log
 !!
-!! \todo Use HDF5 format when available, ASCII otherwise
-!!
 !! Perhaps MPI_TYPE_CREATE_STRUCT would simplify the code and improve the communication
 !! but it requires some C-interoperability, which needs to be explored and tested first.
 !!
-!! \todo XML or JSON output?
+!! \todo Consider HDF5, XML or JSON output but this would require adding proper support in ppp_plot.py
 !<
 
    subroutine publish(this)
@@ -267,6 +314,12 @@ contains
       end enum
 
       if (.not. use_profiling) return
+
+      if (this%overflown) then
+         call printinfo("[ppp_eventlist:publish] Profile timings have overflown the allowed buffers and thus are partially broken. Skipping.")
+         call this%cleanup
+         return
+      endif
 
       if (master) then
          if (disable_mask /= 0) then

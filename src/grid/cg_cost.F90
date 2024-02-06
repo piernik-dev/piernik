@@ -86,17 +86,21 @@ contains
 
 !> \brief Stop measuring the time and add to specified timer
 
-   subroutine stop(this, ind)
+   subroutine stop(this, ind, ppp)
 
-      use dataio_pub, only: msg, warn, die
-      use MPIF,       only: MPI_Wtime
+      use cg_cost_data, only: cost_labels
+      use dataio_pub,   only: msg, warn, die
+      use MPIF,         only: MPI_Wtime
+      use ppp,          only: ppp_main
 
       implicit none
 
-      class(cg_cost_t), intent(inout) :: this
-      integer(kind=4),  intent(in)    :: ind
+      class(cg_cost_t),  intent(inout) :: this  !<
+      integer(kind=4),   intent(in)    :: ind   !<
+      logical, optional, intent(in)    :: ppp   !< If present and .false. then don't add the interval to ppp
 
       real :: t
+      logical :: ppp_call
 
       t = MPI_Wtime()
       if (this%wstart <= T_INVALID) then
@@ -106,6 +110,9 @@ contains
 
       if (ind >= lbound(this%wtime, 1) .and. ind <= ubound(this%wtime, 1)) then
          this%wtime(ind) = this%wtime(ind) + (t - this%wstart)
+         ppp_call = .true.
+         if (present(ppp)) ppp_call = ppp
+         if (ppp_call) call ppp_main%single_cg_cost(this%wstart, t, "cg_cost:" // cost_labels(ind))
       else
          call die("[cg_cost:stop] invalid index")
       endif

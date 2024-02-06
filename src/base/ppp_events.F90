@@ -58,7 +58,8 @@ contains
 
    subroutine init(this, asize)
 
-      use dataio_pub, only: die
+      use memory_usage, only: check_mem_usage
+      use dataio_pub,   only: die
 
       implicit none
 
@@ -67,6 +68,7 @@ contains
 
       if (allocated(this%ev_arr)) call die("[ppp_events:init] already allocated")
       allocate(this%ev_arr(asize))
+      call check_mem_usage
 !      this%ev_arr(:)%wtime = 0.
 
    end subroutine init
