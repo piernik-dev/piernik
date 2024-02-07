@@ -186,7 +186,7 @@ contains
       use constants,        only: one, zero
       use initcrspectrum,   only: spec_mod_trms, p_fix, p_mid_fix, three_ps, g_fix
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
-      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, transrelativistic
+      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, cr_spectral, transrelativistic
       use initcosmicrays,   only: nspc
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
@@ -224,13 +224,13 @@ contains
 
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
 
-         !print *, 'cr_prim : ', cr_table(icr_prim(i_prim))
+            !print *, 'cr_prim: ', cr_prim
 
                do i_sec = 1, ncrsp_sec
 
                   associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  !print *, 'cr_sec : ', cr_table(icr_sec(i_sec))
+                  !print *, 'cr_sec: ', cr_sec
 
                   if (cr_sigma(cr_prim, cr_sec) .gt. zero) then
 
@@ -271,20 +271,20 @@ contains
                      dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
                      dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
 
-                     usrc_cell(iarr_crspc2_n(cr_prim,:)) = usrc_cell(iarr_crspc2_n(cr_prim,:)) - dcr_n(:)
-                     usrc_cell(iarr_crspc2_e(cr_prim,:)) = usrc_cell(iarr_crspc2_e(cr_prim,:)) - dcr_e(:)
+                     usrc_cell(iarr_crspc2_n(cr_prim - count(.not. cr_spectral),:)) = usrc_cell(iarr_crspc2_n(cr_prim - count(.not. cr_spectral),:)) - dcr_n(:)
+                     usrc_cell(iarr_crspc2_e(cr_prim - count(.not. cr_spectral),:)) = usrc_cell(iarr_crspc2_e(cr_prim - count(.not. cr_spectral),:)) - dcr_e(:)
 
                      do i_bin = 1, ncrb
 
                         if (i_bin == ncrb) then
 
-                           usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
-                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
+                           usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin)
+                           usrc_cell(iarr_crspc2_e(cr_sec - count(.not. cr_spectral),i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec - count(.not. cr_spectral),i_bin)) + S_ratio_2(i_bin) * dcr_e(i_bin)*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
 
                         else
 
-                           usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec,i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
-                           usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec,i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
+                           usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),i_bin)) = usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),i_bin)) + Q_ratio_2(i_bin) * dcr_n(i_bin) + Q_ratio_1(i_bin+1)*dcr_n(i_bin+1)
+                           usrc_cell(iarr_crspc2_e(cr_sec - count(.not. cr_spectral),i_bin)) = usrc_cell(iarr_crspc2_e(cr_sec - count(.not. cr_spectral),i_bin)) + (S_ratio_2(i_bin) * dcr_e(i_bin) + S_ratio_1(i_bin+1)*dcr_e(i_bin+1))*cr_mass(cr_table(icr_sec(i_sec)))/cr_mass(cr_table(icr_prim(i_prim)))
 
                         endif
 
@@ -302,8 +302,8 @@ contains
 
          if (i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
 
-            u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - u_cell(iarr_crspc2_n(i_spc,:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
-            u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
+            u_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) = u_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) - u_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
+            u_cell(iarr_crspc2_e(i_spc - count(.not. cr_spectral),:)) = u_cell(iarr_crspc2_e(i_spc - count(.not. cr_spectral),:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc - count(.not. cr_spectral),:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
 
          else
 
