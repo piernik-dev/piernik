@@ -216,27 +216,31 @@ contains
       type(cg_level_connected_t), pointer :: ll
 
       to_send = .false.
-      if (pset%pdata%in) return
+      if (pset%pdata%in .and. pset%pdata%fin) return
 
       ll => base%level
-      ldl(:) = dom%L_(:) / ll%l%n_d(:)
-      do b = lbound(ll%dot%gse(j)%c(:), dim=1), ubound(ll%dot%gse(j)%c(:), dim=1)
-         if (particle_in_area(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, npb))) then
-            to_send = .true.
-         else if (pset%pdata%outside) then
-            do cdim = xdim, zdim
-               ext_bnd(cdim, LO) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, LO)
-               ext_bnd(cdim, HI) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, HI)
-            enddo
-            if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, I_ZERO), ext_bnd)) to_send = .true.
-         endif
+      do while (associated(ll))
+         ldl(:) = dom%L_(:) / ll%l%n_d(:)
+         do b = lbound(ll%dot%gse(j)%c(:), dim=1), ubound(ll%dot%gse(j)%c(:), dim=1)
+            if (particle_in_area(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, npb))) then
+               to_send = .true.
+            else if (pset%pdata%outside) then
+               do cdim = xdim, zdim
+                  ext_bnd(cdim, LO) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, LO)
+                  ext_bnd(cdim, HI) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, HI)
+               enddo
+               if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, I_ZERO), ext_bnd)) to_send = .true.
+            endif
 #ifdef NBODY_CHECK_PID
-         if (to_send) then
-            if (j == proc .and. all(ll%dot%gse(j)%c(b)%se == se)) to_send = .false.
-         endif
+            if (to_send) then
+               if (j == proc .and. all(ll%dot%gse(j)%c(b)%se == se)) to_send = .false.
+            endif
 #endif /* NBODY_CHECK_PID */
-         if (to_send) return
+            if (to_send) return
+         enddo
+         ll => ll%finer
       enddo
+
 
       return
       if (.false. .and. proc == sum(se)) return
@@ -443,7 +447,7 @@ contains
       tform = pinfo(13)
       tdyn  = pinfo(14)
       call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed!' ! NON-AMR ONLY
+      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed! ', pos ! NON-AMR ONLY
       ind = ind + npf
 
    end subroutine unpack_single_part_fields
