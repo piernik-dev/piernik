@@ -73,6 +73,7 @@ contains
       real,    dimension(ndims)      :: dist
       real                           :: Mtot
       integer(kind=4)                :: ig, ip, ib
+      logical, save                  :: firstcall = .true.
       character(len=*), parameter    :: potacc_i_label = "upd_part_gpot_acc:pre", potacc_label = "upd_part_gpot_acc"
 
       call ppp_main%start(potacc_i_label, PPP_PART)
@@ -108,7 +109,11 @@ contains
       call ppp_main%stop(potacc_i_label, PPP_PART)
 
       if (global_count_all_particles() == 0) return
-      if (is_refined) call warn("[particle_gravity:update_particle_gravpot_and_acc] AMR not fully implemented yet")
+
+      if (firstcall .and. is_refined) then
+         call warn("[particle_gravity:update_particle_gravpot_and_acc] AMR not fully implemented yet")
+         firstcall = .false.
+      endif
 
       call ppp_main%start(potacc_label, PPP_PART)
 

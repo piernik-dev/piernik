@@ -276,13 +276,17 @@ contains
       integer                                :: i, j, ind, inc
       integer(kind=4)                        :: nchcg
       real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
+      logical, save                          :: firstcall = .true.
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg", cnt_label = "cnt_part", snd_label = "send_part_prep", &
            &                                    del_label = "detach_part", add_label = "add_part"
 
-      if (is_refined) call warn("[particle_utils:part_leave_cg] AMR not fully implemented yet")
+      if (firstcall .and. is_refined) then
+         call warn("[particle_utils:part_leave_cg] AMR not fully implemented yet")
+         firstcall = .false.
+      endif
 
       call ppp_main%start(ts_label, PPP_PART)
 
