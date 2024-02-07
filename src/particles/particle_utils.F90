@@ -132,7 +132,7 @@ contains
       real, optional,         intent(in)  :: tdyn
       logical, optional,      intent(out) :: success
       type(cg_list_element), pointer      :: cgl
-      logical                             :: in, phy, out, fin, indomain, cgfound, toadd
+      logical                             :: in, phy, out, fin, indomain, cgfound, toadd, met, cgmet
       real                                :: tform1, tdyn1
 #ifdef NBODY_CHECK_PID
       type(particle), pointer             :: pset
@@ -143,6 +143,7 @@ contains
       if (present(tform)) tform1 = tform
       if (present(tdyn))  tdyn1  = tdyn
       cgfound = .false.
+      cgmet = .false.
 
       ! ToDo: OPT: Precompute list of possible cg using SFC_id, use direct loop as a fallback, perhaps with warning.
       indomain = particle_in_area(pos, dom%edge)
@@ -151,12 +152,14 @@ contains
          call cgl%cg%costs%start
          call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
          toadd = out .and. fin
+         met = out
 #ifdef NBODY_CHECK_PID
          if (toadd) then
             pset => cgl%cg%pset%first
             do while (associated(pset))
                if (pset%pdata%pid == pid) then
                   toadd = .false.
+                  met = .false.
                   exit
                endif
                pset => pset%nxt
@@ -165,13 +168,15 @@ contains
 #endif /* NBODY_CHECK_PID */
          if (toadd) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
          cgfound = cgfound .or. toadd
+         cgmet = cgmet .or. met
          call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
          ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
          ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
          ! Collecting of the cg costs for load balancing putposes will still work.
          cgl => cgl%nxt
       enddo
-      if (present(success)) success = cgfound
+      !if (present(success)) success = cgfound
+      if (present(success)) success = cgmet
 
    end subroutine add_part_in_proper_cg
 
@@ -447,7 +452,7 @@ contains
       tform = pinfo(13)
       tdyn  = pinfo(14)
       call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed! ', pos ! NON-AMR ONLY
+      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed! ', pos ! NON-AMR CHECK ONLY
       ind = ind + npf
 
    end subroutine unpack_single_part_fields
