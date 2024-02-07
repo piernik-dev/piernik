@@ -225,18 +225,6 @@ contains
             enddo
          enddo
 
-         print *, 'energy at the center: ', fl%cs2 / fl%gam_1 * cg%u(fl%idn,0,0,0)
-         print *, 'energy at the center with halo temperature of 1e6 K: ', kboltz*TempHalo/(mp * fl%gam_1) * cg%u(fl%idn,0,0,0)
-         print *, 'Kb: ', kboltz
-         print *, 'mp: ', mp
-         print *, 'Kb in cgs: ', kB_cgs
-         print *, 'Temperature of the halo: ', TempHalo
-         print *, 'Thermal energy of the halo: ', kboltz*TempHalo
-         print *, 'Thermal energy of the halo with Kb in cgs: ', kB_cgs*TempHalo
-         print *, 'Sound speed associated with halo temperature: ', kboltz*TempHalo/mp
-         print *, 'Sound speed associated with halo temperature in cgs: ', kb_cgs*TempHalo/mp
-         !stop
-
          cgl => cgl%nxt
       enddo
 
