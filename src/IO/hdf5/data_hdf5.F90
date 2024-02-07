@@ -406,7 +406,8 @@ contains
       use named_array_list, only: wna
 #endif /* CRESP */
 #ifdef COSM_RAYS
-      use cr_data,          only: cr_names, cr_spectral
+      use cr_data,          only: cr_names, cr_spectral, icr_spc
+      use initcosmicrays,   only: ncrn
 #endif /* COSM_RAYS */
 #ifndef ISO
       use units,            only: kboltz, mH
@@ -459,9 +460,13 @@ contains
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
          case ('cr_A000' : 'cr_zz99')
             do i = 1, size(cr_names)
-               if (var == trim('cr_' // cr_names(i))) exit
+               if (var == trim('cr_' // cr_names(i))) then
+                  tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
+               endif
             enddo
-            tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
+
+            !print *, 'cr_names: ', cr_names
+
 #endif /* COSM_RAYS */
 #ifdef CRESP
             clast = len(trim(var), kind=4)
@@ -472,7 +477,7 @@ contains
 
                read (varn2,'(I2.2)') ibin
                do i = 1, size(cr_names)
-                  if (cr_names(i).eq.var(4:clast-3)) icr = i
+                  if (cr_names(i).eq.var(4:clast-3)) icr = i - ncrn
                enddo
                tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
 
@@ -482,8 +487,10 @@ contains
 
                read (varn2,'(I2.2)') ibin
                do i = 1, size(cr_names)
-                  if (cr_names(i).eq.var(4:clast-3)) icr = i
+                  if (cr_names(i).eq.var(4:clast-3)) icr = i - ncrn
                enddo
+
+               !print *, 'flind%crspcs(icr)%nbeg+ibin-1: ', flind%crspcs(icr)%nbeg+ibin-1
                tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
 
             !else
