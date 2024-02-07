@@ -343,6 +343,7 @@ contains
       flind%crspc%all = ncr2b * nspc
 
       flind%crs%all = flind%crs%all + flind%crspc%all
+
 #endif /* CRESP */
 
       do icr = 1, ncrn
@@ -357,8 +358,10 @@ contains
       enddo
 
 #ifdef CRESP
+
       flind%all = flind%all + flind%crspc%all
 #endif /* CRESP */
+
 
       flind%crn%end   = flind%crn%beg + flind%crn%all - I_ONE
       flind%crs%end = flind%crn%end
@@ -395,6 +398,7 @@ contains
       enddo
 
       flind%crspcs(:)%all = ncr2b
+
       flind%crspc%all = ncr2b * nspc
 #endif /* CRESP */
 
