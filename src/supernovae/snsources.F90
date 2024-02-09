@@ -200,12 +200,12 @@ contains
       use grid_cont,        only: grid_container
       use cr_data,          only: cr_table, icr_H1, cr_index
 #ifdef CRESP
-      use cr_data,          only: rel_abound, cr_spectral
+      use cr_data,          only: rel_abound
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: smallcree, cresp, use_cresp!, cre_eff
 #endif /* CRESP */
-      use cr_data,          only: icr_C12, icr_N14, icr_O16, eCRSP, cr_index, cr_primary, cr_mass
+      use cr_data,          only: icr_C12, icr_N14, icr_O16, eCRSP, cr_index, cr_primary, cr_mass, cr_spectral
       use initcosmicrays,   only: iarr_crn
 
 
