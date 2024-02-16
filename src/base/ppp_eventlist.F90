@@ -77,6 +77,7 @@ contains
    subroutine init(this, label, xxl)
 
       use dataio_pub, only: warn
+      use mpisetup,   only: master
 
       implicit none
 
@@ -95,7 +96,7 @@ contains
       this%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
       call this%arrays(this%arr_ind)%init(ev_arr_len)
 
-      if (this%xxl) call warn("[ppp_eventlist:init] XXL profiling enabled")
+      if (this%xxl .and. master) call warn("[ppp_eventlist:init] XXL profiling enabled")
       ! To prevent running into OOM consider setting max_mem from MEMORY namelist.
 
    end subroutine init
