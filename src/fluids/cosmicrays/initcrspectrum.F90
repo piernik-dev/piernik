@@ -792,7 +792,7 @@ contains
    subroutine compute_gs
 
       use cresp_variables, only: clight_cresp
-      use cr_data,         only: transrelativistic, cr_mass
+      use cr_data,         only: transrelativistic, cr_mass, icr_spc
       use constants,       only: zero, three, four
       use initcosmicrays,  only: ncrb, nspc
 
@@ -812,8 +812,10 @@ contains
 
       do i_spc = 1, nspc
 
+         !icr_spc(icr)
+
          if (transrelativistic) then
-            g_fix(i_spc,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(i_spc)**2) - cr_mass(i_spc)*clight_cresp**2
+            g_fix(i_spc,:) = sqrt(clight_cresp**2*p_fix(:)**2 + clight_cresp**4*cr_mass(icr_spc(i_spc))**2) - cr_mass(icr_spc(i_spc))*clight_cresp**2
    !         g = sqrt(cnst_c**2*crel%p**2 + cnst_m**2*cnst_c**4) - cnst_m*cnst_c**2
    !         cnst_m is different for each nucleon, therefore g_fix should be array of ncrb x nspc.
          else
@@ -822,15 +824,18 @@ contains
 
          s(i_spc,:) = log10(g_fix(i_spc,1:ncrb)/g_fix(i_spc,0:ncrb-1))/log10(p_fix(1:ncrb)/p_fix(0:ncrb-1))
 
-#ifdef CRESP_VERBOSED
+#ifdef VERBOSE
 
          print *, 'p_fix =', p_fix
          print *, 'g_fix(',i_spc,') = ', g_fix(i_spc,:)
          print *, 's (',i_spc,') = ', s(i_spc,:)
+         print *, 'cr_mass (',icr_spc(i_spc),') = ', cr_mass(icr_spc(i_spc))
 
 #endif
 
+
       enddo
+      !stop
 
       three_ps = three + s
       four_ps  = four + s
