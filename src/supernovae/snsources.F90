@@ -200,7 +200,7 @@ contains
       use grid_cont,        only: grid_container
       use cr_data,          only: cr_table, icr_H1, cr_index
 #ifdef CRESP
-      use cr_data,          only: rel_abound
+      use cr_data,          only: rel_abound, icr_spc
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc
       use initcrspectrum,   only: smallcree, cresp, use_cresp!, cre_eff
@@ -276,8 +276,8 @@ contains
                              cresp%e = 0.0
                                 call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn, icr)
 
-                                cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
-                                cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
+                                cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr_spc(icr))*cresp%n
+                                cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr_spc(icr))*cresp%e
 
 
 
