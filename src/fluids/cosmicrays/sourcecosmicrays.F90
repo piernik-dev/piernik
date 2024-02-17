@@ -239,9 +239,13 @@ contains
                      Q_ratio_2 = 0.0
                      S_ratio_2 = 0.0
 
+                    !print *, 'cr_mass(',cr_prim,'): ', cr_mass(cr_table(icr_prim(i_prim)))
+                    !print *, 'cr_mass(',cr_sec,'): ', cr_mass(cr_table(icr_sec(i_sec)))
+                    !print *, 'cr_sigma'
+                    !
                      do i_bin = 1, ncrb - 1
 
-                        if (transrelativistic) velocity(i_bin) = clight*p_mid_fix(i_bin)/sqrt(cr_mass(icr_prim(i_prim))**2 + p_mid_fix(i_bin)**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime
+                        if (transrelativistic) velocity(i_bin) = clight*p_mid_fix(i_bin)/sqrt(cr_mass(cr_table(icr_prim(i_prim)))**2 + p_mid_fix(i_bin)**2) ! Correction to the velocity of incident CR particle when approaching the transrelativistic regime
 
                         if (p_fix(i_bin) > zero) then
 
@@ -261,15 +265,19 @@ contains
                      enddo
                      !print *, 'Q_ratio : ', Q_ratio_1
                      !print *, 'S_ratio : ', S_ratio_1
+                     !
+                     !print *, 'cr_sigma(',cr_prim,',', cr_sec,'): ',cr_sigma(cr_prim, cr_sec)
+                     !print *, 'dgas: ', dgas
+                     !print *, 'velocity(:): ', velocity(:)
 
-                     dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_n(cr_prim,:))
-                     dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_e(cr_prim,:))
+                     dcr_n(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_n(cr_prim- count(.not. cr_spectral),:))
+                     dcr_e(:) = cr_sigma(cr_prim, cr_sec) * dgas * velocity(:) * u_cell(iarr_crspc2_e(cr_prim- count(.not. cr_spectral),:))
 
                      !print *, 'dcr_n : ', dcr_n
                      !print *, 'dcr_e : ', dcr_e
 
-                     dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim,:)))
-                     dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim,:))) ! Don't decay more element than available
+                     dcr_n(:) = min(dcr_n,u_cell(iarr_crspc2_n(cr_prim- count(.not. cr_spectral),:)))
+                     dcr_e(:) = min(dcr_e,u_cell(iarr_crspc2_e(cr_prim- count(.not. cr_spectral),:))) ! Don't decay more element than available
 
                      usrc_cell(iarr_crspc2_n(cr_prim - count(.not. cr_spectral),:)) = usrc_cell(iarr_crspc2_n(cr_prim - count(.not. cr_spectral),:)) - dcr_n(:)
                      usrc_cell(iarr_crspc2_e(cr_prim - count(.not. cr_spectral),:)) = usrc_cell(iarr_crspc2_e(cr_prim - count(.not. cr_spectral),:)) - dcr_e(:)
@@ -288,7 +296,14 @@ contains
 
                         endif
 
+                        !if (usrc_cell(iarr_crspc2_n(cr_prim - count(.not. cr_spectral),i_bin)) .gt. 0.) print *, 'usrc_cell(iarr_crspc2_n(',cr_prim - count(.not. cr_spectral),',:)):', usrc_cell(iarr_crspc2_n(cr_prim - count(.not. cr_spectral),:))
+                        !if (usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),i_bin)) .gt. 0.) print *, 'usrc_cell(iarr_crspc2_n(',cr_sec - count(.not. cr_spectral),',:)):', usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),:))
+                        !if (usrc_cell(iarr_crspc2_n(cr_sec - count(.not. cr_spectral),i_bin)) .gt. 0.) stop
+
                      enddo
+
+
+
                   endif
 
                end associate
