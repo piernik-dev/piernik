@@ -39,7 +39,7 @@ module particle_utils
 
    private
    public :: add_part_in_proper_cg, is_part_in_cg, npf
-   public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
+   public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle, global_balance_particles
 
    integer(kind=4), parameter :: npf = 14  !< number of single particle fields
 
@@ -530,6 +530,28 @@ contains
       call piernik_MPI_Allreduce(gpcount, pSUM)
 
    end function global_count_all_particles
+
+   real function global_balance_particles() result(lb_particles)
+
+      use constants, only: pMAX, pSUM, one
+      use mpisetup,  only: piernik_MPI_Allreduce, nproc
+
+      implicit none
+
+      integer(kind=4) :: l_part_cnt, max_part_cnt, g_part_cnt
+
+      l_part_cnt = count_all_particles()
+      max_part_cnt = l_part_cnt
+      call piernik_MPI_Allreduce(max_part_cnt, pMAX)
+      if (max_part_cnt > 0.) then
+         g_part_cnt = l_part_cnt
+         call piernik_MPI_Allreduce(g_part_cnt, pSUM)
+         lb_particles = g_part_cnt/(nproc * real(max_part_cnt))
+      else
+         lb_particles = one  ! 0/0 is balanced
+      endif
+
+   end function global_balance_particles
 
    subroutine detach_particle(cg, pset)
 
