@@ -34,9 +34,7 @@ module particle_types
 
    implicit none
 
-   private
-   public :: particle, particle_set, particle_data, npb
-   public :: P_ID, P_MASS, P_POS_X, P_POS_Y, P_POS_Z, P_VEL_X, P_VEL_Y, P_VEL_Z, P_ACC_X, P_ACC_Y, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
+   public ! QA_WARN no secrets are kept here
 
    integer(kind=4), parameter :: npb = 2   !< number of cells between in and phy or between phy and out boundaries
 
@@ -44,6 +42,7 @@ module particle_types
    enum, bind(C)
       enumerator :: P_ID=1, P_MASS, P_POS_X, P_POS_Y, P_POS_Z, P_VEL_X, P_VEL_Y, P_VEL_Z, P_ACC_X, P_ACC_Y, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
    end enum
+   integer(kind=4), parameter :: npf = P_TDYN  !< last enumerated element: the number of single particle fields
 
    !> \brief Particle type
 
@@ -299,8 +298,8 @@ contains
       class(particle_set),     intent(inout) :: this !< an object invoking the type-bound procedure
       type(particle), pointer, intent(inout) :: pset
 
-      if (.not. associated(pset)) call die("[particle removal] tried to remove null() element")
-      if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
+      if (.not. associated(pset)) call die("[particle_types:remove] tried to remove null() element")
+      if (.not. associated(this%first)) call die("[particle_types:remove] .not. associated(this%first)")
 
       if (associated(this%first, pset)) this%first => this%first%nxt
       if (associated(this%last,  pset)) this%last  => this%last%prv
@@ -309,6 +308,8 @@ contains
       deallocate(pset%pdata)
       deallocate(pset)
       this%cnt = this%cnt - I_ONE
+
+      if (this%cnt < 0) call die("[particle_types:remove] this%cnt < 0")
 
    end subroutine remove
 

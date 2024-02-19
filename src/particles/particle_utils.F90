@@ -35,15 +35,11 @@
 module particle_utils
 ! pulled by NBODY
 
-   use particle_types, only: P_TDYN
-
    implicit none
 
    private
-   public :: add_part_in_proper_cg, is_part_in_cg, npf
+   public :: add_part_in_proper_cg, is_part_in_cg
    public :: count_all_particles, global_count_all_particles, part_leave_cg, detach_particle, global_balance_particles
-
-   integer(kind=4), parameter :: npf = P_TDYN  !< number of single particle fields
 
 contains
 
@@ -272,7 +268,7 @@ contains
       use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
       use mpisetup,       only: proc, err_mpi, FIRST, LAST
       use ppp,            only: ppp_main
-      use particle_types, only: particle
+      use particle_types, only: particle, npf
 
       implicit none
 
@@ -420,7 +416,7 @@ contains
 
    function collect_single_part_fields(ind, p) result(pinfo)
 
-      use particle_types, only: particle_data, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
+      use particle_types, only: particle_data, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
 
       implicit none
 
@@ -445,7 +441,7 @@ contains
    subroutine unpack_single_part_fields(ind, pinfo)
 
       use constants,      only: ndims
-      use particle_types, only: P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
+      use particle_types, only: P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
       implicit none
 
       integer,              intent(inout) :: ind
@@ -469,6 +465,8 @@ contains
       ind = ind + npf
 
    end subroutine unpack_single_part_fields
+
+!> \brief Count all particles on current thread
 
    integer(kind=4) function count_all_particles() result(pcount)
 
@@ -497,6 +495,8 @@ contains
 
    end function count_all_particles
 
+!> \brief Count all particles on all threads
+
    integer(kind=4) function global_count_all_particles() result(gpcount)
 
       use constants, only: pSUM
@@ -508,6 +508,8 @@ contains
       call piernik_MPI_Allreduce(gpcount, pSUM)
 
    end function global_count_all_particles
+
+!> \brief Estimate load balance for particles
 
    real function global_balance_particles() result(lb_particles)
 
@@ -531,7 +533,9 @@ contains
 
    end function global_balance_particles
 
-   subroutine detach_particle(cg, pset)
+!> \brief Remove particle from cg%pset
+
+   subroutine detach_particle(cg, part)
 
       use grid_cont,      only: grid_container
       use particle_types, only: particle
@@ -539,12 +543,12 @@ contains
       implicit none
 
       type(grid_container),  pointer, intent(inout) :: cg
-      type(particle),        pointer, intent(inout) :: pset
-      type(particle),        pointer                :: pset2
+      type(particle),        pointer, intent(inout) :: part
+      type(particle),        pointer                :: part2
 
-      pset2 => pset%nxt
-      call cg%pset%remove(pset)
-      pset => pset2
+      part2 => part%nxt
+      call cg%pset%remove(part)
+      part => part2
 
    end subroutine detach_particle
 
