@@ -76,6 +76,7 @@ module particle_types
    contains
       procedure :: init                      !< initialize the list
       procedure :: print                     !< print the list
+      procedure :: count_phy                 !< count particles with phy flag set
       procedure :: cleanup                   !< delete the list
       procedure :: remove                    !< remove a particle
       !procedure :: merge_parts              !< merge two particles
@@ -83,6 +84,7 @@ module particle_types
       !procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
       !generic, public :: exists => particle_with_id_exists
       generic, public :: add => add_part_list
+      generic, public :: count => count_phy
    end type particle_set
 
 contains
@@ -192,6 +194,27 @@ contains
       end subroutine prntline
 
    end subroutine print
+
+!> \brief count particles with phy flag set
+
+   integer(kind=4) function count_phy(this) result(n_part)
+
+      use constants, only: I_ONE
+
+      implicit none
+
+      class(particle_set), intent(in) :: this  !< an object invoking the type-bound procedure
+
+      type(particle), pointer :: pset
+
+      n_part = 0
+      pset => this%first
+      do while (associated(pset))
+         if (pset%pdata%phy) n_part = n_part + I_ONE
+         pset => pset%nxt
+      enddo
+
+   end function count_phy
 
 !> \brief delete the list
 

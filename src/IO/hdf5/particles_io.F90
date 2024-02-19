@@ -86,9 +86,8 @@ contains
 
    subroutine parallel_nbody_datafields(group_id, pvars, ncg, cg)
 
-      use grid_cont,      only: grid_container
-      use hdf5,           only: HID_T
-      use particle_utils, only: count_cg_particles
+      use grid_cont, only: grid_container
+      use hdf5,      only: HID_T
 
       implicit none
 
@@ -98,7 +97,7 @@ contains
       type(grid_container), pointer,  intent(inout) :: cg
       integer(kind=4)                               :: ivar, n_part
 
-      n_part = count_cg_particles(cg)
+      n_part = cg%count_particles()
       if (n_part == 0) return
 
       allocate(tabi(n_part), tabr(n_part))
@@ -120,11 +119,11 @@ contains
 
       use common_hdf5,    only: get_nth_cg, hdf_vars
       use constants,      only: I_ONE
+      use grid_cont,      only: grid_container
       use hdf5,           only: HID_T
       use MPIF,           only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Recv, MPI_Send
       use mpisetup,       only: master, FIRST, proc, err_mpi
-      use particle_utils, only: count_cg_particles
 
       implicit none
 
@@ -132,10 +131,14 @@ contains
       character(len=*), dimension(:), intent(in) :: pvars
       integer(kind=4),                intent(in) :: ncg, cg_src_ncg, proc_ncg, tot_cg_n
       integer(kind=4)                            :: ptag, ivar, n_part
+      type(grid_container), pointer              :: cg
 
       if (.not. master .and. proc_ncg /= proc) return
 
-      if (proc_ncg == proc) n_part = count_cg_particles(get_nth_cg(cg_src_ncg))
+      if (proc_ncg == proc) then
+         cg => get_nth_cg(cg_src_ncg)
+         n_part = cg%count_particles()
+      endif
 
       ptag = ncg + tot_cg_n * (ubound(hdf_vars, 1, kind=4) + I_ONE)
       if (master) then

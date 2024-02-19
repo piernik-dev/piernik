@@ -41,7 +41,7 @@ module particle_utils
 
    private
    public :: add_part_in_proper_cg, is_part_in_cg, npf
-   public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle, global_balance_particles
+   public :: count_all_particles, global_count_all_particles, part_leave_cg, detach_particle, global_balance_particles
 
    integer(kind=4), parameter :: npf = P_TDYN  !< number of single particle fields
 
@@ -470,51 +470,27 @@ contains
 
    end subroutine unpack_single_part_fields
 
-   integer(kind=4) function count_cg_particles(cg) result(n_part)
-
-      use constants,      only: I_ONE
-      use grid_cont,      only: grid_container
-      use particle_types, only: particle
-
-      implicit none
-
-      type(grid_container), pointer, intent(in) :: cg
-      type(particle),       pointer             :: pset
-
-      n_part = 0
-      pset => cg%pset%first
-      do while (associated(pset))
-         if (pset%pdata%phy) n_part = n_part + I_ONE
-         pset => pset%nxt
-      enddo
-
-   end function count_cg_particles
-
    integer(kind=4) function count_all_particles() result(pcount)
 
       use cg_cost_data,   only: I_PARTICLE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, base_level_id
+      use constants,      only: base_level_id
       use dataio_pub,     only: die
-      use particle_types, only: particle
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(particle), pointer    :: pset
 
       pcount = 0
       cgl => all_cg%first
       do while (associated(cgl))
          call cgl%cg%costs%start
-         if (associated(pset) .and. (cgl%cg%l%id < base_level_id)) &
+
+         if (associated(cgl%cg%pset%first) .and. (cgl%cg%l%id < base_level_id)) &
               call die("[particle_utils:count_all_particles] particles found below base level")
-         pset => cgl%cg%pset%first
-         do while (associated(pset))
-            if (pset%pdata%phy) pcount = pcount + I_ONE
-            pset => pset%nxt
-         enddo
+         pcount = pcount + cgl%cg%count_particles()
+
          call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
