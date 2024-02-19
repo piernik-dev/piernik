@@ -36,24 +36,26 @@ module particle_types
 
    private
    public :: particle, particle_set, particle_data, npb
+   public :: P_ID, P_MASS, P_POS_X, P_POS_Y, P_POS_Z, P_VEL_X, P_VEL_Y, P_VEL_Z, P_ACC_X, P_ACC_Y, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
 
    integer(kind=4), parameter :: npb = 2   !< number of cells between in and phy or between phy and out boundaries
 
-   !>
-   !! \brief simple particle: just mass and position
-   !!
-   !! \todo Extend it a bit
-   !<
+   !> \brief enumerators for packung and unpacking the particles for teleportation to another cg
+   enum, bind(C)
+      enumerator :: P_ID=1, P_MASS, P_POS_X, P_POS_Y, P_POS_Z, P_VEL_X, P_VEL_Y, P_VEL_Z, P_ACC_X, P_ACC_Y, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
+   end enum
+
+   !> \brief Particle type
 
    type :: particle_data
       integer(kind=4)        :: pid            !< particle ID
       real                   :: mass           !< mass of the particle
-      real                   :: tform          !< formation time of the particle
-      real                   :: tdyn           !< dynamical time for SF
       real, dimension(ndims) :: pos            !< physical position
       real, dimension(ndims) :: vel            !< particle velocity
       real, dimension(ndims) :: acc            !< acceleration of the particle
       real                   :: energy         !< total energy of particle
+      real                   :: tform          !< formation time of the particle
+      real                   :: tdyn           !< dynamical time for SF
       logical                :: in, phy, out   !< Flags to locate particle in the inner part of the domain or the outer part
       logical                :: fin            !< this flag is true if the particle is located in a finest level cell
       logical                :: outside        !< this flag is true if the particle is outside the domain
