@@ -448,8 +448,6 @@ contains
       use constants,             only: pLOR, pLAND, pSUM, pMAX, tmr_amr, PPP_AMR
       use dataio_pub,            only: die
       use global,                only: nstep
-      use grid_cont,             only: grid_container
-      use list_of_cg_lists,      only: all_lists
       use mpisetup,              only: piernik_MPI_Allreduce
       use ppp,                   only: ppp_main
       use refinement,            only: n_updAMR, emergency_fix
@@ -466,13 +464,12 @@ contains
 
       integer :: nciter, top_level
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
-      logical :: some_refined, derefined, ctop_exists, fu
-      type(cg_list_element), pointer :: cgl, aux
+      logical :: some_refined, ctop_exists, fu
+      type(cg_list_element), pointer :: cgl
       type(cg_level_connected_t), pointer :: curl
-      type(grid_container),  pointer :: cg
       logical :: correct, full_update
       real :: ts  !< time for runtime profiling
-      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", prol_label = "prolong_new"
+      character(len=*), parameter :: newref_label = "refine", prol_label = "prolong_new"
 
       ts =  set_timer(tmr_amr, .true.)
 
@@ -625,44 +622,7 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement.
-      ! Derefinement saves memory and CPU usage, but it is of lowest priority.
-      ! Just go through derefinement stage once and don't try to do too much here at once.
-      ! Any excess of refinement will be handled in the next call to this routine anyway.
-      if (full_update) then
-
-         call ppp_main%start(deref_label, PPP_AMR)
-         curl => finest%level
-         do while (associated(curl) .and. .not. associated(curl, base%level))
-            cgl => curl%first
-            derefined = .false.
-            do while (associated(cgl))
-               aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
-               cgl => cgl%nxt
-               if (aux%cg%flag%derefine) then
-                  if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
-                     if (all(aux%cg%leafmap)) then
-                        cg => aux%cg
-                        ! Here we have to evacuate the particles to the parent grid
-                        call all_lists%forget(cg)
-                        if (present(act_count)) act_count = act_count + 1
-                        curl%recently_changed = .true.
-                        derefined = .true.
-                     endif
-                  endif
-               endif
-            enddo
-            call piernik_MPI_Allreduce(derefined, pLOR)
-            if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
-            !> \todo replace call curl%init_all_new_cg by something cheaper
-            call curl%sync_ru
-            curl => curl%coarser
-         enddo
-         call ppp_main%stop(deref_label, PPP_AMR)
-
-         ! sync structure
-         call leaves%balance_and_update(" ( derefine ) ")
-
-      endif
+      if (full_update) call execute_derefinement(act_count)
 
       ! Check refinement topology and crash if anything got broken
       if (.not. fix_refinement()) call die("[refinement_update:update_refinement] Refinement defects still present")
@@ -745,6 +705,70 @@ contains
       end subroutine log_req
 
    end subroutine update_refinement_wrapped
+
+!>
+!! \brief Derefine any excess of refinement.
+!! Derefinement saves memory and CPU usage, but it is of lowest priority.
+!! Just go through derefinement stage once and don't try to do too much here at once.
+!! Any excess of refinement will be handled in the next call to this routine anyway.
+!<
+
+   subroutine execute_derefinement(act_count)
+
+      use cg_leaves,             only: leaves
+      use cg_list,               only: cg_list_element
+      use cg_level_base,         only: base
+      use cg_level_connected,    only: cg_level_connected_t
+      use cg_level_finest,       only: finest
+      use constants,             only: pLOR, PPP_AMR
+      use grid_cont,             only: grid_container
+      use list_of_cg_lists,      only: all_lists
+      use mpisetup,              only: piernik_MPI_Allreduce
+      use ppp,                   only: ppp_main
+
+      implicit none
+
+      integer, optional, intent(out) :: act_count  !< counts number of blocks refined or deleted
+
+      logical :: derefined
+      type(cg_list_element), pointer :: cgl, aux
+      type(cg_level_connected_t), pointer :: curl
+      type(grid_container),  pointer :: cg
+      character(len=*), parameter :: deref_label = "derefinement"
+
+      call ppp_main%start(deref_label, PPP_AMR)
+      curl => finest%level
+      do while (associated(curl) .and. .not. associated(curl, base%level))
+         cgl => curl%first
+         derefined = .false.
+         do while (associated(cgl))
+            aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
+            cgl => cgl%nxt
+            if (aux%cg%flag%derefine) then
+               if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
+                  if (all(aux%cg%leafmap)) then
+                     cg => aux%cg
+                     ! Here we have to evacuate the particles to the parent grid
+                     call all_lists%forget(cg)
+                     if (present(act_count)) act_count = act_count + 1
+                     curl%recently_changed = .true.
+                     derefined = .true.
+                  endif
+               endif
+            endif
+         enddo
+         call piernik_MPI_Allreduce(derefined, pLOR)
+         if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
+         !> \todo replace call curl%init_all_new_cg by something cheaper
+         call curl%sync_ru
+         curl => curl%coarser
+      enddo
+      call ppp_main%stop(deref_label, PPP_AMR)
+
+      ! sync structure
+      call leaves%balance_and_update(" ( derefine ) ")
+
+   end subroutine execute_derefinement
 
 !> \brief Refine a single grid piece. Pay attention whether it is already refined
 
