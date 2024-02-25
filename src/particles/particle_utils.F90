@@ -497,15 +497,33 @@ contains
 
 !> \brief Count all particles on all threads
 
-   integer(kind=4) function global_count_all_particles() result(gpcount)
+   integer(kind=8) function global_count_all_particles(message) result(gpcount)
 
-      use constants, only: pSUM
-      use mpisetup,  only: piernik_MPI_Allreduce
+      use constants,  only: pSUM, fmt_len
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: piernik_MPI_Allreduce, master
 
       implicit none
 
+      character(len=*), optional, intent(in) :: message
+
+      character(len=fmt_len) :: fmt
+
       gpcount = count_all_particles()
       call piernik_MPI_Allreduce(gpcount, pSUM)
+
+      if (present(message)) then
+         if (master) then
+            select case (gpcount)
+               case (:999999999)
+                  fmt = '(2a,i9)'
+               case default
+                  fmt = '(2a,i20)'
+            end select
+            write(msg, fmt) trim(message), " Total number of particles is ", gpcount
+            call printinfo(msg)
+         endif
+      endif
 
    end function global_count_all_particles
 
@@ -518,7 +536,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: l_part_cnt, max_part_cnt, g_part_cnt
+      integer(kind=8) :: l_part_cnt, max_part_cnt, g_part_cnt
 
       l_part_cnt = count_all_particles()
       max_part_cnt = l_part_cnt

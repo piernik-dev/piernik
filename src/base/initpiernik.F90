@@ -123,6 +123,7 @@ contains
       integer :: nit, ac
       real    :: ts                  !< Timestep wallclock
       logical :: finished
+      integer(kind=8) :: np
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
       character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", prob_label = "problem_IC"
       character(len=cbuff_len) :: label
@@ -341,8 +342,7 @@ contains
       if (master) call printinfo(msg)
 
 #if defined(GRAV) && defined(NBODY)
-      write(msg,'(a,i9)')"[initpiernik:init_piernik] Total number of particles is ", global_count_all_particles()
-      if (master) call printinfo(msg)
+      np = global_count_all_particles(message = "[initpiernik:init_piernik]")  ! we don't really need np, just call printinfo()
 #endif /* GRAV && NBODY */
 
 #ifdef VERBOSE
