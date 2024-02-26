@@ -717,11 +717,11 @@ contains
 
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
+      use cg_list_dataop,        only: cg_list_dataop_t  ! Can't use abstract type cg_list_t here
       use cg_level_base,         only: base
       use cg_level_connected,    only: cg_level_connected_t
       use cg_level_finest,       only: finest
       use constants,             only: pLOR, PPP_AMR
-      use grid_cont,             only: grid_container
       use list_of_cg_lists,      only: all_lists
       use mpisetup,              only: piernik_MPI_Allreduce
       use ppp,                   only: ppp_main
@@ -732,37 +732,66 @@ contains
 
       logical :: derefined
       type(cg_list_element), pointer :: cgl, aux
+      type(cg_list_dataop_t), pointer :: doomed
       type(cg_level_connected_t), pointer :: curl
-      type(grid_container),  pointer :: cg
       character(len=*), parameter :: deref_label = "derefinement"
+      logical, dimension(:), allocatable :: lev_deref
 
       call ppp_main%start(deref_label, PPP_AMR)
+
+      allocate(doomed)
+      call doomed%init_new("doomed")
+      allocate(lev_deref(base%level%l%id:finest%level%l%id))
+      lev_deref = .false.
+
       curl => finest%level
       do while (associated(curl) .and. .not. associated(curl, base%level))
          cgl => curl%first
          derefined = .false.
          do while (associated(cgl))
-            aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
-            cgl => cgl%nxt
-            if (aux%cg%flag%derefine) then
-               if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
-                  if (all(aux%cg%leafmap)) then
-                     cg => aux%cg
-                     ! Here we have to evacuate the particles to the parent grid
-                     call all_lists%forget(cg)
-                     if (present(act_count)) act_count = act_count + 1
+            if (cgl%cg%flag%derefine) then
+               if (cgl%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
+                  if (all(cgl%cg%leafmap)) then
+                     call doomed%add(cgl%cg)
                      curl%recently_changed = .true.
                      derefined = .true.
                   endif
                endif
             endif
+            cgl => cgl%nxt
          enddo
          call piernik_MPI_Allreduce(derefined, pLOR)
-         if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
-         !> \todo replace call curl%init_all_new_cg by something cheaper
-         call curl%sync_ru
+         if (derefined) lev_deref(curl%l%id) = .true.
+
          curl => curl%coarser
       enddo
+
+      if (present(act_count)) act_count = act_count + doomed%cnt
+
+      ! Here we have to evacuate the particles to the parent grid
+
+      ! Now we can destroy the grids
+      cgl => doomed%first
+      do while (associated(cgl))
+         aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
+         cgl => cgl%nxt
+
+         call all_lists%forget(aux%cg)
+      enddo
+
+      curl => finest%level
+      do while (associated(curl) .and. .not. associated(curl, base%level))
+         if (lev_deref(curl%l%id)) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
+         !> \todo replace call curl%init_all_new_cg by something cheaper
+         call curl%sync_ru
+
+         curl => curl%coarser
+      enddo
+
+      deallocate(lev_deref)
+      call doomed%delete
+      deallocate(doomed)
+
       call ppp_main%stop(deref_label, PPP_AMR)
 
       ! sync structure
