@@ -47,7 +47,7 @@ module load_balance
    real,                     protected :: balance_cg        !< Use the cg-associated costs in rebalance routine as weights. Value <= 0. means no cost weighting (assume all cg of equal weight), use 1. for full cost weighting.
    real,                     protected :: balance_host      !< Use averaged cg MHD costs to account for differing host speed. Value <=0 disables thread speed estimate (assume all hosts equally fast), use 1. for fully speed-weighted rebalance.
    logical,                  protected :: balance_thread    !< If .true. then use balance_host for each thread separately (CPU affinity has to be ensured outside of Piernik).
-   character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD", ToDo: enable selected subset.
+   character(len=cbuff_len), protected :: cost_to_balance   !< One of [ cg_cost_data:cost_labels, "all", "none" ], default: "all", ToDo: enable selected subset.
    real,                     protected :: balance_levels    !< If 1. then prioritize intra-level balancing for multigrid
 
    !   verbosity
@@ -57,7 +57,7 @@ module load_balance
 
    !   thread exclusion
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing
-   character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch? One of [ cg_cost_data:cost_labels, "all", "none" ], default: "MHD"
+   character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch for anomalously slow hosts? One of [ cg_cost_data:cost_labels, "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
 
    namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, balance_levels, &
@@ -65,7 +65,7 @@ module load_balance
         &             enable_exclusion, watch_cost, exclusion_thr
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
-   integer(kind=4) :: watch_ind  !< which index to watch for exclusion
+   integer(kind=4) :: watch_ind  !< which index to watch for exclusion in case of anomalously slow hosts
 
    enum, bind(C)
       enumerator :: V_NONE = 0, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE  !< verbosity levels
