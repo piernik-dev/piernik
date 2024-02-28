@@ -121,7 +121,7 @@ contains
       do while (associated(curl))
          if (curl%l%id == base_level_id) this%coarsest_leaves => curl
          !> \todo Find first not fully covered level, but current IO implementation depends on leaves
-         !! as a complete set of cg from base level to finest level, so be careful.
+         !!       as a complete set of cg from base level to finest level, so be careful.
          curl => curl%coarser
       enddo
 

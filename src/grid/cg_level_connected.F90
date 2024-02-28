@@ -1787,18 +1787,20 @@ contains
          endif
          do iw = 1, wna%lst(i)%dim4
             call this%wq_copy(i, iw, qna%wai)
-            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
-            if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
-               call this%coarser%wq_copy(i, iw, qna%wai)
-               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
-            endif
+            if (any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+            ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
+            call this%coarser%wq_copy(i, iw, qna%wai)
+
+            if (any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai) ! angular momentum conservation
             call this%restrict_1var(qna%wai, wna%lst(i)%position(iw))
-            if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
+
+            if (any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
             call this%coarser%qw_copy(qna%wai, i, iw)
          enddo
       else
          call this%restrict_1var(i, dim4 = .true.)
       endif
+
    end subroutine restrict_w_1var
 
 !>
