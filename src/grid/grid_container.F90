@@ -85,6 +85,8 @@ module grid_cont
       procedure :: print_tgt             !< Print all tgt_lists (for debugging only)
       procedure :: is_sending_fc_flux    !< Returns .true. if this block has fine hydro flux to be sent to some coarse block in specified direction
       procedure :: is_receiving_fc_flux  !< Returns .true. if this block expects fine hydro flux to be received from some fine block in specified direction
+      procedure :: count_particles       !< Returns the number of phy particles in this%pset
+      procedure :: count_all_particles   !< Returns the number of all particles in this%pset
 
    end type grid_container
 
@@ -309,5 +311,45 @@ contains
       end subroutine pr_tgt
 
    end subroutine print_tgt
+
+!> \brief Returns the number of phy particles in this%pset
+
+   integer(kind=4) function count_particles(this) result(n_part)
+
+#if !defined(GRAV) || !defined(NBODY)
+      use constants, only: I_ZERO
+#endif
+
+      implicit none
+
+      class(grid_container), intent(in) :: this  !< an object invoking the type-bound procedure
+
+#if defined(GRAV) && defined(NBODY)
+      n_part = this%pset%count()
+#else
+      n_part = I_ZERO * this%membership  ! suppress compiler warnings
+#endif
+
+   end function count_particles
+
+!> \brief Returns the number of phy particles in this%pset
+
+   integer(kind=4) function count_all_particles(this) result(n_part)
+
+#if !defined(GRAV) || !defined(NBODY)
+      use constants, only: I_ZERO
+#endif
+
+      implicit none
+
+      class(grid_container), intent(in) :: this  !< an object invoking the type-bound procedure
+
+#if defined(GRAV) && defined(NBODY)
+      n_part = this%pset%cnt
+#else
+      n_part = I_ZERO * this%membership  ! suppress compiler warnings
+#endif
+
+   end function count_all_particles
 
 end module grid_cont

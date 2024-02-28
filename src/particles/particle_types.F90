@@ -34,26 +34,27 @@ module particle_types
 
    implicit none
 
-   private
-   public :: particle, particle_set, particle_data, npb
+   public ! QA_WARN no secrets are kept here
 
    integer(kind=4), parameter :: npb = 2   !< number of cells between in and phy or between phy and out boundaries
 
-   !>
-   !! \brief simple particle: just mass and position
-   !!
-   !! \todo Extend it a bit
-   !<
+   !> \brief enumerators for packung and unpacking the particles for teleportation to another cg
+   enum, bind(C)
+      enumerator :: P_ID=1, P_MASS, P_POS_X, P_POS_Y, P_POS_Z, P_VEL_X, P_VEL_Y, P_VEL_Z, P_ACC_X, P_ACC_Y, P_ACC_Z, P_ENER, P_TFORM, P_TDYN
+   end enum
+   integer(kind=4), parameter :: npf = P_TDYN  !< last enumerated element: the number of single particle fields
+
+   !> \brief Particle type
 
    type :: particle_data
       integer(kind=4)        :: pid            !< particle ID
       real                   :: mass           !< mass of the particle
-      real                   :: tform          !< formation time of the particle
-      real                   :: tdyn           !< dynamical time for SF
       real, dimension(ndims) :: pos            !< physical position
       real, dimension(ndims) :: vel            !< particle velocity
       real, dimension(ndims) :: acc            !< acceleration of the particle
       real                   :: energy         !< total energy of particle
+      real                   :: tform          !< formation time of the particle
+      real                   :: tdyn           !< dynamical time for SF
       logical                :: in, phy, out   !< Flags to locate particle in the inner part of the domain or the outer part
       logical                :: fin            !< this flag is true if the particle is located in a finest level cell
       logical                :: outside        !< this flag is true if the particle is outside the domain
@@ -74,6 +75,7 @@ module particle_types
    contains
       procedure :: init                      !< initialize the list
       procedure :: print                     !< print the list
+      procedure :: count_phy                 !< count particles with phy flag set
       procedure :: cleanup                   !< delete the list
       procedure :: remove                    !< remove a particle
       !procedure :: merge_parts              !< merge two particles
@@ -81,6 +83,7 @@ module particle_types
       !procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
       !generic, public :: exists => particle_with_id_exists
       generic, public :: add => add_part_list
+      generic, public :: count => count_phy
    end type particle_set
 
 contains
@@ -191,6 +194,27 @@ contains
 
    end subroutine print
 
+!> \brief count particles with phy flag set
+
+   integer(kind=4) function count_phy(this) result(n_part)
+
+      use constants, only: I_ONE
+
+      implicit none
+
+      class(particle_set), intent(in) :: this  !< an object invoking the type-bound procedure
+
+      type(particle), pointer :: pset
+
+      n_part = 0
+      pset => this%first
+      do while (associated(pset))
+         if (pset%pdata%phy) n_part = n_part + I_ONE
+         pset => pset%nxt
+      enddo
+
+   end function count_phy
+
 !> \brief delete the list
 
    subroutine cleanup(this)
@@ -274,8 +298,8 @@ contains
       class(particle_set),     intent(inout) :: this !< an object invoking the type-bound procedure
       type(particle), pointer, intent(inout) :: pset
 
-      if (.not. associated(pset)) call die("[particle removal] tried to remove null() element")
-      if (.not. associated(this%first)) call die("[particle removal] this%cnt <=0 .and. associated(this%first)")
+      if (.not. associated(pset)) call die("[particle_types:remove] tried to remove null() element")
+      if (.not. associated(this%first)) call die("[particle_types:remove] .not. associated(this%first)")
 
       if (associated(this%first, pset)) this%first => this%first%nxt
       if (associated(this%last,  pset)) this%last  => this%last%prv
@@ -284,6 +308,8 @@ contains
       deallocate(pset%pdata)
       deallocate(pset)
       this%cnt = this%cnt - I_ONE
+
+      if (this%cnt < 0) call die("[particle_types:remove] this%cnt < 0")
 
    end subroutine remove
 
