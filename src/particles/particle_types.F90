@@ -79,10 +79,11 @@ module particle_types
       procedure :: cleanup                   !< delete the list
       procedure :: remove                    !< remove a particle
       !procedure :: merge_parts              !< merge two particles
-      procedure :: add_part_list             !< add a particle
+      procedure :: add_part_list             !< add a particle (create from parameters)
+      procedure :: add_part                  !< add a particle (copy from particle type)
       !procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
       !generic, public :: exists => particle_with_id_exists
-      generic, public :: add => add_part_list
+      generic, public :: add => add_part_list, add_part
       generic, public :: count => count_phy
    end type particle_set
 
@@ -226,8 +227,7 @@ contains
 
    end subroutine cleanup
 
-!> \brief Add a particle to the list
-
+!> \brief Add a particle to the list (create from parameters)
 
    subroutine add_part_list(this, pid, mass, pos, vel, acc, energy, in, phy, out, fin, tform, tdyn)
 
@@ -244,7 +244,7 @@ contains
       real, dimension(ndims), intent(in) :: acc
       real,                   intent(in) :: energy
       real,                   intent(in) :: mass, tform, tdyn
-      logical                            :: in, phy, out, fin
+      logical,                intent(in) :: in, phy, out, fin
 
       allocate(new)
       allocate(part)
@@ -279,6 +279,42 @@ contains
       this%cnt = this%cnt + I_ONE
 
    end subroutine add_part_list
+
+!> \brief Add a particle (copy from particle type)
+
+   subroutine add_part(this, pd)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(particle_set),          intent(inout) :: this  !< an object invoking the type-bound procedure
+      type(particle_data), pointer, intent(in)    :: pd
+
+      type(particle), pointer :: new
+
+      allocate(new)
+      allocate(new%pdata)
+      new%pdata = pd
+
+      ! spaghetti warning: this is the same code as in add_part_list
+      new%nxt => null()
+
+      if (.not. associated(this%first)) then ! the list was empty
+         if (associated(this%last)) call die("[particle_types:add_part] last without first")
+         this%first => new
+         new%prv => null()
+      else
+         if (.not. associated(this%last)) call die("[particle_types:add_part] first without last")
+         this%last%nxt => new
+         new%prv => this%last
+      endif
+
+      this%last => new
+      this%cnt = this%cnt + I_ONE
+
+   end subroutine add_part
 
 !> \brief Remove a particle number id from the list
 

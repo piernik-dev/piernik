@@ -445,7 +445,7 @@ contains
       enum, bind(C)
          enumerator :: I_OFF                  ! cg offset
          enumerator :: I_N_B = I_OFF + ndims  ! cg size
-         enumerator :: I_GID = I_N_B + ndims  ! cg%gid
+         enumerator :: I_GID = I_N_B + ndims  ! cg%grid_id
          enumerator :: I_LEV                  ! cg level
          enumerator :: I_C_P                  ! cg process
          enumerator :: I_D_P                  ! cg destination process

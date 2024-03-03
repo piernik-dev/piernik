@@ -769,6 +769,9 @@ contains
       if (present(act_count)) act_count = act_count + doomed%cnt
 
       ! Here we have to evacuate the particles to the parent grid
+#if defined(GRAV) && defined(NBODY)
+      call derefine_particles
+#endif /* GRAV && NBODY */
 
       ! Now we can destroy the grids
       cgl => doomed%first
@@ -796,6 +799,252 @@ contains
 
       ! sync structure
       call leaves%balance_and_update(" ( derefine ) ")
+
+   contains
+
+#if defined(GRAV) && defined(NBODY)
+      subroutine derefine_particles
+
+         use constants,      only: I_ZERO, I_ONE
+         use dataio_pub,     only: die, msg
+         use domain,         only: dom
+         use grid_cont,      only: grid_container
+         use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
+         use MPIFUN,         only: MPI_Alltoall, MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
+         use mpisetup,       only: proc, req, err_mpi, FIRST, LAST, inflate_req
+         use particle_func,  only: particle_in_area
+         use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
+         use particle_utils, only: is_part_in_cg
+         use ppp_mpi,        only: piernik_Waitall
+#ifdef MPIF08
+         use MPIF,           only: MPI_Comm
+#endif /* MPIF08 */
+
+         implicit none
+
+         integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv
+         integer(kind=4) :: nr, g
+         integer :: i, j, p
+         enum, bind(C)
+            enumerator :: I_GID  ! cg%grid_id
+            enumerator :: I_NP   ! cg%pset%count()
+            enumerator :: I_LEV  ! cg level
+         end enum
+         type :: pp  ! particle pointer
+            type(grid_container), pointer :: cg
+         end type pp
+         type :: gla
+            integer(kind=4), dimension(:, :), allocatable :: gl    ! shape: (I_GID:I_LEV, nsend(g)|nrecv(g))
+            type(pp),        dimension(:),    allocatable :: cgp   ! shape: (nsend(g)|nrecv(g))
+            real,            dimension(:, :), allocatable :: pbuf  ! shape: (npf, sum(cgrecv(g)%gl(I_NP, :))
+            integer :: cnt                                       ! auxiliary counter
+         end type gla
+         type(gla), dimension(FIRST:LAST) :: cgsend, cgrecv
+         type(particle), pointer :: part
+         logical :: found
+         logical :: in, phy, out, fin, indomain
+#ifdef MPIF08
+         type(MPI_Comm)  :: dp_comm
+#else /* !MPIF08 */
+         integer(kind=4) :: dp_comm
+#endif /* !MPIF08 */
+
+         nsend = 0
+         nrecv = 0
+
+         cgl => doomed%first
+         do while (associated(cgl))
+            associate (ro => cgl%cg%ro_tgt)
+               if (allocated(ro%seg)) then
+                  do i = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
+                     if (cgl%cg%pset%count() > 0 ) then
+                        nsend(ro%seg(i)%proc) = nsend(ro%seg(i)%proc) + I_ONE
+                        if (i > lbound(ro%seg(:), dim=1)) &
+                             call die("[refinement_update:execute_derefinement] derefine_particles not implemented for multi-parent yet")
+                     endif
+                  enddo
+               else
+                  call die("[refinement_update:execute_derefinement] derefine_particles found no parent")
+               endif
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+         ! First, figure out with whom to communicate and how many cg
+         call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
+
+         ! nsend/nrecv are expected to represent a quite sparse communication matrix with most nonzero elements located around the diagonal so we may proceed with point-to-point MPI calls only
+
+         call MPI_Comm_dup(MPI_COMM_WORLD, dp_comm, err_mpi)
+
+         ! Second, describe, what to communicate
+         do g = FIRST, LAST
+            if (nsend(g) > 0) then
+               allocate(cgsend(g)%gl(I_GID:I_LEV, nsend(g)), cgsend(g)%cgp(nsend(g)))
+               cgsend(g)%cnt = 0
+            endif
+            if (nrecv(g) > 0) allocate(cgrecv(g)%gl(I_GID:I_LEV, nrecv(g)), cgrecv(g)%cgp(nrecv(g)))
+         enddo
+
+         cgl => doomed%first
+         do while (associated(cgl))
+            associate (ro => cgl%cg%ro_tgt)
+               if (allocated(ro%seg)) then
+                  do i = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
+                     if (cgl%cg%pset%count() > 0 ) then
+                        associate (rproc => ro%seg(i)%proc)  ! target process
+                           cgsend(rproc)%cnt = cgsend(rproc)%cnt + 1
+                           cgsend(rproc)%gl(:, cgsend(rproc)%cnt) = [ ro%seg(i)%tag, cgl%cg%pset%count(), cgl%cg%l%id - I_ONE]
+                           cgsend(rproc)%cgp(cgsend(rproc)%cnt)%cg => cgl%cg
+                        end associate
+                     endif
+                  enddo
+               endif
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+         if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
+         nr = 0
+         do g = FIRST, LAST
+            if (g /= proc) then
+               if (nr + 2 > size(req, dim=1)) call inflate_req
+               if (nsend(g) > 0) then
+                  nr = nr + I_ONE
+                  allocate(cgsend(g)%pbuf(npf, sum(cgsend(g)%gl(I_NP, :))))
+                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+               if (nrecv(g) > 0) then
+                  nr = nr + I_ONE
+                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+            endif
+         enddo
+
+         call piernik_Waitall(nr, "particle_derefinement_cnt")
+
+         ! set up cgrecv(:)%cgp based on received cgrecv(g)%gl, don't exclude g == proc here
+         ! we definitely need a browsable graph of local cgs and their parents, children and neighbours
+         do g = FIRST, LAST
+            if (nrecv(g) > 0) then
+               do i = lbound(cgrecv(g)%gl, dim=2), ubound(cgrecv(g)%gl, dim=2)
+                  found = .false.
+                  curl => finest%level
+                  do while (associated(curl))
+                     if (cgrecv(g)%gl(I_LEV, i) == curl%l%id) then
+                        cgl => curl%first
+                        do while (associated(cgl) .or. .not. found)
+                           do j = lbound(cgl%cg%ri_tgt%seg, dim=1), ubound(cgl%cg%ri_tgt%seg, dim=1)
+                              if (cgl%cg%ri_tgt%seg(j)%tag == cgrecv(g)%gl(I_GID, i)) then
+                                 found = .true.
+                                 cgrecv(g)%cgp(i)%cg => cgl%cg
+                                 exit
+                              endif
+                           enddo
+                           cgl => cgl%nxt
+                        enddo
+                     endif
+                     if (found) exit
+                     curl => curl%coarser
+                  enddo
+                  if (.not. found) call die("[refinement_update:execute_derefinement] not found")
+               enddo
+            endif
+         enddo
+
+         ! Third, communicate the particles
+         nr = 0
+         do g = FIRST, LAST
+            if (g /= proc) then
+               ! no need to call inflate_req as it should be already big enough
+               if (nsend(g) > 0) then
+                  nr = nr + I_ONE
+                  p = 0
+                  do i = lbound(cgsend(g)%gl, dim=2), ubound(cgsend(g)%gl, dim=2)
+                     ! copy outgoing particles
+                     part => cgsend(g)%cgp(i)%cg%pset%first
+                     do while (associated(part))
+                        if (part%pdata%phy) then
+                           p = p + 1
+                           ! spaghetti warning: similar code in rebalance and particle_utils
+                           cgsend(g)%pbuf(P_ID, p)            = part%pdata%pid
+                           cgsend(g)%pbuf(P_MASS, p)          = part%pdata%mass
+                           cgsend(g)%pbuf(P_POS_X:P_POS_Z, p) = part%pdata%pos
+                           cgsend(g)%pbuf(P_VEL_X:P_VEL_Z, p) = part%pdata%vel
+                           cgsend(g)%pbuf(P_ACC_X:P_ACC_Z, p) = part%pdata%acc
+                           cgsend(g)%pbuf(P_ENER, p)          = part%pdata%energy
+                           cgsend(g)%pbuf(P_TFORM, p)         = part%pdata%tform
+                           cgsend(g)%pbuf(P_TDYN, p)          = part%pdata%tdyn
+                        endif
+                        part => part%nxt
+                     enddo
+                  enddo
+                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+               if (nrecv(g) > 0) then
+                  nr = nr + I_ONE
+                  allocate(cgrecv(g)%pbuf(npf, sum(cgrecv(g)%gl(I_NP, :))))
+                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+            endif
+         enddo
+
+         ! copy own particles (rproc == proc)
+         if (nrecv(proc) > 0) then
+            do i = lbound(cgrecv(proc)%cgp, dim=1), ubound(cgrecv(proc)%cgp, dim=1)
+               part => cgsend(proc)%cgp(i)%cg%pset%first
+               do while (associated(part))
+                  if (part%pdata%phy) call cgrecv(proc)%cgp(i)%cg%pset%add(part%pdata)
+                  part => part%nxt
+               enddo
+            enddo
+         endif
+
+         call piernik_Waitall(nr, "particle_derefinement_p")
+
+         ! copy incoming particles
+         do g = FIRST, LAST
+            if (g /= proc) then
+               ! no need to call inflate_req as it should be already big enough
+               if (nrecv(g) > 0) then
+                  p = 0
+                  do i = lbound(cgrecv(g)%cgp, dim=1), ubound(cgrecv(g)%cgp, dim=1)
+                     do j = p + 1, p + cgrecv(g)%gl(I_NP, i)
+                        indomain = particle_in_area(cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), dom%edge)
+
+                        call is_part_in_cg(cgrecv(g)%cgp(i)%cg, cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), indomain, in, phy, out, fin)
+
+                        if (phy) then
+                           call cgrecv(g)%cgp(i)%cg%pset%add(nint(cgrecv(g)%pbuf(P_ID, j), kind=4), cgrecv(g)%pbuf(P_MASS, j), &
+                                cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), cgrecv(g)%pbuf(P_VEL_X:P_VEL_Z, j), &
+                                cgrecv(g)%pbuf(P_ACC_X:P_ACC_Z, j), cgrecv(g)%pbuf(P_ENER, j), &
+                                in, phy, out, .true., &  ! here we have to ignore %fin because the cgrecv(g)%cgp(i)%cg%leafmap is not yet up to date
+                                cgrecv(g)%pbuf(P_TFORM, j), cgrecv(g)%pbuf(P_TDYN, j))
+                        else
+                           write(msg, '(3(a,i5),a,6g12.5,a,3g12.5,a,4i8)')"[refinement_update:execute_derefinement] derefine_particles: misplaced@", proc, " : #", cgrecv(g)%cgp(i)%cg%grid_id, " ^", cgrecv(g)%cgp(i)%cg%l%id, "fbnd[", cgrecv(g)%cgp(i)%cg%fbnd, "] part[", cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), "]", p, g, i, j
+                           call die(msg)
+                        endif
+                     enddo
+                     p = p + cgrecv(g)%gl(I_NP, i)
+                  enddo
+               endif
+            endif
+         enddo
+
+         ! Cleanup
+         call MPI_Comm_free(dp_comm, err_mpi)
+         do g = FIRST, LAST
+            if (allocated(cgsend(g)%gl))   deallocate(cgsend(g)%gl)
+            if (allocated(cgsend(g)%cgp))  deallocate(cgsend(g)%cgp)
+            if (allocated(cgsend(g)%pbuf)) deallocate(cgsend(g)%pbuf)
+
+            if (allocated(cgrecv(g)%gl))   deallocate(cgrecv(g)%gl)
+            if (allocated(cgrecv(g)%cgp))  deallocate(cgrecv(g)%cgp)
+            if (allocated(cgrecv(g)%pbuf)) deallocate(cgrecv(g)%pbuf)
+         enddo
+
+      end subroutine derefine_particles
+#endif /* GRAV && NBODY */
 
    end subroutine execute_derefinement
 
