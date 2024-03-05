@@ -327,7 +327,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
       n_part = this%pset%count()
 #else
-      n_part = I_ZERO * this%membership  ! suppress compiler warnings
+      n_part = I_ZERO * this%maxxyz  ! suppress compiler warnings
 #endif
 
    end function count_particles
@@ -347,7 +347,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
       n_part = this%pset%cnt
 #else
-      n_part = I_ZERO * this%membership  ! suppress compiler warnings
+      n_part = I_ZERO * this%maxxyz  ! suppress compiler warnings
 #endif
 
    end function count_all_particles

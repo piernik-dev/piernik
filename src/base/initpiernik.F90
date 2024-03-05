@@ -123,10 +123,12 @@ contains
       integer :: nit, ac
       real    :: ts                  !< Timestep wallclock
       logical :: finished
-      integer(kind=8) :: np
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
       character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", prob_label = "problem_IC"
       character(len=cbuff_len) :: label
+#if defined(GRAV) && defined(NBODY)
+      integer(kind=8) :: np
+#endif /* GRAV && NBODY */
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
