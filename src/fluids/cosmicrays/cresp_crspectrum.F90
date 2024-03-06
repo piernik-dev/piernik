@@ -987,7 +987,8 @@ contains
         !print *, 'p_init: ', p_i
         p_cut = p_init(:,i_spc)
 
-        p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
+      p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
+      p(max_ic) = p_cut
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
         do k = ncrb, 1, -1
