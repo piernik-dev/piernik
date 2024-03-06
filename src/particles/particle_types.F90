@@ -128,16 +128,16 @@ contains
 
 !> \brief print the list
 
-   subroutine print(this)
+   subroutine print(this, remark)
 
       use dataio_pub, only: msg, printinfo, warn
-      use mpisetup,   only: master, proc, FIRST, LAST
 
       implicit none
 
-      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      class(particle_set), intent(inout) :: this    !< an object invoking the type-bound procedure
+      character(len=*),    intent(in)    :: remark  !< additional comment from the caller
 
-      integer :: i
+      integer :: cnt
       type(particle), pointer :: pp
 
       if (this%cnt < 0) call warn("[particle_types:print] this%cnt < 0")
@@ -146,48 +146,42 @@ contains
       if (this%cnt > 0 .and. .not. associated(this%last))  call warn("[particle_types:print] this%cnt > 0 .and. .not. associated(this%last)")
       if (this%cnt <= 0 .and. (associated(this%first) .or. associated(this%last))) call warn("[particle_types:print] <=0 .and. (associated(this%first) .or. associated(this%last))")
 
-      if (master) call printinfo("[particle_types:print] Known particles:")
-      do i = FIRST, LAST
-         if (proc == i) then
-            write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ]  is_outside, prv, nxt"
+      cnt = this%cnt
+      if (associated(this%first)) then
+         pp => this%first
+         do while (associated(pp))
+            call prntline
+            cnt = cnt - 1
+            pp => pp%nxt
+         enddo
+      else if (associated(this%last)) then
+         pp => this%last
+         call warn(trim(remark) // "[particle_types:print] Going backward")
+         do while (associated(pp))
+            call prntline
+            cnt = cnt - 1
+            pp => pp%prv
+         enddo
+      else
+         if (this%cnt > 0) then
+            write(msg, '(a,i6,a)')trim(remark), this%cnt, " particles missing in the set"
             call printinfo(msg)
-            if (associated(this%first)) then
-               pp => this%first
-               do while (associated(pp))
-                  call prntline
-                  pp => pp%nxt
-               enddo
-            else if (associated(this%last)) then
-               call warn("[particle_types:print] Going backward")
-               do while (associated(pp))
-                  call prntline
-                  pp => pp%prv
-               enddo
-            else
-               if (this%cnt > 0) then
-                  write(msg, '(i6,a)')this%cnt, " particles missing in the set"
-                  call printinfo(msg)
-               endif
-            endif
          endif
-      enddo
+      endif
+
+      if (cnt /= 0) call warn(trim(remark) // "[particle_types:print] particle counter messed up")
 
    contains
 
       subroutine prntline
 
-         use constants, only: INVALID
+         use mpisetup,  only: proc
 
          implicit none
 
-         integer :: ip, in
-
-         ip = INVALID
-         if (associated(pp%prv)) ip = pp%prv%pdata%pid
-         in = INVALID
-         if (associated(pp%nxt)) in = pp%nxt%pdata%pid
-
-         write(msg, '(a,i7,a,g12.3,2(a,3g12.3),a,l11,2i5)')" # ",pp%pdata%pid," : ",pp%pdata%mass," [ ",pp%pdata%pos," ] [ ",pp%pdata%vel," ] ",pp%pdata%outside, ip, in
+         associate (p => pp%pdata)
+            write(msg, '(a,i5,a,i8,a,g12.5,2(a,3g12.5),a,5l2)')trim(remark) // "@", proc, " #",p%pid," : ",p%mass," [ ",p%pos," ] [ ",p%vel," ] ",p%outside, p%in, p%out, p%phy, p%fin
+         end associate
          call printinfo(msg)
 
       end subroutine prntline
