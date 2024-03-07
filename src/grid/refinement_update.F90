@@ -132,10 +132,32 @@ contains
          use cg_level_finest,    only: finest
          use cg_list,            only: cg_list_element
 
+#if defined(GRAV) && defined(NBODY)
+         use cg_level_base,      only: base
+         use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
+         use MPIF,               only: MPI_INTEGER, MPI_COMM_WORLD
+         use MPIFUN,             only: MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
+         use mpisetup,           only: req, err_mpi, inflate_req
+         use ppp_mpi,            only: piernik_Waitall
+         use refinement,         only: nbody_ref
+#ifdef MPIF08
+         use MPIF,               only: MPI_Comm
+#endif /* MPIF08 */
+#endif /* GRAV && NBODY */
+
          implicit none
 
          type(cg_level_connected_t), pointer :: curl
          type(cg_list_element), pointer :: cgl
+#if defined(GRAV) && defined(NBODY)
+         integer(kind=4) :: nr
+         integer :: i, j, k, g
+#ifdef MPIF08
+         type(MPI_Comm)  :: cp_comm
+#else /* !MPIF08 */
+         integer(kind=4) :: cp_comm
+#endif /* !MPIF08 */
+#endif /* GRAV && NBODY */
 
          curl => finest%level
          do while (associated(curl))
@@ -158,6 +180,55 @@ contains
 
             curl => curl%coarser
          enddo
+
+#if defined(GRAV) && defined(NBODY)
+         ! Update the number of particles on children for URC_nbody
+         if (nbody_ref > I_ZERO) then
+
+            call MPI_Comm_dup(MPI_COMM_WORLD, cp_comm, err_mpi)
+            nr = 0
+
+            curl => base%level
+            do while (associated(curl))
+               cgl => curl%first
+               do while (associated(cgl))
+                  cgl%cg%chld_pcnt = I_ZERO
+                  if (.not. associated(curl, base%level)) then
+                     associate (ro => cgl%cg%ro_tgt)
+                        if (allocated(ro%seg)) then
+                           if (nr + size(ro%seg) > size(req, dim=1)) call inflate_req
+                           do g = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
+                              nr = nr + I_ONE
+                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                           enddo
+                        endif
+                     end associate
+                  endif
+
+                  associate (ri => cgl%cg%ri_tgt)
+                     if (allocated(ri%seg)) then
+                        if (nr + size(ri%seg) > size(req, dim=1)) call inflate_req
+                        do g = lbound(ri%seg(:), dim=1), ubound(ri%seg(:), dim=1)
+                           nr = nr + I_ONE
+                           ! This looks a bit too tricky or fragile
+                           i = merge(LO, HI, ri%seg(g)%se(xdim, LO) <= cgl%cg%ijkse(xdim, LO))
+                           j = merge(LO, HI, ri%seg(g)%se(ydim, LO) <= cgl%cg%ijkse(ydim, LO))
+                           k = merge(LO, HI, ri%seg(g)%se(zdim, LO) <= cgl%cg%ijkse(zdim, LO))
+                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                        enddo
+                     endif
+                  end associate
+
+                  cgl => cgl%nxt
+               enddo
+               curl => curl%finer
+            enddo
+
+            call piernik_Waitall(nr, "parent_particle_cnt")
+
+            call MPI_Comm_free(cp_comm, err_mpi)
+         endif
+#endif /* GRAV && NBODY */
 
       end subroutine prepare_ref
 
