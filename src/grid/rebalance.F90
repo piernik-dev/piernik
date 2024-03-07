@@ -451,7 +451,7 @@ contains
          enumerator :: I_D_P                  ! cg destination process
          enumerator :: I_NP                   ! number of particles to transfer
       end enum
-      character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv", cp_label = "reshuffle_copy", gp_label = "reshuffle_gptemp"
+      character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv", cp_label = "reshuffle_copy", cpp_label = "reshuffle_copy_part", gp_label = "reshuffle_gptemp"
 #ifdef MPIF08
       type(MPI_Comm)  :: shuff_comm
 #else /* !MPIF08 */
@@ -651,6 +651,7 @@ contains
 
 #if defined(GRAV) && defined(NBODY)
                   ! assign imported particles
+                  call ppp_main%start(cpp_label, PPP_AMR)
                   do p = lbound(cglepa(i)%pbuf, 2, kind=4), ubound(cglepa(i)%pbuf, 2, kind=4)
                      indomain = particle_in_area(cglepa(i)%pbuf(P_POS_X:P_POS_Z, p), dom%edge)
                      call is_part_in_cg(cgl%cg, cglepa(i)%pbuf(P_POS_X:P_POS_Z, p), indomain, in, phy, out, fin)
@@ -661,6 +662,7 @@ contains
                           cglepa(i)%pbuf(P_TFORM, p), cglepa(i)%pbuf(P_TDYN, p))
                   enddo
                   deallocate(cglepa(i)%pbuf)
+                  call ppp_main%stop(cpp_label, PPP_AMR)
 #endif /* GRAV && NBODY */
 
                endif
