@@ -469,8 +469,10 @@ contains
       type(cg_level_connected_t), pointer :: curl
       logical :: correct, full_update
       real :: ts  !< time for runtime profiling
-      character(len=*), parameter :: newref_label = "refine", prol_label = "prolong_new"
+      character(len=*), parameter :: newref_label = "ru:refine", prol_label = "ru:prolong_new", &
+           rtb_label = "ru:restrict_to_base", ruprep_label = "ru:prep", scan_label = "ru:scan_for_refine"
 
+      call ppp_main%start(rtb_label, PPP_AMR)
       ts =  set_timer(tmr_amr, .true.)
 
       if (present(act_count)) act_count = 0
@@ -479,6 +481,7 @@ contains
       if (present(refinement_fixup_only)) full_update = .not. refinement_fixup_only
 
       call finest%level%restrict_to_base ! implies update of leafmap
+      call ppp_main%stop(rtb_label, PPP_AMR)
 
       if (n_updAMR <= 0) then
          ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
@@ -488,6 +491,8 @@ contains
          ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
          return
       endif
+
+      call ppp_main%start(ruprep_label, PPP_AMR)
 
       call all_cg%prevent_prolong
       call all_cg%set_is_old
@@ -501,8 +506,10 @@ contains
       fu = full_update
       call piernik_MPI_Allreduce(fu, pLAND)
       if (fu .neqv. full_update) call die("[refinement_update:update_refinement] inconsistent full_update")
+      call ppp_main%stop(ruprep_label, PPP_AMR)
 
       if (full_update) then
+         call ppp_main%start(scan_label, PPP_AMR)
          call scan_for_refinements
 
          ! do the refinements first
@@ -542,6 +549,8 @@ contains
          call all_cg%mark_orphans
 
          call leaves%update(" (  refine  ) ")
+
+         call ppp_main%stop(scan_label, PPP_AMR)
       endif
 
       ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions.
@@ -734,7 +743,7 @@ contains
       type(cg_list_element), pointer :: cgl, aux
       type(cg_list_dataop_t), pointer :: doomed
       type(cg_level_connected_t), pointer :: curl
-      character(len=*), parameter :: deref_label = "derefinement"
+      character(len=*), parameter :: deref_label = "ru:derefinement", reinit_label = "ru:deref_reinit_cg"
       logical, dimension(:), allocatable :: lev_deref
 
       call ppp_main%start(deref_label, PPP_AMR)
@@ -782,6 +791,7 @@ contains
          call all_lists%forget(aux%cg)
       enddo
 
+      call ppp_main%start(reinit_label, PPP_AMR)
       curl => finest%level
       do while (associated(curl) .and. .not. associated(curl, base%level))
          if (lev_deref(curl%l%id)) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
@@ -790,6 +800,7 @@ contains
 
          curl => curl%coarser
       enddo
+      call ppp_main%stop(reinit_label, PPP_AMR)
 
       deallocate(lev_deref)
       call doomed%delete
@@ -805,7 +816,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
       subroutine derefine_particles
 
-         use constants,      only: I_ZERO, I_ONE
+         use constants,      only: I_ZERO, I_ONE, PPP_AMR
          use dataio_pub,     only: die, msg
          use domain,         only: dom
          use grid_cont,      only: grid_container
@@ -815,6 +826,7 @@ contains
          use particle_func,  only: particle_in_area
          use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
          use particle_utils, only: is_part_in_cg
+         use ppp,            only: ppp_main
          use ppp_mpi,        only: piernik_Waitall
 #ifdef MPIF08
          use MPIF,           only: MPI_Comm
@@ -843,11 +855,15 @@ contains
          type(particle), pointer :: part
          logical :: found
          logical :: in, phy, out, fin, indomain
+         character(len=*), parameter :: dp_label = "ru:deref_part", allmeta_label = "ru:deref:All2All", srmeta_label = "ru:deref:SR_meta", &
+              srpart_label = "ru:deref:SR_part", ownpart_label = "ru:deref:copy_own_part", get_label = "ru:deref:add_part"
 #ifdef MPIF08
          type(MPI_Comm)  :: dp_comm
 #else /* !MPIF08 */
          integer(kind=4) :: dp_comm
 #endif /* !MPIF08 */
+
+         call ppp_main%start(dp_label, PPP_AMR)
 
          nsend = 0
          nrecv = 0
@@ -871,7 +887,9 @@ contains
          enddo
 
          ! First, figure out with whom to communicate and how many cg
+         call ppp_main%start(allmeta_label, PPP_AMR)
          call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
+         call ppp_main%stop(allmeta_label, PPP_AMR)
 
          ! nsend/nrecv are expected to represent a quite sparse communication matrix with most nonzero elements located around the diagonal so we may proceed with point-to-point MPI calls only
 
@@ -904,6 +922,7 @@ contains
             cgl => cgl%nxt
          enddo
 
+         call ppp_main%start(srmeta_label, PPP_AMR)
          if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
          nr = 0
          do g = FIRST, LAST
@@ -922,6 +941,7 @@ contains
          enddo
 
          call piernik_Waitall(nr, "particle_derefinement_cnt")
+         call ppp_main%stop(srmeta_label, PPP_AMR)
 
          ! set up cgrecv(:)%cgp based on received cgrecv(g)%gl, don't exclude g == proc here
          ! we definitely need a browsable graph of local cgs and their parents, children and neighbours
@@ -953,6 +973,7 @@ contains
          enddo
 
          ! Third, communicate the particles
+         call ppp_main%start(srpart_label, PPP_AMR)
          nr = 0
          do g = FIRST, LAST
             if (g /= proc) then
@@ -990,6 +1011,7 @@ contains
          enddo
 
          ! copy own particles (rproc == proc)
+         call ppp_main%start(ownpart_label, PPP_AMR)
          if (nrecv(proc) > 0) then
             do i = lbound(cgrecv(proc)%cgp, dim=1), ubound(cgrecv(proc)%cgp, dim=1)
                part => cgsend(proc)%cgp(i)%cg%pset%first
@@ -999,10 +1021,13 @@ contains
                enddo
             enddo
          endif
+         call ppp_main%stop(ownpart_label, PPP_AMR)
 
          call piernik_Waitall(nr, "particle_derefinement_p")
+         call ppp_main%stop(srpart_label, PPP_AMR)
 
          ! copy incoming particles
+         call ppp_main%start(get_label, PPP_AMR)
          do g = FIRST, LAST
             if (g /= proc) then
                ! no need to call inflate_req as it should be already big enough
@@ -1030,6 +1055,7 @@ contains
                endif
             endif
          enddo
+         call ppp_main%stop(get_label, PPP_AMR)
 
          ! Cleanup
          call MPI_Comm_free(dp_comm, err_mpi)
@@ -1042,6 +1068,8 @@ contains
             if (allocated(cgrecv(g)%cgp))  deallocate(cgrecv(g)%cgp)
             if (allocated(cgrecv(g)%pbuf)) deallocate(cgrecv(g)%pbuf)
          enddo
+
+         call ppp_main%stop(dp_label, PPP_AMR)
 
       end subroutine derefine_particles
 #endif /* GRAV && NBODY */
