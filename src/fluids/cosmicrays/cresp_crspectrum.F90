@@ -988,7 +988,7 @@ contains
         p_cut = p_init(:,i_spc)
 
       p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
-      p(max_ic) = p_cut
+      !p(max_ic) = p_cut
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
         do k = ncrb, 1, -1
@@ -1240,7 +1240,7 @@ contains
       p_range_add(ic)            = p_init(:,i_spc)
 
       f(ic(LO):ic(HI)) = f_init(i_spc) * (p_range_add(ic(LO):ic(HI))/p_br_init(LO, i_spc))**(-q_init(i_spc))
-      q(ic(LO):ic(HI)) = q_init(i_spc)
+      q(ic(LO)+1:ic(HI)) = q_init(i_spc)
 
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
       act_bins = cresp_all_bins(ic(LO)+1:ic(HI))
