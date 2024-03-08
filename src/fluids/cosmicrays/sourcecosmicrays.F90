@@ -224,13 +224,13 @@ contains
 
          associate( cr_prim => cr_table(icr_prim(i_prim)) )
 
-            print *, 'cr_prim: ', cr_prim
+            !print *, 'cr_prim: ', cr_prim
 
                do i_sec = 1, ncrsp_sec
 
                   associate( cr_sec => cr_table(icr_sec(i_sec)) )
 
-                  print *, 'cr_sec: ', cr_sec
+                  !print *, 'cr_sec: ', cr_sec
 
                   if (cr_sigma(cr_prim, cr_sec) .gt. zero) then
 
