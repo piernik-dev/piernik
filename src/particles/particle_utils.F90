@@ -109,7 +109,7 @@ contains
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
-      use cg_cost_data,   only: I_PARTICLE
+      ! use cg_cost_data,   only: I_PARTICLE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: ndims, base_level_id
@@ -148,7 +148,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          if (cgl%cg%l%id >= base_level_id) then
-            call cgl%cg%costs%start
+            ! call cgl%cg%costs%start  ! Too big overhead when we call it for every particle
             call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
             toadd = out .and. fin
             met = out
@@ -168,7 +168,7 @@ contains
             if (toadd) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
             cgfound = cgfound .or. toadd
             cgmet = cgmet .or. met
-            call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
+            ! call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
             ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
             ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
             ! Collecting of the cg costs for load balancing putposes will still work.
@@ -281,7 +281,7 @@ contains
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg", cnt_label = "cnt_part", snd_label = "send_part_prep", &
-           &                                    del_label = "detach_part", add_label = "add_part"
+           &                                    del_label = "detach_part", add_label = "add_part", addl_label = "chcg_part"
 
       if (firstcall .and. is_refined) then
          call warn("[particle_utils:part_leave_cg] AMR not fully implemented yet")
@@ -401,11 +401,11 @@ contains
       call ppp_main%stop(add_label, PPP_PART)
       inc = 1
       if (nchcg /= 0) then
-         call ppp_main%start(add_label, PPP_PART)
+         call ppp_main%start(addl_label, PPP_PART)
          do i = 1, nchcg
             call unpack_single_part_fields(inc, part_chcg(inc:inc+npf-1))
          enddo
-         call ppp_main%stop(add_label, PPP_PART)
+         call ppp_main%stop(addl_label, PPP_PART)
       endif
 
       deallocate(part_send, part_recv, part_chcg)
