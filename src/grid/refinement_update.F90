@@ -456,6 +456,9 @@ contains
 #ifdef GRAV
       use gravity,               only: update_gp
 #endif /* GRAV */
+#if defined(GRAV) && defined(NBODY)
+      use particle_utils,        only: part_refresh_ghosts
+#endif /* GRAV && NBODY */
 
       implicit none
 
@@ -646,6 +649,10 @@ contains
 
       call all_cg%enable_prolong
 
+#if defined(GRAV) && defined(NBODY)
+      ! Prolong particles, refresh the ghosts
+      call part_refresh_ghosts
+#endif /* GRAV && NBODY */
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */

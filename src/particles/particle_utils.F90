@@ -38,8 +38,8 @@ module particle_utils
    implicit none
 
    private
-   public :: add_part_in_proper_cg, is_part_in_cg
-   public :: count_all_particles, global_count_all_particles, part_leave_cg, detach_particle, global_balance_particles
+   public :: add_part_in_proper_cg, is_part_in_cg, part_refresh_ghosts, part_leave_cg, detach_particle, &
+        &    count_all_particles, global_count_all_particles, global_balance_particles
 
 contains
 
@@ -251,6 +251,38 @@ contains
       if (.false. .and. proc == sum(se)) return
 
    end function attribute_to_proc
+
+!> Remove ghosts and reassign all physical particles. Useful for sanitizing after a change of refinement.
+
+   subroutine part_refresh_ghosts
+
+      use cg_cost_data,   only: I_PARTICLE
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use particle_types, only: particle
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(particle), pointer :: pset
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%phy) then
+               pset => pset%nxt
+            else !Remove ghosts
+               call detach_particle(cgl%cg, pset)
+            endif
+         enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
+         cgl => cgl%nxt
+      enddo
+      call part_leave_cg()
+
+   end subroutine part_refresh_ghosts
 
    ! Sends leaving particles between processors, and creates ghosts
    ! OPT: It looks like operations here will cost about O(proc * number_of_cg * number_of_particles).
