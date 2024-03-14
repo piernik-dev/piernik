@@ -898,6 +898,8 @@ contains
 #ifdef CRESP
                      cg%u(iarr_crspc_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
                      cg%u(iarr_crspc_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+                     cg%u(iarr_crspc_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(iarr_crspc_n,   r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                     cg%u(iarr_crspc_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(iarr_crspc_e,   r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #endif /* CRESP */
                   enddo
                case (BND_OUTD)
@@ -913,6 +915,9 @@ contains
 #ifdef CRESP
                      cg%u(iarr_crspc_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
                      cg%u(iarr_crspc_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
+                     cg%u(iarr_crspc_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(iarr_crspc_n,   r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                     cg%u(iarr_crspc_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(iarr_crspc_e,   r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+
 #endif /* CRESP */
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)
