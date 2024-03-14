@@ -293,8 +293,6 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: I_ONE, PPP_PART, base_level_id
-      use dataio_pub,     only: warn
-      use domain,         only: is_refined
       use grid_cont,      only: grid_container
       use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
@@ -308,17 +306,11 @@ contains
       integer                                :: i, j, ind, inc
       integer(kind=4)                        :: nchcg
       real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
-      logical, save                          :: firstcall = .true.
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg", cnt_label = "cnt_part", snd_label = "send_part_prep", &
            &                                    del_label = "detach_part", add_label = "add_part", addl_label = "chcg_part"
-
-      if (firstcall .and. is_refined) then
-         call warn("[particle_utils:part_leave_cg] AMR not fully implemented yet")
-         firstcall = .false.
-      endif
 
       call ppp_main%start(ts_label, PPP_PART)
 
