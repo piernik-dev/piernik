@@ -146,7 +146,7 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
-      use initcosmicrays,     only: diff_max_lev
+      use initcosmicrays,     only: diff_max_lev, smallecr
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
 
@@ -208,7 +208,7 @@ contains
                         r(d,:) = cg%ijkse(d,lh)
                         do i = 1, dom%nb
                            l(d,:) = r(d,:) + (I_TWO*lh-I_THREE)*i
-                           wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                           wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                         enddo
                   end select
 
