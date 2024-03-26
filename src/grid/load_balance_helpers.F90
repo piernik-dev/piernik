@@ -319,6 +319,7 @@ contains
       subroutine log_summary
 
          use dataio_pub, only: printinfo
+         use mpisetup,   only: nproc
          use procnames,  only: pnames
 
          implicit none
@@ -331,7 +332,7 @@ contains
          if (prev_time >= 0.) then
             dt_wall = MPI_Wtime() - prev_time
 
-            write(msg, '(a,f11.3,3a)') "All accumulated cg costs out of ", mul*dt_wall, " ", trim(prefix), "s"
+            write(msg, '(a,f11.3,3a,f5.1,a)') "All accumulated cg costs out of ", mul*dt_wall, " ", trim(prefix), "s, ", 100*sum(all_proc_stats(N_STATS, I_ONE, :))/nproc/dt_wall, "% spent on cg (averaged globally)"
             call printinfo(msg)
 
             do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)

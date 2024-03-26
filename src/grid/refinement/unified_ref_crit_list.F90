@@ -424,7 +424,7 @@ contains
       implicit none
 
       class(urc_list_t),             intent(inout) :: this  !< an object invoking the type-bound procedure
-      type(grid_container), pointer, intent(inout) :: cg    !< current grid piece
+      type(grid_container), pointer, intent(inout) :: cg    !< starting cg, can't use here leaves%first explicitly because of cyclic dependencies
 
       class(urc), pointer :: p
 

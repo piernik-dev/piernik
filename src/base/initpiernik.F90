@@ -126,6 +126,9 @@ contains
       integer, parameter :: nit_over = 3 ! maximum number of auxiliary iterations after reaching level_max
       character(len=*), parameter :: ip_label = "init_piernik", ic_label = "IC_piernik", iter_label = "IC_iteration ", prob_label = "problem_IC"
       character(len=cbuff_len) :: label
+#if defined(GRAV) && defined(NBODY)
+      integer(kind=8) :: np
+#endif /* GRAV && NBODY */
 
       call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
@@ -341,8 +344,7 @@ contains
       if (master) call printinfo(msg)
 
 #if defined(GRAV) && defined(NBODY)
-      write(msg,'(a,i9)')"[initpiernik:init_piernik] Total number of particles is ", global_count_all_particles()
-      if (master) call printinfo(msg)
+      np = global_count_all_particles(message = "[initpiernik:init_piernik]")  ! we don't really need np, just call printinfo()
 #endif /* GRAV && NBODY */
 
 #ifdef VERBOSE

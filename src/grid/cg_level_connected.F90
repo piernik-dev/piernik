@@ -841,7 +841,11 @@ contains
 
    end subroutine vertical_bf_prep
 
-!> \brief interpolate the grid data which has the flag vital set to this%finer level
+!>
+!! \brief Interpolate the grid data which has the flag vital set to this%finer level
+!!
+!! Here we can look for particles that became covered by finer levels and send them to the child cgs.
+!<
 
    subroutine prolong(this, bnd_type)
 

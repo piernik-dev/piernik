@@ -92,21 +92,22 @@ contains
       use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ, PPP_PART
+      use constants,      only: xdim, ydim, zdim, ndims, LO, GEO_XYZ, PPP_PART
       use dataio_pub,     only: die
       use domain,         only: dom
+      use particle_func,  only: ijk_of_particle, in_range
       use particle_types, only: particle
       use ppp,            only: ppp_main
 
       implicit none
 
-      integer(kind=4), intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in)    :: factor !< typically fpiG
+      integer(kind=4), intent(in)       :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,            intent(in)       :: factor !< typically fpiG
 
-      type(cg_list_element), pointer :: cgl
-      type(particle), pointer        :: pset
-      integer, dimension(ndims)      :: ijkp
-      character(len=*), parameter    :: map_label = "map_ngp"
+      type(cg_list_element), pointer    :: cgl
+      type(particle), pointer           :: pset
+      integer(kind=4), dimension(ndims) :: ijkp
+      character(len=*), parameter       :: map_label = "map_ngp"
 
       call ppp_main%start(map_label, PPP_PART)
 
@@ -120,9 +121,8 @@ contains
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
 
             if (dom%geometry_type /= GEO_XYZ) call die("[particle_maps:map_ngp] Unsupported geometry")
-            where (dom%has_dir(:)) ijkp(:) = floor((part%pos(:) - cg%fbnd(:, LO)) * cg%idl(:)) + cg%ijkse(:, LO)
-            if (all(ijkp >= cg%ijkse(:,LO)) .and. all(ijkp <= cg%ijkse(:,HI))) &
-                 field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
+            where (dom%has_dir(:)) ijkp(:) = ijk_of_particle(part%pos, dom%edge(:,LO), cg%idl)
+            if (in_range(ijkp, cg%ijkse)) field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = field(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * part%mass / cg%dvol
 
             end associate
             pset => pset%nxt
@@ -222,21 +222,22 @@ contains
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP, half, I_ONE, PPP_PART
       use dataio_pub,     only: die
       use domain,         only: dom
+      use particle_func,  only: ijk_of_particle, l_neighb_part, r_neighb_part
       use particle_types, only: particle
       use ppp,            only: ppp_main
 
       implicit none
 
-      integer(kind=4), intent(in) :: iv     !< index in cg%q array, where we want the particles to be projected
-      real,            intent(in) :: factor !< typically fpiG
+      integer(kind=4),              intent(in) :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,                         intent(in) :: factor !< typically fpiG
 
-      type(cg_list_element), pointer   :: cgl
-      type(particle), pointer          :: pset
-      integer                          :: i, j, k
-      integer, dimension(ndims, IM:IP) :: ijkp
-      real                             :: weight_x, weight_xy, delta, fac
-      character(len=*), parameter      :: map_label = "map_tsc"
-      logical                          :: full_span
+      type(cg_list_element), pointer           :: cgl
+      type(particle), pointer                  :: pset
+      integer                                  :: i, j, k
+      integer(kind=4), dimension(ndims, IM:IP) :: ijkp
+      real                                     :: weight_x, weight_xy, delta, fac
+      character(len=*), parameter              :: map_label = "map_tsc"
+      logical                                  :: full_span
 
       ! This routine is performance-critical, so every optimization matters
       if (dom%eff_dim /= ndims) call die("[particle_maps:map_tsc] Only 3D version is implemented")
@@ -247,6 +248,9 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
+         ijkp(:,IM) = cgl%cg%ijkse(:,LO)
+         ijkp(:,I0) = cgl%cg%ijkse(:,LO)
+         ijkp(:,IP) = cgl%cg%ijkse(:,HI)
          pset => cgl%cg%pset%first
          do while (associated(pset))
             associate( field => cgl%cg%q(iv)%arr, part => pset%pdata, cg => cgl%cg )
@@ -258,9 +262,9 @@ contains
                ! Nearly the same code as in particle_gravity::update_particle_acc_tsc
                ! The same performance constraints apply here
 
-               ijkp(:, I0) = floor((part%pos(:) - dom%edge(:,LO)) * cg%idl(:))
-               ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
-               ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
+               ijkp(:,I0) = ijk_of_particle(part%pos, dom%edge(:,LO), cg%idl)
+               ijkp(:,IM) = l_neighb_part(ijkp(:,I0), cg%lhn(:,LO))
+               ijkp(:,IP) = r_neighb_part(ijkp(:,I0), cg%lhn(:,HI))
 
                full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - I_ONE) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + I_ONE)
 

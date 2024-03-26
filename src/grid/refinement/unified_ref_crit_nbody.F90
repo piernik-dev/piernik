@@ -85,7 +85,7 @@ contains
       use grid_cont,      only: grid_container
 #if defined(GRAV) && defined(NBODY)
       use constants,      only: ndims, xdim, ydim, zdim, LO, HI, half, I_ZERO, I_ONE, I_TWO
-      use dataio_pub,     only: warn
+      !use dataio_pub,     only: warn
       use particle_types, only: particle
 #endif /* GRAV && NBODY */
 
@@ -100,21 +100,27 @@ contains
       integer :: i, j, k
       type(particle), pointer :: part
 
-      if (cg%pset%cnt > this%ref_thr/I_TWO**ndims) then
+      if (cg%pset%cnt + sum(cg%chld_pcnt) >= this%ref_thr/I_TWO**ndims) then
          oct_cnt = I_ZERO
          part => cg%pset%first
          do while (associated(part))
             ijk = LO
-            where (part%pdata%pos > half*(cg%fbnd(:, LO) + cg%fbnd(:, HI))) ijk = HI
-            oct_cnt(ijk(xdim), ijk(ydim), ijk(zdim)) = oct_cnt(ijk(xdim), ijk(ydim), ijk(zdim)) + I_ONE
+            if (part%pdata%phy) then
+               where (part%pdata%pos > half*(cg%fbnd(:, LO) + cg%fbnd(:, HI))) ijk = HI
+               oct_cnt(ijk(xdim), ijk(ydim), ijk(zdim)) = oct_cnt(ijk(xdim), ijk(ydim), ijk(zdim)) + I_ONE
+            endif
             part => part%nxt
          enddo
 
          ! mark the octants with big particle count
+         ! To prevent refinement blinking we have to set flags under those children who have enough particles.
+         ! The cg%chld_pcnt has to be updated at this point (non-local operation).
          do i = LO, HI
             do j = LO, HI
                do k = LO, HI
-                  if (oct_cnt(i, j, k) > this%ref_thr) then
+                  ! Looks like some particles remain nonprolonged during IC. Later it works correctly.
+                  ! This bug is also visible on the nbdn field of the 0-th dump
+                  if (oct_cnt(i, j, k) + cg%chld_pcnt(i, j, k) > this%ref_thr) then
                      call cg%flag%set(cg%ijkse(xdim, i), cg%ijkse(ydim, j), cg%ijkse(zdim, k))
                      oct_cnt(i, j, k) = I_ZERO
                   endif
@@ -122,21 +128,7 @@ contains
             enddo
          enddo
 
-         ! check whether there are too many remaining particles
-         if (sum(oct_cnt) > this%ref_thr) then
-            do i = LO, HI
-               do j = LO, HI
-                  do k = LO, HI
-                     if (oct_cnt(i, j, k) > this%ref_thr/I_TWO**ndims) then
-                        call cg%flag%set(cg%ijkse(xdim, i), cg%ijkse(ydim, j), cg%ijkse(zdim, k))
-                        oct_cnt(i, j, k) = I_ZERO
-                     endif
-                  enddo
-               enddo
-            enddo
-         endif
-
-         if (sum(oct_cnt) > this%ref_thr) call warn("[unified_ref_crit_nbody:mark_nbody] Too many particles left in non-refined region")
+         ! if (sum(oct_cnt) > this%ref_thr) call warn("[unified_ref_crit_nbody:mark_nbody] Too many particles left in non-refined region")
 
       endif
 #else /*  !(GRAV && NBODY) */

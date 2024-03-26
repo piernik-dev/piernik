@@ -49,20 +49,30 @@ contains
 
    subroutine print_all_particles
 
-      !use cg_leaves, only: leaves
-      !use cg_list,   only: cg_list_element
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: msg_len
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
 
       implicit none
 
-      !type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer :: cgl
 
-      !!!!!!!!!Does nothing for now
+      character(len=msg_len) :: rem
 
-      !cgl => leaves%first
-      !do while (associated(cgl))
-      !   call cgl%cg%pset%print
-      !   cgl => cgl%nxt
-      !enddo
+      if (master) then
+         call printinfo("[particle_diag:print_all_particles] Known particles:")
+         write(msg, '(a,a12,2(a,a36),2a)')"# grid_id^ level@ proc # number  : ","mass"," [ ","position"," ] [ ","velocity"," ] outside, in, out, phy, fin"
+         call printinfo(msg)
+      endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         write(rem, '(a,i8,a,i6)')"#", cgl%cg%grid_id, "^", cgl%cg%l%id
+         call cgl%cg%pset%print(rem)
+         cgl => cgl%nxt
+      enddo
 
    end subroutine print_all_particles
 

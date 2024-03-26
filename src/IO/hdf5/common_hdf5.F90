@@ -1195,7 +1195,6 @@ contains
       use cg_list,        only: cg_list_element
       use constants,      only: LO, HI, I_ONE
 #ifdef NBODY
-      use particle_utils, only: count_cg_particles
       use star_formation, only: pid_gen
 #endif /* NBODY */
 
@@ -1220,7 +1219,7 @@ contains
          cg_n_b(g, :) = cgl%cg%n_b(:)
          cg_off(g, :) = cgl%cg%my_se(:, LO) - cgl%cg%l%off(:)
 #ifdef NBODY
-         cg_npart(g)   = count_cg_particles(cgl%cg)
+         cg_npart(g)   = cgl%cg%count_particles()
          cg_pid_max(g) = pid_gen
 #endif /* NBODY */
          if (otype == O_OUT) then

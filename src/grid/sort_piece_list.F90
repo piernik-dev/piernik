@@ -46,6 +46,7 @@ module sort_piece_list
       integer(kind=4)                   :: cur_gid   !< current grid_id
       integer(kind=4)                   :: cur_proc  !< current process number
       integer(kind=4)                   :: dest_proc !< process number according to ideal ordering
+      integer(kind=4)                   :: n_part    !< number of particles
       real                              :: weight    !< an estimate of cg cost
       real                              :: cweight   !< cumulative cost for id <= own id
    contains
@@ -112,6 +113,7 @@ contains
       this%cur_proc  = proc
       this%dest_proc = INVALID
       this%id        = INVALID
+      this%n_part    = 0
 
       ! Use the provided weight or use total cell count.
       if (present(weight)) then

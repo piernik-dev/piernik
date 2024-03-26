@@ -79,6 +79,8 @@ contains
 !! \warning There might be other evolving variables (such as mass_defect::magic_mass) that should be added here
 !!
 !! \todo Move this routine somewhere else, because it should be available for all hydro schemes
+!!
+!! \todo Also take care of particles.
 !>
 
    subroutine repeat_fluidstep

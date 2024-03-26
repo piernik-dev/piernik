@@ -359,7 +359,7 @@ def compare_particles(h5f1, h5f2):
     n_comm_p = len(set(pp1.keys()) & set(pp2.keys()))
     pn["particles id"] = 1. - 2 * n_comm_p / (len(pp1.keys()) + len(pp2.keys()))
 
-    for id in pp1.keys():
+    for id in pp1.copy().keys():
         if id not in pp2:
             del pp1[id]
 

@@ -34,7 +34,7 @@ module particle_func
    implicit none
 
    private
-   public :: particle_in_area, check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
+   public :: particle_in_area, in_range, pos_in_sect, ijk_of_particle, l_neighb_part, r_neighb_part, check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
 
    interface
 
@@ -78,7 +78,7 @@ contains
 
 !> \brief check if the particle locates inside given area
 
-   function particle_in_area(pos, area) result(itis)
+   logical function particle_in_area(pos, area) result(itis)
 
       use constants, only: ndims, LO, HI
 
@@ -86,11 +86,69 @@ contains
 
       real, dimension(ndims),       intent(in) :: pos
       real, dimension(ndims,LO:HI), intent(in) :: area
-      logical                                  :: itis
 
       itis = (all(pos >= area(:,LO)) .and. all(pos < area(:,HI)))
 
    end function particle_in_area
+
+!> \brief check if the particle cg-index locates inside given range
+
+   logical function in_range(ind, ijkse) result(itis)
+
+      use constants, only: ndims, LO, HI
+
+      implicit none
+
+      integer(kind=4), dimension(ndims),       intent(in) :: ind
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: ijkse
+
+      itis = all(ind >= ijkse(:,LO)) .and. all(ind <= ijkse(:,HI))
+
+   end function in_range
+
+   elemental logical function pos_in_sect(pos, pl, pr) result(isin)
+
+      implicit none
+
+      real, intent(in) :: pos, pl, pr
+
+      isin = (pos >= pl .and. pos < pr)
+
+   end function pos_in_sect
+
+   elemental integer(kind=4) function ijk_of_particle(pos, edge, idl) result (ijk)
+
+      implicit none
+
+      real, intent(in) :: pos, edge, idl
+
+      ijk = floor((pos - edge) * idl, kind=4)
+
+   end function ijk_of_particle
+
+   elemental integer(kind=4) function l_neighb_part(ind, left_lim) result (lnp)
+
+      use constants, only: I_ONE
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ind, left_lim
+
+      lnp = max(ind - I_ONE, left_lim)
+
+   end function l_neighb_part
+
+   elemental integer(kind=4) function r_neighb_part(ind, right_lim) result (rnp)
+
+      use constants, only: I_ONE
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ind, right_lim
+
+      rnp = min(ind + I_ONE, right_lim)
+
+   end function r_neighb_part
 
    subroutine check_ord(order)
 
