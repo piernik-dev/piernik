@@ -186,7 +186,7 @@ contains
       use constants,        only: one, zero
       use initcrspectrum,   only: spec_mod_trms, p_fix, p_mid_fix, three_ps, g_fix
       use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, ncrb
-      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, cr_spectral, transrelativistic
+      use cr_data,          only: eCRSP, ncrsp_prim, ncrsp_sec, cr_table, cr_tau, cr_sigma, icr_Be10, icr_prim, icr_sec, cr_tau, cr_mass, cr_spectral, cr_names, transrelativistic
       use initcosmicrays,   only: nspc
       use fluidindex,       only: flind
       use fluids_pub,       only: has_ion, has_neu
@@ -321,8 +321,8 @@ contains
 
          if (i_spc==cr_table(icr_Be10) .AND. eCRSP(icr_Be10)) then
 
-            u_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) = u_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) - u_cell(iarr_crspc2_n(i_spc - count(.not. cr_spectral),:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
-            u_cell(iarr_crspc2_e(i_spc - count(.not. cr_spectral),:)) = u_cell(iarr_crspc2_e(i_spc - count(.not. cr_spectral),:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc - count(.not. cr_spectral),:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
+            u_cell(iarr_crspc2_n(i_spc,:)) = u_cell(iarr_crspc2_n(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_n(i_spc,:)) - u_cell(iarr_crspc2_n(i_spc,:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
+            u_cell(iarr_crspc2_e(i_spc,:)) = u_cell(iarr_crspc2_e(i_spc,:)) + dt_doubled*(usrc_cell(iarr_crspc2_e(i_spc,:)) - u_cell(iarr_crspc2_e(i_spc,:)) / (sqrt(1+(p_fix/cr_mass(i_spc))**2)*cr_tau(i_spc)))
 
          else
 
