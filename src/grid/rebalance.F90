@@ -445,7 +445,7 @@ contains
       enum, bind(C)
          enumerator :: I_OFF                  ! cg offset
          enumerator :: I_N_B = I_OFF + ndims  ! cg size
-         enumerator :: I_GID = I_N_B + ndims  ! cg%gid
+         enumerator :: I_GID = I_N_B + ndims  ! cg%grid_id
          enumerator :: I_LEV                  ! cg level
          enumerator :: I_C_P                  ! cg process
          enumerator :: I_D_P                  ! cg destination process
@@ -460,6 +460,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
       logical :: in, phy, out, fin, indomain
       type(particle), pointer :: part
+      character(len=*), parameter :: cpp_label = "reshuffle_copy_part"
 #endif /* GRAV && NBODY */
 
       ! Count the number of fields on any of the base level cg.
@@ -651,6 +652,7 @@ contains
 
 #if defined(GRAV) && defined(NBODY)
                   ! assign imported particles
+                  call ppp_main%start(cpp_label, PPP_AMR)
                   do p = lbound(cglepa(i)%pbuf, 2, kind=4), ubound(cglepa(i)%pbuf, 2, kind=4)
                      indomain = particle_in_area(cglepa(i)%pbuf(P_POS_X:P_POS_Z, p), dom%edge)
                      call is_part_in_cg(cgl%cg, cglepa(i)%pbuf(P_POS_X:P_POS_Z, p), indomain, in, phy, out, fin)
@@ -661,6 +663,7 @@ contains
                           cglepa(i)%pbuf(P_TFORM, p), cglepa(i)%pbuf(P_TDYN, p))
                   enddo
                   deallocate(cglepa(i)%pbuf)
+                  call ppp_main%stop(cpp_label, PPP_AMR)
 #endif /* GRAV && NBODY */
 
                endif

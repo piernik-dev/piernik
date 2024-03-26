@@ -440,7 +440,6 @@ contains
             call cgl%cg%costs%start
             pset => cgl%cg%pset%first
             do while (associated(pset))
-               ! BUG: pset%pdata%fin need to be initialized after restart or we'll lose all particles (3-body CI failing since 7e47e0744)
                if (pset%pdata%phy .and. pset%pdata%fin) then
                   pset%pdata%pos = pset%pdata%pos + pset%pdata%vel * ddt
                   call pset%pdata%is_outside()

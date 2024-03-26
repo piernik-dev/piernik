@@ -38,8 +38,8 @@ module particle_utils
    implicit none
 
    private
-   public :: add_part_in_proper_cg, is_part_in_cg
-   public :: count_all_particles, global_count_all_particles, part_leave_cg, detach_particle, global_balance_particles
+   public :: add_part_in_proper_cg, is_part_in_cg, part_refresh_ghosts, part_leave_cg, detach_particle, &
+        &    count_all_particles, global_count_all_particles, global_balance_particles
 
 contains
 
@@ -109,7 +109,7 @@ contains
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
-      use cg_cost_data,   only: I_PARTICLE
+      ! use cg_cost_data,   only: I_PARTICLE
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: ndims, base_level_id
@@ -148,7 +148,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          if (cgl%cg%l%id >= base_level_id) then
-            call cgl%cg%costs%start
+            ! call cgl%cg%costs%start  ! Too big overhead when we call it for every particle
             call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
             toadd = out .and. fin
             met = out
@@ -168,7 +168,7 @@ contains
             if (toadd) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
             cgfound = cgfound .or. toadd
             cgmet = cgmet .or. met
-            call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
+            ! call cgl%cg%costs%stop(I_PARTICLE, ppp = .false.)
             ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
             ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
             ! Collecting of the cg costs for load balancing putposes will still work.
@@ -252,6 +252,38 @@ contains
 
    end function attribute_to_proc
 
+!> Remove ghosts and reassign all physical particles. Useful for sanitizing after a change of refinement.
+
+   subroutine part_refresh_ghosts
+
+      use cg_cost_data,   only: I_PARTICLE
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use particle_types, only: particle
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(particle), pointer :: pset
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%phy) then
+               pset => pset%nxt
+            else !Remove ghosts
+               call detach_particle(cgl%cg, pset)
+            endif
+         enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
+         cgl => cgl%nxt
+      enddo
+      call part_leave_cg()
+
+   end subroutine part_refresh_ghosts
+
    ! Sends leaving particles between processors, and creates ghosts
    ! OPT: It looks like operations here will cost about O(proc * number_of_cg * number_of_particles).
    !      At least O(proc * number_of_cg) can be reduced by efficient use of SFC_id and oct-trees.
@@ -261,8 +293,6 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: I_ONE, PPP_PART, base_level_id
-      use dataio_pub,     only: warn
-      use domain,         only: is_refined
       use grid_cont,      only: grid_container
       use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
@@ -276,17 +306,11 @@ contains
       integer                                :: i, j, ind, inc
       integer(kind=4)                        :: nchcg
       real, dimension(:), allocatable        :: part_send, part_recv, part_chcg
-      logical, save                          :: firstcall = .true.
       type(cg_list_element), pointer         :: cgl
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg", cnt_label = "cnt_part", snd_label = "send_part_prep", &
-           &                                    del_label = "detach_part", add_label = "add_part"
-
-      if (firstcall .and. is_refined) then
-         call warn("[particle_utils:part_leave_cg] AMR not fully implemented yet")
-         firstcall = .false.
-      endif
+           &                                    del_label = "detach_part", add_label = "add_part", addl_label = "chcg_part"
 
       call ppp_main%start(ts_label, PPP_PART)
 
@@ -401,11 +425,11 @@ contains
       call ppp_main%stop(add_label, PPP_PART)
       inc = 1
       if (nchcg /= 0) then
-         call ppp_main%start(add_label, PPP_PART)
+         call ppp_main%start(addl_label, PPP_PART)
          do i = 1, nchcg
             call unpack_single_part_fields(inc, part_chcg(inc:inc+npf-1))
          enddo
-         call ppp_main%stop(add_label, PPP_PART)
+         call ppp_main%stop(addl_label, PPP_PART)
       endif
 
       deallocate(part_send, part_recv, part_chcg)
@@ -497,15 +521,33 @@ contains
 
 !> \brief Count all particles on all threads
 
-   integer(kind=4) function global_count_all_particles() result(gpcount)
+   integer(kind=8) function global_count_all_particles(message) result(gpcount)
 
-      use constants, only: pSUM
-      use mpisetup,  only: piernik_MPI_Allreduce
+      use constants,  only: pSUM, fmt_len
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: piernik_MPI_Allreduce, master
 
       implicit none
 
+      character(len=*), optional, intent(in) :: message
+
+      character(len=fmt_len) :: fmt
+
       gpcount = count_all_particles()
       call piernik_MPI_Allreduce(gpcount, pSUM)
+
+      if (present(message)) then
+         if (master) then
+            select case (gpcount)
+               case (:999999999)
+                  fmt = '(2a,i9)'
+               case default
+                  fmt = '(2a,i20)'
+            end select
+            write(msg, fmt) trim(message), " Total number of particles is ", gpcount
+            call printinfo(msg)
+         endif
+      endif
 
    end function global_count_all_particles
 
@@ -518,7 +560,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: l_part_cnt, max_part_cnt, g_part_cnt
+      integer(kind=8) :: l_part_cnt, max_part_cnt, g_part_cnt
 
       l_part_cnt = count_all_particles()
       max_part_cnt = l_part_cnt

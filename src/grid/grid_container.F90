@@ -66,6 +66,7 @@ module grid_cont
 #if defined(GRAV) && defined(NBODY)
       type(particle_set) :: pset                        !< set of particles that belong to this grid part
       real, dimension(ndims, LO:HI) :: bnd_in, bnd_out  !< coordinates for qualifying particles in is_part_in_cg
+      integer, dimension(LO:HI, LO:HI, LO:HI) :: chld_pcnt  !< particle counters in children
 #endif /* GRAV && NBODY */
 
       ! Misc
@@ -327,7 +328,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
       n_part = this%pset%count()
 #else
-      n_part = I_ZERO * this%membership  ! suppress compiler warnings
+      n_part = I_ZERO * this%maxxyz  ! suppress compiler warnings
 #endif
 
    end function count_particles
@@ -347,7 +348,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
       n_part = this%pset%cnt
 #else
-      n_part = I_ZERO * this%membership  ! suppress compiler warnings
+      n_part = I_ZERO * this%maxxyz  ! suppress compiler warnings
 #endif
 
    end function count_all_particles
