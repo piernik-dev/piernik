@@ -1,5 +1,5 @@
-#if !defined LOCAL_FR_SPEED
-#  define GLOBAL_FR_SPEED
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
 #endif
 
 #undef ISO
@@ -12,8 +12,10 @@
 #define MAGNETIC
 #undef RESISTIVE
 
-#define GRAV
+#undef GRAV
 
-#define SN_SRC
-#define RANDOMIZE
+#undef SN_SRC
+#undef RANDOMIZE
 #undef MULTIGRID
+
+#define CRESP_VERBOSED

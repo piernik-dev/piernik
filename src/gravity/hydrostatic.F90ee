@@ -366,7 +366,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef CRESP
       use initcrspectrum, only: smallcree, smallcren
-      use initcosmicrays, only: iarr_crspc_e, iarr_crspc_n
+      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
 #endif /* CRESP */
 
       implicit none
@@ -463,8 +463,8 @@ contains
                   cg%u(iarr_all_crn,i,j,kk) = smallecr
 #endif /* COSM_RAYS */
 #ifdef CRESP
-                  cg%u(iarr_crspc_n  ,i,j,kk) = smallcren     !< this line refers to CRESP number density component
-                  cg%u(iarr_crspc_e  ,i,j,kk) = smallcree     !< this line refers to CRESP energy density component
+                  cg%u(iarr_cre_n  ,i,j,kk) = smallcren     !< this line refers to CRESP number density component
+                  cg%u(iarr_cre_e  ,i,j,kk) = smallcree     !< this line refers to CRESP energy density component
 #endif /* CRESP */
                endif
             enddo

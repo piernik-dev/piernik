@@ -159,11 +159,15 @@ contains
       use global,         only: smalld
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use units,          only: kboltz, kB_cgs, TempHalo, mp
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: gamma_cr_1, iarr_crn, iarr_crs
+      use initcosmicrays, only: iarr_crs
+#ifndef CRESP
+      use initcosmicrays, only: gamma_cr_1, iarr_crn
+#endif /* !CRESP */
 #ifdef SN_SRC
       use snsources,      only: cr_sn
 #endif /* SN_SRC */
@@ -209,11 +213,13 @@ contains
 #endif /* SHEAR */
                   cg%b(:,i,j,k) = b0 * sqrt(cg%u(fl%idn,i,j,k) / d0) * b_n / sqrt(sum(b_n**2))
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k) = fl%cs2 / fl%gam_1 * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                  cg%u(fl%ien,i,j,k) = max(fl%cs2 / fl%gam_1 * cg%u(fl%idn,i,j,k),kboltz*TempHalo/(mp * fl%gam_1) * cg%u(fl%idn,i,j,k)) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                                      & emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
+#ifndef CRESP
                   cg%u(iarr_crn(1),i,j,k) = beta_cr * fl%cs2 * cg%u(fl%idn,i,j,k) / gamma_cr_1
+#endif /* !CRESP */
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -345,19 +351,24 @@ contains
       integer                                             :: k
 
       real, parameter :: f1 = 3.23e8, f2 = -4.4e-9, f3 = 1.7e-9
-      real            :: r1, r22, r32, s4, s5
+      real            :: r1, r22, r32, s4, s5, h
+
 
       r1  = 4.9*kpc
       r22 = (0.2*kpc)**2
       r32 = (2.2*kpc)**2
       s4  = f2 * exp(-(r_gc-r_gc_sun)/(r1))
       s5  = f3 * (r_gc_sun**2 + r32)/(r_gc**2 + r32)
+      h   = 3*kpc
 
 !      grav = f1 * ((s4 * xsw/sqrt(xsw**2+r22)) - (s5 * xsw/kpc) )
 !!          -Om*(Om+G) * Z * (kpc ?) ! in the transition region between rigid and flat rotation F'98: eq.(36)
 
       do k = lhn(zdim,LO), lhn(zdim,HI)
          gp(:,:,k) = -f1 * (s4 * sqrt(ax%z(k)**2+r22) - s5 * half * ax%z(k)**2 / kpc)
+         if (k == 5) print *, 'ax%z(k): ', ax%z(k)
+         if (k == 5) print *, 'abs(ax%z(k)): ', abs(ax%z(k))
+         if (abs(ax%z(k)) .gt. h) gp(:,:,k) = gp(:,:,k)/cosh(((abs(ax%z(k))-h)/h))**3.5 !In mcrwind_cresp with multispecies: smoothing the gravitational potential outside of z = +-h = 3kpc
       enddo
       return
 

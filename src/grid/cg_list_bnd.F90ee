@@ -166,11 +166,10 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
-      use constants,  only: xdim, zdim, cor_dim, PPP_AMR
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use global,     only: prefer_merged_MPI
-      use ppp,        only: ppp_main
+      use constants, only: xdim, zdim, cor_dim, PPP_AMR
+      use domain,    only: dom
+      use global,    only: prefer_merged_MPI
+      use ppp,       only: ppp_main
 
       implicit none
 
@@ -184,9 +183,6 @@ contains
       character(len=*), parameter :: ib_label = "internal_boundaries", ibl_label = "internal_boundaries_local", ibm_label = "internal_boundaries_MPI_merged", ib1_label = "internal_boundaries_MPI_1by1"
 
       call ppp_main%start(ib_label)
-
-      if (.not. all_same_level()) call die("[cg_list_bnd::internal_boundaries] MPI routines here are not ready for mixing levels yet")
-
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
          dmask(xdim:zdim) = .false.
@@ -217,40 +213,18 @@ contains
       endif
       call ppp_main%stop(ib_label)
 
-   contains
-
-      logical function all_same_level()
-
-         use cg_list,          only: cg_list_element
-
-         implicit none
-
-         type(cg_list_element), pointer :: cgl
-         integer(kind=4) :: l
-
-         all_same_level = .true.
-
-         cgl => this%first
-         if (associated(cgl)) l = cgl%cg%l%id
-         do while (associated(cgl))
-            if (cgl%cg%l%id /= l) all_same_level = .false.
-            cgl => cgl%nxt
-         enddo
-
-      end function all_same_level
-
    end subroutine internal_boundaries
 
 !> \brief This routine exchanges guardcells between local blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
 
    subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
 
-      use cg_cost_data,   only: I_OTHER
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
-      use dataio_pub,     only: die
-      use grid_cont,      only: grid_container
-      use grid_cont_bseg, only: segment
+      use cg_cost_data,  only: I_OTHER
+      use cg_list,       only: cg_list_element
+      use constants,     only: xdim, ydim, zdim, LO, HI, cor_dim, INVALID
+      use dataio_pub,    only: die
+      use grid_cont,     only: grid_container
+      use grid_cont_bnd, only: segment
 
       implicit none
 
@@ -497,7 +471,7 @@ contains
       use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
-      use grid_cont_bseg,   only: segment
+      use grid_cont_bnd,    only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
            &                      MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
@@ -861,7 +835,7 @@ contains
       call ppp_main%start(bu_label)
 
       if (frun) then
-         call sane_bnd
+         call init_fluidboundaries
          frun = .false.
          if (HI-LO /= I_ONE) call die("[cg_list_bnd:bnd_u] HI-LO /= I_ONE")
       endif
@@ -913,7 +887,6 @@ contains
 #ifdef CRESP
                      cg%u(iarr_crspc_n,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcren   !< CRESP number density component
                      cg%u(iarr_crspc_e,   l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallcree   !< CRESP energy density component
-
 #endif /* CRESP */
                   enddo
                   l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)
@@ -961,7 +934,7 @@ contains
 
 !> \brief Perform some checks
 
-      subroutine sane_bnd
+      subroutine init_fluidboundaries
 
          use constants,  only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
               &                BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
@@ -972,51 +945,55 @@ contains
 
          integer(kind=4) :: dir, side
 
-         if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:bnd_u:sane_bnd] MPI not initialized.") ! bnd_xl, bnd_xr
+         if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) then
-               do side = LO, HI
-                  select case (dom%bnd(dir, side))
-                     case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
-                        ! Do nothing
-                     case (BND_FC, BND_MPI_FC)
-                        call die("[cg_list_bnd:bnd_u:sane_bnd] fine-coarse interfaces not implemented yet")
-                     case (BND_COR)
-                        if (dir == zdim) then
-                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                           call warn(msg)
-                        endif
-                     case (BND_SHE)
-                        if (dir /= xdim) then
-                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                           call warn(msg)
-                        endif
-                     case (BND_OUTH)
-                        if (dir == zdim) then
-                           if (is_multicg) call die("[cg_list_bnd:bnd_u:sane_bnd] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
-                           ! nontrivial, not really checked
-                        else
-                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                           call warn(msg)
-                        endif
-                     case (BND_OUTHD)
-                        if (dir == zdim) then
-                           if (is_multicg) call die("[cg_list_bnd:bnd_u:sane_bnd] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
-                           ! nontrivial, not really checked
-                        else
-                           write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                           call warn(msg)
-                        endif
-                     case default
-                        write(msg,'("[cg_list_bnd:bnd_u:sane_bnd] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+            do side = LO, HI
+
+               select case (dom%bnd(dir, side))
+                  case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
+                     ! Do nothing
+                  case (BND_FC, BND_MPI_FC)
+                     call die("[cg_list_bnd:init_fluidboundaries] fine-coarse interfaces not implemented yet")
+                  case (BND_COR)
+                     if (dir == zdim) then
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
                         call warn(msg)
-                 end select
-              enddo
-           endif
+                     endif
+                  case (BND_SHE)
+                     if (dir /= xdim) then
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case (BND_OUTH)
+                     if (dir == zdim) then
+                        if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
+                        !nontrivial not really checked
+                     else
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case (BND_OUTHD)
+                     if (dir == zdim) then
+                        if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
+                        !nontrivial not really checked
+                     else
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case default
+                     write(msg,'("[cg_list_bnd:init_fluidboundaries] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                          side, dom%bnd(dir, side), dir
+                     call warn(msg)
+               end select
+            enddo
          enddo
 
-      end subroutine sane_bnd
+      end subroutine init_fluidboundaries
 
    end subroutine bnd_u
 

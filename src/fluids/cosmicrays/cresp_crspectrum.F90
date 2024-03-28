@@ -38,7 +38,7 @@ module cresp_crspectrum
 
    private ! most of it
    public :: cresp_update_cell, cresp_init_state, cresp_get_scaled_init_spectrum, cleanup_cresp, cresp_allocate_all, &
-      &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
+      &      src_gpcresp, p_rch_init, detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content, fq_to_e, fq_to_n, q
 
    integer, dimension(1:2)            :: fail_count_NR_2dim, fail_count_interpol
    integer(kind=4), allocatable, dimension(:) :: fail_count_comp_q
@@ -102,7 +102,7 @@ contains
 
 !----- main subroutine -----
 
-   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, p_out, substeps)
+   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, cfl_cresp_violation, q1, i_spc, substeps, p_out)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
 #ifdef CRESP_VERBOSED
@@ -111,7 +111,7 @@ contains
       use diagnostics,    only: decr_vec
       use global,         only: disallow_CRnegatives
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms
+      use initcrspectrum, only: allow_unnatural_transfer, crel, dfpq, e_small_approx_p, nullify_empty_bins, p_mid_fix, p_fix, spec_mod_trms, p_bnd
 
       implicit none
 
@@ -119,11 +119,13 @@ contains
       real, dimension(1:ncrb),        intent(inout) :: n_inout, e_inout
       type(spec_mod_trms),            intent(in)    :: sptab
       logical,                        intent(inout) :: cfl_cresp_violation
+      integer(kind=4),                intent(in)    :: i_spc
       real, dimension(1:2), optional, intent(inout) :: p_out
       integer(kind=4), optional,      intent(in)    :: substeps
 
       logical                                       :: solve_fail_lo, solve_fail_up, empty_cell
       integer                                       :: i_sub, n_substep
+      real, dimension(ncrb), intent(out)            :: q1
 
       e = zero; n = zero; edt = zero; ndt = zero
       solve_fail_lo = .false.
@@ -161,7 +163,7 @@ contains
          endif
       endif
 
-      call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
+      call cresp_find_prepare_spectrum(n_inout, e_inout, i_spc, empty_cell)
 
       if (empty_cell) then
          approx_p = e_small_approx_p         !< restore approximation before leaving
@@ -177,17 +179,21 @@ contains
 ! We pass values of external n_inout and e_inout to n and e after these've been preprocessed
       n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
       e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
+      !print *, 'n_inout : ', n_inout
+      !print *, 'e_inout : ', e_inout
 
+      !print *, 'n : ', n
+      !print *, 'e : ', e
       if (approx_p(HI) > 0) then
-         if (i_cut(HI) > 1) then
-            call get_fqp_cutoff(HI, solve_fail_up)
-         else                                                  !< spectrum cutoff beyond the fixed momentum grid
+         if (i_cut(HI) > 1 .and. p_bnd=='mov') then
+            call get_fqp_cutoff(HI, i_spc, solve_fail_up)
+         else if (i_cut(HI) > 1 .and. p_bnd=='fix') then  !< spectrum cutoff beyond the fixed momentum grid
             p_cut(HI)     = p_fix(i_cut(HI))
             p(i_cut(HI))  = p_fix(i_cut(HI))
             solve_fail_up = .false.
          endif
 
-         if (solve_fail_up) then                               !< exit_code support
+         if (solve_fail_up) then !< exit_code support
             if (i_cut(HI) < ncrb) then
                if (allow_unnatural_transfer) call manually_deactivate_bin_via_transfer(i_cut(HI), -I_ONE, n, e)
                call decr_vec(active_bins, num_active_bins)
@@ -207,9 +213,9 @@ contains
       endif
 
       if (approx_p(LO) > 0) then
-         if (i_cut(LO) + 1 /= ncrb) then
-            call get_fqp_cutoff(LO, solve_fail_lo)
-         else                                                  !< spectrum cutoff beyond the fixed momentum grid
+         if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='mov') then
+            call get_fqp_cutoff(LO, i_spc,solve_fail_lo)
+         else if (i_cut(LO) + 1 /= ncrb .and. p_bnd=='fix') then !< spectrum cutoff beyond the fixed momentum grid
             p_cut(LO)     = p_fix(i_cut(LO))
             p(i_cut(LO))  = p_cut(LO)
             solve_fail_lo = .false.
@@ -255,7 +261,7 @@ contains
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_cut(LO) and p_cut(HI) at [t]
 ! Note that new [t+dt] values of p_cut(LO) and p_cut(HI) in case new fixed edges appear or disappear.
 ! fill new bins
-         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
+         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next, i_spc)
 
 ! Computing e and n at [t+dt]
 
@@ -264,18 +270,18 @@ contains
 
 ! edt(1:ncrb) = e(1:ncrb) *(one-0.5*dt*r(1:ncrb)) - (eflux(1:ncrb) - eflux(0:ncrb-1))/(one+0.5*dt*r(1:ncrb))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-         call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+         call cresp_compute_r(sptab%ub, sptab%ud, p_next, active_bins_next, i_spc)                 ! new active bins already received some particles, Ri is needed for those bins too
 
          edt(1:ncrb) = edt(1:ncrb) *(one-dt*r(1:ncrb))
 
          if (allow_unnatural_transfer) then
             if ((del_i(HI) == 0) .and. (approx_p(HI) > 0) .and. (i_cut_next(HI)-1 > 0)) then
-               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_cut_next(HI))) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(HI)), edt(i_cut_next(HI)), i_spc, i_cut_next(HI))) then
                   call manually_deactivate_bin_via_transfer(i_cut_next(HI), -I_ONE, ndt, edt)
                endif
             endif
             if ((del_i(LO) == 0) .and. (approx_p(LO) > 0) .and. (i_cut_next(LO)+2 <= ncrb)) then
-               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_cut_next(LO))) then
+               if (.not. assert_active_bin_via_nei(ndt(i_cut_next(LO)+1), edt(i_cut_next(LO)+1), i_spc, i_cut_next(LO))) then
                   call manually_deactivate_bin_via_transfer(i_cut_next(LO) + I_ONE, I_ONE, ndt, edt)
                endif
             endif
@@ -306,8 +312,11 @@ contains
                   return
                endif
             endif
+            !print *, 'n(before neq):', n
+            !print *, 'e(before neq):', e
 
-            call ne_to_q(n, e, q, active_bins)  !< begins new step
+
+            call ne_to_q(n, e, q, active_bins, i_spc)  !< begins new step
             f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)  !< Compute values of distribution function in the new step
          endif
 
@@ -363,16 +372,20 @@ contains
       n_tot = sum(n)
       e_tot = sum(e)
 
+      !print *, 'dfpq dump : ', dfpq%any_dump
+      !stop
 ! --- saving the data to output arrays
-      if (dfpq%any_dump) then
-         crel%p = p
-         crel%f = f
-         crel%q = q
-         crel%e = e
-         crel%n = n
-         crel%i_cut = i_cut
-      endif
-
+      !if (dfpq%any_dump) then
+      !  crel%p = p
+      !crel%f = f
+      crel%q = q ! Temporary fix for passing the q value to cresp_update_grid
+      !crel%e = e
+      !crel%n = n
+      !crel%i_cut = i_cut
+      !endif
+      q1=q
+      !print *, 'q : ', q1
+      !stop
       n_inout = n  ! number density of electrons per bin passed back to the external module
       e_inout = e  ! energy density of electrons per bin passed back to the external module
 
@@ -492,7 +505,7 @@ contains
 
    end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
+   subroutine cresp_find_prepare_spectrum(n, e, i_spc, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero, I_ONE
 #ifdef CRESP_VERBOSED
@@ -509,6 +522,7 @@ contains
       integer(kind=4), optional, intent(out)     :: i_up_out
       integer(kind=8), dimension(:), allocatable :: nonempty_bins
       logical, dimension(ncrb)                   :: has_n_gt_zero, has_e_gt_zero
+      integer(kind=4),           intent(in)      :: i_spc
       integer(kind=4)                            :: i, num_has_gt_zero
       integer(kind=4), dimension(LO:HI)          :: approx_p_tmp, pre_i_cut
 
@@ -567,7 +581,7 @@ contains
       approx_p = I_ZERO
       i_cut = pre_i_cut                         !< make ne_to_q happy, FIXME - add cutoff indices to argument list
 
-      call ne_to_q(n, e, q, active_bins)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
+      call ne_to_q(n, e, q, active_bins, i_spc)        !< Compute power indexes for each bin at [t] and f on left bin faces at [t]
 
       f = nq_to_f(p(I_ZERO:ncrb-I_ONE), p(I_ONE:ncrb), n(I_ONE:ncrb), q(I_ONE:ncrb), active_bins)  !< Compute values of distribution function f for active left edges at [t]
 
@@ -684,13 +698,12 @@ contains
    end subroutine cresp_find_prepare_spectrum
 !----------------------------------------------------------------------------------------------------
 
-   logical function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
+   logical function assert_active_bin_via_nei(n_in, e_in, i_cutoff, i_spc)
 
       use constants,       only: zero, fpi, one, three
-      use cresp_variables, only: clight_cresp
       use cresp_NR_method, only: compute_q
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: p_fix, e_small, eps
+      use initcrspectrum,  only: p_fix, g_fix, e_small, eps, three_ps
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: printinfo, msg
 #endif /* CRESP_VERBOSED */
@@ -698,9 +711,11 @@ contains
       implicit none
 
       real,            intent(in) :: n_in, e_in
-      integer(kind=4), intent(in) :: i_cutoff
+      integer(kind=4), intent(in) :: i_cutoff, i_spc
       real                        :: f_one, q_one, q_1m3, p_l, p_r, e_amplitude_l, e_amplitude_r, alpha
       logical                     :: exit_code
+
+      !print *, "salut tout l'monde ! "
 
       assert_active_bin_via_nei = .false.
 
@@ -712,8 +727,8 @@ contains
          endif
 
          exit_code = .true.
-         alpha = e_in/(n_in * clight_cresp * p_fix(i_cutoff-1))
-         q_one = compute_q(alpha, exit_code)
+         alpha = e_in/(n_in * g_fix(i_spc,i_cutoff-1))
+         q_one = compute_q(alpha, three_ps(i_spc,i_cutoff-1), exit_code)
          q_1m3 = three - q_one
 
          p_l = p_fix(i_cutoff-1)
@@ -807,7 +822,7 @@ contains
       use dataio_pub,     only: msg, printinfo
 #endif /* CRESP_VERBOSED */
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, cresp_all_bins, cresp_all_edges
+      use initcrspectrum, only: p_fix, cresp_all_bins, cresp_all_edges, p_bnd
 
       implicit none
 
@@ -821,20 +836,36 @@ contains
 ! Compute p_cut at [t+dt] (update p_range)
       p_cut_next = p_cut * (one + [p_rch(uddt, ubdt*p_cut(LO)), p_rch(uddt, ubdt*p_cut(HI))]) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
       p_cut_next = abs(p_cut_next)
+
+      if (p_bnd == 'fix') then
+
+         p_cut_next(LO) = max(p_cut(LO), p_cut_next(LO))
+         p_cut_next(HI) = min(p_cut(HI), p_cut_next(HI))
+
+      else if (p_bnd == 'mov') then
 ! Compute likely cut-off indices after current timestep
-      i_cut_next = get_i_cut(p_cut_next)
-      i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
-      i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
+         i_cut_next = get_i_cut(p_cut_next)
+         i_cut_next(LO) = max(i_cut_next(LO), i_cut(LO)- I_ONE)
+         i_cut_next(LO) = min(i_cut_next(LO), i_cut(LO)+ I_ONE)
 
-      i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
-      i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
+         i_cut_next(HI) = max(i_cut_next(HI), i_cut(HI)- I_ONE)
+         i_cut_next(HI) = min(i_cut_next(HI), i_cut(HI)+ I_ONE)
 
-      if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
-         dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
-         return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
-      endif
+         if (p_cut_next(HI) < p_fix(i_cut_next(HI)- I_ONE)) then ! if no solution is found at the first try, approximation usually causes p_cut(HI) to jump
+            dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_cut_next(HI) to even
+            return                               ! become negative. As p_cut(HI) would propagate more than one bin this is clearly cfl violation.
+         endif
+
 ! Detect changes in positions of lower an upper cut-ofs
-      del_i = i_cut_next - i_cut
+         del_i = i_cut_next - i_cut
+
+      endif
+
+      !print *, 'p_cut : ', p_cut
+      !print *, 'p_cut_next : ', p_cut_next
+
+
+
 
 ! Construct index arrays for fixed edges between p_cut(LO) and p_cut(HI), active edges after timestep
       call arrange_assoc_active_edge_arrays(fixed_edges_next,  is_fixed_edge_next,  num_fixed_edges_next,  [i_cut_next(LO) + I_ONE, i_cut_next(HI) - I_ONE])
@@ -915,22 +946,24 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_init_state(init_n, init_e)
 
-      use constants,      only: zero, I_ZERO, I_ONE
-      use cresp_helpers,  only: bound_name
-      use dataio_pub,     only: warn, msg, die, printinfo
-      use initcosmicrays, only: ncrb
-      use initcrspectrum, only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
-                             &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins
-      use mpisetup,       only: master
+      use constants,       only: zero, I_ZERO, I_ONE
+      use cresp_helpers,   only: bound_name
+      use dataio_pub,      only: warn, msg, die, printinfo
+      use initcosmicrays,  only: ncrb, nspc
+      use initcrspectrum,  only: q_init, p_init, initial_spectrum, eps, p_fix, f_init, dfpq, crel,   &
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p, total_init_cree, e_small, cresp_all_bins, g_fix, p_bnd
+      use mpisetup,        only: master
 
       implicit none
 
-      real, dimension(I_ONE:ncrb), intent(out) :: init_n, init_e
-      integer                                  :: i, k
+      real, dimension(I_ONE:nspc,I_ONE:ncrb), intent(out) :: init_n, init_e
+      integer(kind=4)                          :: i, k, i_spc
       integer(kind=4)                          :: co
       integer(kind=4), dimension(LO:HI)        :: i_ch
       real                                     :: c
       logical                                  :: exit_code
+
+      print *, 'In init_state'
 
       max_ic = [I_ZERO, ncrb]
       fail_count_interpol = 0
@@ -943,138 +976,180 @@ contains
       init_e = zero
       init_n = zero
 
-      f = zero ; q = zero ; p = zero ; n = zero ; e = zero
+      print *, 'p_init: ', p_init
 
-      q = q_init
+      do i_spc = 1, nspc
+         print *, 'i_spc (in init_state): ', i_spc
+        f = zero ; q = zero ; p = zero ; n = zero ; e = zero
+
 ! reading initial values of p_cut
-      p_cut = p_init
+        print *, 'p_cut: ', p_cut
+        !print *, 'p_init: ', p_i
+        p_cut = p_init(:,i_spc)
 
       p         = p_fix       ! actual array of p including free edges, p_fix shared via initcrspectrum
-      p(max_ic) = p_cut
+      !p(max_ic) = p_cut
 
 ! Sorting bin edges - arbitrary chosen p_cut may need to be sorted to appear in growing order
-      do k = ncrb, 1, -1
-         do i = 0, k-1
-            if (p(i) > p(i+1)) then
-               c = p(i)
-               p(i) = p(i+1)
-               p(i+1) = c
-            endif
-         enddo
-      enddo
+        do k = ncrb, 1, -1
+            do i = 0, k-1
+                if (p(i) > p(i+1)) then
+                c = p(i)
+                p(i) = p(i+1)
+                p(i+1) = c
+                endif
+            enddo
+        enddo
 
-      i_cut = max_ic
+        i_cut = max_ic
 
 ! we only need cresp_init_state to derive (n, e) from initial (f, p_cut). For this purpose only 'active bins', i_cut are needed.
 
-      i_cut = get_i_cut(p_cut)
+        i_cut = get_i_cut(p_cut)
 
-      do co = LO, HI
-         if (abs(p_init(co) - p_fix(i_cut(co)+oz(co)-1)) <= eps ) then
-            write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(",bound_name(co),") = p_fix(i_cut(",bound_name(co),"): (in/dec)crementing i_cut(",bound_name(co),") index to avoid FPE"
-            if (master) call warn(msg)
-            i_cut(co) = i_cut(co) + pm(co)
-         endif
-      enddo
+        print *, 'i_spc, p_cut, i_cut =', i_spc, p_cut, i_cut
 
-      is_active_bin = .false.
-      is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
-      num_active_bins = count(is_active_bin)
-      allocate(active_bins(num_active_bins))
-      active_bins = pack(cresp_all_bins, is_active_bin)
+        do co = LO, HI
+            if (abs(p_init(co,i_spc) - p_fix(i_cut(co)+oz(co)-1)) <= eps ) then
+                write(msg, *) "[cresp_crspectrum:cresp_init_state] p_init(",bound_name(co),") = p_fix(i_cut(",bound_name(co),"): (in/dec)crementing i_cut(",bound_name(co),") index to avoid FPE"
+                if (master) call warn(msg)
+                i_cut(co) = i_cut(co) + pm(co)
+            endif
+        enddo
+
+        is_active_bin = .false.
+        is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
+        num_active_bins = count(is_active_bin)
+        allocate(active_bins(num_active_bins))
+        active_bins = pack(cresp_all_bins, is_active_bin)
 
 ! Pure power law spectrum initial condition (default case)
-      q = q_init
-      f = zero
-      f = f_init * (p/p_init(LO))**(-q_init)
 
-      select case (initial_spectrum)
-         case ('powl')
-            call cresp_init_powl_spectrum
-         case ('brpg')
-            call cresp_init_brpg_spectrum
-         case ('plpc')
-            call cresp_init_plpc_spectrum
-         case ('brpl')
-            call cresp_init_brpl_spectrum
-         case ('symf')
-            call cresp_init_symf_spectrum
-         case ('syme')
-            call cresp_init_syme_spectrum
-         case ('bump')
-            call cresp_init_bump_spectrum
-         case default
-            write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_spectrum (",initial_spectrum,"). Make sure that value is correctly provided."
-            call die(msg)
-      end select
+        q = q_init(i_spc)
+        f = f_init(i_spc) * (p/p_init(LO, i_spc))**(-q_init(i_spc))
 
-      if (e_small_approx_init_cond > 0) then
-         do co = LO, HI
-            call get_fqp_cutoff(co, exit_code)
-            if (exit_code) then
-               write(msg,*) "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but solution for initial spectrum ",bound_name(co)," cutoff not found, exiting! "
-               call die(msg)
-            endif
-         enddo
+        print *, 'p_init : ', p_init
+        print *, 'f_init : ', f_init
+        print *, 'q_init : ', q_init
 
-         if (allow_source_spectrum_break) then
+        select case (initial_spectrum)
+            case ('powl')
+                call cresp_init_powl_spectrum(i_spc)
+            case ('brpg')
+                call cresp_init_brpg_spectrum(i_spc)
+            case ('plpc')
+                call cresp_init_plpc_spectrum(i_spc)
+            case ('brpl')
+                call cresp_init_brpl_spectrum(i_spc)
+            case ('symf')
+                call cresp_init_symf_spectrum(i_spc)
+            case ('syme')
+                call cresp_init_syme_spectrum(i_spc)
+            case ('bump')
+                call cresp_init_bump_spectrum(i_spc)
+            case default
+                write(msg,"(A,A,A)") "[cresp_crspectrum:cresp_init_state] Provided unrecognized initial_spectrum (",initial_spectrum,"). Make sure that value is correctly provided."
+                call die(msg)
+        end select
 
-            i_ch = get_i_cut(p_cut)
-
-            p(i_ch)     = p_cut
-            q(i_ch+oz)  = q(i_cut+oz)
-            f(i_ch(LO)) = e_small_to_f(p_cut(LO))
-            f(i_ch(HI)) = e_small_to_f(p_cut(HI))
-
-            do i = i_ch(LO)+1, i_cut(LO)
-               p(i) = p_fix(i)
-               f(i) = f(i_ch(LO)) * (p_fix(i)/p(i_ch(LO)))**(-q(i_ch(LO)+1))
-               q(i+1) = q(i_ch(LO)+1)
+        if (e_small_approx_init_cond > 0) then  ! Possible bug: len(p_bnd) == idlen == 3
+            do co = LO, HI
+                if (p_bnd=='mov') then
+                  call get_fqp_cutoff(co, i_spc, exit_code)
+                  if (exit_code) then
+                     write(msg,"(a,a,a,i3)") "[cresp_crspectrum:cresp_init_state] e_small_approx_init_cond = 1, but failed to solve initial spectrum cutoff '",bound_name(co),"' for CR component #", i_spc
+                     call die(msg)
+                  endif
+                else if (p_bnd=='fix') then
+                  p_cut(co)     = p_fix(i_cut(co))
+                  p(i_cut(co))  = p_fix(i_cut(co))
+                endif
+                print *, 'p_cut(',co,') : ', p_cut(co)
             enddo
+            !stop
 
-            do i = i_cut(HI), i_ch(HI)-1
-               p(i) = p_fix(i)
-               f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
-               q(i) = q(i_cut(HI))
-            enddo
+            if (allow_source_spectrum_break) then
+
+                i_ch = get_i_cut(p_cut)
+
+                p(i_ch)     = p_cut
+                q(i_ch+oz)  = q(i_cut+oz)
+                f(i_ch(LO)) = e_small_to_f(p_cut(LO))
+                f(i_ch(HI)) = e_small_to_f(p_cut(HI))
+
+                print *, 'if allow source spectrum break selected'
+
+                do i = i_ch(LO)+1, i_cut(LO)
+                p(i) = p_fix(i)
+                f(i) = f(i_ch(LO)) * (p_fix(i)/p(i_ch(LO)))**(-q(i_ch(LO)+1))
+                q(i+1) = q(i_ch(LO)+1)
+                enddo
+
+                do i = i_cut(HI), i_ch(HI)-1
+                p(i) = p_fix(i)
+                f(i) = f(i_cut(HI)-1)* (p_fix(i)/p_fix(i_cut(HI)-1))**(-q(i_cut(HI)))
+                q(i) = q(i_cut(HI))
+                enddo
+
 #ifdef CRESP_VERBOSED
-            write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_ch(LO), i_cut(LO), ' |', i_ch(HI), i_cut(HI)     ; call printinfo(msg)
+                write (msg,"(A,2I3,A,2I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_ch(LO), i_cut(LO), ' |', i_ch(HI), i_cut(HI)     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-            i_cut = i_ch
-            p(i_cut(HI)) = p_cut(HI)
+                i_cut = i_ch
+                p(i_cut(HI)) = p_cut(HI)
 
-            is_active_bin = .false.
-            is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
-            num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            if (allocated(active_bins)) deallocate(active_bins)
-            allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            active_bins = pack(cresp_all_bins, is_active_bin)
+                is_active_bin = .false.
+                is_active_bin(i_cut(LO)+1:i_cut(HI)) = .true.
+                num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
+                if (allocated(active_bins)) deallocate(active_bins)
+                allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
+                active_bins = pack(cresp_all_bins, is_active_bin)
 
-            e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins) ! once again we must count n and e
-            n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
-         endif
-      endif
+                e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(i_spc, 0:ncrb-1), q(1:ncrb), active_bins, i_spc) ! once again we must count n and e
+                n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+            endif
+        endif
 
-      if (dfpq%any_dump) then
-         crel%p = p
-         crel%f = f
-         crel%q = q
-         crel%e = e
-         crel%n = n
-         crel%i_cut = i_cut
-      endif
+        if (dfpq%any_dump) then
+            crel%p = p
+            crel%f = f
+            crel%q = q
+            crel%e = e
+            crel%n = n
+            crel%i_cut = i_cut
+        endif
 
-      if (master) call check_init_spectrum
+        if (master) call check_init_spectrum(i_spc)
 
-      n_tot0 = sum(n)
-      e_tot0 = sum(e)
+        n_tot0 = sum(n)
+        e_tot0 = sum(e)
 
-      init_n = n
-      init_e = e
+        init_n(i_spc,:) = n(:)
+        init_e(i_spc,:) = e(:)
 
-      total_init_cree = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
-      call deallocate_active_arrays
+
+        print *, 'call check_init_spectrum + the end !'
+        print *, 'act.bins: ', active_bins
+        print *, 'i_cut : ', i_cut
+        print *, 'p     : ', p
+        print *, 'q     : ', q
+        print *, 'n     : ', n
+        print *, 'e     : ', e
+        print *, 'n_tot0 =', n_tot0
+        print *, 'e_tot0 =', e_tot0
+
+        ! Test for consistency of conversion (f,q) <--> (n,e)
+        ! Compute power indexes for each bin at [t], from n and ekin
+        call ne_to_q(n, e, q, active_bins, i_spc)
+        ! Compute f on left bin faces at [t]
+        f = nq_to_f(p(0:ncrb-1), p(1:ncrb), n(1:ncrb), q(1:ncrb), active_bins)
+        print *, 'test f =',  f
+        print *, 'test q =',  q
+
+
+        total_init_cree(i_spc) = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
+        call deallocate_active_arrays
+      enddo
 
    end subroutine cresp_init_state
 
@@ -1098,35 +1173,37 @@ contains
 !>
 !! \brief Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but init_state cannot be called from "outside".
 !<
-   subroutine cresp_init_powl_spectrum
+   subroutine cresp_init_powl_spectrum(i_spc)
 
       use constants,      only: zero
       use diagnostics,    only: my_deallocate
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init
+      use initcrspectrum, only: cresp_all_bins, cresp_all_edges, f_init, p_fix, p_init, q_init, g_fix
 
       implicit none
 
       real, dimension(0:ncrb)                    :: p_range_add
       integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
       integer(kind=4), dimension(LO:HI)          :: ic
+      integer,                        intent(in) :: i_spc
 
       p_range_add = zero
-      ic = get_i_cut(p_init)
+      ic = get_i_cut(p_init(:,i_spc))
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      p_range_add(ic(LO)) = p_init(LO)
-      p_range_add(ic(HI)) = p_init(HI)
+      p_range_add(ic(LO)) = p_init(LO, i_spc)
+      p_range_add(ic(HI)) = p_init(HI, i_spc)
+      !print *, 'p_range_add : ', p_range_add
       if (.not.allocated(act_edges)) allocate(act_edges(ic(HI) - ic(LO)  ))
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
       act_edges = cresp_all_edges(ic(LO)  :ic(HI))
       act_bins  = cresp_all_bins (ic(LO)+1:ic(HI))
-      q(act_bins) = q_init
+      q(act_bins) = q_init(i_spc)
 
-      f(act_edges) = f_init * (p_range_add(act_edges)/p_init(LO))**(-q_init)
+      f(act_edges) = f_init(i_spc) * (p_range_add(act_edges)/p_init(LO, i_spc))**(-q_init(i_spc))
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(i_spc,0:ncrb-1), q(1:ncrb), act_bins, i_spc)
 
       call my_deallocate(act_bins)
       call my_deallocate(act_edges)
@@ -1138,13 +1215,13 @@ contains
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope is parabolic
 !! in ranges (p_init(LO); p_br_init(LO)) and (p_br_init(HI); p_init(HI)) and reaches e_small imposed value at cutoffs.
 !<
-   subroutine cresp_init_plpc_spectrum
+   subroutine cresp_init_plpc_spectrum(i_spc)
 
       use constants,       only: zero, one, two, three, ten, I_ONE
       use cresp_variables, only: fpcc
       use diagnostics,     only: my_deallocate
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init
+      use initcrspectrum,  only: cresp_all_bins, e_small, f_init, p_br_init, p_fix, p_init, q_init, g_fix
 
       implicit none
 
@@ -1153,26 +1230,27 @@ contains
       integer(kind=4), allocatable, dimension(:) :: act_bins
       integer(kind=4), dimension(LO:HI)          :: ic
       integer(kind=4)                            :: i_br, i
+      integer,                        intent(in) :: i_spc
 
       p_range_add(:) = zero
-      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
-      ic = get_i_cut(p_init)
+      i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
+      ic = get_i_cut(p_init(:,i_spc))
 
       p_range_add(ic(LO):ic(HI)) = p_fix(ic(LO):ic(HI))
-      p_range_add(ic)            = p_init
+      p_range_add(ic)            = p_init(:,i_spc)
 
-      f(ic(LO):ic(HI)) = f_init * (p_range_add(ic(LO):ic(HI))/p_br_init(LO))**(-q_init)
-      q(ic(LO):ic(HI)) = q_init
+      f(ic(LO):ic(HI)) = f_init(i_spc) * (p_range_add(ic(LO):ic(HI))/p_br_init(LO, i_spc))**(-q_init(i_spc))
+      q(ic(LO)+1:ic(HI)) = q_init(i_spc)
 
       if (.not.allocated(act_bins )) allocate( act_bins(ic(HI) - ic(LO)+1))
       act_bins = cresp_all_bins(ic(LO)+1:ic(HI))
 
-      lpl = log10(p_init(LO))
-      lpb = log10(p_br_init(LO))
+      lpl = log10(p_init(LO, i_spc))
+      lpb = log10(p_br_init(LO, i_spc))
       lp_lpb = lpl / lpb
 
-      a = -q_init
-      b = log10(f_init * p_br_init(LO)**q_init)
+      a = -q_init(i_spc)
+      b = log10(f_init(i_spc) * p_br_init(LO, i_spc)**q_init(i_spc))
 
       c_3 =  (-three * lpl + log10(e_small / fpcc) + b * lp_lpb - a * lpl - two * b * lp_lpb ) / (lp_lpb - one)**two
       c_1 =  (c_3 - b) / lpb**two
@@ -1185,10 +1263,10 @@ contains
       enddo
 
 ! HIGH ENERGY CUTOFF; a and b remain unchanged
-      i_br = int(minloc(abs(p_fix - p_br_init(HI)), dim=1), kind=4)
+      i_br = int(minloc(abs(p_fix - p_br_init(HI, i_spc)), dim=1), kind=4)
 
-      lpu = log10(p_init(HI))
-      lpb = log10(p_br_init(HI))
+      lpu = log10(p_init(HI, i_spc))
+      lpb = log10(p_br_init(HI, i_spc))
       lp_lpb = lpu / lpb
 
       c_3 =  (-three * lpu + log10(e_small / fpcc) + b * lp_lpb - a * lpu - two * b * lp_lpb) / (lp_lpb - one)**two
@@ -1202,7 +1280,7 @@ contains
       enddo
 
       n = n + fq_to_n(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
-      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), q(1:ncrb), act_bins)
+      e = e + fq_to_e(p_range_add(0:ncrb-1), p_range_add(1:ncrb), f(0:ncrb-1), g_fix(i_spc, 0:ncrb-1), q(1:ncrb), act_bins, i_spc)
 
       call my_deallocate(act_bins)
 
@@ -1212,22 +1290,23 @@ contains
 !! \brief Power-law like spectrum with break at p_br_init_lo
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is gaussian. q_br_init scales FWHM.
 !<
-   subroutine cresp_init_brpg_spectrum
+   subroutine cresp_init_brpg_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init
+      use initcrspectrum, only: p_fix, p_br_init, p_init, q_br_init, g_fix
 
       implicit none
 
-      integer(kind=4) :: i, i_br
+      integer(kind=4)     :: i, i_br
+      integer, intent(in) :: i_spc
 
-      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
-      f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO) * p(i_br)))**2))
+      i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
+      f(i_cut(LO):i_br-1) = f(i_br-1) * exp(-(q_br_init(i_spc)*log(2.0) * log(p(i_cut(LO):i_br-1)/sqrt(p_init(LO, i_spc) * p(i_br)))**2))
       do i = 1, i_br
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(i_spc, 0:ncrb-1), q(1:ncrb), active_bins, i_spc)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpg_spectrum
@@ -1236,20 +1315,21 @@ contains
 !! \brief Power-law like spectrum with break at p_br_init_lo
 !! \details In this case initial spectrum with a break at p_min_fix is assumed, the initial slope on the left side of the break is q_br_init.
 !<
-   subroutine cresp_init_brpl_spectrum
+   subroutine cresp_init_brpl_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init
+      use initcrspectrum, only: p_fix, p_br_init, q_br_init, q_init, g_fix
 
       implicit none
 
-      integer(kind=4) :: i_br
+      integer(kind=4)     :: i_br
+      integer, intent(in) :: i_spc
 
-      i_br = int(minloc(abs(p_fix - p_br_init(LO)), dim=1), kind=4) - I_ONE
-      q(:i_br) = q_br_init ; q(i_br+1:) = q_init
-      f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init)
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      i_br = int(minloc(abs(p_fix - p_br_init(LO, i_spc)), dim=1), kind=4) - I_ONE
+      q(:i_br) = q_br_init(i_spc) ; q(i_br+1:) = q_init(i_spc)
+      f(i_cut(LO):i_br-1) = f(i_br) * (p(i_cut(LO):i_br-1) / p(i_br))**(-q_br_init(i_spc))
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(i_spc, 0:ncrb-1), q(1:ncrb), active_bins, i_spc)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_brpl_spectrum
@@ -1257,18 +1337,19 @@ contains
 !>
 !!\brief symf - similar to syme, but symmetric in distribution function
 !<
-   subroutine cresp_init_symf_spectrum
+   subroutine cresp_init_symf_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init
+      use initcrspectrum, only: p_fix, q_init, g_fix
 
       implicit none
 
-      integer(kind=4) :: i, i_br
+      integer(kind=4)     :: i, i_br
+      integer, intent(in) :: i_spc
 
       i_br = int(sum(i_cut)/2, kind=4)
-      q(i_cut(LO)+1:i_br) = -q_init
+      q(i_cut(LO)+1:i_br) = -q_init(i_spc)
       f(i_br) = f(i_br+1)*(p(i_br+1)/p(i_br))**(-q(i_br))
 
       do i = 1, i_br-i_cut(LO)
@@ -1277,7 +1358,7 @@ contains
 
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) - I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(i_spc, 0:ncrb-1), q(1:ncrb), active_bins, i_spc)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_symf_spectrum
@@ -1285,24 +1366,25 @@ contains
 !>
 !!\brief syme - symmetric energy distribution relative to the middle of the initial spectrum
 !<
-   subroutine cresp_init_syme_spectrum
+   subroutine cresp_init_syme_spectrum(i_spc)
 
       use constants,      only: I_ONE
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: p_fix, q_init
+      use initcrspectrum, only: p_fix, q_init, g_fix
 
       implicit none
 
-      integer(kind=4) :: i, i_br
+      integer(kind=4)     :: i, i_br
+      integer, intent(in) :: i_spc
 
       i_br = int(sum(i_cut)/2, kind=4)
-      q(i_cut(LO)+1:i_br) = q_init-2.2
+      q(i_cut(LO)+1:i_br) = q_init(i_spc)-2.2
       do i = 1, i_br-i_cut(LO)
          f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
       enddo
       if ((i_cut(HI) - i_br /= i_br - i_cut(LO))) p_cut(HI) = p_cut(HI) - (p_cut(HI) - p_fix(i_cut(HI)-1))
       p(i_cut(HI)) = p_cut(HI) ; i_cut(HI) = i_cut(HI) -I_ONE
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(i_spc,0:ncrb-1), q(1:ncrb), active_bins,i_spc)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_syme_spectrum
@@ -1311,40 +1393,42 @@ contains
 !! \brief Gaussian bump-type initial condition for energy distribution
 !! \todo @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 !<
-   subroutine cresp_init_bump_spectrum
+   subroutine cresp_init_bump_spectrum(i_spc)
 
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: f_init, p_init
+      use initcrspectrum,  only: f_init, p_init, g_fix
 
       implicit none
 
-      integer(kind=4) :: i
+      integer(kind=4)     :: i
+      integer, intent(in) :: i_spc
 
-      f = f_init * exp(-(4*log(2.0)*log(p/sqrt(p_init(LO)*p_init(HI)/1.))**2)) ! FWHM
+      f = f_init(i_spc) * exp(-(4.*log(2.0)*log(p/sqrt(p_init(LO, i_spc)*p_init(HI, i_spc))/1.))**2) ! FWHM
       f(0:ncrb-1) = f(0:ncrb-1) / (fpcc * p(0:ncrb-1)**3) ! without this spectrum is gaussian for distribution function
       do i = 1, ncrb
          q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
       enddo
-      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
+      e = fq_to_e(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), g_fix(i_spc, 0:ncrb-1), q(1:ncrb), active_bins, i_spc)
       n = fq_to_n(p(0:ncrb-1), p(1:ncrb), f(0:ncrb-1), q(1:ncrb), active_bins)
 
    end subroutine cresp_init_bump_spectrum
 
 !-------------------------------------------------------------------------------------------------
 
-   subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
+   subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total, i_spc) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
 
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: norm_init_spectrum, total_init_cree
+      use initcrspectrum, only: norm_init_spectrum_e, norm_init_spectrum_n, total_init_cree
 
       implicit none
 
       real, dimension(1:ncrb), intent(inout) :: n_inout, e_inout
       real,                    intent(in)    :: e_in_total
+      integer,                 intent(in)    :: i_spc
 
-      n_inout = norm_init_spectrum%n * e_in_total / total_init_cree
-      e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
+      n_inout(:) = norm_init_spectrum_n(i_spc,:) * e_in_total / total_init_cree(i_spc)
+      e_inout(:) = norm_init_spectrum_e(i_spc,:) * e_in_total / total_init_cree(i_spc)
 
    end subroutine cresp_get_scaled_init_spectrum
 
@@ -1361,6 +1445,8 @@ contains
       integer(kind=4)                    :: side
 
       do side = LO, HI
+         !print *, 'side : ', side, 'pc(side) : ', pc(side), 'p_fix(1) : ', p_fix(1)
+
          gic(side) = int(floor(log10(pc(side)/p_fix(1))/w), kind=4) + side
          gic(side) = max(gic(side), side - I_ONE   )
          gic(side) = min(gic(side), ncrb - oz(side))
@@ -1374,29 +1460,38 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   function fq_to_e(p_l, p_r, f_l, q, bins)
+   function fq_to_e(p_l, p_r, f_l, g_l, q, bins, i_spc)
 
-      use constants,       only: zero, one, four
+      use constants,       only: zero, one, three
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps
+      use initcrspectrum,  only: eps, three_ps
 
       implicit none
 
-      real,            dimension(:), intent(in) :: p_l, p_r, f_l, q
+      real,            dimension(:), intent(in) :: p_l, p_r, f_l, g_l, q
       integer(kind=4), dimension(:), intent(in) :: bins
+      integer(kind=4),               intent(in) :: i_spc
       real,    dimension(size(bins))    :: e_bins
       real,    dimension(1:ncrb)        :: fq_to_e
 
       fq_to_e = zero
-      e_bins = fpcc * f_l(bins) * p_l(bins)**4
-      where (abs(q(bins) - four) > eps)
-         e_bins = e_bins * ((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
+      !print *, 'g_l(bins) : ', g_l(bins)
+      !print *, 'p_l(bins) : ', p_l(bins)
+      !print *, 'three_p_s(bins) : ', three_ps(i_spc,bins)
+      !print *, 'q(bins)   : ', q(bins)
+      e_bins = fpcc * f_l(bins) * g_l(bins) * p_l(bins)**three
+      where (abs(q(bins) - three_ps(i_spc,bins)) > eps)
+         e_bins = e_bins*((p_r(bins)/p_l(bins))**(three_ps(i_spc,bins) - q(bins)) - one)/(three_ps(i_spc,bins) - q(bins))
       elsewhere
          e_bins = e_bins * log(p_r(bins)/p_l(bins))
       endwhere
 
       fq_to_e(bins) = e_bins
+
+      !print *, 'Hello ! '
+
+      !print *, 'fq_to_e : ', fq_to_e(bins)
 
    end function fq_to_e
 !-------------------------------------------------------------------------------------------------
@@ -1452,7 +1547,7 @@ contains
 
 !---------------------------------------------------------------------------------------------------
 
-   subroutine check_init_spectrum
+   subroutine check_init_spectrum(i_spc)
 
       use constants,       only: one, I_ONE
       use cresp_helpers,   only: bound_name
@@ -1464,12 +1559,13 @@ contains
       real                   :: e_small_safe, rel_cut
       real, dimension(LO:HI) :: ec
       integer                :: co
+      integer,    intent(in) :: i_spc
 
       e_small_safe = max(e_small, epsilon(e_small))
 
       do co = LO, HI
          ec = e_small_safe
-         ec(co) = fp_to_e_ampl(p_init(co), f(i_cut(co)-1+oz(co)))
+         ec(co) = fp_to_e_ampl(p_init(co, i_spc), f(i_cut(co)-1+oz(co)))
 
          write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of ", bound_name(co), " energy spectrum cutoff:", ec(co)
          call printinfo(msg)
@@ -1508,24 +1604,34 @@ contains
 ! compute fluxes
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_compute_fluxes(ce,he)
+   subroutine cresp_compute_fluxes(ce,he,i_spc)
 
-      use constants,       only: zero, one, three, four, fpi
+      use constants,       only: zero, one, three, fpi
       use cresp_variables, only: fpcc
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: eps, cresp_all_bins
+      use initcrspectrum,  only: eps, cresp_all_bins, three_ps, s, g_fix
 
       implicit none
 
       integer(kind=4), dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
-      real,    dimension(1:ncrb-1)      :: pimh, pimth, fimh,fimth  ! *imh = i_minus_half, *imth = i_minus_third
-      real,    dimension(1:ncrb-1)      :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
+      integer(kind=4),               intent(in) :: i_spc
+      real,    dimension(1:ncrb-1)      :: pimh, pimth, fimh, fimth, gimh, gimth  ! *imh = i_minus_half, *imth = i_minus_third
+      real,    dimension(1:ncrb-1)      :: dn_upw, de_upw, qi, qim1, sim1, three_ps_i, three_ps_im1  ! *im1 = i_minus_one
 
       pimh(1:ncrb-1) = p(1:ncrb-1)
       pimth(1:ncrb-1) = p(0:ncrb-2)
 
       fimh(1:ncrb-1) = f(1:ncrb-1)
       fimth(1:ncrb-1) = f(0:ncrb-2)
+
+      gimh(1:ncrb-1)  = g_fix(i_spc,1:ncrb-1)
+      gimth(1:ncrb-1) = g_fix(i_spc,0:ncrb-2)
+
+      sim1(1:ncrb-1) = s(i_spc,1:ncrb-1)
+
+
+      three_ps_i(1:ncrb-1)  = three_ps(i_spc,2:ncrb)
+      three_ps_im1(1:ncrb-1) = three_ps(i_spc,1:ncrb-1)
 
       qi(1:ncrb-1)  = q(2:ncrb)
       qim1(1:ncrb-1) = q(1:ncrb-1)
@@ -1543,9 +1649,9 @@ contains
       endwhere
       nflux(ce) = - dn_upw(ce)
 
-      de_upw(ce) = fpcc * fimh(ce) * pimh(ce)**4
-      where (abs(qi(ce) - four) > eps)
-         de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
+      de_upw(ce) = fpcc * fimh(ce) *gimh(ce)*pimh(ce)**three
+      where (abs(qi(ce) - three_ps(i_spc,ce)) > eps)
+         de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(three_ps_i(ce)-qi(ce)) - one)/(three_ps_i(ce) - qi(ce))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
       endwhere
@@ -1571,7 +1677,7 @@ contains
          del_i(HI) = -1
       endif
 
-      dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
+      dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**(qim1(he) - sim1(he))
       where (abs(qim1(he) - three) > eps)
          dn_upw(he) = dn_upw(he)*((pimh(he)/p_upw(he))**(three-qim1(he)) - one)/(three - qim1(he))
       elsewhere
@@ -1579,9 +1685,9 @@ contains
       endwhere
       nflux(he) = dn_upw(he)
 
-      de_upw(he) = fpcc * fimth(he) * p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
-      where (abs(qi(he) - four) > eps)
-         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
+      de_upw(he) = fpcc * fimth(he) * gimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**(qim1(he) - s(i_spc,he))
+      where (abs(qi(he) - three_ps(i_spc,he)) > eps)
+         de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(three_ps_im1(he)-qim1(he)) - one)/(three_ps_im1(he) - qim1(he))
       elsewhere
          de_upw(he) = de_upw(he)*log(pimh(he)/p_upw(he))
       endwhere
@@ -1601,15 +1707,16 @@ contains
 ! compute R (eq. 25)
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_compute_r(u_b, u_d, p, bins)
+   subroutine cresp_compute_r(u_b, u_d, p, bins, i_spc)
 
-      use constants,      only: zero, four, five
+      use constants,      only: zero, one
       use initcosmicrays, only: ncrb
-      use initcrspectrum, only: eps
+      use initcrspectrum, only: s, three_ps, four_ps, eps
 
       implicit none
 
       integer(kind=4), dimension(:), intent(in) :: bins
+      integer(kind=4)              , intent(in) :: i_spc
       real,                          intent(in) :: u_b, u_d
       real, dimension(0:ncrb),       intent(in) :: p
       real, dimension(size(bins))               :: r_num, r_den
@@ -1621,20 +1728,20 @@ contains
       ! q = [ 0, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, -30, 4.922038984459582, -30 ]
       ! five-q(bins) = 35, that seems to be a bit high power to apply carelessly
 
-      where (abs(q(bins) - five) > eps)
-         r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
+      where (abs(q(bins) - four_ps(i_spc,bins)) > eps)
+         r_num = p(bins-1)*((p(bins)/p(bins-1))**(four_ps(i_spc,bins)-q(bins)) - one)/(four_ps(i_spc,bins)-q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
       endwhere
 
-      where (abs(q(bins) - four) > eps)
-         r_den = (p(bins)**(four-q(bins)) - p(bins-1)**(four-q(bins)))/(four - q(bins))
-      else where
+      where ((q(bins) - three_ps(i_spc,bins)) > eps)
+         r_den = ((p(bins)/p(bins-1))**(three_ps(i_spc,bins)-q(bins))-one)/(three_ps(i_spc,bins)-q(bins))
+      elsewhere
          r_den = log(p(bins)/p(bins-1))
       endwhere
 
       where (abs(r_num) > zero .and. abs(r_den) > zero)                  !< BEWARE - regression: comparisons against
-         r(bins) = u_d + u_b * r_num/r_den !all cooling effects will come here   !< eps and epsilon result in bad results;
+         r(bins) = s(i_spc,bins)*u_d + u_b * r_num/r_den !all cooling effects will come here   !< eps and epsilon result in bad results;
       endwhere                                                                  !< range of values ofr_num and r_den is very wide
 
    end subroutine cresp_compute_r
@@ -1645,45 +1752,81 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-   subroutine ne_to_q(n, e, q, bins)
+   subroutine ne_to_q(n, e, q, bins, i_spc)
 
-      use constants,       only: zero, I_ONE
+      use cr_data,         only: cr_table, icr_E, transrelativistic
+      use constants,       only: zero, one, I_ONE
       use dataio_pub,      only: warn
-      use cresp_NR_method, only: compute_q
-      use cresp_variables, only: clight_cresp
+      use cresp_NR_method, only: compute_q, q_tab, alpha_q_tab, lin_interpolation_1D
       use initcosmicrays,  only: ncrb
-      use initcrspectrum,  only: e_small
+      use initcrspectrum,  only: e_small, g_fix, three_ps, arr_dim_q, q_big
 
       implicit none
 
       real, dimension(1:ncrb),       intent(in)  :: n, e
       real, dimension(1:ncrb),       intent(out) :: q
       integer(kind=4), dimension(:), intent(in)  :: bins
-      integer                                    :: i, i_active
-      real                                       :: alpha_in
+      integer(kind=4),               intent(in)  :: i_spc
+      integer                                    :: i, i_active, j
+      real                                       :: alpha_in, base
+      real(kind=8)                               :: three_p_s
       logical                                    :: exit_code
 
       q = zero
-
+      j = one
+      !print *, 'i_spc : ', i_spc
       do i_active = 1 + approx_p(LO), size(bins) - approx_p(HI)
          exit_code = .false.
          i = bins(i_active)
+         three_p_s = three_ps(i_spc,i)
+         base = p(i)/p(i-1)
+         !print *, 'i = ', i
          if (e(i) > e_small .and. p(i-1) > zero) then
+            !print *, 'e(i) > e_small'
             exit_code = .true.
             if (abs(n(i)) < 1e-300) call warn("[cresp_crspectrum:ne_to_q] 1/|n(i)| > 1e300")
             ! n(i) of order 1e-100 does happen sometimes, but extreme values like 4.2346894890376292e-312 tend to create FPE in the line below
             ! these could be uninitialized values
-            alpha_in = e(i)/(n(i)*p(i-1)*clight_cresp)
-            if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
-               q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
+            alpha_in = e(i)/(n(i)*g_fix(i_spc,i-1))
+            if (transrelativistic .eqv. .false.) then
+               if ((i == i_cut(LO)+1) .or. (i == i_cut(HI))) then ! for boundary case, when momenta are not approximated
+                  q(i) = compute_q(alpha_in, three_p_s, exit_code, p(i)/p(i-1))
+               else
+                  q(i) = compute_q(alpha_in, three_p_s, exit_code)
+               endif
             else
-               q(i) = compute_q(alpha_in, exit_code)
+               !print *, 'alpha : ', alpha_q_tab
+               j = minloc(abs(alpha_in - alpha_q_tab(:,i_spc,i)), dim=1)
+               !print *, 'j : ', j
+               !print *, 'alpha : ', alpha_in
+               !print *, 'alpha_q_tab(j) : ', alpha_q_tab(j,i_spc,i)
+               !print *, 'alpha_q_tab(j-1) : ', alpha_q_tab(j-1,i_spc,i)
+               !print *, 'alpha_q_tab(j+1) : ', alpha_q_tab(j+1,i_spc,i)
+               !print *, 'q_tab(j) : ',   q_tab(j)
+               !print *, 'q_tab(j+1) : ', q_tab(j+1)
+
+               if (j .ne. arr_dim_q) then
+                  if(j .ne. 1) then
+                     if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .lt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j), q_tab(j+1)],[alpha_q_tab(j,i_spc,i), alpha_q_tab(j+1,i_spc,i)], alpha_in)
+                     if (abs(alpha_q_tab(j+1,i_spc,i) - alpha_q_tab(j,i_spc,i)) .gt. abs(alpha_q_tab(j,i_spc,i) - alpha_q_tab(j-1,i_spc,i))) q(i) = lin_interpolation_1D([q_tab(j-1), q_tab(j)],[alpha_q_tab(j-1,i_spc,i), alpha_q_tab(j,i_spc,i)], alpha_in)
+                  else
+                     q(i) = - q_big
+                  endif
+               else
+                  q(i) = q_big
+               endif
+
             endif
+            !print *, 'q : ', q(i)
+            !print *, 'q_NR : ', q_NR(i)
+            !print *, 'Test difference : Delta q = ', abs(q(i) - q_NR(i))
          else
             q(i) = zero
          endif
          if (exit_code) fail_count_comp_q(i) = fail_count_comp_q(i) + I_ONE
       enddo
+
+      !print *, 'q : ', q
 
    end subroutine ne_to_q
 
@@ -1766,50 +1909,50 @@ contains
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray spectrum component pressure gradient
 !---------------------------------------------------------------------------------------------------
-   subroutine src_gpcresp(u, n, dx, grad_pcresp)
+   subroutine src_gpcresp(u, n, dx, grad_pcresp, i_spc)
 
       use constants,      only: onet
-      use cr_data,        only: cr_gpess, cr_spectral, cr_table, icr_E
       use initcosmicrays, only: ncrb
       use initcrspectrum, only: cre_active
 
       implicit none
 
-      integer(kind=4),            intent(in)  :: n
+      integer(kind=4),            intent(in)  :: n, i_spc
       real,                       intent(in)  :: dx
       real, dimension(n, 1:ncrb), intent(in)  :: u
       real, dimension(n),         intent(out) :: grad_pcresp
-      real, dimension(n)                      :: P_cresp_r, P_cresp_l
+      real, dimension(n)                      :: P_cresp_r, P_cresp_l, P_cresp
 
       grad_pcresp = 0.0
-      if (.not. cr_spectral(cr_table(icr_E)) .or. .not. cr_gpess(cr_table(icr_E))) return !< spectral mode implemented only for electrons
 
       P_cresp_l = 0.0 ;  P_cresp_r = 0.0
 
-!     (ultrarelativistic)
-      P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
-      P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
-      grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+!     (ultrarelativistic) !TODO Expand me to trans-relativistic
+      !P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
+      !P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
+      !grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+
+      P_cresp(:) = onet * sum(u(:, :),dim=2)
+      grad_pcresp(2:n-1) = cre_active(i_spc) * (P_cresp(1:n-2) - P_cresp(3:n) )/(2.*dx)
 
    end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
 ! Preparation and computation of boundary momenta and and boundary
 ! distribution function amplitudes value on left bin edge, computing q for indicated cutoff bin (returns f, p, q)
 !---------------------------------------------------------------------------------------------------
-   subroutine get_fqp_cutoff(cutoff, exit_code)
+   subroutine get_fqp_cutoff(cutoff, i_spc, exit_code)
 
       use constants,       only: zero, one, I_ONE, I_TWO, LO, HI
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, q_ratios, assoc_pointers
-      use cresp_variables, only: clight_cresp
 #ifdef CRESP_VERBOSED
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf, g_fix
 
       implicit none
 
-      integer(kind=4), intent(in)  :: cutoff
+      integer(kind=4), intent(in)  :: cutoff, i_spc
       logical,         intent(out) :: exit_code
       integer(kind=4)              :: ipfix, qi
       real, dimension(1:2)         :: x_NR, x_NR_init
@@ -1819,9 +1962,12 @@ contains
       qi    = i_cut(cutoff) + oz(cutoff)
       call assoc_pointers(cutoff)
 
-      alpha = e(qi)/(n(qi) * p_fix(ipfix) * clight_cresp)
+      alpha = e(qi)/(n(qi) * g_fix(i_spc,ipfix))
+      !print *, 'alpha: ', alpha
       n_in  = n(qi)
+      !print *, 'n_in:', n_in
       x_NR = intpol_pf_from_NR_grids(cutoff, alpha, n_in, interpolated)
+      !print *, 'x_NR:', x_NR
       if (.not. interpolated) then
          exit_code = .true.
          fail_count_interpol(cutoff) = fail_count_interpol(cutoff) + 1
@@ -1858,6 +2004,10 @@ contains
       end select
       p(i_cut(cutoff)) = p_cut(cutoff)
       q(qi)            = q_ratios(x_NR(I_TWO), x_NR(I_ONE))
+
+      !print *, 'in get_cutoff: '
+      !print *, 'p: ', p(i_cut(cutoff))
+      !print *, 'q: ', q(qi)
 
       if (abs(q(qi)) > q_big) q(qi) = sign(one, q(qi)) * q_big
 #ifdef CRESP_VERBOSED

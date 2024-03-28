@@ -36,13 +36,14 @@ module cresp_NR_method
    implicit none
 
    private
-   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps
+   public :: alpha, assoc_pointers, cresp_initialize_guess_grids, compute_q, intpol_pf_from_NR_grids, n_in, NR_algorithm, q_ratios, deallocate_all_smaps, q_tab, alpha_q_tab, lin_interpolation_1D
 
    integer, parameter                        :: ndim = 2
    real, allocatable, dimension(:)           :: p_space, q_space
    real                                      :: alpha, p_ratio_4_q, n_in
-   real, allocatable, dimension(:)           :: alpha_tab_q, q_grid
+   real, allocatable, dimension(:)           :: alpha_tab_q, q_tab, q_grid
    real, allocatable, dimension(:,:)         :: alpha_tab, n_tab
+   real, allocatable, dimension(:,:,:)       :: alpha_q_tab
    integer(kind=4)                           :: helper_arr_dim
    real, pointer, dimension(:,:)             :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 #ifdef CRESP_VERBOSED
@@ -124,29 +125,30 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   subroutine NR_algorithm_1D(x, exit_code)
+   subroutine NR_algorithm_1D(x, three_p_s, exit_code)
 
       use constants,      only: zero, big
       use func,           only: operator(.equals.)
-      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
+      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D!, three_ps
 
       implicit none
 
       integer :: i
       real    :: x, delta, dfun_1D, fun1D_val
+      real(kind=8) :: three_p_s
       logical :: exit_code, func_check
 
       delta = big
       func_check = .false.
 
       do i = 1, NR_iter_limit
-         fun1D_val = alpha_to_q(x) - alpha
+         fun1D_val = alpha_to_q(x, three_p_s, p_ratio_4_q) - alpha
          if ((abs(fun1D_val) <= tol_f_1D) .and. (abs(delta) <= tol_f_1D)) then ! delta <= tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
             exit_code = .false.
             return
          endif
 
-         dfun_1D = derivative_1D(x)
+         dfun_1D = derivative_1D(x, three_p_s)
 
          if (abs(dfun_1D) .equals. zero) then
             exit_code = .true.
@@ -170,7 +172,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
 
-   real function derivative_1D(x) ! via finite difference method
+   real function derivative_1D(x, three_p_s) ! via finite difference method
 
       use constants,      only: half
       use initcrspectrum, only: eps
@@ -180,10 +182,11 @@ contains
       real, intent(in) :: x
       real             :: dx
       real, parameter  :: dx_par = 1.0e-4
+      real(kind=8)     :: three_p_s
 
       dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
       dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
-      derivative_1D = half * (alpha_to_q(x+dx) - alpha_to_q(x-dx))/dx
+      derivative_1D = half * (alpha_to_q(x+dx,three_p_s, p_ratio_4_q) - alpha_to_q(x-dx,three_p_s, p_ratio_4_q))/dx
 
    end function derivative_1D
 
@@ -257,17 +260,18 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine init_smap_array_values(hdr_init)
 
-      use constants,       only: zero, half, one, three, I_ONE, big, small, LO, HI
+      use constants,       only: zero, half, one, two, three, I_ONE, big, small, LO, HI
       use cresp_helpers,   only: map_header
       use cresp_variables, only: clight_cresp
       use dataio_pub,      only: die
-      use initcrspectrum,  only: arr_dim_a, arr_dim_n, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big
+      use initcrspectrum,  only: arr_dim_a, arr_dim_n, arr_dim_q, e_small, max_p_ratio, p_fix_ratio, q_big, three_ps, p_fix
+      use initcosmicrays,  only: ncrb, nspc
 
       implicit none
 
       real               :: a_min_q = big, a_max_q = small , q_in3, pq_cmplx
       real, dimension(2) :: a_min   = big, a_max   = small, n_min = big, n_max = small
-      integer(kind=4)    :: i, j, ilim = 0, qmaxiter = 100
+      integer(kind=4)    :: i, j, k,ilim = 0, qmaxiter = 100
       type(map_header), dimension(2), intent(inout) :: hdr_init
 
 
@@ -319,6 +323,26 @@ contains
          n_tab(HI, i)     = ind_to_flog(i, n_min(HI), n_max(HI), arr_dim_n) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim_n-1)*real(i-1))
       enddo
 
+      q_tab = q_big
+      alpha_q_tab = zero
+
+      do i = 1, arr_dim_q
+         q_tab(i) = ind_to_flog(i, q_big, three*q_big, arr_dim_q) ! We tabulate q
+         q_tab(i) = q_tab(i) - two*q_big
+         !print *, 'q_tab (i=',i,') : ', q_tab(i)
+         do j = 1, nspc
+            do k = 1, ncrb
+               alpha_q_tab(i,j,k)=alpha_to_q(q_tab(i), three_ps(j,k), p_fix(k)/p_fix(k-1))
+               !print *, 'p_ratio : ', p_fix(k)/p_fix(k-1)
+            enddo
+            !stop
+            !print *, 'alpha_q_tab(i=',i,',j=',j,'): ', alpha_q_tab(i,j,:)
+         enddo
+      enddo
+      !print *, 'q_tab : ', q_tab
+      !print *, 'alpha_q_tab : ', alpha_q_tab
+      !stop
+
 
       q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
 
@@ -337,6 +361,10 @@ contains
       enddo
       if (ilim .ge. qmaxiter) call die ("[cresp_NR_method:fill_guess_grids] Maximal iteration limit exceeded, q_grid might not have converged!")
 #ifdef CRESP_VERBOSED
+
+      print *, a_min_q, a_max_q, p_fix_ratio, epsilon(one), j, ilim, qmaxiter
+      !stop
+
       do i = 1, arr_dim_q
          print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
       enddo
@@ -763,8 +791,8 @@ contains
 
       implicit none
 
-      real, dimension(1:3), intent(inout) :: p3, f3
-      real, dimension(1:3), intent(in)    :: arg
+      real, dimension(1:3), intent(inout) :: p3(:), f3(:)
+      real, dimension(1:3), intent(in)    :: arg(:)
       logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                     :: nsubstep = 100, k
@@ -866,7 +894,7 @@ contains
       real :: weight, lin_interpolation_1D
 
       weight   = (arg_mid - arg(1)) / (arg(2) - arg(1))
-      lin_interpolation_1D =  fun(1) * (one - weight) + fun(2) * (one - weight)
+      lin_interpolation_1D =  fun(1) * (one - weight) + fun(2) * weight
 
    end function lin_interpolation_1D
 !----------------------------------------------------------------------------------------------------
@@ -931,6 +959,7 @@ contains
    subroutine fill_q_grid(i_incr)
 
       use initcrspectrum, only: p_fix_ratio, arr_dim_q
+      use constants,      only: four
 
       implicit none
 
@@ -953,12 +982,12 @@ contains
          write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q, ", (alpha): ",alpha  ! QA_WARN debug
 #endif /* CRESP_VERBOSED */
          x = prev_solution
-         call NR_algorithm_1D(x, exit_code)
+         call NR_algorithm_1D(x, four, exit_code)
          if (exit_code) then
             do j = 1, helper_arr_dim
                if (exit_code) then
                   x = q_space(j)
-                  call NR_algorithm_1D(x, exit_code)
+                  call NR_algorithm_1D(x, four, exit_code)
                   if (.not. exit_code) then
                      q_grid(i) = x
                      prev_solution = x
@@ -999,7 +1028,7 @@ contains
 
    end subroutine q_control
 !----------------------------------------------------------------------------------------------------
-   real function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
+   real function alpha_to_q(x, three_p_s, p_ratio_4_q) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
 
       use constants,      only: one, three
       use initcrspectrum, only: q_eps
@@ -1007,10 +1036,11 @@ contains
       implicit none
 
       real, intent(in) :: x
-      real             :: q_in3, q_in4
+      real             :: q_in3, q_in4, p_ratio_4_q
+      real(kind=8)     :: three_p_s
 
       q_in3 = three - x
-      q_in4 = one + q_in3
+      q_in4 = three_p_s - x
       if (abs(q_in3) < q_eps) then
          alpha_to_q = (p_ratio_4_q**q_in4 - one)/log(p_ratio_4_q)
       else if (abs(q_in4) < q_eps) then
@@ -1212,7 +1242,7 @@ contains
 
       implicit none
 
-      real, dimension(1:2), intent(in) :: fun, arg
+      real, dimension(1:2), intent(in) :: fun(:), arg(:)
       real,                 intent(in) :: arg_out
 
       lin_extrapol_1D = fun(1) + (fun(2) - fun(1)) * (arg_out - arg(1))/(arg(2)-arg(1))
@@ -1320,7 +1350,7 @@ contains
 
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
-   real function compute_q(alpha_in, exit_code, outer_p_ratio)
+   real function compute_q(alpha_in, three_p_s, exit_code, outer_p_ratio)
 
       use constants,      only: zero, one, I_ZERO, I_ONE
       use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio, arr_dim_q
@@ -1330,6 +1360,7 @@ contains
       real,           intent(inout) :: alpha_in
       logical,        intent(inout) :: exit_code ! value should be .true. at input
       real, optional, intent(in)    :: outer_p_ratio
+      real(kind = 8)                :: three_p_s
       integer(kind=4)               :: loc_1, loc_2
 
       compute_q = zero
@@ -1356,7 +1387,7 @@ contains
       if (NR_refine_solution_q) then
          alpha = alpha_in
          call q_control(compute_q,exit_code)
-         call NR_algorithm_1D(compute_q, exit_code)
+         call NR_algorithm_1D(compute_q, three_p_s, exit_code)
       endif
 
       if (abs(compute_q) > q_big) compute_q = sign(one, compute_q) * q_big
@@ -1426,9 +1457,11 @@ contains
       call piernik_MPI_Bcast(f_ratios_lo)
       call piernik_MPI_Bcast(f_ratios_up)
       call piernik_MPI_Bcast(q_grid)
+      call piernik_MPI_Bcast(q_tab)
       call piernik_MPI_Bcast(n_tab)
       call piernik_MPI_Bcast(alpha_tab)
       call piernik_MPI_Bcast(alpha_tab_q)
+      call piernik_MPI_Bcast(alpha_q_tab)
 
       do i = LO, HI
          call piernik_MPI_Bcast(hdr_share(i)%s_dim1)
@@ -1482,19 +1515,25 @@ contains
 
       use constants,      only: HI, I_ONE
       use cresp_helpers,  only: allocate_smaps
-      use diagnostics,    only: ma2d, my_allocate, my_allocate_with_index
+      use diagnostics,    only: ma2d, ma3d, my_allocate, my_allocate_with_index
       use initcrspectrum, only: arr_dim_a, arr_dim_n, arr_dim_q
+      use initcosmicrays, only: ncrb, nspc
 
       implicit none
 
       if (.not. allocated(alpha_tab_q)) call my_allocate_with_index(alpha_tab_q, arr_dim_q, I_ONE)
       if (.not. allocated(q_grid))      call my_allocate_with_index(q_grid,      arr_dim_q, I_ONE)
+      if (.not. allocated(q_tab))       call my_allocate_with_index(q_tab,       arr_dim_q, I_ONE)
 
       ma2d = [HI, arr_dim_a]
       if (.not. allocated(alpha_tab))   call my_allocate(alpha_tab, ma2d)
 
       ma2d = [HI, arr_dim_n]
       if (.not. allocated(n_tab))       call my_allocate(n_tab, ma2d)
+
+      ma3d = [arr_dim_q, nspc, ncrb]
+
+      if (.not. allocated(alpha_q_tab)) call my_allocate(alpha_q_tab, ma3d)
 
       call allocate_smaps(arr_dim_a, arr_dim_n)
 
@@ -1511,6 +1550,8 @@ contains
       call my_deallocate(q_grid)
       call my_deallocate(alpha_tab)
       call my_deallocate(n_tab)
+      call my_deallocate(q_tab)
+      call my_deallocate(alpha_q_tab)
       call deallocate_smaps
 
    end subroutine deallocate_all_smaps

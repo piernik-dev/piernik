@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 from colored_io import die, prtinfo, prtwarn, read_var
 from copy import copy
-from crs_h5 import crs_initialize, crs_plot_main, crs_plot_main_fpq
+from crs_h5 import crs_initialize, crs_plot_main, crs_plot_main_fpq, crs_plot_ratio
 from crs_pf import initialize_pf_arrays
 from math import isnan, pi
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from numpy import array as np_array, log, log10, mean, rot90
+from numpy import array as np_array, log, log10, mean, rot90, shape
 from os import getcwd, makedirs, path
 from optparse import OptionParser
 from re import search
@@ -24,19 +24,22 @@ if (version[0:3] != "2.7"):
     not_py27 = True
 else:
     not_py27 = False
+
 # ------- Parse arguments
 parser = OptionParser(
     "Usage: %prog FILE [options] [args] or %prog [options] [args] -F FILENAME")
 parser.add_option("-F", "--file", dest="filename",
                   default="None", help=u"File to use", type="str")
-parser.add_option("-v", "--var", dest="var_name", default="e",
-                  help=u"Variable to plot the spectrum (default: e)")
-parser.add_option("-f", "--field", dest="fieldname", default="cree_tot",
+parser.add_option("-v", "--var", dest="var_name", default="n",
+                  help=u"Variable to plot the spectrum (default: n)")
+parser.add_option("-f", "--field", dest="fieldname", default="",
                   help=u"DS fieldname to image (default:cree_tot)")
 parser.add_option("-z", "--zlim", dest="plot_range", default=("x", "y"),
                   help=u"Plot image with this range", nargs=2, metavar="ZMIN ZMAX")
 parser.add_option("-s", "--slice", dest="slice_info", default=("a", "Nan"),
                   help=u"DS slice coords to image (default:cree_tot)", metavar="AX COORDINATE", nargs=2)
+parser.add_option("-S", "--species", dest="crspecies", default="e-",
+                  help=u"DS fieldname of cr species (default:cr_e-)", metavar="CR FIELDNAME", nargs=1)
 parser.add_option("-d", "--def", dest="default_range", default=False,
                   help=u"Use min/max on yt.ds(fieldname) for clickable image", action="store_true")
 parser.add_option("-l", "--lin", dest="use_linscale", default=False,
@@ -92,10 +95,19 @@ user_limits = (options.default_range is not True)
 save_spectrum = (options.not_save_spec is not True)
 use_logscale = (options.use_linscale is not True)
 use_linscale = (options.use_linscale)
-plot_field = options.fieldname
-plot_var = options.var_name
+
+spc_label = options.crspecies.replace("cr_", "")
+spc_n_lab = "cr_" + spc_label + "n"  # -> "cr_e-n" default
+spc_e_lab = "cr_" + spc_label + "e"  # -> "cr_e-e" default
+if (options.crspecies[0:3] != "cr_"):
+    options.crspecies = "cr_" + options.crspecies
+plot_field = options.fieldname if len(
+    options.fieldname) > 1 else options.crspecies + "n_tot"  # DEFAULT cr_e-e_tot
+
+# plot_var = options.var_name
 plot_vel = options.plot_vel
 plot_mag = options.plot_mag
+spc_label = options.crspecies
 if (plot_vel is True):
     plot_mag = False
 if (plot_mag is True):
@@ -106,6 +118,7 @@ plot_layer = options.avg_layer
 plot_ovlp = options.overlap_layer
 options.fontsize = int(options.fontsize)
 display_bin_no = False
+plot_CRisotope = False
 user_coords_provided = not options.coords_dflt == ""
 if user_coords_provided:
     try:
@@ -123,29 +136,32 @@ par_epsilon = 1.0e-15
 f_run = True
 pf_initialized = False
 
+proton_field_names = ["cr_p+n01", "cr01", "cr1", "cr_p+"]
+
 # ------- Local functions -----------
 
 
-def _total_cree(field, data):
-    list_cree = []
+def _total_cr_e(field, data):
+    list_cr_e = []
     for element in h5ds.field_list:
-        if search("cree", str(element[1])):
-            list_cree.append(element[1])
-    cree_tot = data[str(list_cree[0])]
-    for element in list_cree[1:]:
-        cree_tot = cree_tot + data[element]
-    return cree_tot
+        # print(element, spc_e_lab, str(element[1]), spc_e_lab in element)
+        if search(spc_e_lab.replace("+", "\+"), str(element[1])):
+            list_cr_e.append(element[1])
+    cr_e_tot = data[str(list_cr_e[0])]
+    for element in list_cr_e[1:]:
+        cr_e_tot = cr_e_tot + data[element]
+    return cr_e_tot
 
 
-def _total_cren(field, data):
-    list_cren = []
+def _total_cr_n(field, data):
+    list_cr_n = []
     for element in h5ds.field_list:
-        if search("cren", str(element[1])):
-            list_cren.append(element[1])
-    cren_tot = data[str(list_cren[0])]
-    for element in list_cren[1:]:
-        cren_tot = cren_tot + data[element]
-    return cren_tot
+        if search(spc_n_lab.replace("+", "\+"), str(element[1])):
+            list_cr_n.append(element[1])
+    cr_n_tot = data[str(list_cr_n[0])]
+    for element in list_cr_n[1:]:
+        cr_n_tot = cr_n_tot + data[element]
+    return cr_n_tot
 
 
 def _total_B(field, data):
@@ -157,13 +173,34 @@ def _total_B(field, data):
 def en_ratio(field, data):  # DEPRECATED (?)
     bin_nr = field.name[1][-2:]
     for element in h5ds.field_list:
-        if search("cree" + str(bin_nr.zfill(2)), str(element[1])):
-            cren_data = data["cren" + str(bin_nr.zfill(2))]
+        if search(spc_n_lab + str(bin_nr.zfill(2)), str(element[1])):
+            cren_data = data[spc_n_lab + str(bin_nr.zfill(2))]
             # necessary to avoid FPEs
             cren_data[cren_data <= par_epsilon**2] = par_epsilon
-            cree_data = data["cree" + str(bin_nr.zfill(2))]
+            cree_data = data[spc_e_lab + str(bin_nr.zfill(2))]
             en_ratio = cree_data / cren_data
     return en_ratio
+
+
+def BC_ratio(field, data):  # Boron to Carbon
+    bin_nr = field.name[1][-2:]
+    BC_ratio = []
+
+    for ind in range(1, ncrb + 1):
+        print(ind)
+        for element1 in h5ds.field_list:
+            if ("cr_B11n" + str(ind).zfill(2) == str(element1[1])):
+                for element2 in h5ds.field_list:
+                    if ("cr_C12n" + str(ind).zfill(2) == str(element2[1])):
+                        Bn_data = data["cr_B11n" + str(ind).zfill(2)]
+                        Cn_data = data["cr_C12n" + str(ind).zfill(2)]
+                        BC_ratio.append(Bn_data / Cn_data)
+
+    print('BC_ratio : ')
+    print(BC_ratio)
+    print('shape :')
+    print(shape(BC_ratio))
+    return BC_ratio
 
 
 def copy_field(field, data):
@@ -172,35 +209,67 @@ def copy_field(field, data):
     return copied_field
 
 
-def add_cren_tot_to(h5_dataset):
+def add_cr_n_tot_to(h5_dataset, name):
     try:
-        if (h5ds.all_data()["cren01"].units == "dimensionless"):
-            h5ds.add_field(("gdf", "cren_tot"), units="", function=_total_cren,
+        if (h5ds.all_data()[name + "01"].units == "dimensionless"):
+            h5ds.add_field(("gdf", name + "_tot"), units="", function=_total_cr_n,
                            display_name="Total CR electron number density", sampling_type="cell")
         else:
-            h5ds.add_field(("gdf", "cren_tot"), units="1/(pc**3)", function=_total_cren, display_name="Total CR electron number density",
+            h5ds.add_field(("gdf", name + "_tot"), units="Msun/(Myr**2*pc)", function=_total_cr_n, display_name="Total CR electron number density",
                            dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
     except:
-        die("Failed to construct field 'cren_tot'")
+        die("Failed to construct field '%s_tot'" % name)
     return h5_dataset
 
 
-def add_cree_tot_to(h5_dataset):
+def _total_cr_species_n(field, data):
+    global field_name_total_n
+    list_crn = []
+    for element in h5ds.field_list:
+        if search(field_name_total_n, str(element[1])):
+            list_crn.append(element[1])
+    CR_species_n_tot = data[str(list_crn[0])]
+    for element in list_crn[1:]:
+        CR_species_n_tot = CR_species_n_tot + data[element]
+    return CR_species_n_tot
+
+
+def add_cr_e_tot_to(h5_dataset, name):
     try:
-        if (h5ds.all_data()["cree01"].units == "dimensionless"):
-            h5ds.add_field(("gdf", "cree_tot"), units="", function=_total_cree,
-                           display_name="Total CR electron energy density", sampling_type="cell")
+        if (h5ds.all_data()[name + '01'].units == "dimensionless"):
+            h5ds.add_field(("gdf", name + "_tot"), units="", function=_total_cr_e,
+                           display_name="Total CR species energy density", sampling_type="cell")
         else:
-            h5ds.add_field(("gdf", "cree_tot"), units="Msun/(Myr**2*pc)", function=_total_cree,
-                           display_name="Total CR electron energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
+            h5ds.add_field(("gdf", name + "_tot"), units="Msun/(Myr**2*pc)", function=_total_cr_e,
+                           display_name="Total CR species energy density", dimensions=dimensions.energy / dimensions.volume, sampling_type="cell")
     except:
-        die("Failed to construct field 'cree_tot'")
+        die("Failed to construct field '" + name + "e_tot'")
+    return h5_dataset
+
+
+def add_total_n_to(h5_dataset, name):
+    try:
+        if (h5ds.all_data()[name].units == "dimensionless"):
+            h5ds.add_field(("gdf", name), units="", function=_total_cr_species_n,
+                           display_name="Total CR " + name + " number density", sampling_type="cell")
+        else:
+            h5ds.add_field(("gdf", name), units="Msun/(Myr**2*pc)", function=_total_cr_species_n, display_name="Total CR " + name + " number density",
+                           dimensions=dimensions.energy / dimensions.volume, sampling_type="cell", take_log=True)
+            # TODO BUG units should be "Msun/(Myr**2*pc)"; fix it after fixing it in PIERNIK!
+    except:
+        die("Failed to construct field '" + name + "n_tot'")
     return h5_dataset
 
 
 def add_tot_fields(h5_dataset):
-    h5_dataset = add_cree_tot_to(h5_dataset)
-    h5_dataset = add_cren_tot_to(h5_dataset)
+    global plot_CRisotope
+    if (plot_field[-4:] == "_tot"):
+        print("add_tot_fields, plot_field is:", plot_field)
+        h5_dataset = add_cr_e_tot_to(h5_dataset, spc_e_lab)
+        h5_dataset = add_cr_n_tot_to(h5_dataset, spc_n_lab)
+    else:
+        # h5_dataset = add_total_n_to(h5_dataset, plot_field)
+        plot_CRisotope = True
     return h5_dataset
 
 
@@ -331,14 +400,30 @@ if f_run is True:
         except:
             die("Failed to construct field %s" % plot_field)
 
+    if (plot_field == "cr_B11n_"):
+        print('hello ! ')
+        # try:
+        print(dsSlice["cr_B11n01"].units)
+        """
+        if str(dsSlice["cr_B11n01"].units) == "":  # DEPRECATED
+            print('case 1 ')
+            h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio,
+                           display_name="Ratio B/C in %i-th bin" % int(plot_field[-2:]), sampling_type="cell")
+        else:
+        """
+        h5ds.add_field(("gdf", plot_field), units="", function=BC_ratio, display_name="Ratio B/C in %i-th bin",
+                       dimensions=dimensions.energy, sampling_type="cell", take_log=True)
+        # except:
+        # die("Failed to construct field %s" % plot_field)
+
     dsSlice = add_tot_fields(dsSlice)
 
 # For elegant labels when plot_field is cree?? or cren??
     if (plot_field[-3:] != "tot" and plot_field[0:3] == "cre" and plot_field[3:-2] != "ratio"):
-        if (plot_field[0:4] == "cree"):
+        if (plot_field[0:4] == spc_e_lab):
             disp_name = "energy"
             new_field_dimensions = dimensions.energy / dimensions.volume
-        elif (plot_field[0:4] == "cren"):
+        elif (plot_field[0:4] == spc_n_lab):
             disp_name = "number"
             new_field_dimensions = 1. / dimensions.volume
         prtinfo("Adding display name: %s density" % disp_name)
@@ -354,10 +439,13 @@ if f_run is True:
         plot_field = new_field
 
     # WARNING - this makes field_max unitless
-    try:
-        field_max = h5ds.find_max("cr_p+")[0].v
-    except:
-        field_max = h5ds.find_max("cr1")[0].v
+    for proton_field in proton_field_names:
+        try:
+            # WARNING - this makes field_max unitless
+            field_max = h5ds.find_max(proton_field)[0].v
+            break
+        except:
+            print("MAX for proton field ", proton_field, " not found")
 
 # prepare limits for framebuffer
     # if (options.usr_width == 0.):
@@ -387,39 +475,41 @@ if f_run is True:
         slice_center[dim_map[slice_ax]] = slice_coord
 
 # construct framebuffer
+    frbuffer_plot_field = plot_field
+    # if (plot_CRisotope): frbuffer_plot_field = "cr_"+plot_field+"n_tot"
     if (slice_ax == "y"):
         frb = np_array(dsSlice.to_frb(width=frb_h, resolution=resolution,
-                       center=slice_center, height=frb_w)[plot_field])
+                       center=slice_center, height=frb_w)[frbuffer_plot_field])
         frb = rot90(frb)
     else:
         frb = np_array(dsSlice.to_frb(width=frb_w, resolution=resolution,
-                       center=slice_center, height=frb_h, periodic=False)[plot_field])
+                       center=slice_center, height=frb_h, periodic=False)[frbuffer_plot_field])
     if (not user_limits):
-        plot_max = h5ds.find_max(plot_field)[0]
+        plot_max = h5ds.find_max(frbuffer_plot_field)[0]
     if (not user_limits):
-        plot_min = h5ds.find_min(plot_field)[0]
-    plot_units = str(h5ds.all_data()[plot_field].units)
+        plot_min = h5ds.find_min(frbuffer_plot_field)[0]
+    plot_units = str(h5ds.all_data()[frbuffer_plot_field].units)
 
     if (user_limits is True):  # Overwrites previously found values
         plot_min = plot_user_min
         plot_max = plot_user_max
 
     if (not_py27):
-        plt.xlabel("Domain cooridnates " + list(dim_map.keys())
+        plt.xlabel("Domain coordinates " + list(dim_map.keys())
                    [list(dim_map.values()).index(avail_dim[0])] + " (" + length_unit + ")")
-        plt.ylabel("Domain cooridnates " + list(dim_map.keys())
+        plt.ylabel("Domain coordinates " + list(dim_map.keys())
                    [list(dim_map.values()).index(avail_dim[1])] + " (" + length_unit + ")")
     else:
-        plt.xlabel("Domain cooridnates " + dim_map.keys()
+        plt.xlabel("Domain coordinates " + dim_map.keys()
                    [dim_map.values().index(avail_dim[0])] + " (" + length_unit + ")")
-        plt.ylabel("Domain cooridnates " + dim_map.keys()
+        plt.ylabel("Domain coordinates " + dim_map.keys()
                    [dim_map.values().index(avail_dim[1])] + " (" + length_unit + ")")
 
     if (options.annotate_rect):
         yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(dom_r[avail_dim[0]] + abs(
             dom_l[avail_dim[0]]), dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])), center=slice_center)
     else:
-        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field, width=(
+        yt_data_plot = yt.SlicePlot(h5ds, slice_ax, frbuffer_plot_field, width=(
             frb_w, frb_h), center=slice_center)
     yt_data_plot.set_font({'size': options.fontsize})
 
@@ -442,7 +532,6 @@ if f_run is True:
                    dom_l[avail_dim[1]], dom_r[avail_dim[1]]], origin=im_orig, cmap=colormap_my)
 
     plt.title("Component: " + plot_field + " | t = %9.3f Myr" % time)
-
     try:
         cbar = plt.colorbar(shrink=0.9, pad=0.01, label=plot_units)
     except:
@@ -458,8 +547,8 @@ if f_run is True:
     if (plot_mag):
         yt_data_plot.annotate_magnetic_field(factor=32, scale=40)
 
-    yt_data_plot.set_cmap(field=plot_field, cmap=colormap_my)
-    yt_data_plot.set_zlim(plot_field, plot_min, plot_max)
+    yt_data_plot.set_cmap(field=frbuffer_plot_field, cmap=colormap_my)
+    yt_data_plot.set_zlim(frbuffer_plot_field, plot_min, plot_max)
 
     marker_l = ["x", "+", "*", "X", ".", "^", "v", "<", ">", "1"]
     m_size_l = [350, 500, 400, 400, 500, 350, 350, 350, 350, 500]
@@ -471,9 +560,9 @@ if f_run is True:
 
     print("")
 
-    crs_initialize(var_names, var_array)
+    crs_initialize(var_names, var_array, plot_field)
 
-    mplot = yt_data_plot.plots[plot_field]
+    mplot = yt_data_plot.plots[frbuffer_plot_field]
 
     xticklabels = mplot.axes.xaxis.get_ticklabels()
     yticklabels = mplot.axes.yaxis.get_ticklabels()
@@ -502,15 +591,49 @@ if f_run is True:
         global click_coords, image_number, f_run, marker_index
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]
+        fieldname = spc_label
+        if (fieldname[-3] == "e" or fieldname[-3] == "n"):
+            # If just one bin is plotted on clickable field, strip the bin number + quantity from fieldname
+            fieldname = plot_field[0:-3]
+        plot_field_click = frbuffer_plot_field
+        """
         if (plot_field[0:-2] != "en_ratio"):
             prtinfo(">>>>>>>>>>>>>>>>>>> Value of %s at point [%f, %f, %f] = %f " % (
-                plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+                plot_field_click, coords[0], coords[1], coords[2], position[plot_field_click]))
+        """
+        print('Here it comes : ')
+        print(plot_field)
+
+        if (plot_field == "cr_B11n_tot"):  # Plot B to C ratio rather than spectra
+
+            BC_ratio = []
+
+            for ind in range(1, ncrb + 1):
+
+                for element1 in h5ds.field_list:
+                    if ("cr_B11n" + str(ind).zfill(2) == str(element1[1])):
+                        for element2 in h5ds.field_list:
+                            if ("cr_C12n" + str(ind).zfill(2) == str(element2[1])):
+                                Bn_data = position["cr_B11n" +
+                                                   str(ind).zfill(2)]
+                                Cn_data = position["cr_C12n" +
+                                                   str(ind).zfill(2)]
+                                BC_ratio.append(Bn_data / Cn_data)
+
+            BC_ratio = np_array(BC_ratio)
+            print('BC_ratio : ')
+            print(BC_ratio)
+            print('shape :')
+            print(shape(BC_ratio))
+
         else:
-            prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field, coords[0], coords[1],
-                    coords[2], position["cree" + str(plot_field[-2:])] / position["cren" + str(plot_field[-2:])]))
-            # once again appended - needed as ylimit for the plot
-            plot_max = h5ds.find_max(
-                "cre" + plot_var + str(plot_field[-2:]))[0]
+
+            if (plot_field[-3:] != 'tot'):
+                prtinfo("Value of %s at point [%f, %f, %f] = %f " % (plot_field_click, coords[0], coords[1],
+                        coords[2], position["cree" + str(plot_field_click[-2:])] / position["cren" + str(plot_field_click[-2:])]))
+                # once again appended - needed as ylimit for the plot
+                plot_max = h5ds.find_max(
+                    "cre" + plot_var + str(plot_field_click[-2:]))[0]
 
         btot = (position["mag_field_x"].v**2 + position["mag_field_y"].v **
                 2 + position["mag_field_z"].v**2)**0.5
@@ -561,9 +684,9 @@ if f_run is True:
 
                 for ind in range(1, ncrb + 1):
                     ecrs.append(
-                        float(mean(position['cree' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[spc_e_lab + str(ind).zfill(2)][0].v)))
                     ncrs.append(
-                        float(mean(position['cren' + str(ind).zfill(2)][0].v)))
+                        float(mean(position[spc_n_lab + str(ind).zfill(2)][0].v)))
 
                 fig2, exit_code = crs_plot_main(
                     plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], clean_plot=options.clean_plot, hide_axes=options.no_axes)
@@ -576,8 +699,10 @@ if f_run is True:
                     position = position = h5ds.r[[coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]: [
                         coords[0], dom_l[avail_dim[0]] + dl * j, coords[2]]]
                     for ind in range(1, ncrb + 1):
-                        ecrs.append(position['cree' + str(ind).zfill(2)][0].v)
-                        ncrs.append(position['cren' + str(ind).zfill(2)][0].v)
+                        ecrs.append(
+                            position['cr_' + fieldname + 'e' + str(ind).zfill(2)][0].v)
+                        ncrs.append(
+                            position['cr_' + fieldname + 'n' + str(ind).zfill(2)][0].v)
                     fig2, exit_code_tmp = crs_plot_main(
                         plot_var, ncrs, ecrs, time, coords, marker=marker_l[marker_index], i_plot=image_number, clean_plot=options.clean_plot, hide_axes=options.no_axes)
                     if (exit_code_tmp is False):
@@ -637,7 +762,7 @@ if f_run is True:
             if (save_spectrum):
                 extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
                 spectrum_file_out = str(output_path + '/' + filename_nam + '_' + 'slice_' +
-                                        slice_ax + '_' + plot_var + '_spec_%03d.pdf' % image_number)
+                                        slice_ax + '_' + plot_var + '_' + spc_label + '_spec_%03d.pdf' % image_number)
                 # bbox not working in py27 FIXME
                 s.savefig(spectrum_file_out, transparent='True',
                           bbox_inches="tight", dpi=150)
