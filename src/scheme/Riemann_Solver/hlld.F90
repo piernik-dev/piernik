@@ -164,7 +164,6 @@ contains
 
       use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC, psidim
       use dataio_pub, only: die
-      use func,       only: operator(.notequals.), operator(.equals.)  ! OPT: ~15% speedup is expected by eliminating the use of these functions
       use global,     only: divB_0_method
       use hdc,        only: chspeed
 
@@ -322,15 +321,13 @@ contains
 
             ! Speed of contact discontinuity Eq. 38
             ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
-
-            if ((sr - ur(i, imx))*ur(i, idn) .equals. (sl - ul(i, imx))*ul(i, idn)) then
-               sm = (sl + sr) / 2.
-            else
-               sm =   ( ((sr - ur(i, imx))*ur(i, idn)*ur(i, imx) - prr) - &
-                    &   ((sl - ul(i, imx))*ul(i, idn)*ul(i, imx) - prl) ) / &
-                    &   ((sr - ur(i, imx))*ur(i, idn) - &
-                    &    (sl - ul(i, imx))*ul(i, idn))
-            endif
+            associate (auxr => (sr - ur(i, imx))*ur(i, idn),  auxl => (sl - ul(i, imx))*ul(i,idn))
+               if (abs(auxr - auxl) < spacing(auxr + auxl)) then
+                  sm = (sl + sr) / 2.
+               else
+                  sm = ( (auxr*ur(i, imx) - prr) - (auxl*ul(i, imx) - prl) ) / (auxr - auxl)
+               endif
+            end associate
 
             ! Speed differences
 
@@ -364,7 +361,7 @@ contains
             ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
             coeff_1  =  dn_l*slsm - b_lr
             if (has_energy) ue = ul(i, ien)
-            if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ue) then  ! Left state of gas pressure, so ul(i, ien)
+            if ((abs(coeff_1) > spacing(b_lr)) .and. b_lrgam .le. ue) then  ! Left state of gas pressure, so ul(i, ien)
                b_starl(ydim:zdim) = b_ccl(i, ydim:zdim) * (dn_l*slvxl - b_lr)/coeff_1
             else
                ! Calculate HLL left states
@@ -373,7 +370,7 @@ contains
 
             coeff_1  =  dn_r*srsm - b_lr
             if (has_energy) ue = ur(i, ien)
-            if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ue) then  ! Right state of gas pressure, so ur(i, ien)
+            if ((abs(coeff_1) > spacing(b_lr)) .and. b_lrgam .le. ue) then  ! Right state of gas pressure, so ur(i, ien)
                b_starr(ydim:zdim) = b_ccr(i, ydim:zdim) * (dn_r*srvxr - b_lr)/coeff_1
             else
                ! Calculate HLL right states
@@ -381,10 +378,8 @@ contains
             endif
 
             ! Transversal components of velocity Eq. 42
-            v_starl(ydim:zdim) = ul(i, imy:imz)
-            if (b_ccl(i, xdim) .notequals. 0.) v_starl(ydim:zdim) = v_starl(ydim:zdim) + b_ccl(i, xdim)/dn_l * (b_ccl(i, ydim:zdim) - b_starl(ydim:zdim))
-            v_starr(ydim:zdim) = ur(i, imy:imz)
-            if (b_ccr(i, xdim) .notequals. 0.) v_starr(ydim:zdim) = v_starr(ydim:zdim) + b_ccr(i, xdim)/dn_r * (b_ccr(i, ydim:zdim) - b_starr(ydim:zdim))
+            v_starl(ydim:zdim) = ul(i, imy:imz) + b_ccl(i, xdim)/dn_l * (b_ccl(i, ydim:zdim) - b_starl(ydim:zdim))
+            v_starr(ydim:zdim) = ur(i, imy:imz) + b_ccr(i, xdim)/dn_r * (b_ccr(i, ydim:zdim) - b_starr(ydim:zdim))
 
             ! Dot product of velocity and magnetic field
 
@@ -623,7 +618,6 @@ contains
 
       use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
       use dataio_pub, only: die
-      use func,       only: operator(.equals.)  ! OPT: ~7% speedup is expected by eliminating the use of this function
 #ifndef ISO
       use constants,  only: one
 #endif /* ISO */
@@ -751,15 +745,13 @@ contains
 
             ! Speed of contact discontinuity Eq. 38
             ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
-
-            if ((sr - ur(i, imx))*ur(i, idn) .equals. (sl - ul(i, imx))*ul(i, idn)) then  ! find a way to replace .equals. with something both faster and free of warnings (same for full MHD variant)
-               sm = (sl + sr) / 2.
-            else
-               sm =   ( ((sr - ur(i, imx))*ur(i, idn)*ur(i, imx) - prr) - &
-                    &   ((sl - ul(i, imx))*ul(i, idn)*ul(i, imx) - prl) ) / &
-                    &   ((sr - ur(i, imx))*ur(i, idn) - &
-                    &    (sl - ul(i, imx))*ul(i, idn))
-            endif
+            associate (auxr => (sr - ur(i, imx))*ur(i, idn),  auxl => (sl - ul(i, imx))*ul(i,idn))
+               if (abs(auxr - auxl) < spacing(auxr + auxl)) then
+                  sm = (sl + sr) / 2.
+               else
+                  sm = ( (auxr*ur(i, imx) - prr) - (auxl*ul(i, imx) - prl) ) / (auxr - auxl)
+               endif
+            end associate
 
             ! Speed differences
 
