@@ -461,9 +461,9 @@ contains
       if (dom%eff_dim /= ndims) call die("[particle_gravity:update_particle_acc_tsc] Only 3D version is implemented")
 
       ijkp(:, I0) = nint((pos(:) - cg%fbnd(:,LO)-cg%dl(:)/2.) * cg%idl(:) + int(cg%lhn(:, LO)) + dom%nb, kind=4)
-      ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
-      ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
-      full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
+      ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)) + 1)
+      ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)) - 1)
+      full_span =(ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
       ! Unlike mapping, for acceleration we need one extra cell
       if (any(ijkp(:, IM) < cg%lhn(:, LO)) .or. any(ijkp(:, IP) > cg%lhn(:, HI))) &
            call die("[particle_gravity:update_particle_acc_tsc] the particle flew too far into ghostcells")
