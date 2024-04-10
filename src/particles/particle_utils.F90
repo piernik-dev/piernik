@@ -75,7 +75,7 @@ contains
          out = .true.
          ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
          ijk = max(ijk, cg%l%off)
-         ijk = min(ijk, cg%l%off + cg%l%n_d)
+         ijk = min(ijk, cg%l%off + cg%l%n_d - 1)
          fin = cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))
       endif
 
