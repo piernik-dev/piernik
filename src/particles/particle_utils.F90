@@ -38,29 +38,34 @@ module particle_utils
    implicit none
 
    private
-   public :: add_part_in_proper_cg, is_part_in_cg, npf
-   public :: count_cg_particles, count_all_particles, global_count_all_particles, part_leave_cg, detach_particle
-
-   integer(kind=4), parameter :: npf = 14  !< number of single particle fields
+   public :: add_part_in_proper_cg, is_part_in_cg, part_refresh_ghosts, part_leave_cg, detach_particle, &
+        &    count_all_particles, global_count_all_particles, global_balance_particles
 
 contains
 
-   subroutine is_part_in_cg(cg, pos, indomain, in, phy, out)
+   subroutine is_part_in_cg(cg, pos, indomain, in, phy, out, fin)
 
-      use constants,     only: ndims
+      use constants,     only: LO, HI, ndims, xdim, ydim, zdim
+      use domain,        only: dom
       use grid_cont,     only: grid_container
-      use particle_func, only: particle_in_area
+      use particle_func, only: particle_in_area, ijk_of_particle
 
       implicit none
 
       type(grid_container), pointer, intent(in)  :: cg
       real, dimension(ndims),        intent(in)  :: pos
       logical,                       intent(in)  :: indomain
-      logical,                       intent(out) :: in, phy, out
+      logical,                       intent(out) :: in, phy, out, fin
+      integer(kind=8), dimension(ndims)          :: ijk
 
       in  = particle_in_area(pos, cg%bnd_in)
       phy = particle_in_area(pos, cg%fbnd)
       out = particle_in_area(pos, cg%bnd_out)   ! Ghost particle
+
+      ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
+      ijk = max(ijk, int(cg%ijkse(:,LO), kind=8))
+      ijk = min(ijk, int(cg%ijkse(:,HI), kind=8))
+      fin = cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))
 
       if (indomain) return
 
@@ -68,6 +73,10 @@ contains
          in  = .true.
          phy = .true.
          out = .true.
+         ijk = ijk_of_particle(pos, dom%edge(:,LO), cg%idl)
+         ijk = max(ijk, cg%l%off)
+         ijk = min(ijk, cg%l%off + cg%l%n_d - 1)
+         fin = cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))
       endif
 
    end subroutine is_part_in_cg
@@ -100,10 +109,10 @@ contains
 
    subroutine add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, success)
 
-      use cg_cost_data,   only: I_PARTICLE
-      use cg_leaves,      only: leaves
+      ! use cg_cost_data,   only: I_PARTICLE
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims
+      use cg_list_global, only: all_cg
+      use constants,      only: ndims, base_level_id
       use domain,         only: dom
       use particle_func,  only: particle_in_area
 #ifdef NBODY_CHECK_PID
@@ -121,7 +130,7 @@ contains
       real, optional,         intent(in)  :: tdyn
       logical, optional,      intent(out) :: success
       type(cg_list_element), pointer      :: cgl
-      logical                             :: in, phy, out, indomain, cgfound
+      logical                             :: in, phy, out, fin, indomain, cgfound, toadd, met, cgmet
       real                                :: tform1, tdyn1
 #ifdef NBODY_CHECK_PID
       type(particle), pointer             :: pset
@@ -132,35 +141,42 @@ contains
       if (present(tform)) tform1 = tform
       if (present(tdyn))  tdyn1  = tdyn
       cgfound = .false.
+      cgmet = .false.
 
       ! ToDo: OPT: Precompute list of possible cg using SFC_id, use direct loop as a fallback, perhaps with warning.
       indomain = particle_in_area(pos, dom%edge)
-      cgl => leaves%first
+      cgl => all_cg%first
       do while (associated(cgl))
-         call cgl%cg%costs%start
-         call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out)
+         if (cgl%cg%l%id >= base_level_id) then
+            ! call cgl%cg%costs%start  ! Too big overhead when we call it for every particle
+            call is_part_in_cg(cgl%cg, pos, indomain, in, phy, out, fin)
+            toadd = out .and. fin
+            met = out
 #ifdef NBODY_CHECK_PID
-         if (phy .or. out) then
-            pset => cgl%cg%pset%first
-            do while (associated(pset))
-               if (pset%pdata%pid == pid) then
-                  phy = .false.
-                  out = .false.
-                  exit
-               endif
-               pset => pset%nxt
-            enddo
-         endif
+            if (toadd) then
+               pset => cgl%cg%pset%first
+               do while (associated(pset))
+                  if (pset%pdata%pid == pid) then
+                     toadd = .false.
+                     met = .false.
+                     exit
+                  endif
+                  pset => pset%nxt
+               enddo
+            endif
 #endif /* NBODY_CHECK_PID */
-         if (phy .or. out) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, tform1, tdyn1)
-         cgfound = cgfound .or. (phy .or. out)
-         call cgl%cg%costs%stop(I_PARTICLE, ppp_c = .false.)
-         ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
-         ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
-         ! Collecting of the cg costs for load balancing putposes will still work.
+            if (toadd) call cgl%cg%pset%add(pid, mass, pos, vel, acc, ener, in, phy, out, fin, tform1, tdyn1)
+            cgfound = cgfound .or. toadd
+            cgmet = cgmet .or. met
+            ! call cgl%cg%costs%stop(I_PARTICLE, ppp_c = .false.)
+            ! There are too many calls to include this contribution as cg_cost:particles in the PPP output.
+            ! It will be covered by add_part cumulative counter in part_leave_cg() instead.
+            ! Collecting of the cg costs for load balancing putposes will still work.
+         endif
          cgl => cgl%nxt
       enddo
-      if (present(success)) success = cgfound
+      !if (present(success)) success = cgfound
+      if (present(success)) success = cgmet
 
    end subroutine add_part_in_proper_cg
 
@@ -205,32 +221,68 @@ contains
       type(cg_level_connected_t), pointer :: ll
 
       to_send = .false.
-      if (pset%pdata%in) return
+      if (pset%pdata%in .and. pset%pdata%fin) return
 
       ll => base%level
-      ldl(:) = dom%L_(:) / ll%l%n_d(:)
-      do b = lbound(ll%dot%gse(j)%c(:), dim=1), ubound(ll%dot%gse(j)%c(:), dim=1)
-         if (particle_in_area(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, npb))) then
-            to_send = .true.
-         else if (pset%pdata%outside) then
-            do cdim = xdim, zdim
-               ext_bnd(cdim, LO) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, LO)
-               ext_bnd(cdim, HI) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, HI)
-            enddo
-            if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, I_ZERO), ext_bnd)) to_send = .true.
-         endif
+      do while (associated(ll))
+         ldl(:) = dom%L_(:) / ll%l%n_d(:)
+         do b = lbound(ll%dot%gse(j)%c(:), dim=1), ubound(ll%dot%gse(j)%c(:), dim=1)
+            if (particle_in_area(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, npb))) then
+               to_send = .true.
+            else if (pset%pdata%outside) then
+               do cdim = xdim, zdim
+                  ext_bnd(cdim, LO) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, LO)
+                  ext_bnd(cdim, HI) = ll%l%is_ext_bnd(ll%dot%gse(j)%c(b)%se, cdim, HI)
+               enddo
+               if (outdom_part_in_cg(pset%pdata%pos, fbnd_npb(ll%dot%gse(j)%c(b)%se, ll%l%off, ldl, I_ZERO), ext_bnd)) to_send = .true.
+            endif
 #ifdef NBODY_CHECK_PID
-         if (to_send) then
-            if (j == proc .and. all(ll%dot%gse(j)%c(b)%se == se)) to_send = .false.
-         endif
+            if (to_send) then
+               if (j == proc .and. all(ll%dot%gse(j)%c(b)%se == se)) to_send = .false.
+            endif
 #endif /* NBODY_CHECK_PID */
-         if (to_send) return
+            if (to_send) return
+         enddo
+         ll => ll%finer
       enddo
+
 
       return
       if (.false. .and. proc == sum(se)) return
 
    end function attribute_to_proc
+
+!> Remove ghosts and reassign all physical particles. Useful for sanitizing after a change of refinement.
+
+   subroutine part_refresh_ghosts
+
+      use cg_cost_data,   only: I_PARTICLE
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use particle_types, only: particle
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(particle), pointer :: pset
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            if (pset%pdata%phy) then
+               pset => pset%nxt
+            else !Remove ghosts
+               call detach_particle(cgl%cg, pset)
+            endif
+         enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
+         cgl => cgl%nxt
+      enddo
+      call part_leave_cg()
+
+   end subroutine part_refresh_ghosts
 
    ! Sends leaving particles between processors, and creates ghosts
    ! OPT: It looks like operations here will cost about O(proc * number_of_cg * number_of_particles).
@@ -238,17 +290,15 @@ contains
    subroutine part_leave_cg()
 
       use cg_cost_data,   only: I_PARTICLE
-      use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: I_ONE, PPP_PART
-      use dataio_pub,     only: die
-      use domain,         only: is_refined
+      use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, PPP_PART, base_level_id
       use grid_cont,      only: grid_container
       use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
       use MPIFUN,         only: MPI_Alltoall, MPI_Alltoallv
       use mpisetup,       only: proc, err_mpi, FIRST, LAST
       use ppp,            only: ppp_main
-      use particle_types, only: particle
+      use particle_types, only: particle, npf
 
       implicit none
 
@@ -260,9 +310,7 @@ contains
       type(grid_container),  pointer         :: cg
       type(particle), pointer                :: pset
       character(len=*), parameter            :: ts_label = "leave_cg", cnt_label = "cnt_part", snd_label = "send_part_prep", &
-           &                                    del_label = "detach_part", add_label = "add_part"
-
-      if (is_refined) call die("[particle_utils:part_leave_cg] AMR not implemented yet")
+           &                                    del_label = "detach_part", add_label = "add_part", addl_label = "chcg_part"
 
       call ppp_main%start(ts_label, PPP_PART)
 
@@ -274,17 +322,19 @@ contains
       !Count number of particles to be sent
       call ppp_main%start(cnt_label, PPP_PART)
       do j = FIRST, LAST
-         cgl => leaves%first
+         cgl => all_cg%first
          do while (associated(cgl))
-            call cgl%cg%costs%start
-            cg => cgl%cg
+            if (cgl%cg%l%id >= base_level_id) then
+               call cgl%cg%costs%start
+               cg => cgl%cg
                pset => cg%pset%first
                do while (associated(pset))
                   ! TO CHECK: PARTICLES CHANGING CG OUTSIDE DOMAIN?
                   if (attribute_to_proc(pset, j, cg%ijkse)) nsend(j) = nsend(j) + I_ONE ! WON'T WORK in AMR!!!
                   pset => pset%nxt
                enddo
-            call cgl%cg%costs%stop(I_PARTICLE)
+               call cgl%cg%costs%stop(I_PARTICLE)
+            endif
             cgl => cgl%nxt
          enddo
       enddo
@@ -298,22 +348,24 @@ contains
       ind = 1
       inc = 1
       do j = FIRST, LAST
-         cgl => leaves%first
+         cgl => all_cg%first
          do while (associated(cgl))
-            call cgl%cg%costs%start
-            cg => cgl%cg
-            pset => cg%pset%first
-            do while (associated(pset))
-               if (attribute_to_proc(pset, j, cg%ijkse)) then
-                  if (j == proc) then
-                     part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
-                  else
-                     part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+            if (cgl%cg%l%id >= base_level_id) then
+               call cgl%cg%costs%start
+               cg => cgl%cg
+               pset => cg%pset%first
+               do while (associated(pset))
+                  if (attribute_to_proc(pset, j, cg%ijkse)) then
+                     if (j == proc) then
+                        part_chcg(inc:inc+npf-1) = collect_single_part_fields(inc, pset%pdata)
+                     else
+                        part_send(ind:ind+npf-1) = collect_single_part_fields(ind, pset%pdata)
+                     endif
                   endif
-               endif
-               pset => pset%nxt
-            enddo
-            call cgl%cg%costs%stop(I_PARTICLE)
+                  pset => pset%nxt
+               enddo
+               call cgl%cg%costs%stop(I_PARTICLE)
+            endif
             cgl => cgl%nxt
          enddo
       enddo
@@ -321,24 +373,25 @@ contains
 
       !Remove particles out of cg
       call ppp_main%start(del_label, PPP_PART)
-      cgl => leaves%first
+      cgl => all_cg%first
       do while (associated(cgl))
-         call cgl%cg%costs%start
-         cg => cgl%cg
-         pset => cg%pset%first
-         do while (associated(pset))
+         if (cgl%cg%l%id >= base_level_id) then
+            call cgl%cg%costs%start
+            cg => cgl%cg
+            pset => cg%pset%first
+            do while (associated(pset))
 #ifdef NBODY_CHECK_PID
-            if (.not. pset%pdata%out) then
+               if (.not. pset%pdata%out .or. (pset%pdata%in .and. .not. pset%pdata%fin)) then
 #else /* !NBODY_CHECK_PID */
-            if (.not. pset%pdata%in) then
+               if (.not. (pset%pdata%in .and. pset%pdata%fin)) then
 #endif /* !NBODY_CHECK_PID */
-               call detach_particle(cg, pset)
-               cycle
-            endif
-            pset => pset%nxt
-         enddo
-
-         call cgl%cg%costs%stop(I_PARTICLE)
+                  call detach_particle(cg, pset)
+                  cycle
+               endif
+               pset => pset%nxt
+            enddo
+            call cgl%cg%costs%stop(I_PARTICLE)
+         endif
          cgl => cgl%nxt
       enddo
       call ppp_main%stop(del_label, PPP_PART)
@@ -372,11 +425,11 @@ contains
       call ppp_main%stop(add_label, PPP_PART)
       inc = 1
       if (nchcg /= 0) then
-         call ppp_main%start(add_label, PPP_PART)
+         call ppp_main%start(addl_label, PPP_PART)
          do i = 1, nchcg
             call unpack_single_part_fields(inc, part_chcg(inc:inc+npf-1))
          enddo
-         call ppp_main%stop(add_label, PPP_PART)
+         call ppp_main%stop(addl_label, PPP_PART)
       endif
 
       deallocate(part_send, part_recv, part_chcg)
@@ -387,7 +440,7 @@ contains
 
    function collect_single_part_fields(ind, p) result(pinfo)
 
-      use particle_types, only: particle_data
+      use particle_types, only: particle_data, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
 
       implicit none
 
@@ -395,15 +448,15 @@ contains
       integer,             intent(inout) :: ind
       type(particle_data), intent(in)    :: p
 
-      pinfo(1)    = p%pid
-      if (.not. (pinfo(1) >=1)) print *, 'error, id cannot be zero', ind, pinfo(1)
-      pinfo(2)    = p%mass
-      pinfo(3:5)  = p%pos
-      pinfo(6:8)  = p%vel
-      pinfo(9:11) = p%acc
-      pinfo(12)   = p%energy
-      pinfo(13)   = p%tform
-      pinfo(14)   = p%tdyn
+      pinfo(P_ID)            = p%pid
+      if (.not. (pinfo(P_ID) >=1)) print *, 'error, id cannot be zero', ind, pinfo(P_ID)
+      pinfo(P_MASS)          = p%mass
+      pinfo(P_POS_X:P_POS_Z) = p%pos
+      pinfo(P_VEL_X:P_VEL_Z) = p%vel
+      pinfo(P_ACC_X:P_ACC_Z) = p%acc
+      pinfo(P_ENER)          = p%energy
+      pinfo(P_TFORM)         = p%tform
+      pinfo(P_TDYN)          = p%tdyn
 
       ind = ind + npf
 
@@ -411,8 +464,8 @@ contains
 
    subroutine unpack_single_part_fields(ind, pinfo)
 
-      use constants, only: ndims
-
+      use constants,      only: ndims
+      use particle_types, only: P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
       implicit none
 
       integer,              intent(inout) :: ind
@@ -423,81 +476,108 @@ contains
       real                                :: mass, ener, tform, tdyn
       logical                             :: attributed
 
-      pid   = nint(pinfo(1), kind=4)
-      mass  = pinfo(2)
-      pos   = pinfo(3:5)
-      vel   = pinfo(6:8)
-      acc   = pinfo(9:11)
-      ener  = pinfo(12)
-      tform = pinfo(13)
-      tdyn  = pinfo(14)
+      pid   = nint(pinfo(P_ID), kind=4)
+      mass  = pinfo(P_MASS)
+      pos   = pinfo(P_POS_X:P_POS_Z)
+      vel   = pinfo(P_VEL_X:P_VEL_Z)
+      acc   = pinfo(P_ACC_X:P_ACC_Z)
+      ener  = pinfo(P_ENER)
+      tform = pinfo(P_TFORM)
+      tdyn  = pinfo(P_TDYN)
       call add_part_in_proper_cg(pid, mass, pos, vel, acc, ener, tform, tdyn, attributed) ! TO DO IN AMR USE GRID_ID TO CUT THE SEARCH SHORT
-      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed!' ! NON-AMR ONLY
+      if (.not. attributed) print *, 'error, particle', pid, 'cannot be attributed! ', pos ! NON-AMR CHECK ONLY
       ind = ind + npf
 
    end subroutine unpack_single_part_fields
 
-   integer(kind=4) function count_cg_particles(cg) result(n_part)
-
-      use constants,      only: I_ONE
-      use grid_cont,      only: grid_container
-      use particle_types, only: particle
-
-      implicit none
-
-      type(grid_container), pointer, intent(in) :: cg
-      type(particle),       pointer             :: pset
-
-      n_part = 0
-      pset => cg%pset%first
-      do while (associated(pset))
-         if (pset%pdata%phy) n_part = n_part + I_ONE
-         pset => pset%nxt
-      enddo
-
-   end function count_cg_particles
+!> \brief Count all particles on current thread
 
    integer(kind=4) function count_all_particles() result(pcount)
 
       use cg_cost_data,   only: I_PARTICLE
-      use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: I_ONE
-      use particle_types, only: particle
+      use cg_list_global, only: all_cg
+      use constants,      only: base_level_id
+      use dataio_pub,     only: die
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(particle), pointer    :: pset
 
       pcount = 0
-      cgl => leaves%first
+      cgl => all_cg%first
       do while (associated(cgl))
          call cgl%cg%costs%start
-         pset => cgl%cg%pset%first
-         do while (associated(pset))
-            if (pset%pdata%phy) pcount = pcount + I_ONE
-            pset => pset%nxt
-         enddo
+
+         if (associated(cgl%cg%pset%first) .and. (cgl%cg%l%id < base_level_id)) &
+              call die("[particle_utils:count_all_particles] particles found below base level")
+         pcount = pcount + cgl%cg%count_particles()
+
          call cgl%cg%costs%stop(I_PARTICLE)
          cgl => cgl%nxt
       enddo
 
    end function count_all_particles
 
-   integer(kind=4) function global_count_all_particles() result(gpcount)
+!> \brief Count all particles on all threads
 
-      use constants, only: pSUM
-      use mpisetup,  only: piernik_MPI_Allreduce
+   integer(kind=8) function global_count_all_particles(message) result(gpcount)
+
+      use constants,  only: pSUM, fmt_len
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: piernik_MPI_Allreduce, master
 
       implicit none
+
+      character(len=*), optional, intent(in) :: message
+
+      character(len=fmt_len) :: fmt
 
       gpcount = count_all_particles()
       call piernik_MPI_Allreduce(gpcount, pSUM)
 
+      if (present(message)) then
+         if (master) then
+            select case (gpcount)
+               case (:999999999)
+                  fmt = '(2a,i9)'
+               case default
+                  fmt = '(2a,i20)'
+            end select
+            write(msg, fmt) trim(message), " Total number of particles is ", gpcount
+            call printinfo(msg)
+         endif
+      endif
+
    end function global_count_all_particles
 
-   subroutine detach_particle(cg, pset)
+!> \brief Estimate load balance for particles
+
+   real function global_balance_particles() result(lb_particles)
+
+      use constants, only: pMAX, pSUM, one
+      use mpisetup,  only: piernik_MPI_Allreduce, nproc
+
+      implicit none
+
+      integer(kind=8) :: l_part_cnt, max_part_cnt, g_part_cnt
+
+      l_part_cnt = count_all_particles()
+      max_part_cnt = l_part_cnt
+      call piernik_MPI_Allreduce(max_part_cnt, pMAX)
+      if (max_part_cnt > 0.) then
+         g_part_cnt = l_part_cnt
+         call piernik_MPI_Allreduce(g_part_cnt, pSUM)
+         lb_particles = g_part_cnt/(nproc * real(max_part_cnt))
+      else
+         lb_particles = one  ! 0/0 is balanced
+      endif
+
+   end function global_balance_particles
+
+!> \brief Remove particle from cg%pset
+
+   subroutine detach_particle(cg, part)
 
       use grid_cont,      only: grid_container
       use particle_types, only: particle
@@ -505,12 +585,12 @@ contains
       implicit none
 
       type(grid_container),  pointer, intent(inout) :: cg
-      type(particle),        pointer, intent(inout) :: pset
-      type(particle),        pointer                :: pset2
+      type(particle),        pointer, intent(inout) :: part
+      type(particle),        pointer                :: part2
 
-      pset2 => pset%nxt
-      call cg%pset%remove(pset)
-      pset => pset2
+      part2 => part%nxt
+      call cg%pset%remove(part)
+      part => part2
 
    end subroutine detach_particle
 

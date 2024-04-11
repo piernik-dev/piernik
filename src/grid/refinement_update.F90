@@ -132,10 +132,32 @@ contains
          use cg_level_finest,    only: finest
          use cg_list,            only: cg_list_element
 
+#if defined(GRAV) && defined(NBODY)
+         use cg_level_base,      only: base
+         use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
+         use MPIF,               only: MPI_INTEGER, MPI_COMM_WORLD
+         use MPIFUN,             only: MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
+         use mpisetup,           only: req, err_mpi, inflate_req
+         use ppp_mpi,            only: piernik_Waitall
+         use refinement,         only: nbody_ref
+#ifdef MPIF08
+         use MPIF,               only: MPI_Comm
+#endif /* MPIF08 */
+#endif /* GRAV && NBODY */
+
          implicit none
 
          type(cg_level_connected_t), pointer :: curl
          type(cg_list_element), pointer :: cgl
+#if defined(GRAV) && defined(NBODY)
+         integer(kind=4) :: nr
+         integer :: i, j, k, g
+#ifdef MPIF08
+         type(MPI_Comm)  :: cp_comm
+#else /* !MPIF08 */
+         integer(kind=4) :: cp_comm
+#endif /* !MPIF08 */
+#endif /* GRAV && NBODY */
 
          curl => finest%level
          do while (associated(curl))
@@ -158,6 +180,55 @@ contains
 
             curl => curl%coarser
          enddo
+
+#if defined(GRAV) && defined(NBODY)
+         ! Update the number of particles on children for URC_nbody
+         if (nbody_ref > I_ZERO) then
+
+            call MPI_Comm_dup(MPI_COMM_WORLD, cp_comm, err_mpi)
+            nr = 0
+
+            curl => base%level
+            do while (associated(curl))
+               cgl => curl%first
+               do while (associated(cgl))
+                  cgl%cg%chld_pcnt = I_ZERO
+                  if (.not. associated(curl, base%level)) then
+                     associate (ro => cgl%cg%ro_tgt)
+                        if (allocated(ro%seg)) then
+                           if (nr + size(ro%seg) > size(req, dim=1)) call inflate_req
+                           do g = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
+                              nr = nr + I_ONE
+                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                           enddo
+                        endif
+                     end associate
+                  endif
+
+                  associate (ri => cgl%cg%ri_tgt)
+                     if (allocated(ri%seg)) then
+                        if (nr + size(ri%seg) > size(req, dim=1)) call inflate_req
+                        do g = lbound(ri%seg(:), dim=1), ubound(ri%seg(:), dim=1)
+                           nr = nr + I_ONE
+                           ! This looks a bit too tricky or fragile
+                           i = merge(LO, HI, ri%seg(g)%se(xdim, LO) <= cgl%cg%ijkse(xdim, LO))
+                           j = merge(LO, HI, ri%seg(g)%se(ydim, LO) <= cgl%cg%ijkse(ydim, LO))
+                           k = merge(LO, HI, ri%seg(g)%se(zdim, LO) <= cgl%cg%ijkse(zdim, LO))
+                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                        enddo
+                     endif
+                  end associate
+
+                  cgl => cgl%nxt
+               enddo
+               curl => curl%finer
+            enddo
+
+            call piernik_Waitall(nr, "parent_particle_cnt")
+
+            call MPI_Comm_free(cp_comm, err_mpi)
+         endif
+#endif /* GRAV && NBODY */
 
       end subroutine prepare_ref
 
@@ -448,8 +519,6 @@ contains
       use constants,             only: pLOR, pLAND, pSUM, pMAX, tmr_amr, PPP_AMR
       use dataio_pub,            only: die
       use global,                only: nstep
-      use grid_cont,             only: grid_container
-      use list_of_cg_lists,      only: all_lists
       use mpisetup,              only: piernik_MPI_Allreduce
       use ppp,                   only: ppp_main
       use refinement,            only: n_updAMR, emergency_fix
@@ -458,6 +527,9 @@ contains
 #ifdef GRAV
       use gravity,               only: update_gp
 #endif /* GRAV */
+#if defined(GRAV) && defined(NBODY)
+      use particle_utils,        only: part_refresh_ghosts
+#endif /* GRAV && NBODY */
 
       implicit none
 
@@ -466,14 +538,15 @@ contains
 
       integer :: nciter, top_level
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
-      logical :: some_refined, derefined, ctop_exists, fu
-      type(cg_list_element), pointer :: cgl, aux
+      logical :: some_refined, ctop_exists, fu
+      type(cg_list_element), pointer :: cgl
       type(cg_level_connected_t), pointer :: curl
-      type(grid_container),  pointer :: cg
       logical :: correct, full_update
       real :: ts  !< time for runtime profiling
-      character(len=*), parameter :: newref_label = "refine", deref_label = "derefinement", prol_label = "prolong_new"
+      character(len=*), parameter :: newref_label = "ru:refine", prol_label = "ru:prolong_new", &
+           rtb_label = "ru:restrict_to_base", ruprep_label = "ru:prep", scan_label = "ru:scan_for_refine"
 
+      call ppp_main%start(rtb_label, PPP_AMR)
       ts =  set_timer(tmr_amr, .true.)
 
       if (present(act_count)) act_count = 0
@@ -482,6 +555,7 @@ contains
       if (present(refinement_fixup_only)) full_update = .not. refinement_fixup_only
 
       call finest%level%restrict_to_base ! implies update of leafmap
+      call ppp_main%stop(rtb_label, PPP_AMR)
 
       if (n_updAMR <= 0) then
          ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
@@ -491,6 +565,8 @@ contains
          ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
          return
       endif
+
+      call ppp_main%start(ruprep_label, PPP_AMR)
 
       call all_cg%prevent_prolong
       call all_cg%set_is_old
@@ -504,8 +580,10 @@ contains
       fu = full_update
       call piernik_MPI_Allreduce(fu, pLAND)
       if (fu .neqv. full_update) call die("[refinement_update:update_refinement] inconsistent full_update")
+      call ppp_main%stop(ruprep_label, PPP_AMR)
 
       if (full_update) then
+         call ppp_main%start(scan_label, PPP_AMR)
          call scan_for_refinements
 
          ! do the refinements first
@@ -545,6 +623,8 @@ contains
          call all_cg%mark_orphans
 
          call leaves%update(" (  refine  ) ")
+
+         call ppp_main%stop(scan_label, PPP_AMR)
       endif
 
       ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions.
@@ -625,43 +705,7 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement.
-      ! Derefinement saves memory and CPU usage, but it is of lowest priority.
-      ! Just go through derefinement stage once and don't try to do too much here at once.
-      ! Any excess of refinement will be handled in the next call to this routine anyway.
-      if (full_update) then
-
-         call ppp_main%start(deref_label, PPP_AMR)
-         curl => finest%level
-         do while (associated(curl) .and. .not. associated(curl, base%level))
-            cgl => curl%first
-            derefined = .false.
-            do while (associated(cgl))
-               aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
-               cgl => cgl%nxt
-               if (aux%cg%flag%derefine) then
-                  if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
-                     if (all(aux%cg%leafmap)) then
-                        cg => aux%cg
-                        call all_lists%forget(cg)
-                        if (present(act_count)) act_count = act_count + 1
-                        curl%recently_changed = .true.
-                        derefined = .true.
-                     endif
-                  endif
-               endif
-            enddo
-            call piernik_MPI_Allreduce(derefined, pLOR)
-            if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
-            !> \todo replace call curl%init_all_new_cg by something cheaper
-            call curl%sync_ru
-            curl => curl%coarser
-         enddo
-         call ppp_main%stop(deref_label, PPP_AMR)
-
-         ! sync structure
-         call leaves%balance_and_update(" ( derefine ) ")
-
-      endif
+      if (full_update) call execute_derefinement(act_count)
 
       ! Check refinement topology and crash if anything got broken
       if (.not. fix_refinement()) call die("[refinement_update:update_refinement] Refinement defects still present")
@@ -676,6 +720,10 @@ contains
 
       call all_cg%enable_prolong
 
+#if defined(GRAV) && defined(NBODY)
+      ! Prolong particles, refresh the ghosts
+      call part_refresh_ghosts
+#endif /* GRAV && NBODY */
 #ifdef GRAV
       call update_gp
 #endif /* GRAV */
@@ -745,6 +793,367 @@ contains
 
    end subroutine update_refinement_wrapped
 
+!>
+!! \brief Derefine any excess of refinement.
+!! Derefinement saves memory and CPU usage, but it is of lowest priority.
+!! Just go through derefinement stage once and don't try to do too much here at once.
+!! Any excess of refinement will be handled in the next call to this routine anyway.
+!<
+
+   subroutine execute_derefinement(act_count)
+
+      use cg_leaves,             only: leaves
+      use cg_list,               only: cg_list_element
+      use cg_list_dataop,        only: cg_list_dataop_t  ! Can't use abstract type cg_list_t here
+      use cg_level_base,         only: base
+      use cg_level_connected,    only: cg_level_connected_t
+      use cg_level_finest,       only: finest
+      use constants,             only: pLOR, PPP_AMR
+      use list_of_cg_lists,      only: all_lists
+      use mpisetup,              only: piernik_MPI_Allreduce
+      use ppp,                   only: ppp_main
+
+      implicit none
+
+      integer, optional, intent(out) :: act_count  !< counts number of blocks refined or deleted
+
+      logical :: derefined
+      type(cg_list_element), pointer :: cgl, aux
+      type(cg_list_dataop_t), pointer :: doomed
+      type(cg_level_connected_t), pointer :: curl
+      character(len=*), parameter :: deref_label = "ru:derefinement", reinit_label = "ru:deref_reinit_cg"
+      logical, dimension(:), allocatable :: lev_deref
+
+      call ppp_main%start(deref_label, PPP_AMR)
+
+      allocate(doomed)
+      call doomed%init_new("doomed")
+      allocate(lev_deref(base%level%l%id:finest%level%l%id))
+      lev_deref = .false.
+
+      curl => finest%level
+      do while (associated(curl) .and. .not. associated(curl, base%level))
+         cgl => curl%first
+         derefined = .false.
+         do while (associated(cgl))
+            if (cgl%cg%flag%derefine) then
+               if (cgl%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
+                  if (all(cgl%cg%leafmap)) then
+                     call doomed%add(cgl%cg)
+                     curl%recently_changed = .true.
+                     derefined = .true.
+                  endif
+               endif
+            endif
+            cgl => cgl%nxt
+         enddo
+         call piernik_MPI_Allreduce(derefined, pLOR)
+         if (derefined) lev_deref(curl%l%id) = .true.
+
+         curl => curl%coarser
+      enddo
+
+      if (present(act_count)) act_count = act_count + doomed%cnt
+
+      ! Here we have to evacuate the particles to the parent grid
+#if defined(GRAV) && defined(NBODY)
+      call derefine_particles
+#endif /* GRAV && NBODY */
+
+      ! Now we can destroy the grids
+      cgl => doomed%first
+      do while (associated(cgl))
+         aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
+         cgl => cgl%nxt
+
+         call all_lists%forget(aux%cg)
+      enddo
+
+      call ppp_main%start(reinit_label, PPP_AMR)
+      curl => finest%level
+      do while (associated(curl) .and. .not. associated(curl, base%level))
+         if (lev_deref(curl%l%id)) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
+         !> \todo replace call curl%init_all_new_cg by something cheaper
+         call curl%sync_ru
+
+         curl => curl%coarser
+      enddo
+      call ppp_main%stop(reinit_label, PPP_AMR)
+
+      deallocate(lev_deref)
+      call doomed%delete
+      deallocate(doomed)
+
+      call ppp_main%stop(deref_label, PPP_AMR)
+
+      ! sync structure
+      call leaves%balance_and_update(" ( derefine ) ")
+
+   contains
+
+#if defined(GRAV) && defined(NBODY)
+      subroutine derefine_particles
+
+         use constants,      only: I_ZERO, I_ONE, PPP_AMR
+         use dataio_pub,     only: die, msg
+         use domain,         only: dom
+         use grid_cont,      only: grid_container
+         use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
+         use MPIFUN,         only: MPI_Alltoall, MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
+         use mpisetup,       only: proc, req, err_mpi, FIRST, LAST, inflate_req
+         use particle_func,  only: particle_in_area
+         use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
+         use particle_utils, only: is_part_in_cg
+         use ppp,            only: ppp_main
+         use ppp_mpi,        only: piernik_Waitall
+#ifdef MPIF08
+         use MPIF,           only: MPI_Comm
+#endif /* MPIF08 */
+
+         implicit none
+
+         integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv
+         integer(kind=4) :: nr, g
+         integer :: i, j, p
+         enum, bind(C)
+            enumerator :: I_GID  ! cg%grid_id
+            enumerator :: I_NP   ! cg%pset%count()
+            enumerator :: I_LEV  ! cg level
+         end enum
+         type :: pp  ! particle pointer
+            type(grid_container), pointer :: cg
+         end type pp
+         type :: gla
+            integer(kind=4), dimension(:, :), allocatable :: gl    ! shape: (I_GID:I_LEV, nsend(g)|nrecv(g))
+            type(pp),        dimension(:),    allocatable :: cgp   ! shape: (nsend(g)|nrecv(g))
+            real,            dimension(:, :), allocatable :: pbuf  ! shape: (npf, sum(cgrecv(g)%gl(I_NP, :))
+            integer :: cnt                                       ! auxiliary counter
+         end type gla
+         type(gla), dimension(FIRST:LAST) :: cgsend, cgrecv
+         type(particle), pointer :: part
+         logical :: found
+         logical :: in, phy, out, fin, indomain
+         character(len=*), parameter :: dp_label = "ru:deref_part", allmeta_label = "ru:deref:All2All", srmeta_label = "ru:deref:SR_meta", &
+              srpart_label = "ru:deref:SR_part", ownpart_label = "ru:deref:copy_own_part", get_label = "ru:deref:add_part"
+#ifdef MPIF08
+         type(MPI_Comm)  :: dp_comm
+#else /* !MPIF08 */
+         integer(kind=4) :: dp_comm
+#endif /* !MPIF08 */
+
+         call ppp_main%start(dp_label, PPP_AMR)
+
+         nsend = 0
+         nrecv = 0
+
+         cgl => doomed%first
+         do while (associated(cgl))
+            associate (ro => cgl%cg%ro_tgt)
+               if (allocated(ro%seg)) then
+                  do i = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
+                     if (cgl%cg%pset%count() > 0 ) then
+                        nsend(ro%seg(i)%proc) = nsend(ro%seg(i)%proc) + I_ONE
+                        if (i > lbound(ro%seg(:), dim=1)) &
+                             call die("[refinement_update:execute_derefinement] derefine_particles not implemented for multi-parent yet")
+                     endif
+                  enddo
+               else
+                  call die("[refinement_update:execute_derefinement] derefine_particles found no parent")
+               endif
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+         ! First, figure out with whom to communicate and how many cg
+         call ppp_main%start(allmeta_label, PPP_AMR)
+         call MPI_Alltoall(nsend, I_ONE, MPI_INTEGER, nrecv, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
+         call ppp_main%stop(allmeta_label, PPP_AMR)
+
+         ! nsend/nrecv are expected to represent a quite sparse communication matrix with most nonzero elements located around the diagonal so we may proceed with point-to-point MPI calls only
+
+         call MPI_Comm_dup(MPI_COMM_WORLD, dp_comm, err_mpi)
+
+         ! Second, describe, what to communicate
+         do g = FIRST, LAST
+            if (nsend(g) > 0) then
+               allocate(cgsend(g)%gl(I_GID:I_LEV, nsend(g)), cgsend(g)%cgp(nsend(g)))
+               cgsend(g)%cnt = 0
+            endif
+            if (nrecv(g) > 0) allocate(cgrecv(g)%gl(I_GID:I_LEV, nrecv(g)), cgrecv(g)%cgp(nrecv(g)))
+         enddo
+
+         cgl => doomed%first
+         do while (associated(cgl))
+            associate (ro => cgl%cg%ro_tgt)
+               if (allocated(ro%seg)) then
+                  do i = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
+                     if (cgl%cg%pset%count() > 0 ) then
+                        associate (rproc => ro%seg(i)%proc)  ! target process
+                           cgsend(rproc)%cnt = cgsend(rproc)%cnt + 1
+                           cgsend(rproc)%gl(:, cgsend(rproc)%cnt) = [ ro%seg(i)%tag, cgl%cg%pset%count(), cgl%cg%l%id - I_ONE]
+                           cgsend(rproc)%cgp(cgsend(rproc)%cnt)%cg => cgl%cg
+                        end associate
+                     endif
+                  enddo
+               endif
+            end associate
+            cgl => cgl%nxt
+         enddo
+
+         call ppp_main%start(srmeta_label, PPP_AMR)
+         if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
+         nr = 0
+         do g = FIRST, LAST
+            if (g /= proc) then
+               if (nr + 2 > size(req, dim=1)) call inflate_req
+               if (nsend(g) > 0) then
+                  nr = nr + I_ONE
+                  allocate(cgsend(g)%pbuf(npf, sum(cgsend(g)%gl(I_NP, :))))
+                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+               if (nrecv(g) > 0) then
+                  nr = nr + I_ONE
+                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+            endif
+         enddo
+
+         call piernik_Waitall(nr, "particle_derefinement_cnt")
+         call ppp_main%stop(srmeta_label, PPP_AMR)
+
+         ! set up cgrecv(:)%cgp based on received cgrecv(g)%gl, don't exclude g == proc here
+         ! we definitely need a browsable graph of local cgs and their parents, children and neighbours
+         do g = FIRST, LAST
+            if (nrecv(g) > 0) then
+               do i = lbound(cgrecv(g)%gl, dim=2), ubound(cgrecv(g)%gl, dim=2)
+                  found = .false.
+                  curl => finest%level
+                  do while (associated(curl))
+                     if (cgrecv(g)%gl(I_LEV, i) == curl%l%id) then
+                        cgl => curl%first
+                        do while (associated(cgl) .or. .not. found)
+                           do j = lbound(cgl%cg%ri_tgt%seg, dim=1), ubound(cgl%cg%ri_tgt%seg, dim=1)
+                              if (cgl%cg%ri_tgt%seg(j)%tag == cgrecv(g)%gl(I_GID, i)) then
+                                 found = .true.
+                                 cgrecv(g)%cgp(i)%cg => cgl%cg
+                                 exit
+                              endif
+                           enddo
+                           cgl => cgl%nxt
+                        enddo
+                     endif
+                     if (found) exit
+                     curl => curl%coarser
+                  enddo
+                  if (.not. found) call die("[refinement_update:execute_derefinement] not found")
+               enddo
+            endif
+         enddo
+
+         ! Third, communicate the particles
+         call ppp_main%start(srpart_label, PPP_AMR)
+         nr = 0
+         do g = FIRST, LAST
+            if (g /= proc) then
+               ! no need to call inflate_req as it should be already big enough
+               if (nsend(g) > 0) then
+                  nr = nr + I_ONE
+                  p = 0
+                  do i = lbound(cgsend(g)%gl, dim=2), ubound(cgsend(g)%gl, dim=2)
+                     ! copy outgoing particles
+                     part => cgsend(g)%cgp(i)%cg%pset%first
+                     do while (associated(part))
+                        if (part%pdata%phy) then
+                           p = p + 1
+                           ! spaghetti warning: similar code in rebalance and particle_utils
+                           cgsend(g)%pbuf(P_ID, p)            = part%pdata%pid
+                           cgsend(g)%pbuf(P_MASS, p)          = part%pdata%mass
+                           cgsend(g)%pbuf(P_POS_X:P_POS_Z, p) = part%pdata%pos
+                           cgsend(g)%pbuf(P_VEL_X:P_VEL_Z, p) = part%pdata%vel
+                           cgsend(g)%pbuf(P_ACC_X:P_ACC_Z, p) = part%pdata%acc
+                           cgsend(g)%pbuf(P_ENER, p)          = part%pdata%energy
+                           cgsend(g)%pbuf(P_TFORM, p)         = part%pdata%tform
+                           cgsend(g)%pbuf(P_TDYN, p)          = part%pdata%tdyn
+                        endif
+                        part => part%nxt
+                     enddo
+                  enddo
+                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+               if (nrecv(g) > 0) then
+                  nr = nr + I_ONE
+                  allocate(cgrecv(g)%pbuf(npf, sum(cgrecv(g)%gl(I_NP, :))))
+                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+               endif
+            endif
+         enddo
+
+         ! copy own particles (rproc == proc)
+         call ppp_main%start(ownpart_label, PPP_AMR)
+         if (nrecv(proc) > 0) then
+            do i = lbound(cgrecv(proc)%cgp, dim=1), ubound(cgrecv(proc)%cgp, dim=1)
+               part => cgsend(proc)%cgp(i)%cg%pset%first
+               do while (associated(part))
+                  if (part%pdata%phy) call cgrecv(proc)%cgp(i)%cg%pset%add(part%pdata)
+                  part => part%nxt
+               enddo
+            enddo
+         endif
+         call ppp_main%stop(ownpart_label, PPP_AMR)
+
+         call piernik_Waitall(nr, "particle_derefinement_p")
+         call ppp_main%stop(srpart_label, PPP_AMR)
+
+         ! copy incoming particles
+         call ppp_main%start(get_label, PPP_AMR)
+         do g = FIRST, LAST
+            if (g /= proc) then
+               ! no need to call inflate_req as it should be already big enough
+               if (nrecv(g) > 0) then
+                  p = 0
+                  do i = lbound(cgrecv(g)%cgp, dim=1), ubound(cgrecv(g)%cgp, dim=1)
+                     do j = p + 1, p + cgrecv(g)%gl(I_NP, i)
+                        indomain = particle_in_area(cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), dom%edge)
+
+                        call is_part_in_cg(cgrecv(g)%cgp(i)%cg, cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), indomain, in, phy, out, fin)
+
+                        if (phy) then
+                           call cgrecv(g)%cgp(i)%cg%pset%add(nint(cgrecv(g)%pbuf(P_ID, j), kind=4), cgrecv(g)%pbuf(P_MASS, j), &
+                                cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), cgrecv(g)%pbuf(P_VEL_X:P_VEL_Z, j), &
+                                cgrecv(g)%pbuf(P_ACC_X:P_ACC_Z, j), cgrecv(g)%pbuf(P_ENER, j), &
+                                in, phy, out, .true., &  ! here we have to ignore %fin because the cgrecv(g)%cgp(i)%cg%leafmap is not yet up to date
+                                cgrecv(g)%pbuf(P_TFORM, j), cgrecv(g)%pbuf(P_TDYN, j))
+                        else
+                           write(msg, '(3(a,i5),a,6g12.5,a,3g12.5,a,4i8)')"[refinement_update:execute_derefinement] derefine_particles: misplaced@", proc, " : #", cgrecv(g)%cgp(i)%cg%grid_id, " ^", cgrecv(g)%cgp(i)%cg%l%id, "fbnd[", cgrecv(g)%cgp(i)%cg%fbnd, "] part[", cgrecv(g)%pbuf(P_POS_X:P_POS_Z, j), "]", p, g, i, j
+                           call die(msg)
+                        endif
+                     enddo
+                     p = p + cgrecv(g)%gl(I_NP, i)
+                  enddo
+               endif
+            endif
+         enddo
+         call ppp_main%stop(get_label, PPP_AMR)
+
+         ! Cleanup
+         call MPI_Comm_free(dp_comm, err_mpi)
+         do g = FIRST, LAST
+            if (allocated(cgsend(g)%gl))   deallocate(cgsend(g)%gl)
+            if (allocated(cgsend(g)%cgp))  deallocate(cgsend(g)%cgp)
+            if (allocated(cgsend(g)%pbuf)) deallocate(cgsend(g)%pbuf)
+
+            if (allocated(cgrecv(g)%gl))   deallocate(cgrecv(g)%gl)
+            if (allocated(cgrecv(g)%cgp))  deallocate(cgrecv(g)%cgp)
+            if (allocated(cgrecv(g)%pbuf)) deallocate(cgrecv(g)%pbuf)
+         enddo
+
+         call ppp_main%stop(dp_label, PPP_AMR)
+
+      end subroutine derefine_particles
+#endif /* GRAV && NBODY */
+
+   end subroutine execute_derefinement
+
 !> \brief Refine a single grid piece. Pay attention whether it is already refined
 
    subroutine refine_one_grid(curl, cgl)
@@ -773,8 +1182,13 @@ contains
       call cgl%cg%costs%start
       associate (flag => cgl%cg%flag)
          if (flag%pending_blocks()) then
+            ! The refinemap2SFC_list is responsible for reducing many cell refinement requests into appropriate child cgs.
+            ! No checks against duplication or proper alignment are implemented here.
+            ! The whole procedure of adding patches was written in a very general way and can be a bit simplified.
             do b = lbound(flag%SFC_refine_list, dim=1), ubound(flag%SFC_refine_list, dim=1)
                if (flag%SFC_refine_list(b)%level == curl%finer%l%id) then
+                  ! Here we can determine which particles should go to a refined grid but the grid is not yet created.
+                  ! We'll let the particles to stay and "prolong " them later, when it will be determined, where they should go.
                   call curl%finer%add_patch(int(bsize, kind=8), flag%SFC_refine_list(b)%off)
                else
                   call die("[refinement_update:refine_one_grid] wrong level!")

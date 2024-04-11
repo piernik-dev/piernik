@@ -971,7 +971,8 @@ contains
       use common_hdf5,      only: part_gname, st_gname
       use data_hdf5,        only: gdf_translate
       use particles_io,     only: pvarn
-      use particle_utils,   only: add_part_in_proper_cg, part_leave_cg
+      use particle_func,    only: particle_in_area
+      use particle_utils,   only: is_part_in_cg
       use read_attr,        only: read_attribute
       use star_formation,   only: pid_gen
 #endif /* NBODY */
@@ -1007,6 +1008,7 @@ contains
       real,            dimension(:),   allocatable :: mass, ener, tform, tdyn
       real,            dimension(:,:), allocatable :: pos, vel, acc
       integer(kind=4), dimension(:),   allocatable :: ibuf, pid
+      logical                                      :: in, phy, out, fin
 #endif /* NBODY */
 
       ! Find overlap between own cg and restart cg
@@ -1140,11 +1142,10 @@ contains
       call h5gclose_f(part_g_id, error)
 
       do j = 1, n_part
-         call add_part_in_proper_cg(pid(j), mass(j), pos(j,:), vel(j,:), acc(j,:), ener(j), tform(j), tdyn(j))
+         call is_part_in_cg(cg, pos(j,:), particle_in_area(pos(j,:), dom%edge), in, phy, out, fin)
+         call cg%pset%add(pid(j), mass(j), pos(j,:), vel(j,:), acc(j,:), ener(j), in, phy, out, .true., tform(j), tdyn(j))
       enddo
       deallocate(pid, mass, pos, vel, acc, ener, tform, tdyn)
-
-      call part_leave_cg() ! TODO: isn't it redundant?
 #endif /* NBODY */
 
       call h5gclose_f(cg_g_id, error)

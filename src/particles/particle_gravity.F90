@@ -45,11 +45,11 @@ contains
       use cg_list,          only: cg_list_element
       use cg_list_dataop,   only: ind_val
       use constants,        only: ndims, xdim, ydim, zdim, gp_n, gpot_n, gp1b_n, sgp_n, nbdn_n, prth_n, one, zero, LO, PPP_PART
-      use dataio_pub,       only: die
-      use domain,           only: dom, is_refined
+      use domain,           only: dom
       use gravity,          only: source_terms_grav
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use particle_func,    only: ijk_of_particle
       use particle_maps,    only: map_particles
       use particle_pub,     only: mask_gpot1b
       use particle_types,   only: particle
@@ -107,7 +107,6 @@ contains
       call ppp_main%stop(potacc_i_label, PPP_PART)
 
       if (global_count_all_particles() == 0) return
-      if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented yet")
 
       call ppp_main%start(potacc_label, PPP_PART)
 
@@ -127,7 +126,7 @@ contains
          do while (associated(pset))
 
             ! Locate particle in cell
-            cell = floor((pset%pdata%pos - dom%edge(:, LO)) * cg%idl)
+            cell = ijk_of_particle(pset%pdata%pos, dom%edge(:,LO), cg%idl)
             dist = pset%pdata%pos - (dom%edge(:, LO) + cell * cg%dl)
 
             if (.not. pset%pdata%outside) &  ! Update particle density array
@@ -344,9 +343,9 @@ contains
 
       if (is_setacc_int) then
          pset%pdata%acc = update_particle_acc_int(ig, cg, cell, dist)
-      elseif (is_setacc_cic) then
+      else if (is_setacc_cic) then
          pset%pdata%acc = update_particle_acc_cic(ig, cg, pset%pdata%pos, cell)
-      elseif (is_setacc_tsc) then
+      else if (is_setacc_tsc) then
          pset%pdata%acc = update_particle_acc_tsc(ig, cg, pset%pdata%pos)
       endif
 
@@ -462,9 +461,9 @@ contains
       if (dom%eff_dim /= ndims) call die("[particle_gravity:update_particle_acc_tsc] Only 3D version is implemented")
 
       ijkp(:, I0) = nint((pos(:) - cg%fbnd(:,LO)-cg%dl(:)/2.) * cg%idl(:) + int(cg%lhn(:, LO)) + dom%nb, kind=4)
-      ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)))
-      ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)))
-      full_span = (ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
+      ijkp(:, IM) = max(ijkp(:, I0) - 1, int(cg%lhn(:, LO)) + 1)
+      ijkp(:, IP) = min(ijkp(:, I0) + 1, int(cg%lhn(:, HI)) - 1)
+      full_span =(ijkp(zdim, IM) == ijkp(zdim, I0) - 1) .and. (ijkp(zdim, IP) == ijkp(zdim, I0) + 1)
       ! Unlike mapping, for acceleration we need one extra cell
       if (any(ijkp(:, IM) < cg%lhn(:, LO)) .or. any(ijkp(:, IP) > cg%lhn(:, HI))) &
            call die("[particle_gravity:update_particle_acc_tsc] the particle flew too far into ghostcells")
