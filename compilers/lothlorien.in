@@ -28,7 +28,7 @@ endif
 
 # For gfortran 10.x some optimisations implied by -O2 are known to lead to
 # wrong evaluation of the code
-F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations -fno-ipa-cp-clone
 
 ifdef I64
   F90FLAGS += -fdefault-integer-8
