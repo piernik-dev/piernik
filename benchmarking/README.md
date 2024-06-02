@@ -27,7 +27,7 @@ On many CPUs one can see a bump in the half of the graph and significantly highe
 The current configuration is not well suited for CPUs which consist of *p-cores* and *e-cores*. It would require some extra effort in scheduling the processes and smart use of the `BALANCE` facility in Piernik to reach and show the peak performance available on such hybrid CPUs.
 
 ## Testing problems
-The problems and their configuration was chosen to test various aspects of the algorithms used in the Piernik code and to expose the hardware bottlenecks. 
+The problems and their configuration was chosen to test various aspects of the algorithms used in the Piernik code and to expose the hardware bottlenecks.
 
 * **`sedov`** – The most basic hydrodynamic problem run with the base domain of 64<sup>3</sup> and *cartesian decomposition*. It tends to scale well for small number of threads and exhibits peaks of poor performance when the number of threads is a prime number. This is because such a decomposition for a prime number results in creating slices in only one direction and relatively big communication overhead is combined with poor load balancing (imagine chopping 64<sup>3</sup> domain into 63 slices in _z_-direction ...).
 * **`maclaurin`** – The multigrid self-gravitating setup with very demanding settings for the multipole solver (`lmax = 64`). It is using *block decomposition*. The blocks are 32<sup>3</sup> and the domain is by default 64<sup>3</sup> for the *weak* and *flood* tests and 128<sup>3</sup> for the *strong* test.

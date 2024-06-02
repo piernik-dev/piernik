@@ -171,4 +171,3 @@ fi
 
 # Fail if gold distance is not 0.
 [ $( ( grep "^Total difference between" $GOLD_LOG || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
-

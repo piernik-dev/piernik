@@ -64,8 +64,8 @@
     K_cr_paral(2) = 0.0 !10000.0 ! anisotropic
     K_cr_perp(1)  = 0.0 !1.e1
     K_cr_perp(2)  = 0     ! isotropic
- /   
-  
+ /
+
  $COSMIC_RAY_SPECTRUM
     cre_eff     = 0.01   ! Fraction of total cr01 energy passed to cosmic ray electrons
     cfl_cre     = 0.4    ! CFL coefficient for cosmic ray electrons

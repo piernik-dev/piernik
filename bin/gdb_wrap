@@ -25,7 +25,7 @@
 # task (and hopefully nothing else), you may inspect all the bt_*_* files,
 # which now should contain the backtrace from the point where the processes
 # were killed.  A deadlock typically occurs when some processes have to wait
-# for some other processes, while these are waiting for yet something else. 
+# for some other processes, while these are waiting for yet something else.
 # Typically this can be identified in the backtraces as a partially
 # divergent call stacks: some processes have completed certain procedures
 # and went ahead while other processes are stuck few lines earlier for some

@@ -798,7 +798,7 @@
 	* trunk: Removing ''cs_iso2_arr'' from arrays. Sound speed square
 	  is always present for ISO runs. Adjust scheme to always pass
 	  cs_iso2 vector.
-	  
+
 	  '''BEWARE''' user is now responsible for setting sane values to
 	  cg%cs_iso2, although it's still unused if ISO_LOCAL is not set.
 	  Currenly cg%cs_iso2%arr is set with constants:big_float. In the
@@ -4587,7 +4587,6 @@
 2009-10-29  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* public: fixing svnci.sh
-	* 
 	* public: adding tool for automated commit taging
 
 2009-10-29  Michał Hanasz <mhanasz@astri.umk.pl>
@@ -4811,4 +4810,3 @@
 	* Removing erroneus copy made in r889
 	* Initial commit of public
 	* Restructuring code directories: adding public/trunk
-

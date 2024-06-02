@@ -25,22 +25,22 @@ fi
 # Create the .csv file with norms for Jenkins
 for j in gold riem ; do
     case $j in
-    	 ("gold") jj="gold" ;;
-	 ("riem") jj="Riemann" ;;
-	 (*) jj="___" ;;
+         ("gold") jj="gold" ;;
+         ("riem") jj="Riemann" ;;
+         (*) jj="___" ;;
     esac
     for i in ${CONF_DIR}/*.config ; do
-    	eval $( grep PROBLEM_NAME $i )
+        eval $( grep PROBLEM_NAME $i )
 	PROBLEM_NAME=${PROBLEM_NAME//\//___}
 
 	LOG=${OUT_DIR}${PROBLEM_NAME}/${j}_log
 	if [ -e $LOG ] ; then
            echo ${PROBLEM_NAME}_${jj}" "$( tail -n 1 $LOG | awk '{print $NF}' )
-    	else
+        else
 	   echo ${PROBLEM_NAME}_${jj}" "-0.1
         fi
     done |\
-    	 awk '{\
+        awk '{\
 		    a[$1]=$2;\
 		} END {\
 		    for (i in a) printf("%s,",i);\
@@ -48,7 +48,7 @@ for j in gold riem ; do
 		    for (i in a) printf("%s,",a[i]);\
 		    print "";\
 		}' |\
-     	sed 's/,$//' > ${OUT_DIR}all_${jj}.csv
+        sed 's/,$//' > ${OUT_DIR}all_${jj}.csv
 done
 
 # Print the results
