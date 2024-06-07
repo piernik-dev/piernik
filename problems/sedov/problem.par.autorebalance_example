@@ -1,0 +1,117 @@
+ $BASE_DOMAIN
+    n_d = 3*96
+    bnd_xl = 'ref'
+    bnd_xr = 'out'
+    bnd_yl = 'ref'
+    bnd_yr = 'ref'
+    bnd_zl = 'ref'
+    bnd_zr = 'ref'
+    xmin   = -1.
+    xmax   =  1.
+    ymin   = -1.
+    ymax   =  1.
+    zmin   = -1.
+    zmax   =  1.
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.1
+    nend   = 20
+ /
+
+ $OUTPUT_CONTROL
+    verbosity = "verbose"
+    problem_name = 'sedov'
+    run_id =  'tst'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 0.0001
+    dt_tsl  = 1.e-10
+    vars(1:) = 'ener', 'dens', 'level', 'velx', 'vely', 'velz'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.666666666
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-3
+    smallei= 1.e-5
+    limiter= 'vanleer'
+    solver_str = "Riemann"
+ /
+
+ $GRAVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.0
+    p0     = 1.0
+    Eexpl  = 1.e6
+    bx0    = 0.0
+    by0    = 0.0
+    bz0    = 0.0
+    x0     = 0.
+    y0     = 0.
+    z0     = 0.
+    r0     = 0.25
+    dtrig  = 1.5
+    ref_thr = 0.3
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+    bsize = 3*24
+    level_max = 3
+!    n_updAMR = 3
+ /
+
+!  This is minimal autobalance on hybrid CPU.  If the cores are of non-equal
+! performance it should be possible to notice smaller dWallClock after
+! second timestep.  For best results make sure that you use Core affinity,
+! like `--bind-to core` option in OpenMPI.
+
+!  After disabling flexible_balance, the code would stick to equalization of
+! cg amount per cpu, which may be suboptimal for hybrid processors – the
+! P-cores will be underutizized and E-cores would limit the overall
+! performance.
+
+!  Please note that balancing particles and hydro has limited effects
+! because there are global synchronizations between these phases and no
+! overlap between these two calculations can be achieved.
+
+ $BALANCE
+   verbosity_nstep = 10
+   n_rebalance = 7
+   flexible_balance = .true.
+   verbosity = 2
+   oop_thr = 0.01  ! be very sensitive to any imbalance
+!   balance_thread = .true.
+!   balance_host = 1.
+!   balance_cg = 1.
+ /
