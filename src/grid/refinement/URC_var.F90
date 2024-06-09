@@ -110,7 +110,7 @@ contains
       call identify_field(rf%rvar, iv, ic)
 
       if (iv == INVALID) then
-         if (master) call warn("[unified_ref_crit_var:decode_urcv] ignoring '" // trim(rf%rvar) // "'")
+         if (master) call warn("[URC_var:decode_urcv] ignoring '" // trim(rf%rvar) // "'")
          return
       endif
 
@@ -174,7 +174,7 @@ contains
       !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
       !> \todo introduce possibility to operate on pressure or other indirect fields
 
-      write(msg,'(3a)')"[unified_ref_crit_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
+      write(msg,'(3a)')"[URC_var:identify_field] Unidentified refinement variable: '",trim(vname),"'"
       if (master) call warn(msg)
 
    contains
@@ -223,9 +223,9 @@ contains
          endif
          call printinfo(msg)
          if (present(ic)) then
-            if (.not. wna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
+            if (.not. wna%lst(iv)%vital) call warn("[URC_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
          else
-            if (.not. qna%lst(iv)%vital) call warn("[unified_ref_crit_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
+            if (.not. qna%lst(iv)%vital) call warn("[URC_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
          endif
       endif
 
@@ -251,7 +251,7 @@ contains
             this%refine => refine_on_second_derivative
          case (trim(inactive_name)) ! do nothing
          case default
-            call die("[unified_ref_crit_var:init] unknown refinement detection routine")
+            call die("[URC_var:init] unknown refinement detection routine")
       end select
 
    end function init
@@ -317,9 +317,9 @@ contains
       character(len=*), parameter :: L_label = "Loechner_mark"
 
       call ppp_main%start(L_label, PPP_AMR + PPP_CG)
-      if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_var:refine_on_second_derivative] noncartesian geometry not supported yet")
+      if (dom%geometry_type /= GEO_XYZ) call die("[URC_var:refine_on_second_derivative] noncartesian geometry not supported yet")
       if (dom%nb <= how_far+I_ONE) then
-         write(msg, '(a,i1,a)')"[unified_ref_crit_var:refine_on_second_derivative] at least ", how_far+I_ONE+I_ONE, " guardcells are required"
+         write(msg, '(a,i1,a)')"[URC_var:refine_on_second_derivative] at least ", how_far+I_ONE+I_ONE, " guardcells are required"
          ! dux(i+I_ONE, j, k) is accessing p3d(i+I_ONE+I_ONE, j, k), so for i = cg%ie + how_far*dom%D_x means that dom%nb has to be at least 4
          ! ToDo: check if it is safe to reduce how_far and avoid refinement flickering
          call die(msg)

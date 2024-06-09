@@ -128,7 +128,7 @@ contains
             enddo
          enddo
 
-         ! if (sum(oct_cnt) > this%ref_thr) call warn("[unified_ref_crit_nbody:mark_nbody] Too many particles left in non-refined region")
+         ! if (sum(oct_cnt) > this%ref_thr) call warn("[URC_nbody:mark_nbody] Too many particles left in non-refined region")
 
       endif
 #else /*  !(GRAV && NBODY) */

@@ -103,7 +103,7 @@ contains
 
       if (this%enough_level(cg%l%id)) return
 
-      if (.not. allocated(this%ijk)) call die("[unified_ref_crit_geometrical_point:mark_point] ijk not allocated")
+      if (.not. allocated(this%ijk)) call die("[URCgeom_point:mark_point] ijk not allocated")
 
       ! Have some new levels of refinement appeared in the meantime?
       if (any(this%ijk(cg%l%id, :) == uninit)) call this%init_lev

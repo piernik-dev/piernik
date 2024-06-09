@@ -108,8 +108,8 @@ contains
 
       if (this%enough_level(cg%l%id)) return
 
-      if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[unified_ref_crit_geometrical_box:mark_box] inconsistent alloc")
-      if (.not. allocated(this%ijk_lo)) call die("[unified_ref_crit_geometrical_box:mark_box] ijk_{lo,hi} not allocated")
+      if (allocated(this%ijk_lo) .neqv. allocated(this%ijk_hi)) call die("[URCgeom_box:mark_box] inconsistent alloc")
+      if (.not. allocated(this%ijk_lo)) call die("[URCgeom_box:mark_box] ijk_{lo,hi} not allocated")
 
       ! Have some new levels of refinement appeared in the meantime?
       if ( any(this%ijk_lo(cg%l%id, :) == uninit) .or. &

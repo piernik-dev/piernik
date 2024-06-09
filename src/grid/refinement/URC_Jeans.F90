@@ -109,11 +109,11 @@ contains
 #ifdef MAGNETIC
       logical, save :: warned = .false.
 
-      if (.not. warned) call warn("[unified_ref_crit_Jeans:mark_Jeans] magnetic pressure is ignored (unimplemented yet)")
+      if (.not. warned) call warn("[URC_Jeans:mark_Jeans] magnetic pressure is ignored (unimplemented yet)")
       warned = .true.
 #endif /* MAGNETIC */
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[unified_ref_crit_Jeans:mark_Jeans] unsupported (non-cartesian) geometry")
+      if (dom%geometry_type /= GEO_XYZ) call die("[URC_Jeans:mark_Jeans] unsupported (non-cartesian) geometry")
 
       if (this%iplot /= INVALID) then
          p3d => cg%q(this%iplot)%arr
