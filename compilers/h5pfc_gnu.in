@@ -26,7 +26,7 @@ endif
 F90FLAGS += -O2 -fno-stack-arrays
 
 # Fixes for known problematic gfortran flags that are implied by optimization
-F90FLAGS += -fno-inline-small-functions -fno-tree-pre
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations -fno-ipa-cp-clone
 
 GFORTRAN := $(shell gfortran -dumpversion | cut -f1 -d.)
 ifeq ($(shell expr $(GFORTRAN) \>= 10), 1)

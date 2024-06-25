@@ -6,4 +6,3 @@
 
 #define MAGNETIC
 #undef  RESISTIVE
-

@@ -5,8 +5,8 @@
 # -fcheck=all
 ###############################################################################
 PROG     = piernik
-F90      = mpif90  
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g 
+F90      = mpif90
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -pedantic
 F90FLAGS += -fbacktrace -ggdb

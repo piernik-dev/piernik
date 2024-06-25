@@ -12,4 +12,4 @@ else
    F90FLAGS += -O2 -fno-stack-arrays
 endif
 
-F90FLAGS += -fno-inline-small-functions -fno-tree-pre
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations -fno-ipa-cp-clone

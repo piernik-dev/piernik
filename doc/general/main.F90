@@ -10,4 +10,3 @@
 !!Public version of PIERNIK code is available via the web-page: {http://piernik.astri.umk.pl}. The web-page informs how to access the source code,  which is maintained in a public git repository, together with on-line documentation describing details of code utilization. An overview of PIERNIK capabilities is in conference papers (Hanasz et al. 2008a,b,c and 2009a, see: {http://arxiv.org/abs/0812.2161}, {http://arxiv.org/abs/0812.2799}, {http://arxiv.org/abs/0812.4839}, {http://arxiv.org/abs/0901.0104}).
 !!
 !<
-

@@ -413,7 +413,7 @@ contains
       base_no_fft = base_no_fft .or. (cnt /= 1)
 #ifdef NO_FFT
       if (.not. base_no_fft) then
-         call warn("[multigrid_gravity:init_multigrid_grav] Forced base_no_fft due to NO_FFT")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Forced base_no_fft due to NO_FFT")
          base_no_fft = .true.
       endif
 #endif /* NO_FFT */

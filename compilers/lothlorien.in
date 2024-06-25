@@ -13,7 +13,7 @@ F90      = h5pfc
 F90 += -I/usr/lib64/gfortran/modules/$(subst _,,$(MPI_SUFFIX))
 
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
-F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
+F90FLAGS += -O3 -funroll-loops -fno-stack-arrays -frecursive
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -fmodule-private
 F90FLAGS += -fbacktrace -ggdb
 F90FLAGS += -fcheck=all,no-array-temps
@@ -28,7 +28,7 @@ endif
 
 # For gfortran 10.x some optimisations implied by -O2 are known to lead to
 # wrong evaluation of the code
-F90FLAGS += -fno-inline-small-functions -fno-tree-pre
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations -fno-ipa-cp-clone
 
 ifdef I64
   F90FLAGS += -fdefault-integer-8
@@ -54,8 +54,9 @@ ifdef LINIT
 endif
 
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
-#denormal,underflow,inexact
-## denormal causes weird problems since gcc 4.7.0
+# denormal   # crash in sources.F90:limit_minimal_intener:ekin()
+# underflow  # crash in sources.F90:limit_minimal_intener:ekin()
+# inexact    # OpenMPI 4.1.5 crashes on it in MPI_Init
 
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 MAKEFLAGS += -j4

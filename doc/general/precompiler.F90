@@ -97,5 +97,3 @@
 !! \b \#define \b "__PGI" - flag for Portland Compilers
 !!
 !<
-
-

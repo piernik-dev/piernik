@@ -1,5 +1,5 @@
 ###############################################################################
-# 
+#
 # ToDo: test with different mpi libraries:
 # F90 = mpif90  -I${MPI_FORTRAN_MOD_DIR}
 # -fcheck=all
@@ -17,4 +17,3 @@ F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 MAKEFLAGS += -j4
 F90FLAGS += -I/usr/include
-

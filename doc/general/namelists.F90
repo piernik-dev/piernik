@@ -39,5 +39,3 @@
 !! \copydetails units::init_units
 !!
 !<
-
-

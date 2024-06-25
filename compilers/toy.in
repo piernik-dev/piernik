@@ -3,7 +3,7 @@ PROG      = piernik
 ### gcc-5.1
 F90       = /opt/gcc/5.1.0/hdf5/bin/h5pfc
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g $
-LDFLAGS   = 
+LDFLAGS   =
 
 ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,underflow,invalid -fcheck=all -fno-omit-frame-pointer -fbacktrace

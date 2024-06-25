@@ -103,10 +103,10 @@ contains
 
    subroutine fft_solve_level(curl, src, soln)
 
-      use cg_cost_data,        only: I_MULTIGRID
       use cg_level_connected,  only: cg_level_connected_t
       use dataio_pub,          only: die
 #ifndef NO_FFT
+      use cg_cost_data,        only: I_MULTIGRID
       use cg_list,             only: cg_list_element
       use constants,           only: fft_none, fft_rcr, fft_dst
       use grid_cont,           only: grid_container

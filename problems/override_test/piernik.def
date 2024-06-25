@@ -9,4 +9,3 @@
 #if !defined NEUTRAL && !defined DUST
 #  define IONIZED
 #endif
-

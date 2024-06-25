@@ -88,13 +88,13 @@ awk 'BEGIN {\
 } {\
   if (NF == 16)\
      if ($0 ~ "column") {\
-     	printf("%-11s ", $1);
+        printf("%-11s ", $1);
 	for (i=2; i<=NF; i++)\
 	    printf("%13s ", $i);\
-     	printf("\n");\
+        printf("\n");\
      }\
      else {\
-     	  a[0] = $1;\
+          a[0] = $1;\
 	  a[1] = $2;\
 	  a[2] = $3*x;\
 	  a[3] = $4*y;\
@@ -114,18 +114,18 @@ awk 'BEGIN {\
 	  second = 0.;\
 	  for (i=1 ;i<=15; i++)\
 	      if (abs(a[i]) > max)\
-	      	 max = a[i];\
+	          max = a[i];\
 	      else if (abs(a[i]) > second)\
-	      	 second = a[i];\
+	          second = a[i];\
           printf("%-11s ", val[a[0]]);\
 	  for (i=1 ;i<=15; i++) {\
 	      color = normal;\
 	      if (abs(a[i]) >= high * max)\
-	      	 color = white;\
+	          color = white;\
 	      if (abs(a[i]) < low * max && abs(a[i]) < high * second)\
-	      	 color = gray;\
+	          color = gray;\
 	      printf("%s%13s%s ", color, a[i], normal);\
- 	  }\
+          }\
 	  printf("\n");\
       }\
  }' $FIT
