@@ -1073,6 +1073,8 @@ contains
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
+               if (otype == O_OUT) allocate(cg_n_o(cg_n(p), ndims))  ! Prevent crash due to passing unallocated array.
+               ! Ugliness of the above fix suggests overcomplication somewhere.
                call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail, cg_npart(g), st_g_id) !!!!!
 #ifdef NBODY
                call h5gclose_f(st_g_id, error)
