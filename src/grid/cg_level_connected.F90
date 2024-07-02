@@ -1437,14 +1437,22 @@ contains
 
    recursive subroutine restrict_to_floor_q_1var(this, iv)
 
+      use dataio_pub,       only: warn
+      use named_array_list, only: qna
+
       implicit none
 
       class(cg_level_connected_t), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
-      call this%restrict_1var(iv)
-      call this%coarser%restrict_to_floor_q_1var(iv)
+      if (.not. qna%lst(iv)%multigrid) then
+         call warn("[cg_level_connected:restrict_to_floor_q_1var] '" // trim(qna%lst(iv)%name) // "' is a non-multigrid field, redirecting to restrict_to_base_q_1var")
+         call this%restrict_to_base_q_1var(iv)
+      else
+         call this%restrict_1var(iv)
+         call this%coarser%restrict_to_floor_q_1var(iv)
+      endif
 
    end subroutine restrict_to_floor_q_1var
 
