@@ -35,7 +35,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, &
+   use dataio_pub, only: domain_dump, nend, tend, wend, res_id, &
         &                nrestart, problem_name, run_id, multiple_h5files, use_v2_io, &
         &                nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
    use constants,  only: fmt_len, cbuff_len, msg_len, dsetnamelen, RES, TSL
@@ -105,7 +105,7 @@ module dataio
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump,    &
-                              domain_dump, vars, pvars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files, &
+                              domain_dump, vars, pvars, user_message_file, system_message_file, multiple_h5files, &
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
@@ -150,9 +150,6 @@ contains
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>pvars              </td><td>''                 </td><td>'ppos', 'pvel', 'pacc', 'mass', 'ener' and some more </td><td>\copydoc dataio::pvars </td></tr>
-!! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
-!! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
-!! <tr><td>fmax               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmax         </td></tr>
 !! <tr><td>user_message_file  </td><td>trim(wd_rd)//'/msg'</td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>multiple_h5files   </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::multiple_h5files</td></tr>
@@ -389,7 +386,7 @@ contains
          ibuff(21) = resdel
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
@@ -398,20 +395,17 @@ contains
          rbuff(41) = dt_res
          rbuff(42) = dt_tsl
          rbuff(43) = dt_log
-         rbuff(45) = fmin
-         rbuff(46) = fmax
-         rbuff(47) = wdt_res
+         rbuff(44) = wdt_res
 
-         lbuff(1)  = vizit
-         lbuff(2)  = multiple_h5files
-         lbuff(3)  = use_v2_io
-         lbuff(5)  = init_hdf_dump
-         lbuff(6)  = init_res_dump
-         lbuff(7)  = tsl_with_mom
-         lbuff(8)  = tsl_with_ptc
-         lbuff(9)  = colormode
-         lbuff(10) = gdf_strict
-         lbuff(11) = h5_64bit
+         lbuff(1)  = multiple_h5files
+         lbuff(2)  = use_v2_io
+         lbuff(3)  = init_hdf_dump
+         lbuff(4)  = init_res_dump
+         lbuff(5)  = tsl_with_mom
+         lbuff(6)  = tsl_with_ptc
+         lbuff(7)  = colormode
+         lbuff(8)  = gdf_strict
+         lbuff(9)  = h5_64bit
 
          cbuff(20) = user_message_file
          cbuff(21) = system_message_file
@@ -450,7 +444,7 @@ contains
          resdel              = ibuff(21)
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
-!                              domain_dump, vars, vizit, fmin, fmax, user_message_file, system_message_file, multiple_h5files,     &
+!                              domain_dump, vars, user_message_file, system_message_file, multiple_h5files,     &
 !                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict
 
          nproc_io            = int(ibuff(43), kind=4)
@@ -460,20 +454,17 @@ contains
          dt_res              = rbuff(41)
          dt_tsl              = rbuff(42)
          dt_log              = rbuff(43)
-         fmin                = rbuff(45)
-         fmax                = rbuff(46)
-         wdt_res             = rbuff(47)
+         wdt_res             = rbuff(44)
 
-         vizit               = lbuff(1)
-         multiple_h5files    = lbuff(2)
-         use_v2_io           = lbuff(3)
-         init_hdf_dump       = lbuff(5)
-         init_res_dump       = lbuff(6)
-         tsl_with_mom        = lbuff(7)
-         tsl_with_ptc        = lbuff(8)
-         colormode           = lbuff(9)
-         gdf_strict          = lbuff(10)
-         h5_64bit            = lbuff(11)
+         multiple_h5files    = lbuff(1)
+         use_v2_io           = lbuff(2)
+         init_hdf_dump       = lbuff(3)
+         init_res_dump       = lbuff(4)
+         tsl_with_mom        = lbuff(5)
+         tsl_with_ptc        = lbuff(6)
+         colormode           = lbuff(7)
+         gdf_strict          = lbuff(8)
+         h5_64bit            = lbuff(9)
 
          user_message_file   = trim(cbuff(20))
          system_message_file = trim(cbuff(21))

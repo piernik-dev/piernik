@@ -31,5 +31,4 @@
 
 /* Barely used, abandoned, historical ... */
 #define CORIOLIS
-#undef PGPLOT
 #undef PIERNIK_OPENCL

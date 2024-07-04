@@ -2059,7 +2059,6 @@ PREDEFINED             = COLLISIONS \
                          MULTIGRID \
                          NEUTRAL \
                          PERFMON \
-                         PGPLOT \
                          RESISTIVE \
                          SELF_GRAV \
                          SHEAR \

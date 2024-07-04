@@ -111,10 +111,7 @@ module dataio_pub
    logical, save               :: restarted_sim = .false.        !< logical to distinguish between new and restarted simulation
    integer(kind=4), save       :: require_problem_IC = 0         !< 1 will call initproblem::problem_initial_conditions on restart
 
-   logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
-   real                        :: fmin                           !< minimum on pgplot scale
-   real                        :: fmax                           !< maximum on pgplot scale
 
    ! stdout and logfile messages
    integer, parameter :: T_PLAIN  = 0, &                         !< enum for message types
