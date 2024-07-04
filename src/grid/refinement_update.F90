@@ -557,13 +557,9 @@ contains
       call finest%level%restrict_to_base ! implies update of leafmap
       call ppp_main%stop(rtb_label, PPP_AMR)
 
-      if (n_updAMR <= 0) then
-         ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
-         return
-      endif
-      if (mod(nstep, n_updAMR) /= 0 .and. .not. emergency_fix) then
-         ! call print_time("[refinement_update] No refinement update")  ! ToDo: enable only when detailed profiling is required
-         return
+      if (.not. emergency_fix) then
+         if (n_updAMR <= 0) return
+         if (mod(nstep, n_updAMR) /= 0) return
       endif
 
       call ppp_main%start(ruprep_label, PPP_AMR)
