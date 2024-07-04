@@ -129,11 +129,6 @@
     amp_cr1   = 1000.0
  /
 
- $PIERNIK_DEBUG
-    constant_dt = 0.0
-
- /
-
  $INTERACTIONS
  /
 
