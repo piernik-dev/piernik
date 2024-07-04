@@ -48,7 +48,6 @@ module dataio
 
    integer, parameter       :: nvarsmx = 50          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
-   integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
    real                     :: dt_res                !< simulation time between successive restart file dumps
    real                     :: wdt_res               !< walltime between successive restart file dumps
@@ -103,7 +102,7 @@ module dataio
    end type tsl_container
 
    namelist /END_CONTROL/     nend, tend, wend
-   namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
+   namelist /RESTART_CONTROL/ restart, res_id, nrestart
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump,    &
                               domain_dump, vars, pvars, user_message_file, system_message_file, multiple_h5files, &
                               use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
@@ -131,7 +130,6 @@ contains
 !! <tr><td>restart </td><td>'last'</td><td>'last' or another string of characters</td><td>\copydoc dataio::restart     </td></tr>
 !! <tr><td>res_id  </td><td>''    </td><td>string of characters                  </td><td>\copydoc dataio_pub::res_id  </td></tr>
 !! <tr><td>nrestart</td><td>3     </td><td>integer                               </td><td>\copydoc dataio_pub::nrestart</td></tr>
-!! <tr><td>resdel  </td><td>0     </td><td>integer                               </td><td>\copydoc dataio::resdel      </td></tr>
 !! </table>
 !! \n \n
 !! @b OUTPUT_CONTROL
@@ -268,7 +266,6 @@ contains
                               ! if something else is set: "nrestart" value is fixing
       res_id        = ''
       nrestart      = 3
-      resdel        = 0
 
       dt_hdf        = 0.0
       dt_res        = 0.0
@@ -378,12 +375,11 @@ contains
          rbuff(2)  = wend
 
 
-!   namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
+!   namelist /RESTART_CONTROL/ restart, res_id, nrestart
          cbuff(20) = restart
          cbuff(21) = res_id
 
          ibuff(20) = nrestart
-         ibuff(21) = resdel
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
 !                              domain_dump, vars, user_message_file, system_message_file, multiple_h5files,     &
@@ -436,12 +432,11 @@ contains
          tend                = rbuff(1)
          wend                = rbuff(2)
 
-!   namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
+!   namelist /RESTART_CONTROL/ restart, res_id, nrestart
          restart             = trim(cbuff(20))
          res_id              = trim(cbuff(21))
 
          nrestart            = int(ibuff(20), kind=4)
-         resdel              = ibuff(21)
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump, &
 !                              domain_dump, vars, user_message_file, system_message_file, multiple_h5files,     &
