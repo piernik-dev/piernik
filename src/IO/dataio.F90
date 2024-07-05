@@ -603,6 +603,7 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
+      use cg_leaves,    only: leaves
       use dataio_pub,   only: msg, printinfo, warn
       use load_balance, only: umsg_verbosity, V_HOST
       use mpisetup,     only: master, piernik_MPI_Bcast
@@ -692,6 +693,8 @@ contains
                ! manual excluding may be helpful too, but we need to pass a list, like "exclude 2,7-9,32769", and process it safely
             case ('refine')
                emergency_fix = .true.
+            case ('balance')
+               call leaves%balance_and_update(" (u-balance ) ")
             case ('help')
                if (master) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:", char(10), &
@@ -705,6 +708,7 @@ contains
                   &"  log       - update logfile", char(10), &
                   &"  tsl       - write a timeslice", char(10), &
                   &"  refine    - call refinement_update as soon as possible", char(10), &
+                  &"  balance   - call rebalance as soon as possible", char(10), &
                   &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
                   &"  unexclude - reset thread exclusion mask", char(10), &
                   &"  perf [N]  - print performance data with verbosity N (default V_HOST)", char(10), &

@@ -53,7 +53,8 @@ module cg_level_connected
       procedure :: free_all_cg                !< Erase all data on the level, leave it empty
 
       ! Prolongation and restriction
-      procedure :: vertical_prep              !< initialize prolongation and restriction targets; not PRIVATE because of single call in cg_leaves:update
+      procedure :: update_verticals           !< Go through all necessary vertical_prep and vertical_b_prep
+      procedure, private :: vertical_prep     !< Initialize prolongation and restriction targets
       procedure, private :: vertical_b_prep   !< Initialize prolongation targets for fine-coarse boundary exchange
       procedure, private :: vertical_bf_prep  !< Initialize prolongation targets for fine->coarse flux exchange
 
@@ -168,6 +169,26 @@ contains
       call this%sync_ru
 
    end subroutine free_all_cg
+
+!>
+!! \brief Go through all necessary vertical_prep and vertical_b_prep, from botom to top
+!!
+!! \details This is required to be called in leaves%balance_and_update to prevent deadlocks later in fluidupdate.
+!! The horizontal exchanges are usually updated via update_everything called from check_update_all.
+!>
+
+   recursive subroutine update_verticals(this)
+
+      implicit none
+
+      class(cg_level_connected_t), intent(inout) :: this   !< object invoking type bound procedure
+
+      call this%vertical_prep  ! Is it necessary just here? Perhaps it has to be called somewhere anyway
+      call this%vertical_b_prep
+
+      if (associated(this%finer)) call this%finer%update_verticals
+
+   end subroutine update_verticals
 
 !>
 !! \brief Initialize prolongation and restriction targets. Called from init_multigrid.

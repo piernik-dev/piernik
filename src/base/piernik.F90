@@ -31,7 +31,6 @@
 program piernik
 ! pulled by ANY
 
-   use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI
@@ -180,9 +179,7 @@ program piernik
          ! * some "derefine" events are allowed
          ! It can be used for diagnostic purposes. In production runs it may cost too much.
          if (try_rebalance) then
-            !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
             call leaves%balance_and_update(" (re-balance) ")
-            call all_bnd ! For some strange reasons this call prevents MPI-deadlock
             try_rebalance = .false.
          endif
 
