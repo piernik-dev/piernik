@@ -39,7 +39,7 @@ module refinement
         &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot, &
         &    nbody_ref, updAMR_after
 
-   integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
+   integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure, 0 to disable it even at IC
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
@@ -350,6 +350,10 @@ contains
          n_updAMR  = huge(I_ONE)
       endif
       if (master) call printinfo(msg)
+
+      if ((n_updAMR == 0) .and. (level_max > base_level_id)) then
+         if (master) call warn("[refinement:init_refinement] refinements disabled (n_updAMR = 0)")
+      endif
 
    end subroutine init_refinement
 

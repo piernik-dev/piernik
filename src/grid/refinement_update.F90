@@ -559,7 +559,7 @@ contains
 
       if (.not. emergency_fix) then
          if (n_updAMR <= 0) return
-         if (mod(nstep, n_updAMR) /= 0) return
+         if (mod(nstep, n_updAMR) /= 0) return  ! IC refinements possible only when n_updAMR /= 0 (default: huge(I_ONE))
       endif
 
       call ppp_main%start(ruprep_label, PPP_AMR)
@@ -727,12 +727,7 @@ contains
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
 
       emergency_fix = .false.
-
-      if (full_update) then
-         call print_time("[refinement_update] Finishing (full update)")
-      else
-         call print_time("[refinement_update] Finishing (fixup only)")
-      endif
+      call print_time("[refinement_update] Finishing (" // trim(merge("full update", "fixup only ", full_update)) // ")")
 
       call log_req
 
