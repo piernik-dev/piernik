@@ -108,7 +108,7 @@ contains
 !!   <tr><td> level_max           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_max           </td></tr>
 !!   <tr><td> n_updAMR            </td><td> HUGE    </td><td> integer          </td><td> \copydoc refinement::n_updAMR            </td></tr>
 !!   <tr><td> updAMR_after        </td><td> 0       </td><td> integer(10)      </td><td> \copydoc refinement::updAMR_after        </td></tr>
-!!   <tr><td> oop_thr             </td><td> 0.1     </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
+!!   <tr><td> oop_thr             </td><td> 0.05    </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
 !!   <tr><td> refine_points(10)   </td><td> none    </td><td> integer, 3*real  </td><td> \copydoc refinement::refine_points       </td></tr>
 !!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
 !!   <tr><td> refine_zcyls(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_zcyls        </td></tr>
@@ -142,7 +142,7 @@ contains
       auto_bsize = associated(problem_domain_update)  ! allow by default for problems with domain expansion configured
       n_updAMR  = huge(I_ONE)
       prefer_n_bruteforce = .false.
-      oop_thr = 0.1
+      oop_thr = 0.05
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
       refine_zcyls(:)  = refine_boxes (:)
