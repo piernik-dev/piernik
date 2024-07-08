@@ -37,9 +37,9 @@ module refinement
    private
    public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
         &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot, &
-        &    nbody_ref
+        &    nbody_ref, updAMR_after
 
-   integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure
+   integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure, 0 to disable it even at IC
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
@@ -49,6 +49,9 @@ module refinement
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
+
+   integer, parameter :: n_upd_steps = 10 !< number of entries in updAMR_after
+   integer(kind=4), dimension(n_upd_steps), protected :: updAMR_after
 
    !> \brief Refinement point
    type :: ref_point
@@ -87,7 +90,7 @@ module refinement
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, prefer_n_bruteforce, oop_thr, &
+   namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, updAMR_after, prefer_n_bruteforce, oop_thr, &
         &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot, &
         &         nbody_ref
 
@@ -104,6 +107,7 @@ contains
 !!   <tr><td> level_min           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_min           </td></tr>
 !!   <tr><td> level_max           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_max           </td></tr>
 !!   <tr><td> n_updAMR            </td><td> HUGE    </td><td> integer          </td><td> \copydoc refinement::n_updAMR            </td></tr>
+!!   <tr><td> updAMR_after        </td><td> 0       </td><td> integer(10)      </td><td> \copydoc refinement::updAMR_after        </td></tr>
 !!   <tr><td> oop_thr             </td><td> 0.1     </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
 !!   <tr><td> refine_points(10)   </td><td> none    </td><td> integer, 3*real  </td><td> \copydoc refinement::refine_points       </td></tr>
 !!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
@@ -146,6 +150,7 @@ contains
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
       nbody_ref = INVALID
+      updAMR_after = I_ZERO
 
       if (2*n_ref_auto_param              > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
       if (10+3*nshapes                    > ubound(ibuff, dim=1)) call die("[refinement:init_refinement] increase ibuff size")
@@ -187,6 +192,7 @@ contains
          ibuff(11          :10+  nshapes) = refine_points(:)%level
          ibuff(11+  nshapes:10+2*nshapes) = refine_boxes (:)%level
          ibuff(11+2*nshapes:10+3*nshapes) = refine_zcyls (:)%level
+         ibuff(11+3*nshapes:10+3*nshapes+n_upd_steps) = updAMR_after
 
          lbuff(1) = jeans_plot
          lbuff(2) = prefer_n_bruteforce
@@ -236,6 +242,7 @@ contains
          refine_points(:)%level = ibuff(11          :10+  nshapes)
          refine_boxes (:)%level = ibuff(11+  nshapes:10+2*nshapes)
          refine_zcyls (:)%level = ibuff(11+2*nshapes:10+3*nshapes)
+         updAMR_after           = ibuff(11+3*nshapes:10+3*nshapes+n_upd_steps)
 
          jeans_plot               = lbuff(1)
          prefer_n_bruteforce      = lbuff(2)
@@ -343,6 +350,10 @@ contains
          n_updAMR  = huge(I_ONE)
       endif
       if (master) call printinfo(msg)
+
+      if ((n_updAMR == 0) .and. (level_max > base_level_id)) then
+         if (master) call warn("[refinement:init_refinement] refinements disabled (n_updAMR = 0)")
+      endif
 
    end subroutine init_refinement
 

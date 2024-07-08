@@ -36,7 +36,7 @@ program piernik
    use cg_list_global,    only: all_cg
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump, cleanup_dataio
-   use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
+   use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress, nstep_start
    use div_B,             only: print_divB_norm
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
@@ -48,7 +48,7 @@ program piernik
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast, cleanup_mpi
    use named_array_list,  only: qna, wna
    use ppp,               only: cleanup_profiling, update_profiling, ppp_main
-   use refinement,        only: emergency_fix
+   use refinement,        only: emergency_fix, updAMR_after
    use refinement_update, only: update_refinement
    use repeatstep,        only: repeat_step
    use timer,             only: walltime_end
@@ -203,6 +203,7 @@ program piernik
       call update_profiling
       rs = repeat_step()  ! enforce function call
 
+      emergency_fix = any(nstep_start + updAMR_after == nstep)
    enddo ! main loop
 
    if (print_divB > 0) then

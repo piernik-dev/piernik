@@ -608,6 +608,7 @@ contains
       use mpisetup,     only: master, piernik_MPI_Bcast
       use ppp,          only: umsg_request
       use procnames,    only: pnames
+      use refinement,   only: emergency_fix
       use timer,        only: walltime_end
 #ifdef HDF5
       use data_hdf5,    only: write_hdf5
@@ -689,6 +690,8 @@ contains
             case ('unexclude')
                call pnames%enable_all
                ! manual excluding may be helpful too, but we need to pass a list, like "exclude 2,7-9,32769", and process it safely
+            case ('refine')
+               emergency_fix = .true.
             case ('help')
                if (master) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:", char(10), &
@@ -701,6 +704,7 @@ contains
 #endif /* HDF5 */
                   &"  log       - update logfile", char(10), &
                   &"  tsl       - write a timeslice", char(10), &
+                  &"  refine    - call refinement_update as soon as possible", char(10), &
                   &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
                   &"  unexclude - reset thread exclusion mask", char(10), &
                   &"  perf [N]  - print performance data with verbosity N (default V_HOST)", char(10), &
