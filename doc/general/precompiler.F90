@@ -78,8 +78,6 @@
 !!
 !! \b \#define \b "VERBOSE" - print additional diagnostic information on stdout
 !!
-!! \b \#define \b "PGPLOT"
-!!
 !! \b \#define \b "NO_FFT" - don't use FFTW libraries at all (may be useful on some restricted environments)
 !!
 !! \b \#define \b "JEANS_PROBLEM" - switch on jeans problem-specific quirks

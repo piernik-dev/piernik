@@ -122,10 +122,6 @@ $BASE_DOMAIN
     expansion_cnst = 0.0023026 ! small expansion for adiabatic cooling testing, can cause problem in a longer test with periodic boundaries!
  /
 
- $PIERNIK_DEBUG
-    constant_dt = 0.0
- /
-
  $INTERACTIONS
  /
 

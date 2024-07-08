@@ -536,8 +536,6 @@ def setup_piernik(data=None):
     m.write("\nCPPFLAGS += %s\n" % cppflags)
     if (isinstance(options.f90flags, str)):
         m.write("\nF90FLAGS += %s\n" % options.f90flags)
-    if ("PGPLOT" in our_defs):
-        m.write("LIBS += -lpgplot\n")
     if ("SHEAR" in our_defs or "MULTIGRID" in our_defs):
         if ("NO_FFT" not in our_defs):
             m.write("LIBS += $(shell pkg-config --libs fftw3)\n")

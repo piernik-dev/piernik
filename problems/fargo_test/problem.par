@@ -95,10 +95,6 @@
     amplify = 5.0
  /
 
- $PIERNIK_DEBUG
-   constant_dt = 0.0
- /
-
  $INTERACTIONS
    collision_factor  = 1.0
    dragc_gas_dust    = 1.0
