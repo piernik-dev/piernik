@@ -37,7 +37,7 @@ module refinement
    private
    public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
         &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot, &
-        &    nbody_ref, updAMR_after
+        &    nbody_ref, updAMR_after, is_blocky
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure, 0 to disable it even at IC
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
@@ -447,5 +447,15 @@ contains
       endif
 
    end subroutine automagic_bsize
+
+   logical function is_blocky()
+
+      use domain, only:dom
+
+      implicit none
+
+      is_blocky = all(bsize(:) > 0 .or. .not. dom%has_dir(:))
+
+   end function is_blocky
 
 end module refinement

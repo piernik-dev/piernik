@@ -107,6 +107,8 @@ contains
       call fill_proc_on_node
       deallocate(nodenames)
 
+      this%wtime = 0.
+
    contains
 
       !> \brief Find unique node names

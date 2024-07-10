@@ -59,10 +59,13 @@ module load_balance
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch for anomalously slow hosts? One of [ cg_cost_data:cost_labels, "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
+   logical,                  protected :: flexible_balance  !< can alter some parameters in this module if uneven load balancing is detected
+   real,                     protected :: imbalance_tol     !< don't warn if load balance fits the range [imbalance_tol, 1./imbalance_tol]
+   integer(kind=4),          protected :: n_rebalance       !< rebalance every n steps
 
    namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, balance_levels, &
-        &             verbosity, verbosity_nstep, &
-        &             enable_exclusion, watch_cost, exclusion_thr
+        &             verbosity, verbosity_nstep, flexible_balance, imbalance_tol, &
+        &             enable_exclusion, watch_cost, exclusion_thr, n_rebalance
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion in case of anomalously slow hosts
@@ -70,6 +73,9 @@ module load_balance
    enum, bind(C)
       enumerator :: V_NONE = 0, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE  !< verbosity levels
    end enum
+
+   integer(kind=4), parameter :: r_rebalance = 2  !< routine rebalance 2 steps after start or restart
+   logical :: rebalance_asap  !< flag to suggest rebalancing
 
 contains
 
@@ -89,12 +95,15 @@ contains
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
 !!   <tr><td> watch_cost       </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::watch_cost       </td></tr>
 !!   <tr><td> exclusion_thr    </td><td> 3.       </td><td> real        </td><td> \copydoc load_balance::exclusion_thr    </td></tr>
+!!   <tr><td> flexible_balance </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::flexible_balance </td></tr>
+!!   <tr><td> imbalance_tol    </td><td> 0.8      </td><td> real        </td><td> \copydoc load_balance::imbalance_tol    </td></tr>
+!!   <tr><td> n_rebalance      </td><td> huge     </td><td> integer     </td><td> \copydoc load_balance::n_rebalance      </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_load_balance
 
-      use constants,  only: INVALID, cbuff_len
+      use constants,  only: INVALID, cbuff_len, I_ONE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -117,6 +126,9 @@ contains
       enable_exclusion = .false.
       watch_cost       = "MHD"
       exclusion_thr    = intolerable_perf
+      flexible_balance = .false.
+      imbalance_tol    = 0.8
+      n_rebalance      = huge(I_ONE)
 
       if (master) then
 
@@ -141,14 +153,17 @@ contains
 
          ibuff(1) = verbosity
          ibuff(2) = verbosity_nstep
+         ibuff(3) = n_rebalance
 
          lbuff(1) = balance_thread
          lbuff(2) = enable_exclusion
+         lbuff(3) = flexible_balance
 
          rbuff(1) = exclusion_thr
          rbuff(2) = balance_cg
          rbuff(3) = balance_host
          rbuff(4) = balance_levels
+         rbuff(5) = imbalance_tol
 
       endif
 
@@ -164,14 +179,17 @@ contains
 
          verbosity        = ibuff(1)
          verbosity_nstep  = ibuff(2)
+         n_rebalance      = ibuff(3)
 
          balance_thread   = lbuff(1)
          enable_exclusion = lbuff(2)
+         flexible_balance = lbuff(3)
 
          exclusion_thr    = rbuff(1)
          balance_cg       = rbuff(2)
          balance_host     = rbuff(3)
          balance_levels   = rbuff(4)
+         imbalance_tol    = rbuff(5)
 
       endif
 
@@ -239,6 +257,15 @@ contains
       endif
 
       umsg_verbosity = V_NONE
+      if (imbalance_tol > 1.) imbalance_tol = 1. / imbalance_tol  ! normalize to [0. : 1.] range
+
+      if (flexible_balance) then
+         balance_thread = .true.
+         if (balance_host > 0.) call warn("[load_balance] flexible_balance enforced balance_host = 1.")
+         balance_host = 1.
+      endif
+
+      rebalance_asap = .false.
 
    contains
 

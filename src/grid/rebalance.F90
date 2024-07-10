@@ -165,6 +165,7 @@ contains
       use dataio_pub,         only: warn, msg
       use mpisetup,           only: master, FIRST, LAST, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use ppp,                only: ppp_main
+      use refinement,         only: is_blocky
 
       implicit none
 
@@ -173,6 +174,8 @@ contains
       integer :: hmts
       integer(kind=4) :: edc
       character(len=*), parameter :: ro_label = "rebalance"
+
+      if (.not. is_blocky()) return  !< Rebalancing non-blocky decompositions should be done in totally different way. Currently of no practical interest.
 
       call ppp_main%start(ro_label, PPP_AMR)
 
