@@ -263,6 +263,48 @@ contains
          balance_thread = .true.
          if (balance_host > 0.) call warn("[load_balance] flexible_balance enforced balance_host = 1.")
          balance_host = 1.
+#ifdef NBODY
+         if (balance_cg <= epsilon(1.)) then
+            ! Setting balance_cg to a non-0. value may help to minimize walltime for unbalanced particle setups.
+            ! * The value 1.0 will try to equalize cg costs across all processes but since the particle operations don't
+            !   overlap well with other computations, the wall time is not guaranteed to improve. Perhaps it may even
+            !   degrade.
+            ! * The value 0.5, that was usually close to the observable optimum in tests and may be treates as
+            ! a conservative, safe choice.
+            ! By running the code with balance_cg set to 1.0, 0.5 and 0.1 you should be able to estimate where to look
+            ! for the minimum. It seems that 0.75 may beat the 0.5 and 1.0 by few percent.
+            balance_cg = 0.5
+            write(msg, '(a,f6.3,a)')"[load_balance] flexible_balance enforced balance_cg =", balance_cg, " but it is advised to check also other values up to 1.0 and estimate is the optimal value."
+            if (master) call warn(msg)
+            ! OPT: Generally, the problem with load balance of particles in Piernik is hard, at least for current
+            ! implmentation. Possible ways to consider:
+            ! * Rearrange particle computations in a way that will allow for overlap with other costly operations.
+            !   Personally, I don't have idea to what extent it is possible if at all.
+            ! * Remove the concept of ghost particles. This should significantly reduce the amount of work associated
+            !   with particles and thus will reduce the imbalance. For proper communication of the TSC map, one would
+            !   need to write modified boundary exchange routines that would compute sums on overlapping boundary
+            !   regions. Special care is needed on fine-coarse boundaries to correctly account for projecting TSC onto
+            !   grid of different cell size.
+            ! * Write a dedicated load balancing and offload whole "ghost cg" with particles to particle-deficient
+            !   threads and communicate the density and potential fields. This may work nicely when the number of
+            !   particles on a cg exceeds the number of its cells. For most dense particle clumps consider offloading
+            !   only subsets of particles. The ratios or thresholds at which the offloading should occur has to be
+            !   determined, but it may require relatively small changes to the code.
+            ! * Exploit shared memory benefits and maintain the list of particles as a property of a host (set of
+            !   threads) rather than property of a cg. Requires big chamges in the codebase. If MPI-3 would be used
+            !   as a shared memory enabler, then it should be possible to perform the migration to shared  memory use
+            !   in parts and start from the particles as most benefit is expected here. It is also possible to perform
+            !   a conditional migration and enable the shared memory only when the code runs on a single host.
+            !   This will be still quite beneficial for medium-sized runs, that may fit single machine.
+            !   After validating single-machine shared memory code it may be relatively easy to go for general case as
+            !   the inter-host communication would be analogous to what we have in Piernik now with the communication
+            !   between threads. Using shared memory should be also beneficial for other parts of the code:
+            !   * a lot of boundary exchanges could be performed as a direct memory copy,
+            !   * some memory copies related to global reductions may be even avoided (e.g. in the multipole algorithm),
+            !   * it is possible to achieve better cache utilisation by parallel processing of a single cg, which may
+            !     also result in less transfers between CPU and RAM memory.
+         endif
+#endif /* NBODY */
       endif
 
       rebalance_asap = .false.
