@@ -159,6 +159,20 @@ module constants
       enumerator :: PIERNIK_CLEANUP                      ! finished post-simulation computations and I/O
    end enum
 
+   ! verbosity levels for printinfo
+   enum, bind(C)
+      enumerator :: V_SILENT                 ! messages that are supposed to be only in the log, not on stdout
+      enumerator :: V_DEBUG                  ! debugging information
+      enumerator :: V_VERBOSE                ! extra details
+      enumerator :: V_INFO                   ! printed by default
+      enumerator :: V_ESSENTIAL              ! to make the output very brief
+      enumerator :: V_WARN                   ! redirect to warn()
+      ! aliases
+      enumerator :: V_LOG     = V_SILENT
+      enumerator :: V_NORMAL  = V_INFO
+      enumerator :: V_LACONIC = V_ESSENTIAL
+   end enum
+
    ! grid geometry type
    enum, bind(C)
       enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
