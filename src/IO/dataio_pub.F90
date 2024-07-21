@@ -113,14 +113,12 @@ module dataio_pub
 
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
 
+   !< enum for message types
    ! stdout and logfile messages
-   integer, parameter :: T_PLAIN  = 0, &                         !< enum for message types
-        &                T_ERR    = T_PLAIN  + 1, &
-        &                T_WARN   = T_ERR    + 1, &
-        &                T_INFO   = T_WARN   + 1, &
-        &                T_IO     = T_INFO   + 1, &
-        &                T_IO_NOA = T_IO     + 1, &
-        &                T_SILENT = T_IO_NOA + 1
+   enum, bind(C)
+      enumerator ::  T_PLAIN = 0
+      enumerator :: T_ERR, T_WARN, T_INFO, T_IO, T_IO_NOA, T_SILENT
+   end enum
    character(len=msglen)       :: msg                            !< buffer for messages
    character(len=ansirst)      :: ansi_black
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
@@ -246,7 +244,7 @@ contains
       implicit none
 
       character(len=*),  intent(in) :: nm
-      integer,           intent(in) :: mode
+      integer(kind=4),   intent(in) :: mode
 
       character(len=ansilen)        :: ansicolor
       integer, parameter            :: msg_type_len = len("Warning")
