@@ -415,15 +415,9 @@ contains
       logical :: adv
 
       adv  = .true.
-      if (present(noadvance)) then
-         if (noadvance) adv = .false.
-      endif
+      if (present(noadvance)) adv = .not. noadvance
 
-      if (adv) then
-         call colormessage(nm, T_IO)
-      else
-         call colormessage(nm, T_IO_NOA)
-      endif
+      call colormessage(nm, merge(T_IO, T_IO_NOA, adv))
 
    end subroutine printio
 !-----------------------------------------------------------------------------
