@@ -30,7 +30,7 @@
 !<
 module dataio_pub
 
-   use constants, only: cbuff_len, domlen, idlen, cwdlen
+   use constants, only: cbuff_len, domlen, idlen, cwdlen, V_INFO
 
    implicit none
 
@@ -38,7 +38,7 @@ module dataio_pub
    private :: err_mpi, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
         &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
         &     namelist_handler_t, logbuffer                                            ! QA_WARN
-   private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
+   private :: cbuff_len, domlen, idlen, cwdlen, V_INFO ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
    real, parameter             :: piernik_hdf5_version = 1.19    !< output version
@@ -124,6 +124,8 @@ module dataio_pub
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    real                        :: thdf                           !< hdf dump wallclock
 
+   integer                     :: piernik_verbosity = V_INFO
+
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
 #if defined(__INTEL_COMPILER)
@@ -163,6 +165,11 @@ module dataio_pub
    end type namelist_handler_t
 
    type(namelist_handler_t) :: nh
+
+   interface printinfo
+      module procedure printinfo_legacy
+      module procedure printinfo_v
+   end interface printinfo
 
 contains
 
@@ -360,25 +367,43 @@ contains
       if (allocated(parfile)) deallocate(parfile)
 
    end subroutine cleanup_text_buffers
-!-----------------------------------------------------------------------------
-   subroutine printinfo(nm, to_stdout)
+
+   !> \brief Printinfo variant which does not print colored tag (legacy)
+
+   subroutine printinfo_legacy(nm, to_stdout)
+
+      implicit none
+
+      character(len=*), intent(in) :: nm
+      logical,          intent(in) :: to_stdout
+
+      call colormessage(nm, merge(T_PLAIN, T_SILENT, to_stdout))
+
+   end subroutine printinfo_legacy
+
+   !> \brief New printinfo implementation that does the filtering wrt. verbosity level
+
+   subroutine printinfo_v(nm, verbosity)
+
+      use constants, only: V_INFO, V_WARN
 
       implicit none
 
       character(len=*),  intent(in) :: nm
-      logical, optional, intent(in) :: to_stdout
+      integer, optional, intent(in) :: verbosity
 
-      if (present(to_stdout)) then
-         if (to_stdout) then
-            call colormessage(nm, T_PLAIN)
-         else
-            call colormessage(nm, T_SILENT)
-         endif
-      else
-         call colormessage(nm, T_INFO)
+      integer :: v
+
+      v = V_INFO
+      if (present(verbosity)) v = verbosity
+
+      if (v >= V_WARN) then  ! now it is also possible to implement several warning levels, if necessary
+         call warn(nm)
+      else                   ! emit standard green-tagged message if verbosity level allows, print everything to the logile
+         call colormessage(nm, merge(T_INFO, T_SILENT, v >= piernik_verbosity))
       endif
 
-   end subroutine printinfo
+   end subroutine printinfo_v
 !-----------------------------------------------------------------------------
    subroutine printio(nm, noadvance)
 
