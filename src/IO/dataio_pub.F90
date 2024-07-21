@@ -117,7 +117,7 @@ module dataio_pub
    ! stdout and logfile messages
    enum, bind(C)
       enumerator ::  T_PLAIN = 0
-      enumerator :: T_ERR, T_WARN, T_INFO, T_IO, T_IO_NOA, T_SILENT
+      enumerator :: T_PLAIN_NOA, T_ERR, T_WARN, T_INFO, T_IO, T_IO_NOA, T_SILENT
    end enum
    character(len=msglen)       :: msg                            !< buffer for messages
    character(len=ansirst)      :: ansi_black
@@ -262,7 +262,7 @@ contains
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
       adv = 'yes'
-      if (mode == T_IO_NOA) adv = 'no'
+      if ((mode == T_IO_NOA) .or. (mode == T_PLAIN_NOA)) adv = 'no'
       select case (mode)
          case (T_ERR)
             ansicolor = ansi_red
@@ -284,7 +284,7 @@ contains
             ansicolor = ansi_black
             outunit   = stdout
             msg_type_str = ''
-         case default ! T_PLAIN
+         case default ! T_PLAIN, T_PLAIN_NOA
             ansicolor = ansi_black
             outunit   = stdout
             msg_type_str = ''
@@ -293,7 +293,7 @@ contains
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, err_mpi)
 
       if (mode /= T_SILENT) then
-         if (mode == T_PLAIN) then
+         if ((mode == T_PLAIN) .or. (mode == T_PLAIN_NOA)) then
             write(outunit,'(a)') trim(nm)
          else
             write(outunit,'(a,a," @",a,i5,2a)', advance=adv) trim(ansicolor), msg_type_str, ansi_black, proc, ': ', trim(nm)
@@ -372,27 +372,32 @@ contains
 
    subroutine printinfo_legacy(nm, to_stdout)
 
+      use constants, only: V_INFO, V_LOG
+
       implicit none
 
-      character(len=*), intent(in) :: nm
-      logical,          intent(in) :: to_stdout
+      character(len=*), intent(in) :: nm         !< message
+      logical,          intent(in) :: to_stdout  !< to print or only to log
 
-      call colormessage(nm, merge(T_PLAIN, T_SILENT, to_stdout))
+!      call colormessage(nm, merge(T_PLAIN, T_SILENT, to_stdout))
+      call printinfo_v(nm, merge(V_INFO, V_LOG, to_stdout), .true.)
 
    end subroutine printinfo_legacy
 
    !> \brief New printinfo implementation that does the filtering wrt. verbosity level
 
-   subroutine printinfo_v(nm, verbosity)
+   subroutine printinfo_v(nm, verbosity, no_tag)
 
       use constants, only: V_INFO, V_WARN
 
       implicit none
 
-      character(len=*),  intent(in) :: nm
-      integer, optional, intent(in) :: verbosity
+      character(len=*),          intent(in) :: nm         !< message
+      integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
+      logical,         optional, intent(in) :: no_tag     !< use plain formatting (no color tag, ignored for V_WARN)
 
       integer :: v
+      logical :: plain
 
       v = V_INFO
       if (present(verbosity)) v = verbosity
@@ -400,7 +405,9 @@ contains
       if (v >= V_WARN) then  ! now it is also possible to implement several warning levels, if necessary
          call warn(nm)
       else                   ! emit standard green-tagged message if verbosity level allows, print everything to the logile
-         call colormessage(nm, merge(T_INFO, T_SILENT, v >= piernik_verbosity))
+         plain = .false.
+         if (present(no_tag)) plain = no_tag
+         call colormessage(nm, merge(merge(T_PLAIN, T_INFO, plain), T_SILENT, v >= piernik_verbosity))
       endif
 
    end subroutine printinfo_v
@@ -420,6 +427,17 @@ contains
       call colormessage(nm, merge(T_IO, T_IO_NOA, adv))
 
    end subroutine printio
+!-----------------------------------------------------------------------------
+   subroutine print_plain(nm, noadvance)
+
+      implicit none
+
+      character(len=*), intent(in) :: nm
+      logical,          intent(in) :: noadvance
+
+      call colormessage(nm, merge(T_PLAIN_NOA, T_PLAIN, noadvance))
+
+   end subroutine print_plain
 !-----------------------------------------------------------------------------
    subroutine warn(nm)
 
