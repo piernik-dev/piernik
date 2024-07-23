@@ -171,6 +171,9 @@ module constants
       enumerator :: V_LOG     = V_SILENT
       enumerator :: V_NORMAL  = V_INFO
       enumerator :: V_LACONIC = V_ESSENTIAL
+      ! special aliases
+      enumerator :: V_LOWEST = V_SILENT
+      enumerator :: V_HIGHEST = V_WARN
    end enum
 
    ! grid geometry type

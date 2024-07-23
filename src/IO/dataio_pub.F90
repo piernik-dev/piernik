@@ -372,15 +372,20 @@ contains
 
    subroutine printinfo_legacy(nm, to_stdout)
 
-      use constants, only: V_INFO, V_LOG
+      use constants, only: cbuff_len, V_LOG, V_DEBUG, V_INFO
 
       implicit none
 
       character(len=*), intent(in) :: nm         !< message
       logical,          intent(in) :: to_stdout  !< to print or only to log
 
+      character(len=cbuff_len) :: l
+
+      l = ""
+      if (piernik_verbosity <= V_DEBUG) l = "<Legacy>"
+
 !      call colormessage(nm, merge(T_PLAIN, T_SILENT, to_stdout))
-      call printinfo_v(nm, merge(V_INFO, V_LOG, to_stdout), .true.)
+      call printinfo_v(trim(l) // nm, merge(V_INFO, V_LOG, to_stdout), .true.)
 
    end subroutine printinfo_legacy
 
@@ -388,7 +393,7 @@ contains
 
    subroutine printinfo_v(nm, verbosity, no_tag)
 
-      use constants, only: V_INFO, V_WARN
+      use constants, only: V_DEBUG, V_INFO, V_WARN, V_LOWEST, V_HIGHEST
 
       implicit none
 
@@ -396,18 +401,28 @@ contains
       integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
       logical,         optional, intent(in) :: no_tag     !< use plain formatting (no color tag, ignored for V_WARN)
 
-      integer :: v
+      integer :: v, i
       logical :: plain
+      character(len=V_HIGHEST-V_LOWEST+1) :: v_lev
 
       v = V_INFO
       if (present(verbosity)) v = verbosity
+
+      if (piernik_verbosity <= V_DEBUG) then  ! add verbosity level info to the messages
+         do i = V_LOWEST, V_HIGHEST-1
+            v_lev(i-V_LOWEST+1:i-V_LOWEST+1) = merge(merge("+", ".", present(verbosity)), " ", i < v)
+         enddo
+         v_lev(V_HIGHEST-V_LOWEST+1:V_HIGHEST-V_LOWEST+1) = ":"
+      else
+         v_lev = ""
+      endif
 
       if (v >= V_WARN) then  ! now it is also possible to implement several warning levels, if necessary
          call warn(nm)
       else                   ! emit standard green-tagged message if verbosity level allows, print everything to the logile
          plain = .false.
          if (present(no_tag)) plain = no_tag
-         call colormessage(nm, merge(merge(T_PLAIN, T_INFO, plain), T_SILENT, v >= piernik_verbosity))
+         call colormessage(trim(v_lev) // nm, merge(merge(T_PLAIN, T_INFO, plain), T_SILENT, v >= piernik_verbosity))
       endif
 
    end subroutine printinfo_v

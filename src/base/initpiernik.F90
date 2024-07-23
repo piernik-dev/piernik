@@ -48,9 +48,9 @@ contains
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
            &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
-           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB
+           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB, V_DEBUG, V_LOWEST, V_HIGHEST
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, &
+      use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, piernik_verbosity, &
            &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
@@ -156,6 +156,13 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+
+      if (piernik_verbosity <= V_DEBUG) then
+         do nit= V_LOWEST, V_HIGHEST
+            write(msg, '(a,i1)')"Verbosity level ", nit
+            if (master) call printinfo(msg, int(nit, kind=4))
+         enddo
+      endif
 
       call pnames%init ; call print_hostnames
       call init_load_balance
