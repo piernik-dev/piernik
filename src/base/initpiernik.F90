@@ -368,7 +368,7 @@ contains
 
       subroutine print_hostnames
 
-         use constants,  only: fmt_len
+         use constants,  only: fmt_len, V_VERBOSE
          use dataio_pub, only: msg, printinfo
          use mpisetup,   only: slave, nproc
          use procnames,  only: pnames
@@ -408,13 +408,13 @@ contains
                   else
                      write(msg, fmt1) trim(header), p%proc(lbound(p%proc, 1))
                   endif
-                  call printinfo(msg)
+                  call printinfo(msg, V_VERBOSE)
 
                else
 
                   do hl = 0, int((ubound(p%proc, 1) - 1)/ mpl)
                      write(msg, fmtl) merge(repeat(" ", len_trim(header)), trim(header), hl>0), p%proc(hl*mpl+1:min((hl+1)*mpl, ubound(p%proc, 1)))
-                     call printinfo(msg)
+                     call printinfo(msg, V_VERBOSE)
                   enddo
 
                endif

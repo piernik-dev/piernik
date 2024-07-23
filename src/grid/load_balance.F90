@@ -113,7 +113,7 @@ contains
       balance_thread   = .false.
       cost_to_balance  = "all"
       verbosity        = V_HOST
-      verbosity_nstep  = 0
+      verbosity_nstep  = huge(1_4)
       enable_exclusion = .false.
       watch_cost       = "MHD"
       exclusion_thr    = intolerable_perf
@@ -192,10 +192,7 @@ contains
          exclusion_thr = huge(1.)
       endif
 
-      if (verbosity_nstep <= 0) then
-         if (master) call warn("[load_balance] verbosity_nstep <= 0 (disabling)")
-         verbosity_nstep = huge(1_4)
-      endif
+      if (verbosity_nstep <= 0) verbosity_nstep = huge(1_4)
 
       if (balance_host > 1.) then
          if (balance_host > insane_factor) then

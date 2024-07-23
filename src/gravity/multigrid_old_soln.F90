@@ -135,11 +135,11 @@ contains
       use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
       use cg_list_global, only: all_cg
-      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE, dirtyH1
+      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE, dirtyH1, V_DEBUG, V_VERBOSE
       use dataio_pub,     only: msg, die, printinfo
       use global,         only: t
       use mpisetup,       only: master
-      use multigridvars,  only: stdout, solution
+      use multigridvars,  only: solution
 
       implicit none
 
@@ -157,9 +157,9 @@ contains
 
       ordt = min(this%old%cnt() - I_ONE, ord_time_extrap)
 
-#ifdef DEBUG
       write(msg, '(a,g14.6,a,i2)')"[multigrid_old_soln:init_solution] init solution at time: ", t, " order: ", ordt
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_DEBUG)
+#ifdef DEBUG
       call this%print
 #endif /* DEBUG */
 
@@ -167,7 +167,7 @@ contains
          case (:INVALID)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_old_soln:init_solution] Clearing ", trim(prefix), "solution."
-               call printinfo(msg, stdout)
+               call printinfo(msg, V_VERBOSE)
             endif
             call all_cg%set_q_value(solution, 0.)
          case (O_INJ)
@@ -175,7 +175,7 @@ contains
             call leaves%q_copy(this%old%latest%i_hist, solution)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_old_soln:init_solution] No extrapolation of ",trim(prefix),"solution."
-               call printinfo(msg, stdout)
+               call printinfo(msg, V_VERBOSE)
             endif
          case (O_LIN)
             associate( p0 => this%old%latest, &
@@ -187,7 +187,7 @@ contains
                     &                    ind_val(p1%i_hist,    -dt_fac(1) ) ], solution )
                if (master .and. ord_time_extrap > ordt) then
                   write(msg, '(3a)')"[multigrid_old_soln:init_solution] Linear extrapolation of ",trim(prefix),"solution."
-                  call printinfo(msg, stdout)
+                  call printinfo(msg, V_VERBOSE)
                endif
             end associate
          case (O_I2:)
@@ -215,15 +215,13 @@ contains
    subroutine store_solution(this)
 
       use cg_leaves,        only: leaves
-      use dataio_pub,       only: die, msg
+      use constants,        only: V_DEBUG
+      use dataio_pub,       only: die, msg, printinfo
       use global,           only: t
+      use mpisetup,         only: master
       use multigridvars,    only: solution
       use named_array_list, only: qna
       use old_soln_list,    only: old_soln
-#ifdef DEBUG
-      use dataio_pub,       only: printinfo
-      use mpisetup,         only: master
-#endif /* DEBUG */
 
       implicit none
 
@@ -245,9 +243,9 @@ contains
       call leaves%q_copy(solution, os%i_hist)
       qna%lst(os%i_hist)%vital = .true.
 
-#ifdef DEBUG
       write(msg, '(a,g14.6)')"[multigrid_old_soln:store_solution] store solution at time ", t
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_DEBUG)
+#ifdef DEBUG
       call this%print
 #endif /* DEBUG */
 
@@ -256,6 +254,7 @@ contains
 
    subroutine sanitize(this)
 
+      use constants,        only: V_VERBOSE
       use dataio_pub,       only: printinfo, msg
       use global,           only: t
       use mpisetup,         only: master
@@ -281,7 +280,7 @@ contains
 
       if (cnt /= this%old%cnt()) then
          write(msg, '(a,g14.6,a,i2,a)')"[multigrid_old_soln:sanitize] sanitize solution history at time ", t, ", removed ", cnt - this%old%cnt(), " elements"
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_VERBOSE)
 #ifdef DEBUG
          call this%print
 #endif /* DEBUG */

@@ -137,20 +137,16 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
-      use dataio_pub,   only: die
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero, V_DEBUG !, GEO_RPZ
+      use dataio_pub,   only: die, msg, printinfo
       use domain,       only: dom
       use func,         only: operator(.notequals.)
       use grid_cont,    only: grid_container
-      use mpisetup,     only: piernik_MPI_Allreduce
+      use mpisetup,     only: piernik_MPI_Allreduce, master
+      use units,        only: fpiG
 #ifdef NBODY
       use particle_types, only: particle
 #endif /* NBODY */
-#ifdef DEBUG
-      use dataio_pub,   only: msg, printinfo
-      use mpisetup,     only: master
-      use units,        only: fpiG
-#endif /* DEBUG */
 
       implicit none
 
@@ -217,12 +213,10 @@ contains
       else
          call die("[multigrid_monopole:find_img_CoM] Total mass == 0")
       endif
-#ifdef DEBUG
       if (master) then
          write(msg, '(a,g14.6,a,3g14.6,a)')"[multigrid_monopole:find_img_CoM] Total mass = ", CoM(imass)/fpiG," at (",CoM(xdim:zdim),")"
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       endif
-#endif /* DEBUG */
 
    end subroutine find_img_CoM
 

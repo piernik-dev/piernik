@@ -124,7 +124,7 @@ module dataio_pub
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    real                        :: thdf                           !< hdf dump wallclock
 
-   integer                     :: piernik_verbosity = V_INFO
+   integer(kind=4)             :: piernik_verbosity = V_INFO
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
@@ -484,6 +484,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine namelist_errh(ierrh,nm,skip_eof)
 
+      use constants, only: V_VERBOSE
+
       implicit none
 
       integer(kind=4),   intent(in) :: ierrh
@@ -509,7 +511,7 @@ contains
                if (skip_eof) return
             endif
             write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par. Assuming defaults." ! Can happen also when there is no EOL after the namelist in problem.par
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          case (239, 5010)
             write(msg,'(3a)') "A problem with one of the variables that belong to the ",trim(nm)," namelist was found in problem.par:"
             call warn(msg)
@@ -528,7 +530,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(this)
 
-      use constants, only: PIERNIK_INIT_IO_IC
+      use constants, only: PIERNIK_INIT_IO_IC, V_LOG
       use MPIF,      only: MPI_COMM_WORLD, MPI_Comm_rank
 
       implicit none
@@ -555,7 +557,7 @@ contains
          else
             write(msg,'(a1,a)') ' ',trim(sb)
          endif
-         call printinfo(msg, .false.)
+         call printinfo(msg, V_LOG)
       enddo
       close(lun_aft, status="delete")
       close(lun_bef, status="delete")
