@@ -63,7 +63,7 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>level_depth          </td><td>1      </td><td>integer value </td><td>\copydoc multigrid::init_multigrid::level_depth</td></tr>
 !! <tr><td>ord_prolong          </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong          </td></tr>
-!! <tr><td>stdout               </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::stdout               </td></tr>
+!! <tr><td>mg_stdout            </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::mg_stdout            </td></tr>
 !! <tr><td>verbose_vcycle       </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::verbose_vcycle       </td></tr>
 !! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc global::do_ascii_dump               </td></tr>
 !! <tr><td>dirty_debug          </td><td>.false.</td><td>logical       </td><td>\copydoc global::dirty_debug                 </td></tr>
@@ -79,7 +79,7 @@ contains
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,       only: single_base, ord_prolong, stdout, verbose_vcycle, tot_ts, v_mg, &
+      use multigridvars,       only: single_base, ord_prolong, mg_stdout, verbose_vcycle, tot_ts, v_mg, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
       use named_array_list,    only: qna
 #ifdef SELF_GRAV
@@ -93,7 +93,7 @@ contains
 
       logical, save         :: frun = .true.          !< First run flag
 
-      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
+      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, mg_stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:multigrid_par] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
@@ -106,7 +106,7 @@ contains
       ord_prolong           = O_D3
       show_n_dirtys         = 16
       ! May all the logical parameters be .false. by default
-      stdout                = .false.
+      mg_stdout             = .false.
       verbose_vcycle        = .false.
       do_ascii_dump         = .false.
       dirty_debug           = .false.
@@ -133,7 +133,7 @@ contains
          ibuff(2) = ord_prolong
          ibuff(3) = show_n_dirtys
 
-         lbuff(1) = stdout
+         lbuff(1) = mg_stdout
          lbuff(2) = verbose_vcycle
          lbuff(3) = do_ascii_dump
          lbuff(4) = dirty_debug
@@ -149,7 +149,7 @@ contains
          ord_prolong           = int(ibuff(2), kind=4)
          show_n_dirtys         = ibuff(3)
 
-         stdout           = lbuff(1)
+         mg_stdout        = lbuff(1)
          verbose_vcycle   = lbuff(2)
          do_ascii_dump    = lbuff(3)
          dirty_debug      = lbuff(4)
@@ -157,9 +157,7 @@ contains
       endif
 
       v_mg = V_VERBOSE
-      if (stdout) v_mg = max(v_mg, piernik_verbosity)
-
-      stdout = stdout .and. master
+      if (mg_stdout) v_mg = max(v_mg, piernik_verbosity)
 
       single_base = (nproc == 1)
 
