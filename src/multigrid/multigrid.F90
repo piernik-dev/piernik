@@ -156,7 +156,8 @@ contains
 
       endif
 
-      v_mg = merge(piernik_verbosity, V_VERBOSE, stdout)
+      v_mg = V_VERBOSE
+      if (stdout) v_mg = max(v_mg, piernik_verbosity)
 
       stdout = stdout .and. master
 
