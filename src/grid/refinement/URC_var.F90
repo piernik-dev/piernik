@@ -198,6 +198,7 @@ contains
 
    function init(rf, iv, ic) result(this)
 
+      use constants,        only: V_VERBOSE
       use dataio_pub,       only: printinfo, msg, die, warn
       use func,             only: operator(.notequals.)
       use mpisetup,         only: master
@@ -221,7 +222,7 @@ contains
          else
             write(msg(len_trim(msg)+1:), '(a, i3)') ", qna index: ", iv
          endif
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
          if (present(ic)) then
             if (.not. wna%lst(iv)%vital) call warn("[URC_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
          else

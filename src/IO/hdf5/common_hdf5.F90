@@ -1379,7 +1379,7 @@ contains
    subroutine dump_announce_time
 
       use constants,  only: tmr_hdf
-      use dataio_pub, only: msg, printinfo, thdf
+      use dataio_pub, only: msg, print_plain, thdf
       use mpisetup,   only: master
       use timer,      only: set_timer
 
@@ -1388,7 +1388,7 @@ contains
       thdf = set_timer(tmr_hdf)
       if (master) then
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
+         call print_plain(msg, .false.)
       endif
 
    end subroutine dump_announce_time

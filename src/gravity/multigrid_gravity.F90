@@ -386,7 +386,7 @@ contains
       use cg_level_coarsest,   only: coarsest
       use cg_level_connected,  only: cg_level_connected_t
       use cg_list,             only: cg_list_element
-      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX
+      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX, V_VERBOSE
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
       use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
@@ -440,12 +440,12 @@ contains
          end select
          if (trim(FFTn) /= "none" .and. master) then
             write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%l%id,"), FFT solver: ", trim(FFTn)
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
       endif
       if (coarsest%level%fft_type == fft_none .and. master) then
          write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%l%id,"), relaxation solver"
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
       require_FFT = .false.
@@ -1009,7 +1009,7 @@ contains
       use mpisetup,                 only: nproc
       use multigrid_gravity_helper, only: fft_solve_level
       use multigrid_old_soln,       only: soln_history
-      use multigridvars,            only: grav_bnd, bnd_givenval, stdout, source, solution
+      use multigridvars,            only: grav_bnd, bnd_givenval, v_mg, source, solution
       use pcg,                      only: mgpcg, use_CG, use_CG_outer
 
       implicit none
@@ -1023,7 +1023,7 @@ contains
       if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
          call all_cg%set_dirty(solution, 0.978*dirtyH1)
          call fft_solve_level(finest%level, source, solution)
-         call printinfo("[multigrid_gravity:poisson_solver] FFT solve on finest level, Skipping V-cycles.", stdout)
+         call printinfo("[multigrid_gravity:poisson_solver] FFT solve on finest level, Skipping V-cycles.", v_mg)
          fft_solved = .true.
       else
          call history%init_solution(vstat%cprefix)
@@ -1061,11 +1061,11 @@ contains
       use cg_level_connected,       only: cg_level_connected_t
       use cg_level_finest,          only: finest
       use cg_list_global,           only: all_cg
-      use constants,                only: cbuff_len, tmr_mg, dirtyH1, PPP_GRAV, PPP_MG
+      use constants,                only: cbuff_len, tmr_mg, dirtyH1, PPP_GRAV, PPP_MG, V_INFO
       use dataio_pub,               only: msg, die, warn, printinfo
       use global,                   only: do_ascii_dump
       use mpisetup,                 only: master
-      use multigridvars,            only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
+      use multigridvars,            only: source, solution, correction, defect, verbose_vcycle, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
       use multigrid_Laplace,        only: residual
       use ppp,                      only: ppp_main
@@ -1139,7 +1139,7 @@ contains
                fmt='(3a,i3,a,f12.9,a,es8.2,a,f7.3)'
             endif
             write(msg, fmt)"[multigrid_gravity] ", trim(vstat%cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
-            call printinfo(msg, stdout)
+            call printinfo(msg, V_INFO, .true.)
          endif
 
          vstat%count = v

@@ -278,7 +278,7 @@ contains
 !<
    subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
 
-      use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len
+      use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len, V_VERBOSE
       use dataio_pub,  only: msg, printinfo
       use diagnostics, only: ma1d, ma2d, my_allocate
       use mpisetup,    only: master
@@ -366,7 +366,7 @@ contains
          msg = trim(msg) // aux
       endif
 
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine set_fluid_index
 

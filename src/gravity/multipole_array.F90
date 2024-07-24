@@ -141,7 +141,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_coarsest,  only: coarsest
       use cg_list,            only: cg_list_element
-      use constants,          only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN
+      use constants,          only: xdim, zdim, GEO_XYZ, GEO_RPZ, HI, pMIN, V_LOG, V_VERBOSE
       use dataio_pub,         only: die, warn, msg, printinfo
       use domain,             only: dom
       use memory_usage,       only: check_mem_usage
@@ -240,7 +240,7 @@ contains
 
       if (this%pr_log) then
          write(msg, '(a,3g13.5,a)')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) low edges of bins are at:"
-         if (master) call printinfo(msg, .false.)
+         if (master) call printinfo(msg, V_LOG)
       endif
       prev = 0
       do i = lbound(this%i_r, dim=1), ubound(this%i_r, dim=1)
@@ -253,10 +253,10 @@ contains
                call print_ri(i)
                prev = i
             else if (div2n(i) <= 3) then  ! if the array is long then print only for some values
-               if (prev < i-2 .and. prev == skip_pr .and. master) call printinfo(dots, .false.)
+               if (prev < i-2 .and. prev == skip_pr .and. master) call printinfo(dots, V_LOG)
                if (prev < i-1) call print_ri(i-1)
                call print_ri(i)
-               if (i+1 /= ubound(this%i_r, dim=1) - skip_pr .and. master) call printinfo(dots, .false.)
+               if (i+1 /= ubound(this%i_r, dim=1) - skip_pr .and. master) call printinfo(dots, V_LOG)
                prev = i
             endif
          endif
@@ -264,7 +264,7 @@ contains
       if (this%pr_log .and. ubound(this%i_r, dim=1) > 1 .and. master) then
          write(msg, '(a,3g13.5,2(a,g13.5))')"[multipole_array:refresh] multipoles centered at ( ", this%center, " ) first bin width = ", this%i_r(1), " last bin starts at = ", this%i_r(ubound(this%i_r, dim=1) - 1)
          ! Expect inaccurate potential for sources that fall into last few bins due to large dr/r ratio.
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
    contains
@@ -313,7 +313,7 @@ contains
             write(fmt, '(a,i1,a)')'(a,i',1 + int(log10(real(max(1,i)))),',a,g13.5)'
          endif
          write(msg, fmt)"  r( ",i," ) = ", this%i_r(i)
-         if (master) call printinfo(msg, .false.)
+         if (master) call printinfo(msg, V_LOG)
 
       end subroutine print_ri
 

@@ -101,7 +101,7 @@ contains
       use constants,     only: fplen, fmt_len
       use mpisetup,      only: slave
       use dataio_pub,    only: msg, warn, printinfo
-      use multigridvars, only: stdout
+      use multigridvars, only: v_mg
 
       implicit none
 
@@ -134,7 +134,7 @@ contains
          if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)
       enddo
 
-      call printinfo(msg, stdout)
+      call printinfo(msg, v_mg, .true.)
 
    end subroutine brief_v_log
 

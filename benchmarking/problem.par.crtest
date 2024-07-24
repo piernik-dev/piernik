@@ -61,7 +61,7 @@
  /
 
  $MULTIGRID_SOLVER
-    stdout = .true.
+    mg_stdout = .true.
  /
 
  $MULTIGRID_DIFFUSION

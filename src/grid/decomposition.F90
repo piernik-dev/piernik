@@ -123,7 +123,7 @@ contains
 
    subroutine decompose_patch_int(this, patch_divided, level_id, n_pieces)
 
-      use constants,  only: ndims, I_ONE
+      use constants,  only: ndims, I_ONE, V_VERBOSE
       use dataio_pub, only: warn, printinfo, msg
       use domain,     only: dom, psize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize
       use mpisetup,   only: nproc, master, have_mpi
@@ -161,7 +161,7 @@ contains
             if (master .and. have_mpi) then
                write(msg,'(a,i3,a,3i4,a,3i6,a)')"[decomposition:decompose_patch_int] Grid at level ",level_id," divided to [",psize(:), &
                     &                           " ] pieces, each of [",this%n_d(:)/psize(:)," ] cells."
-               call printinfo(msg)
+               call printinfo(msg, V_VERBOSE)
             endif
             call this%cartesian_tiling(psize(:), pieces, level_id)
             patch_divided = this%is_not_too_small("cartesian_tiling")
@@ -245,7 +245,7 @@ contains
       if (master) then
          write(msg,'(a,i3,a,3i4,a,f7.4)')"[decomposition:decompose_patch_int]        Level ",level_id,": grid divided to [",p_size(:), &
               &                          " ] pieces, balance = ", product(p_size(:))/real(nproc) ! rough estimate, this might be nonuniform decomposition
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
       call this%cartesian_tiling(p_size(:), product(p_size(:)), level_id)
       patch_divided = this%is_not_too_small("decompose_patch_cartesian_less_than_nproc")
@@ -265,7 +265,7 @@ contains
 
    subroutine cartesian_tiling(this, p_size, pieces, level_id)
 
-      use constants,  only: xdim, ydim, ndims, LO, HI, I_ZERO, I_ONE
+      use constants,  only: xdim, ydim, ndims, LO, HI, I_ZERO, I_ONE, V_VERBOSE
       use dataio_pub, only: printinfo, die, msg
       use domain,     only: dom
       use mpisetup,   only: master, nproc
@@ -293,7 +293,7 @@ contains
 
       if (master) then
          write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": cartesian decomposition"
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
       do p = I_ZERO, pieces-I_ONE
@@ -315,7 +315,7 @@ contains
 
    subroutine choppy_tiling(this, p_size, pieces, level_id)
 
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, V_VERBOSE
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: master
 
@@ -333,7 +333,7 @@ contains
 
       if (master) then
          write(msg, '(a,i3,a)')"[decomposition:choppy_tiling]              Level ",level_id,": non-cartesian decomposition"
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
       allocate(pz_slab(p_size(zdim) + 1))
       pz_slab(1) = I_ZERO
@@ -381,7 +381,7 @@ contains
 !<
    subroutine decompose_patch_uniform(p_size, n_d, pieces, level_id)
 
-      use constants,  only: xdim, zdim, ndims
+      use constants,  only: xdim, zdim, ndims, V_VERBOSE
       use dataio_pub, only: warn, printinfo, msg
       use domain,     only: dom
       use mpisetup,   only: master
@@ -451,7 +451,7 @@ contains
       if (master) then
          write(msg,'(a,i3,a,3i4,a,3i6,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": grid divided to [",p_size(:), &
               &                           " ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
    end subroutine decompose_patch_uniform
@@ -462,7 +462,7 @@ contains
 !<
    subroutine decompose_patch_rectlinear(p_size, n_d, pieces, level_id)
 
-      use constants,  only: xdim, ydim, ndims, I_ZERO, I_ONE
+      use constants,  only: xdim, ydim, ndims, I_ZERO, I_ONE, V_DEBUG, V_VERBOSE
       use dataio_pub, only: printinfo, msg
       use domain,     only: dom, is_uneven
       use mpisetup,   only: master
@@ -532,13 +532,11 @@ contains
          if (any(ldom(:) > n_d(:))) quality = 0
          if (any(n_d(:)/ldom(:) < dom%nb .and. dom%has_dir(:))) quality = 0
 
-#ifdef VERBOSE
          if (quality > 0 .and. master) then
             ii = ii + 1
             write(msg,'(a,i3,a,3i4,a,i10,2(a,f10.7))')"m:ddr ",ii," p_size= [",ldom(:)," ], bcells= ", bsize, ", balance = ", load_balance, ", est_quality = ", quality
-            call printinfo(msg)
+            call printinfo(msg, V_DEBUG)
          endif
-#endif /* VERBOSE */
          if (quality > best) then
             best = quality
             p_size(:) = ldom(:)
@@ -562,24 +560,22 @@ contains
       is_uneven = any(mod(n_d(:), int(p_size(:), kind=8)) /= 0)
 
       if (master) then
-#ifdef VERBOSE
          if (dom%eff_dim /= 0) then
             write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(pieces/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:),"], cells= ", int(ideal_bnd_area)
-            call printinfo(msg)
+            call printinfo(msg, V_DEBUG)
          endif
-#endif /* VERBOSE */
          write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_rectlinear] Level ",level_id,": grid divided to [",p_size(:)," ] pieces"
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
          if (is_uneven) then
             write(msg,'(2(a,3i5),a)')"                                                      Sizes are from [", int(n_d(:)/p_size(:))," ] to [", &
                  &                   int((n_d(:)-1)/p_size(:))+1," ] cells."
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
             write(msg,'(a,f8.5)')    "                                                      Load balance is ", &
                  &                   product(int(n_d(:), kind=8)) / ( real(pieces, kind=8) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
          else
             write(msg,'(a,3i5,a)')   "                                                      Size is [", int(n_d(:)/p_size(:))," ] cells."
          endif
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
    end subroutine decompose_patch_rectlinear
@@ -590,7 +586,7 @@ contains
 !<
    subroutine decompose_patch_slices(p_size, n_d, pieces, level_id)
 
-      use constants,  only: xdim, ydim, zdim, ndims, I_ONE
+      use constants,  only: xdim, ydim, zdim, ndims, I_ONE, V_VERBOSE
       use dataio_pub, only: msg, printinfo, warn
       use domain,     only: dom, is_mpi_noncart, is_uneven
       use mpisetup,   only: master
@@ -636,7 +632,7 @@ contains
          endif
       enddo
       write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices]     Level ",level_id,": performed noncartesian division to [",p_size(:)," ] pieces"
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine decompose_patch_slices
 

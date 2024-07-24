@@ -275,7 +275,7 @@ contains
 
    subroutine print_progress(nstep)
 
-      use constants,  only: tmr_fu
+      use constants,  only: tmr_fu, V_ESSENTIAL
       use dataio_pub, only: printinfo, msg
       use global,     only: dt, t
       use timer,      only: set_timer, get_timestamp
@@ -292,7 +292,7 @@ contains
             first_run = (set_timer(tmr_fu) < 0.0)
          endif
          write(msg, fmt900) nstep, dt, t, set_timer(tmr_fu), get_timestamp()
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_ESSENTIAL, .true.)
       endif
 
    end subroutine print_progress

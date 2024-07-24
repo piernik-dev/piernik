@@ -45,7 +45,7 @@ contains
       use cg_cost_data,          only: I_REFINE
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
-      use constants,             only: I_ONE, pSUM, PPP_AMR, PPP_PROB
+      use constants,             only: I_ONE, pSUM, PPP_AMR, PPP_PROB, V_VERBOSE
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
       use ppp,                   only: ppp_main
@@ -105,7 +105,7 @@ contains
          if (cnt(ubound(cnt, dim=1)) > 0) then
             write(msg,'(a,2i6,a)')"[refinement_update:scan_for_refinements] User routine and URC marked ", &
                  &                cnt(PROBLEM), cnt(PROBLEM+I_ONE:URC)-cnt(PROBLEM:URC-I_ONE), " block(s) for refinement, respectively."
-            if (master) call printinfo(msg)
+            if (master) call printinfo(msg, V_VERBOSE)
          endif
       endif
 
@@ -740,7 +740,7 @@ contains
 
       subroutine print_time(str)
 
-         use constants,  only: tmr_amr
+         use constants,  only: tmr_amr, V_VERBOSE
          use dataio_pub, only: msg, printinfo
          use mpisetup,   only: master
          use timer,      only: set_timer
@@ -750,7 +750,7 @@ contains
          character(len=*), intent(in) :: str
 
          write(msg, '(2a,f7.3)') str, ", dt_wall= ", set_timer(tmr_amr)
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_VERBOSE)
 
       end subroutine print_time
 
@@ -758,7 +758,7 @@ contains
 
       subroutine log_req
 
-         use constants,  only: pMAX
+         use constants,  only: pMAX, V_DEBUG
          use dataio_pub, only: printinfo, msg
          use mpisetup,   only: master, req, req2, piernik_MPI_Allreduce
 
@@ -775,7 +775,7 @@ contains
          if (cursize > oldsize) then
             if (master) then
                write(msg, *) cursize
-               call printinfo("[refinement_update] Total number of simultaneous nonblocking MPI requests increased to " // trim(adjustl(msg)))
+               call printinfo("[refinement_update] Total number of simultaneous nonblocking MPI requests increased to " // trim(adjustl(msg)), V_DEBUG)
             endif
             oldsize = cursize
          endif

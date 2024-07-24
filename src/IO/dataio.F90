@@ -79,6 +79,7 @@ module dataio
    logical                  :: colormode             !< enable color messages using ANSI escape modes
 
    type(wallclock)          :: walltime_nextres      !< wallclock used for dumping restarts every n hours
+   character(len=cbuff_len) :: verbosity             !< set desired verbosity level
 
    type :: tsl_container
       logical :: dummy
@@ -105,7 +106,7 @@ module dataio
    namelist /RESTART_CONTROL/ restart, res_id, nrestart
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, init_hdf_dump, init_res_dump,    &
                               domain_dump, vars, pvars, user_message_file, system_message_file, multiple_h5files, &
-                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit
+                              use_v2_io, nproc_io, enable_compression, gzip_level, colormode, wdt_res, gdf_strict, h5_64bit, verbosity
 
 contains
 
@@ -158,6 +159,7 @@ contains
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
 !! <tr><td>colormode          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::colormode    </td></tr>
 !! <tr><td>h5_64bit           </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::h5_64bit     </td></tr>
+!! <tr><td>verbosity          </td><td>"default"          </td><td>string    </td><td>\copydoc dataio_pub::verbosity    </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -255,9 +257,10 @@ contains
 
    subroutine dataio_par_io
 
-      use constants,  only: idlen, cbuff_len, INT4
-      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors
+      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name
+      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors, piernik_verbosity
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
+
       implicit none
 
       problem_name  = "nameless"
@@ -304,6 +307,7 @@ contains
 
       colormode = .true.
       h5_64bit  = .false.
+      verbosity = "default"
 
       if (master) then
 
@@ -408,6 +412,7 @@ contains
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
+         cbuff(33) = verbosity
          cbuff(40) = domain_dump
 
          do iv = 1, nvarsmx
@@ -466,6 +471,7 @@ contains
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
+         verbosity           = cbuff(33)
          domain_dump         = trim(cbuff(40))
 
          do iv = 1, nvarsmx
@@ -476,6 +482,25 @@ contains
          enddo
 
       endif
+
+      select case (trim(verbosity))
+         case ("silent", trim(v_name(V_SILENT)))
+            piernik_verbosity = V_SILENT
+         case (trim(v_name(V_DEBUG)))
+            piernik_verbosity = V_DEBUG
+         case (trim(v_name(V_VERBOSE)))
+            piernik_verbosity = V_VERBOSE
+         case ("", "default", "info", "normal", trim(v_name(V_INFO)))
+            piernik_verbosity = V_INFO
+         case ("laconic", trim(v_name(V_ESSENTIAL)))
+            piernik_verbosity = V_ESSENTIAL
+         case ("warning", trim(v_name(V_WARN)))
+            piernik_verbosity = V_WARN
+            if (master) call warn("[dataio:dataio_par_io] only warnings are allowed")
+         case default
+            piernik_verbosity = V_INFO
+            if (master) call warn("[dataio:dataio_par_io] non recognized verbosity level '" // trim(verbosity) // "', defaulting to '" // trim(v_name(piernik_verbosity)) // "'")
+      end select
 
       call set_colors(colormode)
 
@@ -603,7 +628,8 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use dataio_pub,   only: msg, printinfo, warn
+      use constants,    only: I_ONE, V_LOWEST, V_HIGHEST, v_name
+      use dataio_pub,   only: msg, printinfo, warn, piernik_verbosity
       use load_balance, only: umsg_verbosity, V_HOST
       use mpisetup,     only: master, piernik_MPI_Bcast
       use ppp,          only: umsg_request
@@ -692,6 +718,12 @@ contains
                ! manual excluding may be helpful too, but we need to pass a list, like "exclude 2,7-9,32769", and process it safely
             case ('refine')
                emergency_fix = .true.
+            case ("+v", "v+")
+               piernik_verbosity = max(piernik_verbosity - I_ONE, V_LOWEST)
+               if (master) call printinfo("[dataio:user_msg_handler] Verbosity level raised to '" // trim(v_name(piernik_verbosity)) // "'", piernik_verbosity)
+            case ("-v", "v-")
+               piernik_verbosity = min(piernik_verbosity + I_ONE, V_HIGHEST)
+               if (master) call printinfo("[dataio:user_msg_handler] Verbosity level lowered to '" // trim(v_name(piernik_verbosity)) // "'", piernik_verbosity)
             case ('help')
                if (master) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:", char(10), &
@@ -704,6 +736,8 @@ contains
 #endif /* HDF5 */
                   &"  log       - update logfile", char(10), &
                   &"  tsl       - write a timeslice", char(10), &
+                  &"  +v        - be more verbose", char(10), &
+                  &"  -v        - be less verbose", char(10), &
                   &"  refine    - call refinement_update as soon as possible", char(10), &
                   &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
                   &"  unexclude - reset thread exclusion mask", char(10), &

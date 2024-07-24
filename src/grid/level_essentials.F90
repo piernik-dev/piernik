@@ -66,7 +66,7 @@ contains
 
    subroutine init(this, id, n_d, off)
 
-      use constants,  only: ndims, LONG, INT4
+      use constants,  only: ndims, LONG, INT4, V_VERBOSE
       use dataio_pub, only: msg, printinfo, die
       use domain,     only: dom
       use mpisetup,   only: master
@@ -88,7 +88,7 @@ contains
       else
          write(msg(len_trim(msg)+1:), '(a)') " no offset"
       endif
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine init
 

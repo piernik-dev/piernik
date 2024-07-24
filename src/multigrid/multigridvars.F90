@@ -55,8 +55,9 @@ module multigridvars
 
    ! namelist parameters
    integer(kind=4)  :: ord_prolong     !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
-   logical          :: stdout          !< print verbose messages to stdout
+   logical          :: mg_stdout       !< print verbose messages to stdout by increasing their verbosity level to piernik_verbosity
    logical          :: verbose_vcycle  !< Print one line of log per V-cycle, summary otherwise
+   integer(kind=4)  :: v_mg            !< Multigrid verbosity
 
    ! miscellaneous
    real             :: ts                !< time for runtime profiling
