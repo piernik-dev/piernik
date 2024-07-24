@@ -257,7 +257,7 @@ contains
 
    subroutine dataio_par_io
 
-      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN
+      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors, piernik_verbosity
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
@@ -483,23 +483,23 @@ contains
 
       endif
 
-      select case (verbosity)
-         case ("silent", "log")
+      select case (trim(verbosity))
+         case ("silent", trim(v_name(V_SILENT)))
             piernik_verbosity = V_SILENT
-         case ("debug")
+         case (trim(v_name(V_DEBUG)))
             piernik_verbosity = V_DEBUG
-         case ("verbose")
+         case (trim(v_name(V_VERBOSE)))
             piernik_verbosity = V_VERBOSE
-         case ("", "default", "info", "normal")
+         case ("", "default", "info", "normal", trim(v_name(V_INFO)))
             piernik_verbosity = V_INFO
-         case ("essential", "laconic")
+         case ("laconic", trim(v_name(V_ESSENTIAL)))
             piernik_verbosity = V_ESSENTIAL
-         case ("warn", "warning")
+         case ("warning", trim(v_name(V_WARN)))
             piernik_verbosity = V_WARN
             if (master) call warn("[dataio:dataio_par_io] only warnings are allowed")
          case default
             piernik_verbosity = V_INFO
-            if (master) call warn("[dataio:dataio_par_io] non recognized verbosity level, defaulting to V_INFO")
+            if (master) call warn("[dataio:dataio_par_io] non recognized verbosity level '" // trim(verbosity) // "', defaulting to '" // trim(v_name(piernik_verbosity)) // "'")
       end select
 
       call set_colors(colormode)
@@ -628,7 +628,8 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use dataio_pub,   only: msg, printinfo, warn
+      use constants,    only: I_ONE, V_LOWEST, V_HIGHEST, v_name
+      use dataio_pub,   only: msg, printinfo, warn, piernik_verbosity
       use load_balance, only: umsg_verbosity, V_HOST
       use mpisetup,     only: master, piernik_MPI_Bcast
       use ppp,          only: umsg_request
@@ -717,6 +718,12 @@ contains
                ! manual excluding may be helpful too, but we need to pass a list, like "exclude 2,7-9,32769", and process it safely
             case ('refine')
                emergency_fix = .true.
+            case ("+v", "v+")
+               piernik_verbosity = max(piernik_verbosity - I_ONE, V_LOWEST)
+               if (master) call printinfo("[dataio:user_msg_handler] Verbosity level raised to '" // trim(v_name(piernik_verbosity)) // "'", piernik_verbosity)
+            case ("-v", "v-")
+               piernik_verbosity = min(piernik_verbosity + I_ONE, V_HIGHEST)
+               if (master) call printinfo("[dataio:user_msg_handler] Verbosity level lowered to '" // trim(v_name(piernik_verbosity)) // "'", piernik_verbosity)
             case ('help')
                if (master) then
                   write(msg,*) "[dataio:user_msg_handler] Recognized messages:", char(10), &
@@ -729,6 +736,8 @@ contains
 #endif /* HDF5 */
                   &"  log       - update logfile", char(10), &
                   &"  tsl       - write a timeslice", char(10), &
+                  &"  +v        - be more verbose", char(10), &
+                  &"  -v        - be less verbose", char(10), &
                   &"  refine    - call refinement_update as soon as possible", char(10), &
                   &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
                   &"  unexclude - reset thread exclusion mask", char(10), &

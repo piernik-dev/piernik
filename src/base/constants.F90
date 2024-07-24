@@ -176,6 +176,14 @@ module constants
       enumerator :: V_HIGHEST = V_WARN
    end enum
 
+   character(len=*), dimension(V_LOWEST:V_HIGHEST), parameter :: v_name = [ &
+        "log      ", &
+        "debug    ", &
+        "verbose  ", &
+        "standard ", &
+        "essential", &
+        "warn     " ]
+
    ! grid geometry type
    enum, bind(C)
       enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
