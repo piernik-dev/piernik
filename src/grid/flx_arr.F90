@@ -88,7 +88,7 @@ contains
 
 !> \brief Pick a point flux
 
-   function fa2fp(this, i1, i2) result(fp)
+   subroutine fa2fp(this, fp, i1, i2)
 
       use constants,  only: has_B
       use dataio_pub, only: die
@@ -96,25 +96,24 @@ contains
 
       implicit none
 
-      class(fluxarray), intent(in) :: this  !< object invoking type bound procedure
-      integer,          intent(in) :: i1    !< 1st index
-      integer,          intent(in) :: i2    !< 2nd index
-
-      type(fluxpoint) :: fp
+      class(fluxarray), intent(in)    :: this  !< object invoking type bound procedure
+      integer,          intent(in)    :: i1    !< 1st index
+      integer,          intent(in)    :: i2    !< 2nd index
+      type(fluxpoint),  intent(inout) :: fp    !< buffer for the data
 
       fp%index = this%index(i1, i2)
 
-      ! It looks like a bogus detection of -Wmaybe-uninitialized that occurs only with -O0.
-
       if (.not. allocated(this%uflx)) call die("[flx_arr:fa2fp] .not. allocated(this%uflx)")
+      if (.not. allocated(fp%uflx)) call die("[flx_arr:fa2fp] .not. allocated(fp%uflx)")
       fp%uflx = this%uflx(:, i1, i2)
 
       if (has_B) then
          if (.not. allocated(this%bflx)) call die("[flx_arr:fa2fp] .not. allocated(this%bflx)")
+         if (.not. allocated(fp%bflx)) call die("[flx_arr:fa2fp] .not. allocated(fp%bflx)")
          fp%bflx = this%bflx(:, i1, i2)
       endif
 
-   end function fa2fp
+   end subroutine fa2fp
 
 !> \brief Store a point flux
 
