@@ -54,10 +54,17 @@ for i in range(len(bt[base_bt])):
         print("")
     else:
         vl = list(s_bt[fname_pos])
+        vfcnt = 0
         for ll in range(len(vl)):
             fset = []
             for f in args.file:
-                if vl[ll] == bt[f][-(i+1)].split()[fname_pos]:
-                    fset.append(f)
+                try:
+                    if vl[ll] == bt[f][-(i+1)].split()[fname_pos]:
+                        fset.append(f)
+                except IndexError:
+                    pass
             print(c_red + bt[fset[0]][-(i+1)] + c_reset, "%d files : " % len(fset) + str(fset))
+            vfcnt += len(fset)
+        if vfcnt != len(args.file):
+            print(c_red + "Only %d out of %d backtraces reached this point." % (vfcnt, len(args.file)))
         break
