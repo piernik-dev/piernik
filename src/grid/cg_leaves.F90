@@ -168,7 +168,6 @@ contains
          call piernik_MPI_Allreduce(g_cnt, pSUM)
          write(msg(len_trim(msg)+1:),'(i6)') g_cnt
          if (associated(curl, this%coarsest_leaves)) b_cnt = g_cnt
-         call curl%vertical_prep  ! is it necessary here?
          curl => curl%finer
       enddo
 
@@ -203,7 +202,7 @@ contains
 
    end subroutine update
 
-!> \brief Rebalance if required and update.
+!> \brief Rebalance if required and update grid structure.
 
    subroutine balance_and_update(this, str)
 
@@ -227,12 +226,14 @@ contains
 
       curl => finest%level
       do while (associated(curl))
-         call curl%check_update_all
+         call curl%check_update_all  ! here the buffers for horizontal communication are updated
          call curl%sync_ru  ! no need to update this%recently_changed here (was done in check_update_all)
          curl => curl%coarser
       enddo
 
       call this%update(str)
+      call this%coarsest_leaves%update_verticals  ! update prolongation/restriction buffers
+
       call ppp_main%stop(bu_label, PPP_AMR)
 
    end subroutine balance_and_update

@@ -59,10 +59,14 @@ module load_balance
    logical,                  protected :: enable_exclusion  !< When .true. then threads detected as underperforming will be excluded for load balancing
    character(len=cbuff_len), protected :: watch_cost        !< Which cg cost to watch for anomalously slow hosts? One of [ cg_cost_data:cost_labels, "none" ], default: "MHD"
    real,                     protected :: exclusion_thr     !< Exclusion threshold
+   logical,                  protected :: flexible_balance  !< can alter some parameters in this module if uneven load balancing is detected
+   real,                     protected :: imbalance_tol     !< don't warn if load balance fits the range [imbalance_tol, 1./imbalance_tol]
+   integer(kind=4),          protected :: n_rebalance       !< rebalance every n steps
+   real,                     protected :: oop_thr           !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
 
    namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, balance_levels, &
-        &             verbosity, verbosity_nstep, &
-        &             enable_exclusion, watch_cost, exclusion_thr
+        &             verbosity, verbosity_nstep, flexible_balance, imbalance_tol, &
+        &             enable_exclusion, watch_cost, exclusion_thr, n_rebalance, oop_thr
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion in case of anomalously slow hosts
@@ -70,6 +74,9 @@ module load_balance
    enum, bind(C)
       enumerator :: V_NONE = 0, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE  !< verbosity levels
    end enum
+
+   integer(kind=4), parameter :: r_rebalance = 2  !< routine rebalance 2 steps after start or restart
+   logical :: rebalance_asap  !< flag to suggest rebalancing
 
 contains
 
@@ -89,12 +96,16 @@ contains
 !!   <tr><td> enable_exclusion </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::enable_exclusion </td></tr>
 !!   <tr><td> watch_cost       </td><td> "MHD"    </td><td> character() </td><td> \copydoc load_balance::watch_cost       </td></tr>
 !!   <tr><td> exclusion_thr    </td><td> 3.       </td><td> real        </td><td> \copydoc load_balance::exclusion_thr    </td></tr>
+!!   <tr><td> flexible_balance </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::flexible_balance </td></tr>
+!!   <tr><td> imbalance_tol    </td><td> 0.8      </td><td> real        </td><td> \copydoc load_balance::imbalance_tol    </td></tr>
+!!   <tr><td> n_rebalance      </td><td> huge     </td><td> integer     </td><td> \copydoc load_balance::n_rebalance      </td></tr>
+!!   <tr><td> oop_thr          </td><td> 0.05     </td><td> real        </td><td> \copydoc load_balance::oop_thr          </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_load_balance
 
-      use constants,  only: INVALID, cbuff_len
+      use constants,  only: INVALID, cbuff_len, I_ONE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -117,6 +128,10 @@ contains
       enable_exclusion = .false.
       watch_cost       = "MHD"
       exclusion_thr    = intolerable_perf
+      flexible_balance = .false.
+      imbalance_tol    = 0.8
+      n_rebalance      = huge(I_ONE)
+      oop_thr          = 0.05
 
       if (master) then
 
@@ -141,14 +156,18 @@ contains
 
          ibuff(1) = verbosity
          ibuff(2) = verbosity_nstep
+         ibuff(3) = n_rebalance
 
          lbuff(1) = balance_thread
          lbuff(2) = enable_exclusion
+         lbuff(3) = flexible_balance
 
          rbuff(1) = exclusion_thr
          rbuff(2) = balance_cg
          rbuff(3) = balance_host
          rbuff(4) = balance_levels
+         rbuff(5) = imbalance_tol
+         rbuff(6) = oop_thr
 
       endif
 
@@ -164,14 +183,18 @@ contains
 
          verbosity        = ibuff(1)
          verbosity_nstep  = ibuff(2)
+         n_rebalance      = ibuff(3)
 
          balance_thread   = lbuff(1)
          enable_exclusion = lbuff(2)
+         flexible_balance = lbuff(3)
 
          exclusion_thr    = rbuff(1)
          balance_cg       = rbuff(2)
          balance_host     = rbuff(3)
          balance_levels   = rbuff(4)
+         imbalance_tol    = rbuff(5)
+         oop_thr          = rbuff(6)
 
       endif
 
@@ -239,6 +262,57 @@ contains
       endif
 
       umsg_verbosity = V_NONE
+      if (imbalance_tol > 1.) imbalance_tol = 1. / imbalance_tol  ! normalize to [0. : 1.] range
+
+      if (flexible_balance) then
+         balance_thread = .true.
+         if (balance_host > 0.) call warn("[load_balance] flexible_balance enforced balance_host = 1.")
+         balance_host = 1.
+#ifdef NBODY
+         if (balance_cg <= epsilon(1.)) then
+            ! Setting balance_cg to a non-0. value may help to minimize walltime for unbalanced particle setups.
+            ! * The value 1.0 will try to equalize cg costs across all processes but since the particle operations don't
+            !   overlap well with other computations, the wall time is not guaranteed to improve. Perhaps it may even
+            !   degrade.
+            ! * The value 0.5, that was usually close to the observable optimum in tests and may be treates as
+            ! a conservative, safe choice.
+            ! By running the code with balance_cg set to 1.0, 0.5 and 0.1 you should be able to estimate where to look
+            ! for the minimum. It seems that 0.75 may beat the 0.5 and 1.0 by few percent.
+            balance_cg = 0.5
+            write(msg, '(a,f6.3,a)')"[load_balance] flexible_balance enforced balance_cg =", balance_cg, " but it is advised to check also other values up to 1.0 and estimate is the optimal value."
+            if (master) call warn(msg)
+            ! OPT: Generally, the problem with load balance of particles in Piernik is hard, at least for current
+            ! implmentation. Possible ways to consider:
+            ! * Rearrange particle computations in a way that will allow for overlap with other costly operations.
+            !   Personally, I don't have idea to what extent it is possible if at all.
+            ! * Remove the concept of ghost particles. This should significantly reduce the amount of work associated
+            !   with particles and thus will reduce the imbalance. For proper communication of the TSC map, one would
+            !   need to write modified boundary exchange routines that would compute sums on overlapping boundary
+            !   regions. Special care is needed on fine-coarse boundaries to correctly account for projecting TSC onto
+            !   grid of different cell size.
+            ! * Write a dedicated load balancing and offload whole "ghost cg" with particles to particle-deficient
+            !   threads and communicate the density and potential fields. This may work nicely when the number of
+            !   particles on a cg exceeds the number of its cells. For most dense particle clumps consider offloading
+            !   only subsets of particles. The ratios or thresholds at which the offloading should occur has to be
+            !   determined, but it may require relatively small changes to the code.
+            ! * Exploit shared memory benefits and maintain the list of particles as a property of a host (set of
+            !   threads) rather than property of a cg. Requires big chamges in the codebase. If MPI-3 would be used
+            !   as a shared memory enabler, then it should be possible to perform the migration to shared  memory use
+            !   in parts and start from the particles as most benefit is expected here. It is also possible to perform
+            !   a conditional migration and enable the shared memory only when the code runs on a single host.
+            !   This will be still quite beneficial for medium-sized runs, that may fit single machine.
+            !   After validating single-machine shared memory code it may be relatively easy to go for general case as
+            !   the inter-host communication would be analogous to what we have in Piernik now with the communication
+            !   between threads. Using shared memory should be also beneficial for other parts of the code:
+            !   * a lot of boundary exchanges could be performed as a direct memory copy,
+            !   * some memory copies related to global reductions may be even avoided (e.g. in the multipole algorithm),
+            !   * it is possible to achieve better cache utilisation by parallel processing of a single cg, which may
+            !     also result in less transfers between CPU and RAM memory.
+         endif
+#endif /* NBODY */
+      endif
+
+      rebalance_asap = .false.
 
    contains
 

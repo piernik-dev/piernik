@@ -35,12 +35,11 @@ module refinement
    implicit none
 
    private
-   public :: n_updAMR, oop_thr, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
+   public :: n_updAMR, ref_point, refine_points, ref_auto_param, refine_vars, level_min, level_max, inactive_name, bsize, &
         &    ref_box, refine_boxes, refine_zcyls, init_refinement, emergency_fix, set_n_updAMR, prefer_n_bruteforce, jeans_ref, jeans_plot, &
-        &    nbody_ref, updAMR_after
+        &    nbody_ref, updAMR_after, is_blocky
 
    integer(kind=4), protected :: n_updAMR            !< How often to update the refinement structure, 0 to disable it even at IC
-   real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< If .false. then try SFC algorithms for neighbor searches
    integer(kind=4), protected :: level_min           !< Minimum allowed refinement, base level by default.
    integer(kind=4), protected :: level_max           !< Maximum allowed refinement, if set > 0 then AMR is requested (don't need to be reached if not necessary)
@@ -90,7 +89,7 @@ module refinement
 
    logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, updAMR_after, prefer_n_bruteforce, oop_thr, &
+   namelist /AMR/ level_min, level_max, bsize, auto_bsize, n_updAMR, updAMR_after, prefer_n_bruteforce, &
         &         refine_points, refine_boxes, refine_zcyls, refine_vars, jeans_ref, jeans_plot, &
         &         nbody_ref
 
@@ -108,7 +107,6 @@ contains
 !!   <tr><td> level_max           </td><td> 0       </td><td> integer          </td><td> \copydoc refinement::level_max           </td></tr>
 !!   <tr><td> n_updAMR            </td><td> HUGE    </td><td> integer          </td><td> \copydoc refinement::n_updAMR            </td></tr>
 !!   <tr><td> updAMR_after        </td><td> 0       </td><td> integer(10)      </td><td> \copydoc refinement::updAMR_after        </td></tr>
-!!   <tr><td> oop_thr             </td><td> 0.1     </td><td> real             </td><td> \copydoc refinement::oop_thr             </td></tr>
 !!   <tr><td> refine_points(10)   </td><td> none    </td><td> integer, 3*real  </td><td> \copydoc refinement::refine_points       </td></tr>
 !!   <tr><td> refine_boxes(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_boxes        </td></tr>
 !!   <tr><td> refine_zcyls(10)    </td><td> none    </td><td> integer, 6*real  </td><td> \copydoc refinement::refine_zcyls        </td></tr>
@@ -136,13 +134,14 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[refinement:init_refinement] Domain not initialized.")
 
+      ! Namelist defaults
       level_min = base_level_id
       level_max = level_min
       bsize(:)  = I_ZERO
       auto_bsize = associated(problem_domain_update)  ! allow by default for problems with domain expansion configured
       n_updAMR  = huge(I_ONE)
+      updAMR_after = I_ZERO
       prefer_n_bruteforce = .false.
-      oop_thr = 0.1
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
       refine_zcyls(:)  = refine_boxes (:)
@@ -150,7 +149,6 @@ contains
       jeans_ref = 0.       !< inactive by default, 4. is the absolute minimum for reasonable use
       jeans_plot = .false.
       nbody_ref = INVALID
-      updAMR_after = I_ZERO
 
       if (2*n_ref_auto_param              > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
       if (10+3*nshapes                    > ubound(ibuff, dim=1)) call die("[refinement:init_refinement] increase ibuff size")
@@ -199,7 +197,6 @@ contains
          lbuff(3) = auto_bsize
          lbuff(4:3+n_ref_auto_param) = refine_vars(:)%plotfield
 
-         rbuff(1) = oop_thr
          rbuff(2) = jeans_ref
          rbuff(3          :2+  nshapes) = refine_points(:)%coords(xdim)
          rbuff(3+  nshapes:2+2*nshapes) = refine_points(:)%coords(ydim)
@@ -249,7 +246,6 @@ contains
          auto_bsize               = lbuff(3)
          refine_vars(:)%plotfield = lbuff(4:3+n_ref_auto_param)
 
-         oop_thr   = rbuff(1)
          jeans_ref = rbuff(2)
          refine_points(:)%coords(xdim)     = rbuff(3          :2+  nshapes)
          refine_points(:)%coords(ydim)     = rbuff(3+  nshapes:2+2*nshapes)
@@ -447,5 +443,15 @@ contains
       endif
 
    end subroutine automagic_bsize
+
+   logical function is_blocky()
+
+      use domain, only:dom
+
+      implicit none
+
+      is_blocky = all(bsize(:) > 0 .or. .not. dom%has_dir(:))
+
+   end function is_blocky
 
 end module refinement
