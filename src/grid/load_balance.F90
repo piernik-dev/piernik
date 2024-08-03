@@ -62,10 +62,11 @@ module load_balance
    logical,                  protected :: flexible_balance  !< can alter some parameters in this module if uneven load balancing is detected
    real,                     protected :: imbalance_tol     !< don't warn if load balance fits the range [imbalance_tol, 1./imbalance_tol]
    integer(kind=4),          protected :: n_rebalance       !< rebalance every n steps
+   real,                     protected :: oop_thr           !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
 
    namelist /BALANCE/ balance_cg, balance_host, balance_thread, cost_to_balance, balance_levels, &
         &             verbosity, verbosity_nstep, flexible_balance, imbalance_tol, &
-        &             enable_exclusion, watch_cost, exclusion_thr, n_rebalance
+        &             enable_exclusion, watch_cost, exclusion_thr, n_rebalance, oop_thr
 
    logical, dimension(lbound(cost_labels,1):ubound(cost_labels,1)) :: cost_mask  !< translated from cost_to_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion in case of anomalously slow hosts
@@ -98,6 +99,7 @@ contains
 !!   <tr><td> flexible_balance </td><td> .false.  </td><td> logical     </td><td> \copydoc load_balance::flexible_balance </td></tr>
 !!   <tr><td> imbalance_tol    </td><td> 0.8      </td><td> real        </td><td> \copydoc load_balance::imbalance_tol    </td></tr>
 !!   <tr><td> n_rebalance      </td><td> huge     </td><td> integer     </td><td> \copydoc load_balance::n_rebalance      </td></tr>
+!!   <tr><td> oop_thr          </td><td> 0.05     </td><td> real        </td><td> \copydoc load_balance::oop_thr          </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -129,6 +131,7 @@ contains
       flexible_balance = .false.
       imbalance_tol    = 0.8
       n_rebalance      = huge(I_ONE)
+      oop_thr          = 0.05
 
       if (master) then
 
@@ -164,6 +167,7 @@ contains
          rbuff(3) = balance_host
          rbuff(4) = balance_levels
          rbuff(5) = imbalance_tol
+         rbuff(6) = oop_thr
 
       endif
 
@@ -190,6 +194,7 @@ contains
          balance_host     = rbuff(3)
          balance_levels   = rbuff(4)
          imbalance_tol    = rbuff(5)
+         oop_thr          = rbuff(6)
 
       endif
 

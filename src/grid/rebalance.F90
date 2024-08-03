@@ -219,10 +219,9 @@ contains
          use cg_level_coarsest, only: coarsest
          use constants,         only: fmt_len, INVALID, I_ONE, base_level_id
          use dataio_pub,        only: printinfo, die
-         use load_balance,      only: balance_cg, balance_levels
+         use load_balance,      only: balance_cg, balance_levels, oop_thr
          use mpisetup,          only: slave
          use procnames,         only: pnames
-         use refinement,        only: oop_thr
 
          implicit none
 
