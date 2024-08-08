@@ -163,12 +163,12 @@ contains
       call eflx%init
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
-         fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
+         call this%finebnd(cdim, LO)%fa2fp(fpl, i1, i2)
          eflx%li => fpl
          eflx%li%index = eflx%li%index - this%lhn(cdim, LO) + 1
       endif
       if (this%finebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
-         fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
+         call this%finebnd(cdim, HI)%fa2fp(fpr, i1, i2)
          eflx%ri => fpr
          eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
       endif
