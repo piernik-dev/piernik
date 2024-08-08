@@ -798,6 +798,31 @@ contains
 #endif /* HDF5 */
       if (associated(user_post_write_data)) call user_post_write_data(output, dump)
 
+#ifdef HDF5
+   contains
+
+      subroutine manage_hdf_dump(dumptype, dmp, output)
+
+         use constants,  only: INCEPTIVE, RES
+         use dataio_pub, only: nres
+
+         implicit none
+
+         integer(kind=4), intent(in)    :: dumptype !< type of dump
+         integer(kind=4), intent(in)    :: output   !< type of output call
+         logical,         intent(inout) :: dmp      !< perform I/O if True
+
+         if (output /= INCEPTIVE) return
+         if ((dumptype == HDF) .and. init_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
+         if ((dumptype == RES) .and. init_res_dump .and. nres == 0) then
+            dmp = .true.
+            nres = -1
+         endif
+
+      end subroutine manage_hdf_dump
+
+#endif /* HDF5 */
+
    end subroutine write_data
 
    subroutine determine_dump(dmp, last_dump_time, dt_dump, output, dumptype)
@@ -819,26 +844,6 @@ contains
       dmp = (dmp .or. output == dumptype)
 
    end subroutine determine_dump
-
-   subroutine manage_hdf_dump(dumptype, dmp, output)
-
-      use constants,  only: INCEPTIVE, HDF, RES
-      use dataio_pub, only: nres
-
-      implicit none
-
-      integer(kind=4), intent(in)    :: dumptype !< type of dump
-      integer(kind=4), intent(in)    :: output   !< type of output call
-      logical,         intent(inout) :: dmp      !< perform I/O if True
-
-      if (output /= INCEPTIVE) return
-      if ((dumptype == HDF) .and. init_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
-      if ((dumptype == RES) .and. init_res_dump .and. nres == 0) then
-         dmp = .true.
-         nres = -1
-      endif
-
-   end subroutine manage_hdf_dump
 
    subroutine check_log
 
