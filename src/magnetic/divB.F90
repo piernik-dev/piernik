@@ -83,7 +83,7 @@ contains
    subroutine print_divB_norm
 
       use cg_leaves,        only: leaves
-      use constants,        only: I_TWO, psi_n
+      use constants,        only: I_TWO, psi_n, V_INFO
       use dataio_pub,       only: printinfo, msg
       use domain,           only: dom
       use mpisetup,         only: master
@@ -103,7 +103,7 @@ contains
          write(msg(len_trim(msg)+1:), '(a,i1,a,g12.5)') " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
       if (qna%exists(psi_n)) write(msg(len_trim(msg)+1:), '(a,g12.5)') " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_INFO)
 
    end subroutine print_divB_norm
 

@@ -106,11 +106,11 @@ program piernik
       call print_char_line("=")
       call printinfo("###############     Simulation     ###############", V_LOG)
       call printinfo("Named arrays present at start:", V_LOG)
-      call qna%print_vars(to_stdout=.false.)
-      call wna%print_vars(to_stdout=.false.)
-      call printinfo("Grid lists present at start:", to_stdout=.false.)
+      call qna%print_vars
+      call wna%print_vars
+      call printinfo("Grid lists present at start:", V_LOG)
    endif
-   call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
+   call all_lists%print  ! needs all procs to participate
    if (master) call print_char_line("=")
 
    call print_progress(nstep)
@@ -236,12 +236,12 @@ program piernik
          call warn(msg)
       endif
 
-      call printinfo("Named arrays present at finish:", to_stdout=.false.)
-      call qna%print_vars(to_stdout=.false.)
-      call wna%print_vars(to_stdout=.false.)
-      call printinfo("Grid lists present at finish:", to_stdout=.false.)
+      call printinfo("Named arrays present at finish:", V_LOG)
+      call qna%print_vars
+      call wna%print_vars
+      call printinfo("Grid lists present at finish:", V_LOG)
    endif
-   call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
+   call all_lists%print  ! needs all procs to participate
    if (master) call print_char_line("=")
 
    if (associated(finalize_problem)) call finalize_problem

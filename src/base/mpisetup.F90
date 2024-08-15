@@ -192,7 +192,7 @@ contains
       call MPI_Comm_size(MPI_COMM_WORLD, nproc, err_mpi)
       call MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, tag_ub, flag, err_mpi)
 
-      LAST = nproc-I_ONE
+      LAST = nproc - I_ONE
       master = (proc == FIRST)
       slave  = .not. master
       have_mpi = (LAST /= FIRST)
@@ -205,11 +205,8 @@ contains
             open(newunit=lun, file=tmp_log_file)
             close(lun, status="delete")
          endif
-#ifdef VERBOSE
-         call printinfo("[mpisetup:init_mpi]: commencing...")
-#endif /* VERBOSE */
-         if (is_spawned) &
-              call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!")
+         call printinfo("[mpisetup:init_mpi]: commencing...", V_DEBUG)
+         if (is_spawned) call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!", V_INFO)
       endif
 
       if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) &
@@ -222,10 +219,9 @@ contains
       cwd_status  = getcwd(cwd_proc)
 
       if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
-#ifdef DEBUG
-      write(msg,'(3a,i8,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
-      call printinfo(msg)
-#endif /* DEBUG */
+
+!!$      write(msg,'(3a,i8,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
+!!$      call printinfo(msg, V_DEBUG)
 
       call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
@@ -243,13 +239,13 @@ contains
          call printinfo("PROCESSES:", V_LOG)
          do iproc = FIRST, LAST
             write(msg,"(a,i4,a,i6,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
-            call printinfo(msg, .false.)
+            call printinfo(msg, V_LOG)
          enddo
-         call printinfo("", .true.)
+         call printinfo("", V_INFO, .true.)
          write(msg, "(a,i5,a)")'   Start of the PIERNIK code on ', nproc, " processes"
-         call printinfo(msg, .true.)
-         call printinfo("", .true.)
-         call printinfo("###############     Namelist parameters     ###############", .false.)
+         call printinfo(msg, V_INFO, .true.)
+         call printinfo("", V_INFO, .true.)
+         call printinfo("###############     Namelist parameters     ###############", V_LOG)
       endif
 
       deallocate(host_all, pid_all, cwd_all)

@@ -57,32 +57,36 @@ contains
 
 !> \brief Print all cg lists for diagnostic purposes
 
-   subroutine print(this, to_stdout)
+   subroutine print(this, verbosity)
 
-      use constants,  only: pSUM
+      use constants,  only: pSUM, V_LOG
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master, piernik_MPI_Allreduce
 
       implicit none
 
-      class(all_cg_lists), intent(inout) :: this !< object invoking type-bound procedure
-      logical, optional,   intent(in)    :: to_stdout
+      class(all_cg_lists),       intent(inout) :: this       !< object invoking type-bound procedure
+      integer(kind=4), optional, intent(in)    :: verbosity  !< verbosity level
 
       integer :: i, g_cnt
+      integer(kind=4) :: v
+
+      v = V_LOG
+      if (present(verbosity)) v = verbosity
 
       !> \todo use MPI_Gather and let the master process print everything
 
       if (.not. allocated(this%entries)) then
-         call printinfo("[list_of_cg_lists:print] Unbelievable! No lists at all!", to_stdout)
+         call printinfo("[list_of_cg_lists:print] Unbelievable! No lists at all!", v)
       else
-         if (master) call printinfo("[list_of_cg_lists:print] All known cg_lists:", to_stdout)
+         if (master) call printinfo("[list_of_cg_lists:print] All known cg_lists:", v)
          do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
             if (associated(this%entries(i)%lp)) then
                !> \todo Call MPI_Allgather and print detailed distribution of grid pieces across processors
                g_cnt = this%entries(i)%lp%cnt
                call piernik_MPI_Allreduce(g_cnt, pSUM)
                write(msg, '(3a,i7,a)') "'", this%entries(i)%lp%label, "' : ", g_cnt, " element(s)"
-               if (master) call printinfo(msg, to_stdout)
+               if (master) call printinfo(msg, v)
             else
                call warn("[list_of_cg_lists:print] (null)")
             endif

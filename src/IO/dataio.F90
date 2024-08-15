@@ -165,7 +165,7 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID
+      use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
            &                move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
@@ -176,9 +176,7 @@ contains
       integer              :: system_status, i, ip, par_lun
       logical, allocatable, dimension(:) :: can_write
 
-#ifdef VERBOSE
-      if (master) call printinfo("[dataio:init_dataio_parameters] Commencing dataio module initialization")
-#endif /* VERBOSE */
+      if (master) call printinfo("[dataio:init_dataio_parameters] Commencing dataio module initialization", V_DEBUG)
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[dataio:init_dataio_parameters] Some physics modules are not initialized.")
 
@@ -510,7 +508,7 @@ contains
 
    subroutine init_dataio
 
-      use constants,    only: PIERNIK_INIT_IO_IC
+      use constants,    only: PIERNIK_INIT_IO_IC, V_DEBUG, V_LOG
       use dataio_pub,   only: code_progress, die, maxenvlen, nres, nrestart, printinfo, restarted_sim, warn
       use domain,       only: dom
       use mpisetup,     only: master
@@ -573,9 +571,9 @@ contains
 
       call init_version
       if (master) then
-         call printinfo("###############     Source configuration     ###############", .false.)
+         call printinfo("###############     Source configuration     ###############", V_LOG)
          do i = 1, nenv
-            call printinfo(env(i), .false.)
+            call printinfo(env(i), V_LOG)
          enddo
       endif
       maxenvlen = int(maxval(len_trim(env(:nenv))), kind=4)
@@ -586,7 +584,7 @@ contains
 
       if (restarted_sim) then
 #ifdef HDF5
-         if (master) call printinfo("###############     Reading restart     ###############", .false.)
+         if (master) call printinfo("###############     Reading restart     ###############", V_LOG)
          call read_restart_hdf5
          nstep_start = nstep
          t_start     = t
@@ -597,12 +595,10 @@ contains
 #endif /* !HDF5 */
       endif
 
-#ifdef VERBOSE
-      call printinfo("[dataio:init_dataio] finished. \o/")
-#endif /* VERBOSE */
-
       walltime_nextres = wallclock(0, 0, "until next restart")
       if (master) tn = walltime_nextres%time_left(wdt_res)
+
+      if (master) call printinfo("[dataio:init_dataio] finished. \o/", V_DEBUG)
 
    end subroutine init_dataio
 
@@ -628,7 +624,7 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use constants,    only: I_ONE, V_LOWEST, V_HIGHEST, v_name
+      use constants,    only: I_ONE, V_LOWEST, V_ESSENTIAL, V_HIGHEST, v_name
       use dataio_pub,   only: msg, printinfo, warn, piernik_verbosity
       use load_balance, only: umsg_verbosity, V_HOST
       use mpisetup,     only: master, piernik_MPI_Bcast
@@ -675,7 +671,7 @@ contains
                   umsg_request = max(1, int(umsg_param))
                   write(msg,'(a,i6,a)') "[dataio:user_msg_handler] enable PPP for ", umsg_request, &
                        " step" // trim(merge(" ", "s", umsg_request == 1))
-                  if (master) call printinfo(msg)
+                  if (master) call printinfo(msg, V_ESSENTIAL)
                else
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
                endif
@@ -747,7 +743,7 @@ contains
                   &"  sleep <number> - wait <number> seconds", char(10), &
                   &"  wend|wdtres|tend|nend|dtres|dthdf|dtlog|dttsl <value> - update specified parameter with <value>", char(10), &
                   &"Note that only one line at a time is read."
-                  call printinfo(msg)
+                  call printinfo(msg, V_ESSENTIAL)
                endif
             case default
                if (master) then
@@ -1305,15 +1301,19 @@ contains
 !!  Common log print (short - without assoc value)
 !<
    subroutine cmnlog_s(fmt_, title, id, ess)
+
+      use constants,  only: V_LOG
       use dataio_pub, only: msg, printinfo
       use domain,     only: dom
       use types,      only: value
+
       implicit none
+
       character(len=*), intent(in) :: fmt_, title, id
       type(value),      intent(in) :: ess
 
       write(msg, fmt_)  title, id, ess%val, ess%proc, pack(ess%loc,dom%has_dir), pack(ess%coords,dom%has_dir)
-      call printinfo(msg, .false.)
+      call printinfo(msg, V_LOG)
 
    end subroutine cmnlog_s
 
@@ -1321,15 +1321,19 @@ contains
 !!  Common log print (long - including assoc value)
 !<
    subroutine cmnlog_l(fmt_, title, id, ess)
+
+      use constants,  only: V_LOG
       use dataio_pub, only: msg, printinfo
       use domain,     only: dom
       use types,      only: value
+
       implicit none
+
       character(len=*), intent(in) :: fmt_, title, id
       type(value),      intent(in) :: ess
 
       write(msg, fmt_) title, id, ess%val, ess%assoc, ess%proc, pack(ess%loc,dom%has_dir), pack(ess%coords,dom%has_dir)
-      call printinfo(msg, .false.)
+      call printinfo(msg, V_LOG)
 
    end subroutine cmnlog_l
 
@@ -1665,7 +1669,7 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half
+      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half, V_LOG
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver, cc_mag
@@ -1964,7 +1968,7 @@ contains
                call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
                id = "ION"
-               write(msg, fmt_dtloc) 'max(c_f)    ', id, cfi_max%val, cfi_max%assoc ; call printinfo(msg, .false.)
+               write(msg, fmt_dtloc) 'max(c_f)    ', id, cfi_max%val, cfi_max%assoc ; call printinfo(msg, V_LOG)
                call cmnlog_l(fmt_dtloc, 'max(v_a)    ', id, vai_max)
 #endif /* MAGNETIC */
             endif
@@ -2059,7 +2063,7 @@ contains
 
       subroutine print_memory_usage
 
-         use constants,    only: I_ONE, INVALID
+         use constants,    only: I_ONE, INVALID, V_DEBUG
          use dataio_pub,   only: msg, printinfo
          use memory_usage, only: system_mem_usage
          use MPIF,         only: MPI_INTEGER, MPI_COMM_WORLD
@@ -2081,7 +2085,7 @@ contains
                     trim(kMGTP(minval(real(cnt_rss)))), "/", &
                     trim(kMGTP(maxval(real(cnt_rss)))), &
                     ". Total RSS memory:", trim(kMGTP(sum(real(cnt_rss)))), "."
-               call printinfo(msg, .false.)
+               call printinfo(msg, V_DEBUG)
             endif
          endif
 
@@ -2125,7 +2129,7 @@ contains
 !-------------------------------------------------------------------------
 
 !> \todo process multiple commands at once
-      use constants,  only: msg_len
+      use constants,  only: msg_len, V_ESSENTIAL
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master
 #if defined(__INTEL_COMPILER)
@@ -2200,7 +2204,7 @@ contains
             endif
             close(msg_lun)
 
-            if (len_trim(msg) > 0 .and. master) call printinfo(msg)
+            if (len_trim(msg) > 0 .and. master) call printinfo(msg, V_ESSENTIAL)
 
             sz = len_trim(msg)
             if (fname(i) == user_message_file) then

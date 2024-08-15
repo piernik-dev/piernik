@@ -49,7 +49,7 @@ contains
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
            &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
            &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB, &
-           &                           v_name, V_DEBUG, V_INFO, V_ESSENTIAL, V_LOWEST, V_HIGHEST
+           &                           v_name, V_LOG, V_DEBUG, V_INFO, V_ESSENTIAL, V_LOWEST, V_HIGHEST
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, piernik_verbosity, &
            &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
@@ -264,7 +264,7 @@ contains
 
       call ppp_main%start(ic_label)
       if (master) then
-         call printinfo("###############     Initial Conditions     ###############", .false.)
+         call printinfo("###############     Initial Conditions     ###############", V_LOG)
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
          call printinfo("", V_ESSENTIAL, .true.)
          call printinfo(msg, V_ESSENTIAL, .true.)
