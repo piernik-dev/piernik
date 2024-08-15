@@ -178,7 +178,7 @@ contains
 
       use constants,  only: big_float, one, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
-           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ, V_INFO, V_DEBUG
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -485,11 +485,11 @@ contains
       if (master) then
          select case (which_solver)
             case (RTVD_SPLIT)
-               call printinfo("    (M)HD solver: RTVD.")
+               call printinfo("    (M)HD solver: RTVD.", V_INFO)
             case (HLLC_SPLIT)
-               call printinfo("    HD solver: HLLC.")
+               call printinfo("    HD solver: HLLC.", V_INFO)
             case (RIEMANN_SPLIT)
-               call printinfo("    (M)HD solver: Riemann.")
+               call printinfo("    (M)HD solver: Riemann.", V_INFO)
             case default
                call die("[global:init_global] unrecognized hydro solver")
          end select
@@ -499,29 +499,27 @@ contains
       if (master) then
          select case (divB_0_method)
             case (DIVB_HDC)
-               call printinfo("    The div(B) constraint is maintained by Hyperbolic Cleaning (GLM).")
+               call printinfo("    The div(B) constraint is maintained by Hyperbolic Cleaning (GLM).", V_INFO)
             case (DIVB_CT)
-               call printinfo("    The div(B) constraint is maintained by Constrained Transport (2nd order).")
+               call printinfo("    The div(B) constraint is maintained by Constrained Transport (2nd order).", V_INFO)
             case default
                call die("    The div(B) constraint is maintained by Uknown Something.")
          end select
 
          if (cc_mag) then
-            call printinfo("    Magnetic field is cell-centered.")
+            call printinfo("    Magnetic field is cell-centered.", V_INFO)
          else
-            call printinfo("    Magnetic field is face-centered (staggered).")
+            call printinfo("    Magnetic field is face-centered (staggered).", V_INFO)
          endif
       endif
 #endif /* MAGNETIC */
 
-#ifdef DEBUG
       if (master) &
 #  ifdef MPIF08
-           call printinfo("    use mpi_f08 (modern interface)")
+           call printinfo("    use mpi_f08 (modern interface)", V_DEBUG)
 #  else /* !MPIF08 */
-           call printinfo("    use mpi (old interface)")
+           call printinfo("    use mpi (old interface)", V_DEBUG)
 #  endif /* !MPIF08 */
-#endif /* DEBUG */
 
       if (all(ord_fluid_prolong /= [O_INJ, O_LIN])) then
          write(msg, '(a,i3,a)')"[global:init_global] Prolongation order ", ord_fluid_prolong, " is not positive-definite and thus not allowed for density and energy. Degrading to injection (0)"

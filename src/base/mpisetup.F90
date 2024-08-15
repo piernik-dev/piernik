@@ -148,7 +148,7 @@ contains
            &                   MPI_Wtime, MPI_Init, MPI_Comm_get_parent, &
            &                   MPI_Comm_rank, MPI_Comm_size
       use MPIFUN,        only: MPI_Gather, MPI_Comm_get_attr
-      use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
+      use dataio_pub,    only: die, printinfo, msg, tmp_log_file
       use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
 #if defined(__INTEL_COMPILER)
@@ -247,7 +247,7 @@ contains
             call printinfo(msg, .false.)
          enddo
          call printinfo("", .true.)
-         write(msg,"(5a,i5)") 'Start of the',ansi_white,' PIERNIK ',ansi_black,'code. No. of procs = ', nproc
+         write(msg, "(a,i5,a)")'   Start of the PIERNIK code on ', nproc, " processes"
          call printinfo(msg, .true.)
          call printinfo("", .true.)
          call printinfo("###############     Namelist parameters     ###############", .false.)

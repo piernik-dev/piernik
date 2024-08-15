@@ -48,7 +48,8 @@ contains
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
            &                           PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, PIERNIK_POST_IC, &
-           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB, V_DEBUG, V_LOWEST, V_HIGHEST
+           &                           INCEPTIVE, tmr_fu, cbuff_len, PPP_PROB, &
+           &                           v_name, V_DEBUG, V_INFO, V_ESSENTIAL, V_LOWEST, V_HIGHEST
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, restarted_sim, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, piernik_verbosity, &
            &                           warn, die, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
@@ -156,10 +157,11 @@ contains
       call cg_extptrs%epa_init
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
+      ! Colors in stdout will be available from here if /OUTPUT_CONTROL/ colormode == .true.
 
       if (piernik_verbosity <= V_DEBUG) then
          do nit= V_LOWEST, V_HIGHEST
-            write(msg, '(a,i1)')"Verbosity level ", nit
+            write(msg, '(a,i1,a)')"Verbosity level ", nit, " (" // trim(v_name(nit)) // ")"
             if (master) call printinfo(msg, int(nit, kind=4))
          enddo
       endif
@@ -264,8 +266,9 @@ contains
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
          write(msg,'(4a)') "   Starting problem : ",trim(problem_name)," :: ",trim(run_id)
-         call printinfo(msg, .true.)
-         call printinfo("", .true.)
+         call printinfo("", V_ESSENTIAL, .true.)
+         call printinfo(msg, V_ESSENTIAL, .true.)
+         call printinfo("", V_ESSENTIAL, .true.)
       endif
       !>
       !! \deprecated It makes no sense to call (sometimes expensive) problem_initial_conditions before reading restart file.
@@ -275,11 +278,11 @@ contains
       !> \warning Set initial conditions by hand when starting from scratch or read them from a restart file. Do not use both unless you REALLY need to do so.
       if (restarted_sim .and. require_problem_IC /= 1) then
          if (master) then
-            write(msg,'(a,i4,a)') "[initpiernik:init_piernik] Restart file #",nrestart," read. Skipping problem_initial_conditions."
+            write(msg,'(a,i4,a)') "[initpiernik] Restart file #",nrestart," read. Skipping problem_initial_conditions."
             call printio(msg)
          endif
          if (associated(problem_post_restart)) then
-            if (master) call printinfo("[initpiernik:init_piernik] Calling problem specific, post restart procedure")
+            if (master) call printinfo("[initpiernik] Calling problem specific, post restart procedure", V_INFO)
             call problem_post_restart
          endif
       else
@@ -295,7 +298,7 @@ contains
          call init_psi ! initialize the auxiliary field for divergence cleaning when needed
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_INFO)
          call ppp_main%stop(iter_label // "0", PPP_PROB)
 
          call costs_maintenance
@@ -323,7 +326,7 @@ contains
 
             nit = nit + 1
             write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
-            if (master) call printinfo(msg)
+            if (master) call printinfo(msg, V_INFO)
             call ppp_main%stop(iter_label // adjustl(label), PPP_PROB)
             call costs_maintenance
          enddo
@@ -332,7 +335,7 @@ contains
 #endif /* GRAV */
 
          if (ac /= 0) then
-            if (master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
+            if (master) call warn("[initpiernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
 #ifdef GRAV
             call source_terms_grav  ! fix up gravitational potential when refiements did not converge
 #endif /* GRAV */
@@ -346,12 +349,12 @@ contains
 
       code_progress = PIERNIK_POST_IC
 
-      write(msg, '(a,3i11,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
+      write(msg, '(a,3i11,a,i2)')"[initpiernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_INFO)
 
 #if defined(GRAV) && defined(NBODY)
-      np = global_count_all_particles(message = "[initpiernik:init_piernik]")  ! we don't really need np, just call printinfo()
+      np = global_count_all_particles(message = "[initpiernik]")  ! we don't really need np, just call printinfo()
 #endif /* GRAV && NBODY */
 
 #ifdef VERBOSE

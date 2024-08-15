@@ -34,7 +34,8 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, &
+        &                       fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI, V_INFO
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump, cleanup_dataio
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress, nstep_start
    use div_B,             only: print_divB_norm
@@ -222,7 +223,7 @@ program piernik
       call printinfo("###############     Finishing     ###############", .false.)
       if (t >= tend) then
          write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
-         call printinfo(msg)
+         call printinfo(msg, V_INFO)
       endif
       if (nstep >= nend) then
          write(msg, '(4a)') "Maximum step count exceeded (",trim(nstr),") at t = ",trim(tstr)
@@ -259,17 +260,16 @@ program piernik
 
    code_progress = PIERNIK_CLEANUP
 
-   if (master) write(stdout, '(a)', advance='no') "Finishing #"
-
+   if (master) write(stdout, '(/,a)', advance='no') "   Finishing #"
    call cleanup_piernik
 
    call ppp_main%stop(f_label)
    call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
    call cleanup_profiling
-   call cleanup_mpi
+   call cleanup_mpi       ! No calls to warn() or printinfo() are allowed beyond this point.
    call cleanup_dataio
 
-   if (master) write(stdout,'(a)')"#"
+   if (master) write(stdout,'(a,/)')"#"
 
 contains
 
@@ -303,6 +303,7 @@ contains
    subroutine grace_period
 
       use all_boundaries, only: all_fluid_boundaries
+      use constants,      only: V_INFO
       use dataio_pub,     only: printinfo
       use global,         only: grace_period_passed, relax_time
       use interactions,   only: interactions_grace_passed
@@ -318,7 +319,7 @@ contains
          if (relax_time > 0.0) then
             ! write info message only if relax_time was set
             write(msg,'(A,ES10.3)') "[piernik:grace_period] grace period has passed.", t
-            if (master) call printinfo(msg)
+            if (master) call printinfo(msg, V_INFO)
          endif
          call interactions_grace_passed
          if (associated(problem_grace_passed)) call problem_grace_passed

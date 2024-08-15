@@ -483,6 +483,8 @@ contains
 
       endif
 
+      call set_colors(colormode)
+
       select case (trim(verbosity))
          case ("silent", trim(v_name(V_SILENT)))
             piernik_verbosity = V_SILENT
@@ -501,8 +503,6 @@ contains
             piernik_verbosity = V_INFO
             if (master) call warn("[dataio:dataio_par_io] non recognized verbosity level '" // trim(verbosity) // "', defaulting to '" // trim(v_name(piernik_verbosity)) // "'")
       end select
-
-      call set_colors(colormode)
 
    end subroutine dataio_par_io
 
