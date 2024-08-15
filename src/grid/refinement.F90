@@ -356,7 +356,7 @@ contains
       endif
 
       if (level_max > base_level_id .and. (mod(dom%nb, I_TWO) == I_ONE)) then
-         write(msg, '(a,i2)')"[fluidupdate:fluid_update] odd number of guardcells is not compatible with current implementation of prolongation and restriction routines. It should be safe to set /BASE_DOMAIN/ nb = ", dom%nb + 1
+         write(msg, '(a,i2)')"[refinement:init_refinement] odd number of guardcells is not compatible with current implementation of prolongation and restriction routines. It should be safe to set /BASE_DOMAIN/ nb = ", dom%nb + 1
          call die(msg)
       endif
 
