@@ -368,6 +368,26 @@ contains
 
    end subroutine cleanup_text_buffers
 
+   !> \brief Printinfo variant which prints a line of repeated characters
+
+   subroutine print_char_line(c, verbosity)
+
+      use constants, only: I_ONE, rep_len, V_LOG
+
+      implicit none
+
+      character(len=I_ONE),      intent(in) :: c          !< the character to repeat
+      integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
+
+      integer(kind=4) :: v
+
+      v = V_LOG
+      if (present(verbosity)) v = verbosity
+
+      call printinfo(repeat(c, rep_len), v)
+
+   end subroutine print_char_line
+
    !> \brief Printinfo variant which does not print colored tag (legacy)
 
    subroutine printinfo_legacy(nm, to_stdout)

@@ -35,9 +35,9 @@ program piernik
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, &
-        &                       fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI, V_INFO
+        &                       fplen, stdout, I_ONE, CHK, FINAL_DUMP, cbuff_len, PPP_IO, PPP_MPI, V_LOG, V_INFO
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump, cleanup_dataio
-   use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress, nstep_start
+   use dataio_pub,        only: nend, tend, msg, print_char_line, printinfo, warn, die, code_progress, nstep_start
    use div_B,             only: print_divB_norm
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
@@ -103,17 +103,15 @@ program piernik
    end_sim = .false.
 
    if (master) then
-      call printinfo("======================================================================================================", .false.)
-      call printinfo("###############     Simulation     ###############", .false.)
-      call printinfo("Named arrays present at start:", to_stdout=.false.)
+      call print_char_line("=")
+      call printinfo("###############     Simulation     ###############", V_LOG)
+      call printinfo("Named arrays present at start:", V_LOG)
       call qna%print_vars(to_stdout=.false.)
       call wna%print_vars(to_stdout=.false.)
       call printinfo("Grid lists present at start:", to_stdout=.false.)
    endif
    call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
-   if (master) then
-      call printinfo("======================================================================================================", .false.)
-   endif
+   if (master) call print_char_line("=")
 
    call print_progress(nstep)
    if (print_divB > 0) call print_divB_norm
@@ -219,8 +217,8 @@ program piernik
       write(nstr, '(i7)') nstep
       tstr = adjustl(tstr)
       nstr = adjustl(nstr)
-      call printinfo("======================================================================================================", .false.)
-      call printinfo("###############     Finishing     ###############", .false.)
+      call print_char_line("=")
+      call printinfo("###############     Finishing     ###############", V_LOG)
       if (t >= tend) then
          write(msg, '(2a)') "Simulation has reached final time t = ",trim(tstr)
          call printinfo(msg, V_INFO)
@@ -244,9 +242,7 @@ program piernik
       call printinfo("Grid lists present at finish:", to_stdout=.false.)
    endif
    call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
-   if (master) then
-      call printinfo("======================================================================================================", .false.)
-   endif
+   if (master) call print_char_line("=")
 
    if (associated(finalize_problem)) call finalize_problem
 

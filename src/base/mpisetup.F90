@@ -142,14 +142,13 @@ contains
 
    subroutine init_mpi
 
-      use constants,     only: cwdlen, I_ONE
+      use constants,     only: cwdlen, I_ONE, V_LOG, V_DEBUG, V_INFO
+      use dataio_pub,    only: die, print_char_line, printinfo, msg, tmp_log_file, par_file, lun
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
            &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, MPI_TAG_UB, &
            &                   MPI_Wtime, MPI_Init, MPI_Comm_get_parent, &
            &                   MPI_Comm_rank, MPI_Comm_size
       use MPIFUN,        only: MPI_Gather, MPI_Comm_get_attr
-      use dataio_pub,    only: die, printinfo, msg, tmp_log_file
-      use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
 #if defined(__INTEL_COMPILER)
       use ifport,        only: getpid, getcwd, hostnm
@@ -238,10 +237,10 @@ contains
          inquire(file=par_file, exist=par_file_exist)
          if (.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
 
-         call printinfo("------------------------------------------------------------------------------------------------------", .false.)
-         call printinfo("###############     Environment     ###############", .false.)
-         call printinfo("", .false.)
-         call printinfo("PROCESSES:", .false.)
+         call print_char_line("-")
+         call printinfo("###############     Environment     ###############", V_LOG)
+         call printinfo("", V_LOG)
+         call printinfo("PROCESSES:", V_LOG)
          do iproc = FIRST, LAST
             write(msg,"(a,i4,a,i6,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
             call printinfo(msg, .false.)
@@ -351,7 +350,7 @@ contains
 
    subroutine cleanup_mpi
 
-      use dataio_pub,      only: printinfo, close_logs
+      use dataio_pub,      only: print_char_line, close_logs
       use MPIF,            only: MPI_COMM_WORLD, MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
       use piernik_mpi_sig, only: sig
 #if defined(__INTEL_COMPILER)
@@ -363,7 +362,7 @@ contains
       if (allocated(req)) deallocate(req)
       if (allocated(req2)) deallocate(req2)
 
-      if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
+      if (master) call print_char_line("+")
       call MPI_Barrier(MPI_COMM_WORLD,err_mpi)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
       if (is_spawned) then

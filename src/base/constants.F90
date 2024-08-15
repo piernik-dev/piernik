@@ -144,6 +144,8 @@ module constants
    integer(kind=4), parameter :: idlen = 3                  !< COMMENT ME
    integer(kind=4), parameter :: singlechar = 1             !< a single character
 
+   integer(kind=4), parameter :: rep_len = 112              !< default length of "---...", "+++..." and "===..." strings in the log
+
    ! simulation state
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization

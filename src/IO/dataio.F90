@@ -1639,7 +1639,7 @@ contains
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use constants,          only: idlen, small, MAXL, PPP_IO
-      use dataio_pub,         only: printinfo
+      use dataio_pub,         only: printinfo, print_char_line
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use func,               only: L2norm
@@ -1959,7 +1959,7 @@ contains
 
       if (master)  then
          if (.not.present(tsl)) then
-            call printinfo('================================================================================================================', .false.)
+            call print_char_line('=')
             if (has_ion) then
                call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
@@ -2017,7 +2017,7 @@ contains
             id = "PRT"
             call cmnlog_l(fmt_dtloc, 'max(|acc|)  ', id, pacc_max)
 #endif /* NBODY */
-            call printinfo('================================================================================================================', .false.)
+            call print_char_line('=')
          else
 #ifdef MAGNETIC
             tsl%b_min = b_min%val
