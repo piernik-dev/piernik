@@ -243,7 +243,7 @@ contains
 
    subroutine describe_test
 
-      use constants,  only: pi
+      use constants,  only: pi, V_INFO
       use dataio_pub, only: msg, printinfo
       use mpisetup,   only: master
       use units,      only: fpiG, newtong
@@ -251,36 +251,36 @@ contains
       implicit none
 
       if (master) then
+         call printinfo("", V_INFO, .true.)
          write(msg, *) 'Unperturbed adiabatic sound speed = ', cs0
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO, .true.)
          write(msg, *) 'Gravitational constant * 4pi      = ', fpiG
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO, .true.)
          write(msg, *) 'L_critical                        = ', sqrt(pi * fl%gam * p0 / newtong / d0**2)
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO, .true.)
          write(msg, *) 'gamma                             = ', fl%gam
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO, .true.)
          write(msg, *) 'Perturbation wavenumber           = ', kn
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO, .true.)
          write(msg, *) 'Jeans wavenumber                  = ', kJ
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO, .true.)
          if (omg2>0) then
             write(msg, *) 'characteristic frequency          = ', omg
-            call printinfo(msg, .true.)
-            call printinfo("", .true.)
+            call printinfo(msg, V_INFO, .true.)
+            call printinfo("", V_INFO, .true.)
             write(msg, *) 'T(t) = ',Tamp,'*[1 - cos(',omg,'t)]'
-            call printinfo(msg, .true.)
+            call printinfo(msg, V_INFO, .true.)
          else
             write(msg, *) 'characteristic timescale          = ', omg
-            call printinfo(msg, .true.)
+            call printinfo(msg, V_INFO, .true.)
             !write(msg, *) 'Something like T(t) = ',Tamp,'* exp(',omg,'t)]' !BEWARE the formula is not completed
             !call printinfo(msg, .true.)
          endif
-         call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
-         call printinfo('', .true.)
-         call printinfo('To verify results, run:', .true.)
+         call printinfo(' Divide T(t) for .tsl by L to get proper amplitude !', V_INFO, .true.)
+         call printinfo('', V_INFO, .true.)
+         call printinfo(' To verify results, run:', V_INFO, .true.)
          write(msg, '(5a)')' % gnuplot ', plot_fname, '; display jeans.png'
-         call printinfo(msg, .true.)
-         call printinfo('', .true.)
+         call printinfo(msg, V_INFO, .true.)
       endif
 
    end subroutine describe_test

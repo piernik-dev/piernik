@@ -399,7 +399,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, pMIN, pMAX
+      use constants,        only: pSUM, pMIN, pMAX, V_INFO
       use dataio_pub,       only: msg, die, printinfo
       use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
@@ -458,7 +458,7 @@ contains
          else
             write(msg,'(a,2f12.5)')"[initproblem:check_norm] Cannot compute L2 error norm, min and max error = ", dev(1:2)
          endif
-         call printinfo(msg)
+         call printinfo(msg, V_INFO)
       endif
 
    end subroutine check_norm

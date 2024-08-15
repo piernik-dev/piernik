@@ -253,7 +253,7 @@ contains
          else
             write(msg, '(a)')"[initproblem:problem_initial_conditions] Set up point-like mass"
          endif
-         call printinfo(msg, V_INFO, .true.)
+         call printinfo(msg, V_INFO)
          if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:problem_initial_conditions] Part of the spheroid is outside the domain in the X-direction.")
          if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
               (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
@@ -263,7 +263,7 @@ contains
          else
             write(msg,'(a,g12.5)')   "[initproblem:problem_initial_conditions] Mass = ", d0
          endif
-         call printinfo(msg, V_VERBOSE, .true.)
+         call printinfo(msg, V_VERBOSE)
       endif
 
       call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
