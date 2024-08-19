@@ -99,7 +99,6 @@
  /
 
  $MULTIGRID_SOLVER
-!    mg_stdout = .true.
     dirty_debug = .true.
  /
 
