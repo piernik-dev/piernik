@@ -59,8 +59,7 @@ contains
       use constants,      only: I_ONE, base_level_id, PPP_AMR
       use dataio_pub,     only: msg, warn
       use global,         only: nstep
-      use load_balance,   only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
-           &                    verbosity, verbosity_nstep, umsg_verbosity, &
+      use load_balance,   only: exclusion_thr, verbosity, verbosity_nstep, umsg_verbosity, &
            &                    V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
       use mpisetup,       only: master, FIRST, LAST, err_mpi
       use MPIF,           only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime
@@ -146,7 +145,7 @@ contains
                end select
                if (v >= V_HOST) call log_host
                if (v >= V_SUMMARY) call log_summary
-               if ((balance_cg > 0. .or. balance_host > 0. .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
+               if (nstep >= 1) call log_speed
             endif
 
          endif
