@@ -40,6 +40,8 @@ for i in range(len(bt[base_bt])):
         except IndexError:
             l_bt_f = [None]
         for ll in range(len(l_bt_f)):
+            if ll >= len(s_bt):  # some lines may have more words
+                s_bt.append(set())
             s_bt[ll].add(l_bt_f[ll])
     if len(s_bt[fname_pos]) == 1:
         if len(s_bt[-1]) > 1:
