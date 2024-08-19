@@ -68,7 +68,7 @@ module load_balance
    integer(kind=4) :: watch_ind  !< which index to watch for exclusion in case of anomalously slow hosts
 
    enum, bind(C)
-      enumerator :: V_NONE = 0, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE  !< verbosity levels
+      enumerator :: VB_NONE = 0, VB_SUMMARY, VB_HOST, VB_DETAILED, VB_ELABORATE  !< verbosity levels
    end enum
 
 contains
@@ -112,7 +112,7 @@ contains
       balance_levels   = 0.
       balance_thread   = .false.
       cost_to_balance  = "all"
-      verbosity        = V_HOST
+      verbosity        = VB_HOST
       verbosity_nstep  = 0
       enable_exclusion = .false.
       watch_cost       = "MHD"
@@ -238,7 +238,7 @@ contains
          endif
       endif
 
-      umsg_verbosity = V_NONE
+      umsg_verbosity = VB_NONE
 
    contains
 
