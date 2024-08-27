@@ -310,7 +310,7 @@ contains
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field("nJ")
                   write(msg, '(3a)') "[URC_list:create_plotfields] Jeans refinement criterion is stored in array '", trim(ref_n), "'"
-                  if (master) call printinfo(msg)
+                  if (master) call printinfo(msg, V_VERBOSE)
                endif
             class is (urc_nbody)
                ! unused at the moment of implementation

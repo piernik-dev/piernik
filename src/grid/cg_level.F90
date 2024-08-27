@@ -126,6 +126,7 @@ contains
       use dataio_pub, only: printinfo !, msg, warn
       use mpisetup,   only: FIRST, LAST, master!, nproc, proc
 #ifdef VERBOSE
+      use constants,  only: V_DEBUG
       use dataio_pub, only: msg
 #endif /* VERBOSE */
 
@@ -155,7 +156,7 @@ contains
 !!$         cgl => this%first
 !!$         do while (associated(cgl))
 !!$            write(msg,'(2(a,i7),2(a,3i10),a)')" @",proc," #",cgl%cg%grid_id," : [", cgl%cg%my_se(:, LO), "] : [", cgl%cg%my_se(:, HI)," ]"
-!!$            call printinfo(msg)
+!!$            call printinfo(msg, V_DEBUG)
 !!$            cgl => cgl%nxt
 !!$         enddo
 !!$      endif
@@ -188,7 +189,7 @@ contains
             else
                write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             endif
-            call printinfo(msg)
+            call printinfo(msg, V_DEBUG)
 #endif /* VERBOSE */
          enddo
       enddo
@@ -196,7 +197,7 @@ contains
 !      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_level:print_segments] Level ", this%l%id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
 !           &                                 "%, ",tot_cg," grid(s), load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
-!      call printinfo(msg)
+!      call printinfo(msg, V_DEBUG)
       deallocate(maxcnt)
 
    end subroutine print_segments

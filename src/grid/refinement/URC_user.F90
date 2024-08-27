@@ -102,8 +102,9 @@ contains
 
    function init(user_mark, plotfield) result(this)
 
-      use dataio_pub,       only: printinfo, msg
-      use mpisetup,         only: master
+      use constants,  only: V_INFO
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: master
 
       implicit none
 
@@ -118,7 +119,7 @@ contains
       if (master) then
          write(msg, '(5a,2g13.5,a)')"[URC user]  Initializing user-provided criteria"
          if (plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield"
-         call printinfo(msg)
+         call printinfo(msg, V_INFO)
       endif
 
    end function init

@@ -181,6 +181,7 @@ contains
 !> \brief print the list and associated cg ID for debugging purposes
    subroutine print_list(this)
 
+      use constants,  only: V_DEBUG
       use dataio_pub, only: warn, printinfo, msg
 
       implicit none
@@ -210,11 +211,11 @@ contains
 
       if (associated(this%first%cg)) then
          write(msg,'(a,i7)')"First element #",this%first%cg%grid_id
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       endif
       if (associated(this%last%cg)) then
          write(msg,'(a,i7)')"Last element #",this%last%cg%grid_id
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       endif
 
       cnt = 0
@@ -223,7 +224,7 @@ contains
          cnt = cnt + 1
          if (associated(cur%cg)) then
             write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_id
-            call printinfo(msg)
+            call printinfo(msg, V_DEBUG)
          endif
          cur => cur%nxt
       enddo
@@ -237,7 +238,7 @@ contains
       do while (associated(cur))
          if (associated(cur%cg)) then
             write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_id
-            call printinfo(msg)
+            call printinfo(msg, V_DEBUG)
          endif
          cnt = cnt - 1
          cur => cur%prv

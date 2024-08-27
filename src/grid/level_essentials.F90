@@ -97,7 +97,7 @@ contains
 
    subroutine update(this, id, n_d, off)
 
-      use constants,  only: ndims
+      use constants,  only: ndims, V_VERBOSE
       use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: master
 
@@ -114,7 +114,7 @@ contains
       call this%write(id, n_d, off)
 
       write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Updating level", this%id, ", new size=[", this%n_d, "], new offset=[", this%off, "]"
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine update
 

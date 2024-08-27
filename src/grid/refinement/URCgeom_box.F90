@@ -62,7 +62,7 @@ contains
 
    function init(rp) result(this)
 
-      use constants,  only: base_level_id, ndims, LO, HI
+      use constants,  only: base_level_id, ndims, LO, HI, V_VERBOSE
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: master
       use refinement, only: ref_box
@@ -82,7 +82,7 @@ contains
       this%ijk_hi = uninit
       if (master) then
          write(msg, '(a,3g13.5,a,3g13.5,a,i3)')"[URC box]   Initializing refinement at box: [ ", this%coords(:, LO), " ]..[ ", this%coords(:, HI), " ] at level ", this%level
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
    end function init

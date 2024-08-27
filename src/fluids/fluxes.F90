@@ -179,10 +179,8 @@ contains
 !*/
    subroutine set_limiter(lname)
 
-      use dataio_pub, only: msg, die
-#ifdef VERBOSE
-      use dataio_pub, only: printinfo
-#endif /* VERBOSE */
+      use constants,  only: V_VERBOSE
+      use dataio_pub, only: msg, die, printinfo
 
       implicit none
 
@@ -202,10 +200,8 @@ contains
             write(msg,'(2a)') "[fluxes:set_limiter] unknown limiter ", lname
             call die(msg)
       end select
-#ifdef VERBOSE
       write(msg,'(2a)') "[fluxes:set_limiter] limiter set to ", lname
-      call printinfo(msg)
-#endif /* VERBOSE */
+      call printinfo(msg, V_VERBOSE)
 
    end subroutine set_limiter
 

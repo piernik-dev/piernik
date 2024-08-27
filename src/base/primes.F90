@@ -95,6 +95,7 @@ contains
 
    subroutine print(this)
 
+      use constants,  only: V_DEBUG
       use dataio_pub, only: msg, printinfo
       use mpisetup,   only: master
 
@@ -104,7 +105,7 @@ contains
 
       if (master) then
          write(msg,'(a,i5,a,i9,a)') "There are ", size(this%tab), " prime numbers smaller than", this%max,":"
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
          print "(15i7)", this%tab
       endif
 

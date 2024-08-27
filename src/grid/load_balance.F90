@@ -94,7 +94,7 @@ contains
 !<
    subroutine init_load_balance
 
-      use constants,  only: INVALID, cbuff_len
+      use constants,  only: INVALID, cbuff_len, V_VERBOSE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -227,11 +227,11 @@ contains
             if (balance_host > 0.) write(msg(len_trim(msg)+1:), '(a,f5.2,a)') &
                  " balance_host = ", balance_host, " (" // trim(merge("thread", "host  ", balance_thread)) // "-based)"
             if (balance_cg > 0.) write(msg(len_trim(msg)+1:), '(a,f5.2)') " balance_cg = ", balance_cg
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
          if (watch_ind /= INVALID .and. enable_exclusion) then
             write(msg, '(a,f4.1,a)')"[load_balance] Thread exclusion enabled (threshold = ", exclusion_thr, ")"
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
       endif
 

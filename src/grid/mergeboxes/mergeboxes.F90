@@ -144,6 +144,7 @@ contains
 
    subroutine print(this)
 
+      use constants,  only: V_DEBUG
       use dataio_pub, only: msg, printinfo
 
       implicit none
@@ -159,7 +160,7 @@ contains
                a = 0.
                if (this%map(i,j,k)) a = 1.
                write(msg,'(a,3i3,f5.2)')"[mergeboxes:print] ",i,j,k,a
-               call printinfo(msg)
+               call printinfo(msg, V_DEBUG)
             enddo
          enddo
       enddo

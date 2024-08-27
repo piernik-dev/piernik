@@ -426,24 +426,24 @@ contains
 
    subroutine print_me(this)
 
-      use constants,  only: LO, HI
+      use constants,  only: LO, HI, V_DEBUG
       use dataio_pub, only: printinfo, msg
 
       implicit none
 
       class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
 
-      write(msg,'(a,3(F5.1,1X))') "LO edge: ", this%edge(:,LO)  ; call printinfo(msg)
-      write(msg,'(a,3(F5.1,1X))') "HI edge: ", this%edge(:,HI)  ; call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "n_d    : ", this%n_d(:)      ; call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "n_t    : ", this%n_t(:)      ; call printinfo(msg)
-      write(msg,'(a,1(I4,1X))')   "nb     : ", this%nb          ; call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "LO bnd : ", this%bnd(:,LO)   ; call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "HI bnd : ", this%bnd(:,HI)   ; call printinfo(msg)
-      write(msg,'(a,3(F5.1,1X))') "L_     : ", this%L_(:)       ; call printinfo(msg)
-      write(msg,'(a,3(F5.1,1X))') "C_     : ", this%C_(:)       ; call printinfo(msg)
-      write(msg,'(a,1(F5.1,1X))') "Vol    : ", this%Vol         ; call printinfo(msg)
-      write(msg,'(a,3(L1,1X))')   "period : ", this%periodic(:) ; call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "LO edge: ", this%edge(:,LO)  ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(F5.1,1X))') "HI edge: ", this%edge(:,HI)  ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(I4,1X))')   "n_d    : ", this%n_d(:)      ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(I4,1X))')   "n_t    : ", this%n_t(:)      ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,1(I4,1X))')   "nb     : ", this%nb          ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(I4,1X))')   "LO bnd : ", this%bnd(:,LO)   ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(I4,1X))')   "HI bnd : ", this%bnd(:,HI)   ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(F5.1,1X))') "L_     : ", this%L_(:)       ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(F5.1,1X))') "C_     : ", this%C_(:)       ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,1(F5.1,1X))') "Vol    : ", this%Vol         ; call printinfo(msg, V_DEBUG)
+      write(msg,'(a,3(L1,1X))')   "period : ", this%periodic(:) ; call printinfo(msg, V_DEBUG)
 
    end subroutine print_me
 
