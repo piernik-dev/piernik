@@ -181,6 +181,7 @@ contains
 
       use constants,  only: V_VERBOSE
       use dataio_pub, only: msg, die, printinfo
+      use mpisetup,   only: master
 
       implicit none
 
@@ -201,7 +202,7 @@ contains
             call die(msg)
       end select
       write(msg,'(2a)') "[fluxes:set_limiter] limiter set to ", lname
-      call printinfo(msg, V_VERBOSE)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine set_limiter
 

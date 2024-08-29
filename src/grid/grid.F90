@@ -62,7 +62,7 @@ contains
       ts =  set_timer(tmr_amr, .true.)  ! we need it here for call leaves%update()
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
-      call printinfo("[grid:init_grid]: commencing...", V_DEBUG)
+      if (master) call printinfo("[grid:init_grid]: commencing...", V_DEBUG)
 
       ! Create the empty main lists.with the base level
 
@@ -78,7 +78,7 @@ contains
 
       call leaves%update(" (base level) ")
 
-      call printinfo("[grid:init_grid]: cg finished. \o/", V_DEBUG)
+      if (master) call printinfo("[grid:init_grid]: cg finished. \o/", V_DEBUG)
 
    end subroutine init_grid
 
