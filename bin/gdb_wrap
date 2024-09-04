@@ -31,6 +31,12 @@
 # and went ahead while other processes are stuck few lines earlier for some
 # reason.
 #
+# Since it is not an easy task for human to spot difference in few or few
+# tens of backtrace files, you may use bin/gdb_find_div_in_bt to attempt
+# automatical identification of the divergence point. This script will
+# present to which point the backtrace is the same for all threads and first
+# two entries that differ.
+#
 # Good luck!
 
-gdb -q -ex "set logging file bt_${HOSTNAME}_$$" -ex "set logging on" -ex "r" -ex "bt" -ex "quit" ./piernik
+gdb --batch -q -ex "set logging file bt_${HOSTNAME}_$$" -ex "set logging enabled on" -ex "set debuginfod enabled off" -ex "r" -ex "bt" -ex "quit" ./piernik

@@ -1,0 +1,35 @@
+PROG      = piernik
+
+ F90       = h5pfc
+#.openmpi
+# F90       = h5pfc.mpich
+#F90 = h5pfc
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g -I/usr/include
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
+
+F90FLAGS += -funroll-loops -fno-stack-arrays
+F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -fmodule-private
+F90FLAGS += -fbacktrace -ggdb -frecursive
+F90FLAGS += -fcheck=all,no-array-temps -pedantic 
+
+F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
+#denormal,underflow,inexact
+## denormal causes weird problems since gcc 4.7.0
+
+ifeq ($(PIERNIK_DEBUG), 1)
+   F90FLAGS += -ggdb -O0 -fno-omit-frame-pointer
+   F90FLAGS += -pedantic-errors
+else
+   F90FLAGS += -O2
+endif
+
+# For gfortran 10.x some optimisations implied by -O2 are known to lead to
+# wrong evaluation of the code
+F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations -fno-ipa-cp-clone
+
+#-fno-expensive-optimizations
+
+ifdef I64
+  F90FLAGS += -fdefault-integer-8
+endif
+

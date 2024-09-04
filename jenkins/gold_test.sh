@@ -19,7 +19,8 @@ for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT NTHR; do
 done
 FLAT_PROBLEM_NAME=${PROBLEM_NAME//\//___}  # handle subproblems safely
 
-RUN_COMMAND="mpirun -np $NTHR --oversubscribe"
+OVERSUB=$( mpirun --oversubscribe test true 2> /dev/null && echo "--oversubscribe" || echo "" )
+RUN_COMMAND="mpirun -np $NTHR $OVERSUB"
 SETUP_PARAMS=$SETUP_PARAMS" -n --copy --linkexe"
 PIERNIK_REPO="http://github.com/piernik-dev/piernik"
 PIERNIK=piernik
