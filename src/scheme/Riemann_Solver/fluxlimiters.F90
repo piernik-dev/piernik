@@ -124,7 +124,11 @@ contains
          do i = lbound(u,1)+1, ubound(u,1)-1
             drgt = u(i+1, v) - u(i, v)     ! (14.38)
             dcen = dlft*drgt
-            dq(i, v) = merge(2.0*dcen / (dlft+drgt), 0., dcen>0.0) ! variable = merge(value if true, value if false, condition)
+            if (dcen > 0.) then
+               dq(i, v) = 2.0 * dcen / (dlft + drgt)
+            else
+               dq(i, v) = 0.
+            endif
             dlft = drgt
          enddo
       enddo
