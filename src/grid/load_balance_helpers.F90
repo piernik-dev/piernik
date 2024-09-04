@@ -150,6 +150,9 @@ contains
             endif
 
          endif
+
+         call speed_check
+
       endif
 
       deallocate(all_proc_stats, send_stats)
@@ -456,6 +459,46 @@ contains
          endif
 
       end subroutine log_speed
+
+      !>
+      !! \brief Detects uneven load balance by checking the time spent on cgs and suggests a rebalance.
+      !!
+      !! Depends on prior call to print_costs.
+      !<
+
+      subroutine speed_check
+
+         use load_balance, only: imbalance_tol, rebalance_asap, flexible_balance
+         use mpisetup,     only: slave
+         use procnames,    only: pnames
+
+         implicit none
+
+         integer :: p, n
+         real :: min_s, max_s
+         integer, parameter :: s_ind = I_ONE  ! can be anything within size(cost_labels) because all values are the same
+
+         if (slave .or. .not. flexible_balance) return
+
+         n = 0
+         min_s = huge(1.)
+         max_s = -min_s
+
+         do p = lbound(all_proc_stats, 3), ubound(all_proc_stats, 3)
+            associate (s => all_proc_stats(N_STATS, s_ind, p))
+               if (pnames%wtime(p) > epsilon(1.)) then
+                  if (s < min_s) min_s = s
+                  if (s > max_s) max_s = s
+                  n = n + 1
+               endif
+            end associate
+         enddo
+
+         if (n > 0) then
+            if (max_s * imbalance_tol > min_s) rebalance_asap = .true.
+         endif
+
+      end subroutine speed_check
 
    end subroutine print_costs
 
