@@ -59,9 +59,8 @@ contains
       use constants,      only: I_ONE, base_level_id, PPP_AMR
       use dataio_pub,     only: msg, warn
       use global,         only: nstep
-      use load_balance,   only: balance_cg, balance_host, enable_exclusion, exclusion_thr, &
-           &                    verbosity, verbosity_nstep, umsg_verbosity, &
-           &                    V_NONE, V_SUMMARY, V_HOST, V_DETAILED, V_ELABORATE
+      use load_balance,   only: exclusion_thr, verbosity, verbosity_nstep, umsg_verbosity, &
+           &                    VB_NONE, VB_SUMMARY, VB_HOST, VB_DETAILED, VB_ELABORATE
       use mpisetup,       only: master, FIRST, LAST, err_mpi
       use MPIF,           only: MPI_COMM_WORLD, MPI_DOUBLE_PRECISION, MPI_Wtime
       use MPIFUN,         only: MPI_Gather
@@ -111,8 +110,8 @@ contains
 
          if (nstep >= 1) call update_costs
 
-         if (((verbosity > V_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) &
-              .or. (umsg_verbosity > V_NONE)) then
+         if (((verbosity > VB_NONE) .and. ((nstep <= 0 .and. verbosity_nstep <= 1) .or. (nstep > 0 .and. mod(nstep, verbosity_nstep) == 0))) &
+              .or. (umsg_verbosity > VB_NONE)) then
 
             ! Choose between s and ms.
             maxv = maxval(all_proc_stats(:, I_MAX - lbound(stat_labels) + I_ONE, :))
@@ -131,22 +130,22 @@ contains
                endif
             else
                v = verbosity
-               if (umsg_verbosity > V_NONE) then
-                  v = min(V_ELABORATE, umsg_verbosity)
-                  umsg_verbosity = V_NONE
+               if (umsg_verbosity > VB_NONE) then
+                  v = min(VB_ELABORATE, umsg_verbosity)
+                  umsg_verbosity = VB_NONE
                   ! Intentionally the reset occurs only when umsg_verbosity triggers printing (maxv has to be > 0.)
                endif
                select case (v)
-                  case (V_ELABORATE:)
+                  case (VB_ELABORATE:)
                      call log_elaborate
-                  case (V_DETAILED)
+                  case (VB_DETAILED)
                      call log_detailed
-                  case (V_HOST)
-                  case (V_SUMMARY)
+                  case (VB_HOST)
+                  case (VB_SUMMARY)
                end select
-               if (v >= V_HOST) call log_host
-               if (v >= V_SUMMARY) call log_summary
-               if ((balance_cg > 0. .or. balance_host > 0. .or. enable_exclusion) .and. (nstep >= 1)) call log_speed
+               if (v >= VB_HOST) call log_host
+               if (v >= VB_SUMMARY) call log_summary
+               if (nstep >= 1) call log_speed
             endif
 
          endif

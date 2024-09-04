@@ -55,9 +55,9 @@ contains
       use constants,          only: LO, I_ONE, ndims, PPP_AMR
       use dataio_pub,         only: warn
       use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
-      use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST
-      use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Gather, MPI_Recv, MPI_Isend
+      use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST, extra_barriers
+      use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Gather, MPI_Recv, MPI_Isend, MPI_Waitall
       use procnames,          only: pnames
       use ppp,                only: ppp_main
       use ppp_mpi,            only: piernik_Waitall
@@ -142,7 +142,11 @@ contains
             if (curl%cnt > 0) then
                call MPI_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  MPI_COMM_WORLD, req(tag_gpt),  err_mpi)
                call MPI_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, MPI_COMM_WORLD, req(tag_cost), err_mpi)
-               call piernik_Waitall(tag_cost, "rebalance")
+               if (extra_barriers) then
+                  call MPI_Waitall(tag_cost, req(:tag_cost), MPI_STATUSES_IGNORE, err_mpi)
+               else
+                  call piernik_Waitall(tag_cost, "rebalance")
+               endif
             endif
             deallocate(gptemp, costs)
          endif
@@ -516,6 +520,7 @@ contains
 
          if (ubound(gptemp, dim=2, kind=4) > tag_ub) call die("[rebalance:reshuffle] this MPI implementation has too low MPI_TAG_UB attribute")
          do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
+            associate (ip => i + size(gptemp, dim=2, kind=4))
             if (gptemp(I_LEV, i) == curl%l%id) then
 
                cglepa(i)%p => null()
@@ -578,7 +583,7 @@ contains
                   ! Isend for particles
                   nr = nr + I_ONE
                   if (nr > size(req, dim=1)) call inflate_req
-                  call MPI_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, shuff_comm, req(nr), err_mpi)
+                  call MPI_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, shuff_comm, req(nr), err_mpi)
 #endif /* GRAV && NBODY */
 
                endif
@@ -603,12 +608,15 @@ contains
 
 #if defined(GRAV) && defined(NBODY)
                   ! Irecv for particles
+                  nr = nr + I_ONE
+                  if (nr > size(req, dim=1)) call inflate_req
                   allocate(cglepa(i)%pbuf(npf, gptemp(I_NP, i)))
-                  call MPI_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, shuff_comm, req(nr), err_mpi)
+                  call MPI_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, shuff_comm, req(nr), err_mpi)
 #endif /* GRAV && NBODY */
 
                endif
             endif
+            end associate
          enddo
 
          curl => curl%coarser

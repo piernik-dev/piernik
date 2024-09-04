@@ -120,7 +120,7 @@ contains
 !<
    subroutine init_refinement
 
-      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, LO, HI, cbuff_len, refinement_factor, INVALID
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, I_TWO, LO, HI, cbuff_len, refinement_factor, INVALID
       use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -349,6 +349,11 @@ contains
 
       if ((n_updAMR == 0) .and. (level_max > base_level_id)) then
          if (master) call warn("[refinement:init_refinement] refinements disabled (n_updAMR = 0)")
+      endif
+
+      if (level_max > base_level_id .and. (mod(dom%nb, I_TWO) == I_ONE)) then
+         write(msg, '(a,i2)')"[refinement:init_refinement] odd number of guardcells is not compatible with current implementation of prolongation and restriction routines. It should be safe to set /BASE_DOMAIN/ nb = ", dom%nb + 1
+         call die(msg)
       endif
 
    end subroutine init_refinement

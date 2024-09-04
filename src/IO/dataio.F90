@@ -605,7 +605,7 @@ contains
 
       use cg_leaves,    only: leaves
       use dataio_pub,   only: msg, printinfo, warn
-      use load_balance, only: umsg_verbosity, V_HOST
+      use load_balance, only: umsg_verbosity, VB_HOST
       use mpisetup,     only: master, piernik_MPI_Bcast
       use ppp,          only: umsg_request
       use procnames,    only: pnames
@@ -655,7 +655,7 @@ contains
                   if (master) call warn("[dataio:user_msg_handler] Cannot convert the parameter to integer")
                endif
             case ('perf')
-               if (umsg_param <= 0.) umsg_param = V_HOST
+               if (umsg_param <= 0.) umsg_param = VB_HOST
                if (abs(umsg_param) < huge(1_4)) then
                   umsg_verbosity = int(umsg_param, kind=4)
                else
@@ -711,7 +711,7 @@ contains
                   &"  balance   - call rebalance as soon as possible", char(10), &
                   &"  ppp [N]   - start ppp_main profiling for N timesteps (default 1)", char(10), &
                   &"  unexclude - reset thread exclusion mask", char(10), &
-                  &"  perf [N]  - print performance data with verbosity N (default V_HOST)", char(10), &
+                  &"  perf [N]  - print performance data with verbosity N (default VB_HOST)", char(10), &
                   &"  wleft     - show how much walltime is left", char(10), &
                   &"  wresleft  - show how much walltime is left till next restart", char(10), &
                   &"  sleep <number> - wait <number> seconds", char(10), &
@@ -802,6 +802,31 @@ contains
 #endif /* HDF5 */
       if (associated(user_post_write_data)) call user_post_write_data(output, dump)
 
+#ifdef HDF5
+   contains
+
+      subroutine manage_hdf_dump(dumptype, dmp, output)
+
+         use constants,  only: INCEPTIVE, RES
+         use dataio_pub, only: nres
+
+         implicit none
+
+         integer(kind=4), intent(in)    :: dumptype !< type of dump
+         integer(kind=4), intent(in)    :: output   !< type of output call
+         logical,         intent(inout) :: dmp      !< perform I/O if True
+
+         if (output /= INCEPTIVE) return
+         if ((dumptype == HDF) .and. init_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
+         if ((dumptype == RES) .and. init_res_dump .and. nres == 0) then
+            dmp = .true.
+            nres = -1
+         endif
+
+      end subroutine manage_hdf_dump
+
+#endif /* HDF5 */
+
    end subroutine write_data
 
    subroutine determine_dump(dmp, last_dump_time, dt_dump, output, dumptype)
@@ -823,26 +848,6 @@ contains
       dmp = (dmp .or. output == dumptype)
 
    end subroutine determine_dump
-
-   subroutine manage_hdf_dump(dumptype, dmp, output)
-
-      use constants,  only: INCEPTIVE, HDF, RES
-      use dataio_pub, only: nres
-
-      implicit none
-
-      integer(kind=4), intent(in)    :: dumptype !< type of dump
-      integer(kind=4), intent(in)    :: output   !< type of output call
-      logical,         intent(inout) :: dmp      !< perform I/O if True
-
-      if (output /= INCEPTIVE) return
-      if ((dumptype == HDF) .and. init_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
-      if ((dumptype == RES) .and. init_res_dump .and. nres == 0) then
-         dmp = .true.
-         nres = -1
-      endif
-
-   end subroutine manage_hdf_dump
 
    subroutine check_log
 

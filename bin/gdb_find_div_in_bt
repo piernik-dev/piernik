@@ -1,0 +1,72 @@
+#!/usr/bin/python3
+
+import argparse
+
+c_red = '\033[91m'
+c_yellow = '\033[93m'
+c_green = '\033[92m'
+c_reset = '\033[0m'
+
+parser = argparse.ArgumentParser(description='''
+Compare multiple backtrace files to find, where something went wrong and the parallel code went off-sync.
+''')
+
+parser.add_argument('file', nargs='+', metavar='backtrace_file', help='file with piernik backtrace from gdb')
+
+args = parser.parse_args()
+
+# Read the backtraces, select the lines starting from '#'
+bt = {}
+print(c_green + "Reading:" + c_reset)
+for f in args.file:
+    print("'%s' " % f, end='')
+    bt[f] = []
+    with open(f, "r") as bt_f:
+        for line in bt_f:
+            if line[0] == '#':
+                bt[f].append(line)
+print("\n")
+
+# Compare the lines in all backtraces from last until difference is found
+fname_pos = 3  # position of the function name in the backtrace
+base_bt = args.file[0]
+for i in range(len(bt[base_bt])):
+    s_bt = []
+    for ll in range(len(bt[base_bt][-(i+1)].split())):
+        s_bt.append(set())
+    for f in args.file:
+        try:
+            l_bt_f = bt[f][-(i+1)].split()
+        except IndexError:
+            l_bt_f = [None]
+        for ll in range(len(l_bt_f)):
+            if ll >= len(s_bt):  # some lines may have more words
+                s_bt.append(set())
+            s_bt[ll].add(l_bt_f[ll])
+    if len(s_bt[fname_pos]) == 1:
+        if len(s_bt[-1]) > 1:
+            print("\n" + c_green + "Divergent:" + c_reset)
+        if i == 0:
+            print(c_green + "In sync:" + c_reset)
+        for ll in range(1, len(s_bt)):
+            if len(s_bt[ll]) == 1:
+                print(list(s_bt[ll])[0], end=' ')
+            else:
+                print(c_yellow + str(s_bt[ll]) + c_reset, end=' ')
+        print("")
+    else:
+        vl = list(s_bt[fname_pos])
+        vfcnt = 0
+        for ll in range(len(vl)):
+            fset = []
+            for f in args.file:
+                try:
+                    if vl[ll] == bt[f][-(i+1)].split()[fname_pos]:
+                        fset.append(f)
+                except IndexError:
+                    pass
+            print(c_red + bt[fset[0]][-(i+1)] + c_reset, "%d files : " % len(fset) + str(fset))
+            vfcnt += len(fset)
+        if vfcnt != len(args.file):
+            print(c_red + "Only %d out of %d backtraces reached this point." % (vfcnt, len(args.file)))
+        break

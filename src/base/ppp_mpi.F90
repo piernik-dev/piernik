@@ -41,11 +41,8 @@ contains
 !>
 !! \brief a PPP wrapper for MPI_Waitall
 !!
-!! This routine may sometimes be called only by a subset of MPI ranks.
-!! Do not insert MPI_Barrier and do not assume equal call count over all ranks.
-!! This may result in differing count of associated PPP timer on different processes.
+!! Cannot use extra_barriers when this routine is called only by a subset of MPI ranks.
 !<
-
 
    subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
 
