@@ -617,8 +617,10 @@ def setup_piernik(data=None):
             break
 
     # assign color to boxes according to their location in source tree
-    colors = {'src': 'red', 'src/base': 'green', 'src/grid': 'magenta',
-              'src/fluids': 'yellow', 'src/IO': 'cyan', 'problems': 'blue'}
+    # some more colors that can be used: tan, lavender, beige, mauve, salmon
+    colors = {'src': 'red', 'src/base': 'green', 'src/grid': 'purple', 'src/particles': 'teal',
+              'src/multigrid': 'orange', 'src/gravity': 'olive', 'src/scheme': 'brown', 'src/grid/refinement': 'magenta',
+              'src/fluids': 'blue', 'src/fluids/cosmicrays': 'cyan', 'src/IO': 'yellow', 'problems': 'pink', 'src/magnetic': 'gray'}
 
     # create dictionary that maps file to directories
     dirs = {}
@@ -640,8 +642,7 @@ def setup_piernik(data=None):
         for mod in dep_s[m].difference(dep[m]):
             try:
                 longest_key = max(dirs[mod].intersection(set(colors.keys())))
-                dd.write(
-                    "\t \"%s\" [color=%s];\n" % (mod, colors[longest_key]))
+                dd.write('\t "%s" [color="%s"];\n' % (mod, colors[longest_key]))
                 del dirs[mod]  # prevent duplicates
             except:
                 pass
