@@ -951,6 +951,7 @@ contains
 
    subroutine write_timeslice
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -969,7 +970,7 @@ contains
       use global,           only: t, dt, smalld, nstep
       use grid_cont,        only: grid_container
       use mass_defect,      only: update_tsl_magic_mass
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: wna
       use ppp,              only: ppp_main
 #ifdef GRAV
@@ -1361,8 +1362,8 @@ contains
       use named_array_list, only: qna
       use units,            only: mH, kboltz
 #ifdef ISO
+      use allreduce,        only: piernik_MPI_Allreduce
       use constants,        only: pMIN, pMAX
-      use mpisetup,         only: piernik_MPI_Allreduce
 #else /* !ISO */
       use constants,        only: DST, I_ZERO
 #ifdef MAGNETIC
@@ -1662,9 +1663,9 @@ contains
       use ppp,                only: ppp_main
       use types,              only: value
 #ifdef COSM_RAYS
+      use allreduce,          only: piernik_MPI_Allreduce
       use constants,          only: pMIN
       use fluidindex,         only: iarr_all_crn
-      use mpisetup,           only: piernik_MPI_Allreduce
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef CRESP

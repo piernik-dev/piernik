@@ -295,13 +295,14 @@ contains
 
    subroutine timestep_resist(dt)
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: big, zero, pMIN, MAXL
       use grid_cont,        only: grid_container
       use func,             only: operator(.notequals.)
-      use mpisetup,         only: piernik_MPI_Allreduce, piernik_MPI_Bcast
+      use mpisetup,         only: piernik_MPI_Bcast
       use named_array_list, only: qna
       use types,            only: value
 #ifndef ISO

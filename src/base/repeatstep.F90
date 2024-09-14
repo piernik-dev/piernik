@@ -102,8 +102,8 @@ contains
 
    subroutine sync_repeat_step
 
+      use allreduce, only: piernik_MPI_Allreduce
       use constants, only: pLOR
-      use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
 

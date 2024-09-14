@@ -188,6 +188,7 @@ contains
 
    subroutine approximate_solution_relax4M(curl, src, soln, nsmoo)
 
+      use allreduce,          only: piernik_MPI_Allreduce
       use cg_cost_data,       only: I_MULTIGRID
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
@@ -197,7 +198,7 @@ contains
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use mpisetup,           only: piernik_MPI_Allreduce, master
+      use mpisetup,           only: master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
       use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth, dirty_label
       use named_array_list,   only: qna

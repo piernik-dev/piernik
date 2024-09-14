@@ -59,9 +59,10 @@ contains
 
    subroutine print(this, verbosity)
 
+      use allreduce,  only: piernik_MPI_Allreduce
       use constants,  only: pSUM, V_LOG
       use dataio_pub, only: msg, printinfo, warn
-      use mpisetup,   only: master, piernik_MPI_Allreduce
+      use mpisetup,   only: master
 
       implicit none
 

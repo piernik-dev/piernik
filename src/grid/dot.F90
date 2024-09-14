@@ -270,13 +270,14 @@ contains
 
    subroutine check_blocky(this)
 
-      use constants,  only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,       only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
-      use MPIFUN,     only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,   only: proc, req, err_mpi, LAST, inflate_req, slave, piernik_MPI_Allreduce
-      use ppp_mpi,    only: piernik_Waitall
+      use allreduce, only: piernik_MPI_Allreduce
+      use constants, only: ndims, LO, HI, pLAND, I_ONE
+      use MPIF,      only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
+      use MPIFUN,    only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
+      use mpisetup,  only: proc, req, err_mpi, LAST, inflate_req, slave
+      use ppp_mpi,   only: piernik_Waitall
 #ifdef MPIF08
-      use MPIF,       only: MPI_Comm
+      use MPIF,      only: MPI_Comm
 #endif /* MPIF08 */
 
       implicit none

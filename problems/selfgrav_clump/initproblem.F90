@@ -194,6 +194,7 @@ contains
 !
    subroutine problem_initial_conditions
 
+      use allreduce,         only: piernik_MPI_Allreduce
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
       use constants,         only: pi, xdim, ydim, zdim, pSUM, pMIN, pMAX, GEO_XYZ, GEO_RPZ
@@ -201,7 +202,7 @@ contains
       use domain,            only: dom
       use func,              only: ekin, emag, operator(.equals.), operator(.notequals.)
       use global,            only: smalld, smallei, t
-      use mpisetup,          only: master, piernik_MPI_Allreduce
+      use mpisetup,          only: master
       use multigrid_gravity, only: multigrid_solve_grav
       use units,             only: newtong
 
@@ -542,13 +543,14 @@ contains
 
    subroutine virialCheck(tol)
 
+      use allreduce,     only: piernik_MPI_Allreduce
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
       use constants,     only: pSUM, GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: msg, die, warn, printinfo
       use domain,        only: dom
       use grid_cont,     only: grid_container
-      use mpisetup,      only: master, piernik_MPI_Allreduce
+      use mpisetup,      only: master
       use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
@@ -622,13 +624,13 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
+      use allreduce,   only: piernik_MPI_Allreduce
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use constants,   only: pSUM, GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: die
       use domain,      only: dom
       use grid_cont,   only: grid_container
-      use mpisetup,    only: piernik_MPI_Allreduce
 
       implicit none
 

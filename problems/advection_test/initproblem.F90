@@ -546,6 +546,7 @@ contains
 
    subroutine calculate_error_norm
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use constants,        only: pSUM, pMIN, pMAX, idlen
@@ -554,7 +555,7 @@ contains
       use func,             only: operator(.notequals.)
       use global,           only: t
       use grid_cont,        only: grid_container
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: qna
 #ifdef MAGNETIC
       use div_B,            only: print_divB_norm

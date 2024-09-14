@@ -114,6 +114,7 @@ contains
 !<
    subroutine time_step(dt, flind, main_call)
 
+      use allreduce,          only: piernik_MPI_Allreduce
       use cg_cost_data,       only: I_OTHER
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
@@ -125,7 +126,7 @@ contains
       use fluidtypes,         only: var_numbers
       use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repetitive_steps
       use grid_cont,          only: grid_container
-      use mpisetup,           only: master, piernik_MPI_Allreduce
+      use mpisetup,           only: master
       use ppp,                only: ppp_main
       use sources,            only: timestep_sources
       use timestep_pub,       only: c_all, c_all_old
@@ -242,11 +243,12 @@ contains
 !<
    subroutine check_cfl_violation(flind)
 
+      use allreduce,      only: piernik_MPI_Allreduce
       use constants,      only: pLOR
       use dataio_pub,     only: warn
       use fluidtypes,     only: var_numbers
       use global,         only: dn_negative, ei_negative, disallow_negatives, repetitive_steps
-      use mpisetup,       only: piernik_MPI_Allreduce, master
+      use mpisetup,       only: master
       use repeatstep,     only: repeat_step, set_repeat_step, sync_repeat_step
       use timestep_pub,   only: c_all
       use timestep_retry, only: reset_freezing_speed

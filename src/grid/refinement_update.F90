@@ -42,12 +42,13 @@ contains
    subroutine scan_for_refinements
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
+      use allreduce,             only: piernik_MPI_Allreduce
       use cg_cost_data,          only: I_REFINE
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
       use constants,             only: I_ONE, pSUM, PPP_AMR, PPP_PROB, V_VERBOSE
       use dataio_pub,            only: msg, printinfo
-      use mpisetup,              only: master, piernik_MPI_Allreduce
+      use mpisetup,              only: master
       use ppp,                   only: ppp_main
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_refine_derefine
@@ -510,6 +511,7 @@ contains
    subroutine update_refinement_wrapped(act_count, refinement_fixup_only)
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
+      use allreduce,             only: piernik_MPI_Allreduce
       use cg_leaves,             only: leaves
       use cg_list,               only: cg_list_element
       use cg_level_base,         only: base
@@ -519,7 +521,6 @@ contains
       use constants,             only: pLOR, pLAND, pSUM, pMAX, tmr_amr, PPP_AMR
       use dataio_pub,            only: die
       use global,                only: nstep
-      use mpisetup,              only: piernik_MPI_Allreduce
       use ppp,                   only: ppp_main
       use refinement,            only: n_updAMR, emergency_fix
       use timer,                 only: set_timer
@@ -758,9 +759,10 @@ contains
 
       subroutine log_req
 
+         use allreduce,  only: piernik_MPI_Allreduce
          use constants,  only: pMAX, V_DEBUG
          use dataio_pub, only: printinfo, msg
-         use mpisetup,   only: master, req, req2, piernik_MPI_Allreduce
+         use mpisetup,   only: master, req, req2
 
          implicit none
 
@@ -793,16 +795,16 @@ contains
 
    subroutine execute_derefinement(act_count)
 
-      use cg_leaves,             only: leaves
-      use cg_list,               only: cg_list_element
-      use cg_list_dataop,        only: cg_list_dataop_t  ! Can't use abstract type cg_list_t here
-      use cg_level_base,         only: base
-      use cg_level_connected,    only: cg_level_connected_t
-      use cg_level_finest,       only: finest
-      use constants,             only: pLOR, PPP_AMR
-      use list_of_cg_lists,      only: all_lists
-      use mpisetup,              only: piernik_MPI_Allreduce
-      use ppp,                   only: ppp_main
+      use allreduce,          only: piernik_MPI_Allreduce
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
+      use cg_list_dataop,     only: cg_list_dataop_t  ! Can't use abstract type cg_list_t here
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_level_finest,    only: finest
+      use constants,          only: pLOR, PPP_AMR
+      use list_of_cg_lists,   only: all_lists
+      use ppp,                only: ppp_main
 
       implicit none
 

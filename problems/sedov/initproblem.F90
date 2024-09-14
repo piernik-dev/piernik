@@ -292,9 +292,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)
 
+      use allreduce,   only: piernik_MPI_Allreduce
       use constants,   only: pSUM
       use diagnostics, only: pop_vector
-      use mpisetup,    only: proc, master, piernik_MPI_Allreduce
+      use mpisetup,    only: proc, master
 
       implicit none
 

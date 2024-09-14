@@ -61,9 +61,9 @@ contains
 
    subroutine equalize(this)
 
+      use allreduce,  only: piernik_MPI_Allreduce
       use constants,  only: pMAX
       use dataio_pub, only: die
-      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -126,11 +126,11 @@ contains
 
    function find_finest_bnd(this) result(level)
 
+      use allreduce,  only: piernik_MPI_Allreduce
       use cg_list,    only: cg_list_element
       use constants,  only: pMAX
       use dataio_pub, only: die
       use domain,     only: dom
-      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 

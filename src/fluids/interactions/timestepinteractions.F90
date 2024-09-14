@@ -43,6 +43,7 @@ contains
 !<
    real function timestep_interactions() result(dt_interact)
 
+      use allreduce,    only: piernik_MPI_Allreduce
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: pMIN, small
@@ -50,7 +51,6 @@ contains
       use func,         only: L2norm
       use grid_cont,    only: grid_container
       use interactions, only: collfaq, cfl_interact, has_interactions
-      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 

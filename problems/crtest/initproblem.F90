@@ -397,6 +397,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine check_norm
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, pMIN, pMAX, V_INFO
@@ -404,7 +405,7 @@ contains
       use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, ncrsp, ncrb
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: qna
 
       implicit none
@@ -499,13 +500,13 @@ contains
 
    subroutine cr_dist_to_edge
 
+      use allreduce,      only: piernik_MPI_Allreduce
       use cg_leaves,      only: leaves
       use cg_expand_base, only: expand_base
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
       use domain,         only: dom
       use initcosmicrays, only: iarr_crs
-      use mpisetup,       only: piernik_MPI_Allreduce
 
       implicit none
 

@@ -128,10 +128,10 @@ contains
 
    function copy_and_max(curl, soln) result(max_in)
 
+      use allreduce,          only: piernik_MPI_Allreduce
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
       use constants,          only: pMAX
-      use mpisetup,           only: piernik_MPI_Allreduce
 
       implicit none
 

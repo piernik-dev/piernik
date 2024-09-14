@@ -382,16 +382,17 @@ contains
 
    subroutine init_multigrid_grav
 
-      use cg_leaves,           only: leaves
-      use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_t
-      use cg_list,             only: cg_list_element
-      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX, V_VERBOSE
-      use dataio_pub,          only: die, warn, printinfo, msg
-      use domain,              only: dom
-      use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
-      use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
-      use named_array_list,    only: qna
+      use allreduce,          only: piernik_MPI_Allreduce
+      use cg_leaves,          only: leaves
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_list,            only: cg_list_element
+      use constants,          only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX, V_VERBOSE
+      use dataio_pub,         only: die, warn, printinfo, msg
+      use domain,             only: dom
+      use mpisetup,           only: master, FIRST, LAST
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
+      use named_array_list,   only: qna
 
       implicit none
 
