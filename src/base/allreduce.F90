@@ -30,9 +30,10 @@
 
 module allreduce
 
-   use constants, only: pSUM, pLAND
+   use constants,  only: pSUM, pLAND
+   use dataio_pub, only: die  ! QA_WARN this is needed only when MPIF08 is set, which is not known at the setup time
 #ifdef MPIF08
-   use MPIF,      only: MPI_Op
+   use MPIF,       only: MPI_Op
 #endif /* MPIF08 */
 
    implicit none
@@ -50,6 +51,7 @@ module allreduce
 #endif /* !MPIF08 */
                     & dimension(pSUM:pLAND) :: mpiop
 
+#ifndef MPIF08
    interface piernik_MPI_Allreduce
       module procedure MPI_Allreduce_single_logical
       module procedure MPI_Allreduce_single_real4
@@ -64,6 +66,7 @@ module allreduce
       module procedure MPI_Allreduce_arr2d_real8
       module procedure MPI_Allreduce_arr3d_real8
    end interface piernik_MPI_Allreduce
+#endif /* !MPIF08 */
 
 contains
 
@@ -79,10 +82,72 @@ contains
 
    end subroutine init_allreduce
 
+#ifdef MPIF08
 !>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
+!! \brief Polymorphic wrapper for MPI_Allreduce with MPI_IN_PLACE
+!!
+!! Unlimited polymorphism here still requires some spaghetti code but much less than in non-f08 way
+!!
+!! Requires Fortran 2018 for SELECT RANK and DIMENSION(..)
 !<
+
+   subroutine piernik_MPI_Allreduce(var, reduction)
+
+      use dataio_pub, only: die
+      use MPIF,       only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
+           &                MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Datatype
+      use MPIFUN,     only: MPI_Allreduce
+
+      implicit none
+
+      class(*), dimension(..), target, intent(inout) :: var       !< variable that will be reduced
+      integer(kind=4),                 intent(in)    :: reduction !< integer to mark a reduction type
+
+      type(MPI_Datatype) :: dtype
+      class(*), pointer :: pvar
+      logical, target :: dummy
+
+      select rank (var)
+         rank (0)
+            pvar => var
+         rank (1)
+            pvar => var(lbound(var, 1))
+         rank (2)  ! most likely never used
+            pvar => var(lbound(var, 1), lbound(var, 2))
+         rank (3)  ! most likely never used
+            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
+         rank (4)  ! most likely never used
+            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
+         rank default
+            call die("[allreduce:piernik_MPI_Allreduce] non-implemented rank")
+            pvar => dummy  ! suppress compiler warning
+      end select
+      ! In Fortran 2023 it should be possible to reduce the above construct to just
+      !     pvar => var(@lbound(var))
+
+      select type (pvar)
+         type is (logical)
+            dtype = MPI_LOGICAL
+         type is (integer(kind=4))
+            dtype = MPI_INTEGER
+         type is (integer(kind=8))  ! most likely never used
+            dtype = MPI_INTEGER8
+         type is (real(kind=4))  ! most likely never used
+            dtype = MPI_REAL
+         type is (real(kind=8))
+            dtype = MPI_DOUBLE_PRECISION
+         class default
+            call die("[allreduce:piernik_MPI_Allreduce] non-implemented type")
+      end select
+
+      call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), dtype, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
+
+   end subroutine piernik_MPI_Allreduce
+
+#else /* !MPIF08 */
+
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for logical
+
    subroutine MPI_Allreduce_single_logical(lvar, reduction)
 
       use constants, only: I_ONE
@@ -98,10 +163,8 @@ contains
 
    end subroutine MPI_Allreduce_single_logical
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for integer(kind=4)
+
    subroutine MPI_Allreduce_single_int4(ivar4, reduction)
 
       use constants, only: I_ONE
@@ -117,10 +180,8 @@ contains
 
    end subroutine MPI_Allreduce_single_int4
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for integer(kind=8) most likely never used
+
    subroutine MPI_Allreduce_single_int8(ivar8, reduction)
 
       use constants, only: I_ONE
@@ -136,10 +197,8 @@ contains
 
    end subroutine MPI_Allreduce_single_int8
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for integer(kind=4), dimension(:) most likely never used
+
    subroutine MPI_Allreduce_vec_int4(ivar4, reduction)
 
       use MPIF,   only: MPI_INTEGER, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -154,10 +213,8 @@ contains
 
    end subroutine MPI_Allreduce_vec_int4
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for integer(kind=8), dimension(:) most likely never used
+
    subroutine MPI_Allreduce_vec_int8(ivar8, reduction)
 
       use MPIF,   only: MPI_INTEGER8, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -172,10 +229,8 @@ contains
 
    end subroutine MPI_Allreduce_vec_int8
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=4) most likely never used
+
    subroutine MPI_Allreduce_single_real4(rvar4, reduction)
 
       use constants, only: I_ONE
@@ -191,10 +246,8 @@ contains
 
    end subroutine MPI_Allreduce_single_real4
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=8)
+
    subroutine MPI_Allreduce_single_real8(rvar8, reduction)
 
       use constants, only: I_ONE
@@ -210,10 +263,8 @@ contains
 
    end subroutine MPI_Allreduce_single_real8
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=4), dimension(:) most likely never used
+
    subroutine MPI_Allreduce_vec_real4(rvar4, reduction)
 
       use MPIF,   only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -228,10 +279,8 @@ contains
 
    end subroutine MPI_Allreduce_vec_real4
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=8), dimension(:)
+
    subroutine MPI_Allreduce_vec_real8(rvar8, reduction)
 
       use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -246,10 +295,8 @@ contains
 
    end subroutine MPI_Allreduce_vec_real8
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=8), dimension(:,:,:) most likely never used
+
    subroutine MPI_Allreduce_arr3d_real8(rvar8, reduction)
 
       use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -264,10 +311,8 @@ contains
 
    end subroutine MPI_Allreduce_arr3d_real8
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=8), dimension(:,:) most likely never used
+
    subroutine MPI_Allreduce_arr2d_real8(rvar8, reduction)
 
       use MPIF,   only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -282,10 +327,8 @@ contains
 
    end subroutine MPI_Allreduce_arr2d_real8
 
-!>
-!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polymorphism will obsolete me
-!<
+!> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for real(kind=4), dimension(:,:) most likely never used
+
    subroutine MPI_Allreduce_arr2d_real4(rvar4, reduction)
 
       use MPIF,   only: MPI_REAL, MPI_IN_PLACE, MPI_COMM_WORLD
@@ -299,5 +342,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4, kind=4), MPI_REAL, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine MPI_Allreduce_arr2d_real4
+
+#endif /* !MPIF08 */
 
 end module allreduce
