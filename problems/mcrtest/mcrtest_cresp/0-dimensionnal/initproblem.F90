@@ -44,7 +44,11 @@ contains
 
    subroutine problem_pointers
 
+      use dataio_user, only: user_tsl
+
       implicit none
+
+      user_tsl => mcrtest_tsl
 
    end subroutine problem_pointers
 
@@ -67,7 +71,7 @@ contains
       x0             = 0.0         !< x-position of the blob
       y0             = 0.0         !< y-position of the blob
       z0             = 0.0         !< z-position of the blob
-      r0             = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      r0             = merge(0., 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)), dom%eff_dim == 0)  !< radius of the blob
       vxd0           = 0.0         !< initial velocity_x, refers to whole domain
       vyd0           = 0.0         !< initial velocity_y, refers to whole domain
       vzd0           = 0.0         !< initial velocity_z, refers to whole domain
@@ -157,7 +161,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS
-      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, cr_index, eCRSP, rel_abound
+      use cr_data,        only: eCRSP, cr_spectral, icr_H1, icr_C12, cr_index, cr_table, eCRSP, rel_abound
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
 #ifdef CRESP
       use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
@@ -176,6 +180,7 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef CRESP
       real                            :: e_tot
+
 #endif /* CRESP */
 
       fl => flind%ion
@@ -238,12 +243,8 @@ contains
 
 #ifdef COSM_RAYS
          cg%u(iarr_crs, RNG) = 0.0
-         if (eCRSP(icr_H1 )) then
-            if (.not. cr_spectral(icr_H1)) cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
-         endif
-         if (eCRSP(icr_C12)) then
-            if (.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
-         endif
+         if (eCRSP(icr_H1 ) .and. .not. cr_spectral(cr_table(icr_H1)))  cg%u(iarr_crn(cr_index(icr_H1 )), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
+         if (eCRSP(icr_C12) .and. .not. cr_spectral(cr_table(icr_C12))) cg%u(iarr_crn(cr_index(icr_C12)), RNG) = beta_cr * fl%cs2 * cg%u(fl%idn, RNG) / gamma_cr_1
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -255,16 +256,13 @@ contains
                      do jpm = mantle(xdim,LO), mantle(xdim,HI)
                         do kpm = mantle(xdim,LO), mantle(xdim,HI)
                            r2 = (cg%x(i)-x0+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-y0+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-z0+real(kpm)*dom%L_(zdim))**2
-                           decr = decr + exp(-r2/r0**2)
+                                if (r2/r0**2 < 0.9999*log(huge(1.))) &  ! preventing numerical underflow
+                                decr = decr + exp(-r2/r0**2)
                         enddo
                      enddo
                   enddo
-                  if (eCRSP(icr_H1 )) then
-                     if (.not. cr_spectral(icr_H1))  cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
-                  endif
-                  if (eCRSP(icr_C12)) then
-                     if (.not. cr_spectral(icr_C12)) cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
-                  endif
+                  if (eCRSP(icr_H1 ) .and. .not. cr_spectral(cr_table(icr_H1 )))  cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) = cg%u(iarr_crn(cr_index(icr_H1 )), i, j, k) + amp_cr1*decr
+                  if (eCRSP(icr_C12) .and. .not. cr_spectral(cr_table(icr_C12)))  cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) = cg%u(iarr_crn(cr_index(icr_C12)), i, j, k) + amp_cr2*decr
 #ifdef CRESP
 ! Explosions @CRESP independent of cr nucleons
                   do icr = 1, nspc
@@ -272,8 +270,8 @@ contains
                      if (e_tot > smallcree .and. use_cresp) then
                         call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot, icr)
 
-                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + cresp%n
-                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + cresp%e
+                        cg%u(iarr_crspc2_n(icr,:),i,j,k) = cg%u(iarr_crspc2_n(icr,:),i,j,k) + rel_abound(icr)*cresp%n
+                        cg%u(iarr_crspc2_e(icr,:),i,j,k) = cg%u(iarr_crspc2_e(icr,:),i,j,k) + rel_abound(icr)*cresp%e
 
                      endif
                   enddo
@@ -281,11 +279,11 @@ contains
                enddo
             enddo
          enddo
+
 #endif /* COSM_RAYS */
          call cg%costs%stop(I_IC)
          cgl => cgl%nxt
       enddo
-
 #ifdef COSM_RAYS
       do icr = 1, flind%crs%all
 
@@ -324,5 +322,89 @@ contains
 #endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
+
+   subroutine mcrtest_tsl(user_vars, tsl_names)
+
+      use cg_cost_data,     only: I_IC
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: pSUM
+      use diagnostics,      only: pop_vector
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master, piernik_MPI_Allreduce
+#ifdef COSM_RAYS
+      use cr_data,          only: cr_table, icr_C12, icr_B10
+#ifdef CRESP
+      use initcosmicrays,   only: iarr_crspc2_n, ncrb
+      !use initcrspectrum,   only: bin_old
+#endif /* CRESP */
+#endif /* COSM_RAYS */
+
+      implicit none
+
+      character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+      integer                                                              :: i, j, k
+      real, dimension(:), intent(inout), allocatable                       :: user_vars
+      real(kind=8), dimension(ncrb)                                        :: cr_total
+      real(kind=8)                                                         :: output1, output2, output3
+      !type(bin_old), dimension(:), allocatable                             :: crspc_bins_all
+      type(cg_list_element), pointer                                       :: cgl
+      type(grid_container), pointer                                        :: cg
+
+      !allocate(crspc_bins_all(2*nspc*ncrb))
+      !call ppp_main%start(crug_label)
+
+      output1 = 0
+      output2 = 0
+      output3 = 0
+
+      if (present(tsl_names)) then
+         call pop_vector(tsl_names, len(tsl_names(1)), ["cr_C12n_tot"])    !   add to header
+         call pop_vector(tsl_names, len(tsl_names(1)), ["cr_Be9n_tot"])    !   add to
+         call pop_vector(tsl_names, len(tsl_names(1)), ["Total"])
+
+      else
+
+         cgl => leaves%first
+         do while (associated(cgl))
+
+            cg => cgl%cg
+            call cg%costs%start
+
+            ! do mpi stuff here...
+
+            cr_total = 0
+
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+
+                     cr_total(:) = cg%u(iarr_crspc2_n(cr_table(icr_B10),:), i, j, k)+cg%u(iarr_crspc2_n(cr_table(icr_C12),:), i, j, k)
+
+                     output1 = sum(cg%u(iarr_crspc2_n(cr_table(icr_C12),:), i, j, k))
+                     output2 = sum(cg%u(iarr_crspc2_n(cr_table(icr_B10),:), i, j, k))
+                     output3 = sum(cr_total(:))
+
+                  enddo
+               enddo
+            enddo
+
+            call cg%costs%stop(I_IC)
+            cgl=>cgl%nxt
+
+         enddo
+
+         call piernik_MPI_Allreduce(output1, pSUM)
+         if (master) call pop_vector(user_vars,[output1])
+         call piernik_MPI_Allreduce(output2, pSUM)
+         if (master) call pop_vector(user_vars,[output2])
+         call piernik_MPI_Allreduce(output2, pSUM)
+         if (master) call pop_vector(user_vars,[output3])!   pop value
+
+      endif
+
+      !deallocate(crspc_bins_all(2*nspc*ncrb))
+
+   end subroutine mcrtest_tsl
 
 end module initproblem

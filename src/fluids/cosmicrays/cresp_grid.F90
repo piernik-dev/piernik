@@ -35,7 +35,6 @@ module cresp_grid
 
    implicit none
 
-   private
    public :: cresp_update_grid, cresp_init_grid, cfl_cresp_violation, cresp_clean_grid
 
    logical :: cfl_cresp_violation
@@ -57,8 +56,8 @@ contains
       use dataio_pub,       only: printinfo, restarted_sim
       use global,           only: repetitive_steps, cflcontrol, disallow_CRnegatives
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_cre_n, iarr_cre_e, ncrb
-      use initcrspectrum,   only: norm_init_spectrum, dfpq, check_if_dump_fpq, use_cresp
+      use initcosmicrays,   only: iarr_crspc_n, iarr_crspc_e, ncrb
+      use initcrspectrum,   only: norm_init_spectrum_n, norm_init_spectrum_e, dfpq, check_if_dump_fpq, use_cresp !, p_bnd
       use mpisetup,         only: master
       use named_array_list, only: wna
 
@@ -69,7 +68,9 @@ contains
 
       if (.not. use_cresp) return
 
-      call cresp_initialize_guess_grids
+!      if (p_bnd == 'moving') then
+         call cresp_initialize_guess_grids
+!      endif
       call cresp_allocate_all
 
       call check_if_dump_fpq(vars)
@@ -85,8 +86,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            cg%u(iarr_cre_n,:,:,:)  = 0.0
-            cg%u(iarr_cre_e,:,:,:)  = 0.0
+            cg%u(iarr_crspc_n,:,:,:)  = 0.0
+            cg%u(iarr_crspc_e,:,:,:)  = 0.0
 
             if (dfpq%any_dump) then
                if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr = 0.0
@@ -101,7 +102,7 @@ contains
 
       call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
-      call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e)   !< initialize spectrum here, f_init should be 1.0
+      call cresp_init_state(norm_init_spectrum_n, norm_init_spectrum_e)   !< initialize spectrum here, f_init should be 1.0
 
       allow_loop_leave = (disallow_CRnegatives .and. repetitive_steps .and. cflcontrol /= "flex" .and. cflcontrol /= "flexible")
 
@@ -117,17 +118,19 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
       use cresp_crspectrum, only: cresp_update_cell
+      use cr_data,          only: cr_table, icr_C12, icr_N14, icr_O16, eC12, eO16, eN14, PRIM
       use crhelpers,        only: divv_i
       use cresp_helpers,    only: enden_CMB
       use dataio_pub,       only: msg, warn
       use func,             only: emag
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum,   only: adiab_active, synch_active, icomp_active, icomp_active, cresp, crel, dfpq, f_synchIC, spec_mod_trms, u_b_max, use_cresp_evol
+      use initcosmicrays,   only: iarr_crspc2_e, iarr_crspc2_n, nspc, ncrb
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, icomp_active, cresp, crel, dfpq, f_synchIC, u_b_max, use_cresp_evol, bin_old
       use initcrspectrum,   only: cresp_substep, n_substeps_max, redshift
       use named_array_list, only: wna
       use ppp,              only: ppp_main
+      use sourcecosmicrays, only: cr_spallation_sources
       use timestep_cresp,   only: cresp_timestep_cell
 #ifdef DEBUG
       use cresp_crspectrum, only: cresp_detect_negative_content
@@ -136,13 +139,18 @@ contains
       implicit none
 
       integer                        :: i, j, k, nssteps_max
-      integer(kind=4)                :: nssteps
+      integer(kind=4)                :: nssteps, i_spc
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(spec_mod_trms)            :: sptab
+      type(bin_old), dimension(:), allocatable :: crspc_bins_all
       real                           :: dt_crs_sstep, dt_cresp, dt_doubled
       logical                        :: inactive_cell, cfl_violation_step
       character(len=*), parameter    :: crug_label = "CRESP_upd_grid"
+      real, dimension(ncrb)          :: q_spc
+      real, dimension(ncrb,nspc)     :: q_spc_all
+
+      allocate(crspc_bins_all(2*nspc*ncrb))
 
       if (.not. use_cresp_evol) return
 
@@ -156,53 +164,90 @@ contains
       dt_cresp    = dt_doubled   !< computed for each cell if cresp_substep, using dt_doubled
       nssteps     = 1
       nssteps_max = 1
-
+      q_spc = 0.
+      q_spc_all = 0.
+      !usrc_cell = 0.0
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
 
          sptab%ucmb  = 0.0
-         if (icomp_active) sptab%ucmb = enden_CMB(redshift) * f_synchIC
 
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
+
                   sptab%ud = 0.0 ; sptab%ub = 0.0; sptab%umag = 0.0
-                  cresp%n = cg%u(iarr_cre_n, i, j, k)
-                  cresp%e = cg%u(iarr_cre_e, i, j, k)
-                  if (synch_active) sptab%umag = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC, u_b_max) !< WARNING assusmes that b is in mGs
-                  if (adiab_active) sptab%ud   = cg%q(divv_i)%point([i,j,k]) * onet
-                  sptab%ub = sptab%umag + sptab%ucmb  ! prepare term for synchrotron + IC losses
 
-                  if (cresp_substep) then !< prepare substep timestep for each cell
-                     call cresp_timestep_cell(sptab, dt_cresp, inactive_cell)
-                     call prepare_substep(dt_doubled, dt_cresp, dt_crs_sstep, nssteps)
-                     dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
-                     nssteps_max = max(n_substeps_max, nssteps)
-                  endif
-#ifdef CRESP_VERBOSED
-                  print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
-#endif /* CRESP_VERBOSED */
-                  if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, substeps = nssteps)
-#ifdef DEBUG
-                  call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
-#endif /* DEBUG */
-                  if (cfl_violation_step) then
-                     cfl_cresp_violation = cfl_violation_step
-                     if (allow_loop_leave) then
-                        call cg%costs%stop(I_MHD)
-                        call ppp_main%stop(crug_label)
-                        return ! nothing to do here!
+                  !print *, 'cresp%n: ', cresp%n
+                  !print *, 'cresp%e: ', cresp%e
+
+                  !print *, 'cg%u(iarr_crspc2_n(,:), i, j, k):', cg%u(iarr_crspc2_n(:,:), i, j, k)
+
+                  do i_spc = 1, nspc
+
+                     !print *, 'i_spc (in cresp_update_grid) : ', i_spc
+
+                     !print *, 'iarr_crspc2_n(i_spc,:)', iarr_crspc2_n(i_spc,:)
+                     !print *, 'iarr_crspc2_e(i_spc,:)', iarr_crspc2_e(i_spc,:)
+                     !print *, 'cg%u(iarr_crspc2_n(',i_spc,':), i, j, k):', cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
+                     !print *, 'cg%u(iarr_crspc2_e(',i_spc,':), i, j, k):', cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
+
+                     cresp%n = cg%u(iarr_crspc2_n(i_spc,:), i, j, k)  !TODO OPTIMIZE ME PLEASE !!
+                     cresp%e = cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
+                     !print *, 'n: ', cresp%n
+                     !print *, 'e: ', cresp%e
+                     if (synch_active(i_spc)) sptab%ub = min(emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * f_synchIC(i_spc), u_b_max)    !< WARNING assusmes that b is in mGs
+                     if (adiab_active(i_spc)) sptab%ud = cg%q(divv_i)%point([i,j,k]) * onet
+                     if (icomp_active(i_spc)) sptab%ucmb = enden_CMB(redshift) * f_synchIC(i_spc)
+                     sptab%ub = sptab%umag + sptab%ucmb
+
+                     if (cresp_substep) then !< prepare substep timestep for each cell
+                        call cresp_timestep_cell(cresp%n, cresp%e, sptab, dt_cresp, i_spc, inactive_cell)
+                        call prepare_substep(dt_doubled, dt_cresp, dt_crs_sstep, nssteps)
+                        dt_cresp = dt_crs_sstep    !< 2 * dt is equal to nssteps * dt_crs_sstep
+                        nssteps_max = max(n_substeps_max, nssteps)
                      endif
-                  endif
+                     !print *, 'n (after timestep routines): ', cresp%n
+                     !print *, 'e (after timestep routines): ', cresp%e
+#ifdef CRESP_VERBOSED
+                     print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
+#endif /* CRESP_VERBOSED */
+                     if (.not. inactive_cell) call cresp_update_cell(dt_cresp, cresp%n, cresp%e, sptab, cfl_violation_step, q_spc, i_spc, substeps = nssteps)
+                    ! if (i_spc == icr_H1 .and. eH1(PRIM))  q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == cr_table(icr_C12) .and. eC12(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == cr_table(icr_N14) .and. eN14(PRIM)) q_spc_all(:,i_spc) = q_spc
+                     if (i_spc == cr_table(icr_O16) .and. eO16(PRIM)) q_spc_all(:,i_spc) = q_spc
 
-                  cg%u(iarr_cre_n, i, j, k) = cresp%n
-                  cg%u(iarr_cre_e, i, j, k) = cresp%e
-                  if (dfpq%any_dump) then
-                     if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
-                     if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
-                     if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
-                  endif
+#ifdef DEBUG
+                     call cresp_detect_negative_content(cfl_violation_step, [i, j, k])
+#endif /* DEBUG */
+                     if (cfl_violation_step) then
+                        cfl_cresp_violation = cfl_violation_step
+                        if (allow_loop_leave) then
+                           call cg%costs%stop(I_MHD)
+                           call ppp_main%stop(crug_label)
+                           return ! nothing to do here!
+                        endif
+                     endif
+
+                     !usrc_cell = 0.0
+
+                     cg%u(iarr_crspc2_n(i_spc,:), i, j, k) = cresp%n
+                     cg%u(iarr_crspc2_e(i_spc,:), i, j, k) = cresp%e
+
+                     !print *, 'cg%u(iarr_crspc2_n(',i_spc,':), i, j, k)(end of the loop)(:', cg%u(iarr_crspc2_n(i_spc,:), i, j, k)
+                     !print *, 'cg%u(iarr_crspc2_e(',i_spc,':), i, j, k)(end of the loop)(:', cg%u(iarr_crspc2_e(i_spc,:), i, j, k)
+
+                     if (dfpq%any_dump) then
+                        if (dfpq%dump_f) cg%w(wna%ind(dfpq%f_nam))%arr(:, i, j, k) = crel%f
+                        if (dfpq%dump_p) cg%w(wna%ind(dfpq%p_nam))%arr(:, i, j, k) = crel%p(crel%i_cut)
+                        if (dfpq%dump_q) cg%w(wna%ind(dfpq%q_nam))%arr(:, i, j, k) = crel%q
+                     endif
+                  enddo
+
+                  call cr_spallation_sources(cg%u(:, i, j, k),dt_doubled, q_spc_all)
+
                enddo
             enddo
          enddo
@@ -220,6 +265,73 @@ contains
       call ppp_main%stop(crug_label)
 
    end subroutine cresp_update_grid
+
+
+   !==========================================================================================
+
+!>
+!! \brief Computation of Cosmic ray particles spallation and decay
+!! \warning multiplying by cr_sigma may cause underflow errors in some unit sets
+!<
+!   subroutine src_cr_spallation_and_decay_cresp(uu, )
+!
+!      use cr_data,        only: eCRSP, cr_table, cr_tau, cr_sigma, icr_B11, icr_prim, icr_sec
+!      use domain,         only: dom
+!      use fluids_pub,     only: has_ion, has_neu
+!      use fluidindex,     only: flind
+!      use initcosmicrays, only: iarr_crspc2_e, iarr_crspc2_n, iarr_crn
+!      use initcrspectrum, only: cresp
+!      use units,          only: clight, mH, mp
+!
+!      implicit none
+!
+!      !integer(kind=4),               intent(in)  :: n
+!      real, dimension(1, flind%all), intent(in)  :: uu
+!      !real,                          intent(in)  :: rk_coeff   !< coefficient used in RK step, while computing source term
+!      real, dimension(1, flind%all), intent(out) :: usrc       !< u array update component for sources
+!
+!! locals
+!      real, dimension(1)                         :: dgas, dcr
+!      real, parameter                            :: gamma_lor = 10.0 !< \todo should taken from cosmic ray species settings
+!      real                                       :: gn
+!      integer                                    :: i, j
+!      !type(bin_old), dimension(:), allocatable   :: bins_all
+!
+!      gn = 1.0 / gamma_lor
+!      dgas = 0.0
+!      if (has_ion) dgas = dgas + uu(:, flind%ion%idn) / mp
+!      if (has_neu) dgas = dgas + uu(:, flind%neu%idn) / mH
+!      dgas = dgas * clight / dom%eff_dim
+!
+!      usrc(:,:) = 0.0
+!
+!      !i = cr_table(icr_B11) ; j = iarr_crn(i)
+!      !if (eCRSP(icr_B11)) usrc(:, j) = usrc(:, j) - gn * uu(:, j) / cr_tau(i)
+!
+!      print *, 'primaries : ', icr_prim, ' secondaries : ', icr_sec
+!      print *,  ' lbound : ', lbound(icr_prim, 1), ' ubound : ', ubound(icr_prim, 1)
+!         do i = lbound(icr_prim, 1), ubound(icr_prim, 1)
+!         associate( cr_prim => cr_table(icr_prim(i)) )
+!            if (eCRSP(icr_prim(i))) then
+!               do j = lbound(icr_sec, 1), ubound(icr_sec, 1)
+!               associate( cr_sec => cr_table(icr_sec(j)) )
+!                  if (eCRSP(icr_sec(j))) then
+!                     dcr = cr_sigma(cr_prim, cr_sec) * dgas * uu(:, iarr_crn(cr_prim))
+!                     dcr = min(uu(:, iarr_crn(cr_prim)), dcr)  ! Don't decay more elements than available
+!                     usrc(:, iarr_crn(cr_prim)) = usrc(:, iarr_crn(cr_prim)) - dcr
+!                     usrc(:, iarr_crn(cr_sec)) = usrc(:, iarr_crn(cr_sec)) + dcr
+!                  endif
+!               end associate
+!               enddo
+!         endif
+!         end associate
+!      enddo
+!
+!   end subroutine src_cr_spallation_and_decay_cresp
+
+
+
+
 
    subroutine prepare_substep(dt_simulation, dt_process_short, dt_substep, n_substeps)
 
@@ -257,7 +369,7 @@ contains
       use cg_list,          only: cg_list_element
       use cresp_crspectrum, only: detect_clean_spectrum
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+      use initcosmicrays,   only: iarr_crspc_e, iarr_crspc_n
       use initcrspectrum,   only: cresp, nullify_empty_bins
       use ppp,              only: ppp_main
 
@@ -280,13 +392,13 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  cresp%n = cg%u(iarr_cre_n, i, j, k)
-                  cresp%e = cg%U(iarr_cre_e, i, j, k)
+                  cresp%n = cg%u(iarr_crspc_n, i, j, k)
+                  cresp%e = cg%U(iarr_crspc_e, i, j, k)
 
                   call detect_clean_spectrum
 
-                  cg%u(iarr_cre_n, i, j, k) = cresp%n
-                  cg%u(iarr_cre_e, i, j, k) = cresp%e
+                  cg%u(iarr_crspc_n, i, j, k) = cresp%n
+                  cg%u(iarr_crspc_e, i, j, k) = cresp%e
                enddo
             enddo
          enddo

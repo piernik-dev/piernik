@@ -33,6 +33,7 @@ module diagnostics
       module procedure allocate_1D_arr_w_ind_int4        ! < not in PIERNIK
       module procedure allocate_1D_arr_w_ind_real8       ! < not in PIERNIK
       module procedure allocate_1D_arr_w_ind_logical     ! < not in PIERNIK
+      module procedure allocate_2D_arr_w_ind_real8
    end interface my_allocate_with_index       ! < not in PIERNIK
 
    interface my_allocate
@@ -666,5 +667,18 @@ contains
       used_memory = used_memory + size(array)*bool_s
 
    end subroutine allocate_1D_arr_w_ind_logical
+!----------------------------------------------------------------------------------------------------
+   subroutine allocate_2D_arr_w_ind_real8(array, as1, as2, a_ind_beg1, a_ind_beg2)
+
+      implicit none
+
+      real(kind=8), allocatable, dimension(:,:), intent(inout) :: array
+      integer(kind=4),                           intent(in)    :: as1, as2
+      integer(kind=4),                 optional, intent(in)    :: a_ind_beg1, a_ind_beg2
+
+      if (.not. allocated(array)) allocate(array(a_ind_beg1:as1,a_ind_beg2:as2))
+      used_memory = used_memory + size(array)*i4_s
+
+   end subroutine allocate_2D_arr_w_ind_real8
 
 end module diagnostics

@@ -112,8 +112,6 @@ contains
          case ("divbc", "divbf", "divbc4", "divbf4", "divbc6", "divbf6", "divbc8", "divbf8")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
-         case ("divb_norm")
-            f%fu= ""
          case ("magdir")
             f%fu = "\rm{radians}"
 #ifdef COSM_RAYS
@@ -122,75 +120,10 @@ contains
             f%f2cgs = 1.0 / (erg/cm**3)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-         case ("cr_e-n01" : "cr_e-n99")
-             f%fu = "\rm{erg}/\rm{cm}^3" ! rest mass energy times number density
-             f%f2cgs = 1.0 / (erg/cm**3)
-             !f%fu = "1/\rm{cm}^3"
-             !f%f2cgs = 1.0 / (1.0/cm**3) ! number density
-         case ("cr_e-e01" : "cr_e-e99")
-             f%fu = "\rm{erg}/\rm{cm}^3"
-             f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_p+n01" : "cr_p+n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_p+e01" : "cr_p+e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_C12n01" : "cr_C12n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_C12e01" : "cr_C12e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_N14n01" : "cr_N14n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_N14e01" : "cr_N14e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_O16n01" : "cr_O16n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_O16e01" : "cr_O16e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_Li7n01" : "cr_Li7n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_Li7e01" : "cr_Li7e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_Be9n01" : "cr_Be9n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_Be9e01" : "cr_Be9e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_Be10n01" : "cr_Be10n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_Be10e01" : "cr_Be10e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_B10n01" : "cr_B10n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_B10e01" : "cr_B10e99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
-
-         case ("cr_B11n01" : "cr_B11n99")
-            f%fu = "\rm{erg}/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3) ! rest mass energy times number density
-         case ("cr_B11e01" : "cr_B11e99")
+         case ("cren01" : "cren99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
+         case ("cree01" : "cree99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
          case ("cref01" : "cref99")
@@ -246,8 +179,6 @@ contains
                write(newname, '("magnetic_field_divergence_",A1,"_O(6)")') var(5:5)
             case ("divbc8", "divbf8")
                write(newname, '("magnetic_field_divergence_",A1,"_O(8)")') var(5:5)
-            case ("divb_norm")
-               newname = "normalized_divB"
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
@@ -291,10 +222,6 @@ contains
                newname="acceleration_y"
             case ("accz")
                newname="acceleration_z"
-            case ("tfor")
-               newname="formation_time"
-            case ("tdyn")
-               newname="dynamical_time"
 #endif /* NBODY */
             case default
                write(newname, '(A)') trim(var)
@@ -388,7 +315,7 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5,      only: common_shortcuts
-      use constants,        only: dsetnamelen, I_ONE, I_TWO
+      use constants,        only: dsetnamelen, I_ONE
       use fluids_pub,       only: has_ion, has_neu, has_dst
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -406,8 +333,7 @@ contains
       use named_array_list, only: wna
 #endif /* CRESP */
 #ifdef COSM_RAYS
-      use cr_data,          only: cr_names, cr_spectral, icr_spc
-      use initcosmicrays,   only: ncrn
+      use cr_data,          only: cr_names, cr_spectral
 #endif /* COSM_RAYS */
 #ifndef ISO
       use units,            only: kboltz, mH
@@ -422,27 +348,17 @@ contains
 
       class(component_fluid), pointer                :: fl_dni, fl_mach
       integer(kind=4)                                :: i_xyz
-      integer                                        :: ii, jj, kk, icr
+      integer                                        :: ii, jj, kk
 #ifdef COSM_RAYS
       integer                                        :: i
       integer, parameter                             :: auxlen = dsetnamelen - 1
       character(len=auxlen)                          :: aux
-      !character(len=*)                               :: vname
 #endif /* COSM_RAYS */
-#ifdef CRESP
-      character(len=I_TWO)                           :: varn2
-      integer                                        :: ibin
-      integer(kind=4)                                :: clast
-#endif /* CRESP */
 
       call common_shortcuts(var, fl_dni, i_xyz)
       if (.not. associated(fl_dni)) tab = -huge(1.)
       ierrh = 0
       tab = 0.0
-      icr = 0
-#ifdef CRESP
-      ibin = 0
-#endif /* CRESP */
 
 #ifdef MAGNETIC
       associate(emag_c => merge(emag(cg%b(xdim, RNG), cg%b(ydim, RNG),  cg%b(zdim, RNG)), &
@@ -460,62 +376,26 @@ contains
             tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
          case ('cr_A000' : 'cr_zz99')
             do i = 1, size(cr_names)
-               if (var == trim('cr_' // cr_names(i))) then
-                  tab(:,:,:) = cg%u(flind%crn%beg+i-1, RNG)
-               endif
+               if (var == trim('cr_' // cr_names(i))) exit
             enddo
-
-            !print *, 'cr_names: ', cr_names
-
+            tab(:,:,:) = cg%u(flind%crn%beg+i-1-count(cr_spectral), RNG)
 #endif /* COSM_RAYS */
 #ifdef CRESP
-            clast = len(trim(var), kind=4)
-            varn2 = var(clast - 1:clast)
-            if (var(clast - 2:clast - 2) == 'e') then
-
-            !part of the code for spectrally resolved species : energy density
-
-               read (varn2,'(I2.2)') ibin
-               do i = 1, size(cr_names)
-                  if (cr_names(i).eq.var(4:clast-3)) icr = i - ncrn
-               enddo
-               tab(:,:,:) = cg%u(flind%crspcs(icr)%ebeg+ibin-1, RNG)
-
-            else if (var(clast - 2:clast - 2) == 'n') then
-
-            !part of the code for spectrally resolved species : number density
-
-               read (varn2,'(I2.2)') ibin
-               do i = 1, size(cr_names)
-                  if (cr_names(i).eq.var(4:clast-3)) icr = i - ncrn
-               enddo
-
-               !print *, 'flind%crspcs(icr)%nbeg+ibin-1: ', flind%crspcs(icr)%nbeg+ibin-1
-               tab(:,:,:) = cg%u(flind%crspcs(icr)%nbeg+ibin-1, RNG)
-
-            !else
-            !   do i = 1, size(cr_names)
-            !      if (var == trim('cr_' // cr_names(i))) exit
-            !   enddo
-            !   tab(:,:,:) = cg%u(flind%crn%beg+ibin-1-count(cr_spectral), RNG)
-            endif
-  !        print *, var, aux
-  !        print *, flind%crn%beg+i-1-count(cr_spectral)
-         !case ("cren01" : "cren99")
-         !   read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-         !   tab(:,:,:) = cg%u(flind%crspc%nbeg+i-1, RNG)
-         !case ("cree01" : "cree99")
-         !   read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-         !   tab(:,:,:) = cg%u(flind%crspc%ebeg+i-1, RNG)
+         case ("cren01" : "cren99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%u(flind%_crspc_%nbeg+i-1, RNG)
+         case ("cree01" : "cree99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%u(flind%_crspc_%ebeg+i-1, RNG)
          case ("cref01" : "cref99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%f_nam))%arr(i,RNG)  !flind%_crspc_%fbeg+i-1, RNG)
          case ("crep01" : "crep02")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(dfpq%p_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%p_nam))%arr(i,RNG)  !flind%_crspc_%fbeg+i-1, RNG)
          case ("creq01" : "creq99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%crspc%fbeg+i-1, RNG)
+            tab(:,:,:) = cg%w(wna%ind(dfpq%q_nam))%arr(i,RNG)  !flind%_crspc_%fbeg+i-1, RNG)
 #endif /* CRESP */
 #ifdef TRACER
          case ("trcr")
@@ -604,16 +484,6 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .true.)
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
-         case ("divb_norm")
-            tab(:,:,:) = emag_c
-            where (tab(:,:,:) <= 0.)
-               tab(:,:,:) = 0.
-            elsewhere
-               tab(:,:,:) = abs(divB_c_IO(cg, I_TWO, cc_mag)) / (sqrt(two) * sqrt(tab(:,:,:))) / cg%suminv * dom%eff_dim
-            endwhere
-            !     dom%eff_dim / cg%suminv = 1/h for  h = cg%dx = cg%dy = cg%dz
-            ! This factor should preserve the magnitude of |div B|/|B| for elongated cells quite well.
-            ! Alternatively, one can use harmonic mean (cg%dvol**(1./dom%eff_dim)) instead.
 #endif /* MAGNETIC */
          case ("v") ! perhaps this should be expanded to vi, vn or vd, depending on fluids present
             nullify(fl_mach)
@@ -683,15 +553,18 @@ contains
 !
    subroutine h5_write_to_single_file(sequential)
 
-      use common_hdf5,       only: dump_announcement, dump_announce_time, set_common_attributes
-      use constants,         only: cwdlen, PPP_IO, HDF
-      use dataio_pub,        only: nhdf, use_v2_io, last_hdf_time
-      use mpisetup,          only: report_to_master, report_string_to_master
-      use piernik_mpi_sig,   only: sig
-      use ppp,               only: ppp_main
+      use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
+      use constants,       only: cwdlen, PPP_IO, HDF
+      use dataio_pub,      only: nhdf, use_v2_io, last_hdf_time
+      use mpisetup,        only: report_to_master, report_string_to_master
+      use piernik_mpi_sig, only: sig
+      use ppp,             only: ppp_main
 #if defined(MULTIGRID) && defined(SELF_GRAV)
       use multigrid_gravity, only: unmark_oldsoln
 #endif /* MULTIGRID && SELF_GRAV */
+#ifdef NBODY_1FILE
+!      use particles_io_hdf5, only: write_nbody_hdf5
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -717,6 +590,9 @@ contains
       call dump_announce_time
       call report_to_master(sig%hdf_written, only_master=.True.)
       call report_string_to_master(fname, only_master=.True.)
+#ifdef NBODY_1FILE
+!      call write_nbody_hdf5(fname)
+#endif /* NBODY_1FILE */
 
       call ppp_main%stop(wrd_label, PPP_IO)
 
@@ -753,22 +629,25 @@ contains
 
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use common_hdf5,  only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
-      use constants,    only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG, I_ONE
-      use dataio_pub,   only: die, nproc_io, can_i_write, h5_64bit, nstep_start
-      use global,       only: nstep
-      use grid_cont,    only: grid_container
-      use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,       only: MPI_Recv, MPI_Send
-      use mpisetup,     only: master, FIRST, proc, err_mpi, tag_ub
-      use ppp,          only: ppp_main
-#ifdef NBODY
-      use common_hdf5,  only: pdsets
-      use particles_io, only: parallel_nbody_datafields, serial_nbody_datafields
-#endif /* NBODY */
+      use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, hdf_vars_avail, enable_all_hdf_var
+      use constants,   only: xdim, ydim, zdim, ndims, FP_REAL, PPP_IO, PPP_CG, I_ONE
+      use dataio_pub,  only: die, nproc_io, can_i_write, h5_64bit, nstep_start
+      use global,      only: nstep
+      use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
+      use MPIF,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,      only: MPI_Recv, MPI_Send
+      use mpisetup,    only: master, FIRST, proc, err_mpi, tag_ub
+      use ppp,         only: ppp_main
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets, nbody_datafields
+      use domain,          only: is_multicg
+      use MPIF,            only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,        only: LAST
+      use particle_utils,  only: count_all_particles
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -781,23 +660,28 @@ contains
       integer(kind=4)                                      :: error       !< error perhaps should be of type integer(HID_T)
       integer(kind=4), parameter                           :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable          :: dims
-      integer(kind=4)                                      :: i, ncg, n, ntags
+      integer(kind=4)                                      :: i, ncg, n
       integer                                              :: ip
       type(grid_container),            pointer             :: cg
       type(cg_list_element),           pointer             :: cgl
       real, dimension(:,:,:),          pointer             :: data_dbl ! double precision buffer (internal default, single precision buffer is the plotfile output default, overridable by h5_64bit)
       type(cg_output)                                      :: cg_desc
+#ifdef NBODY_1FILE
+      integer(kind=4)                                      :: n_part
+      integer(HID_T)                                       :: id
+      integer(HID_T), dimension(LAST+1)                    :: tmp
+#endif /* NBODY_1FILE */
       character(len=*), parameter :: wrdc_label = "IO_write_data_v2_cg", wrdc1s_label = "IO_write_data_v2_1cg_(serial)", wrdc1p_label = "IO_write_data_v2_1cg_(parallel)"
 
       call ppp_main%start(wrdc_label, PPP_IO)
 
       if (nstep - nstep_start < 1) call enable_all_hdf_var  ! just in case things have changed meanwhile
 
-#ifdef NBODY
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
-#else /* !NBODY */
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, ntags, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
-#endif /* !NBODY */
+#ifdef NBODY_1FILE
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)), gdf_translate(pdsets))
+#else /* !NBODY_1FILE */
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(pack(hdf_vars, hdf_vars_avail)))
+#endif /* !NBODY_1FILE */
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -808,7 +692,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         if (cg_desc%tot_cg_n * ntags > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
+         if (cg_desc%tot_cg_n *(ubound(hdf_vars,1, kind=4) + I_ONE) > tag_ub) call die("[data_hdf5:write_cg_to_output] this MPI implementation has too low MPI_TAG_UB attribute")
          do ncg = 1, cg_desc%tot_cg_n
             call ppp_main%start(wrdc1s_label, PPP_IO + PPP_CG)
             dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
@@ -817,8 +701,8 @@ contains
             if (master) then
                if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
-               ip = lbound(hdf_vars, 1) - 1
-               do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
+               ip = lbound(hdf_vars,1) - 1
+               do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                   if (.not.hdf_vars_avail(i)) cycle
                   ip = ip + 1
                   if (cg_desc%cg_src_p(ncg) == proc) then
@@ -838,7 +722,7 @@ contains
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                  do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
+                  do i = lbound(hdf_vars,1, kind=4), ubound(hdf_vars,1, kind=4)
                      if (hdf_vars_avail(i)) call get_data_from_cg(hdf_vars(i), cg, data_dbl)
                      if (.not.hdf_vars_avail(i)) cycle
                      call MPI_Send(data_dbl(1,1,1), size(data_dbl, kind=4), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, MPI_COMM_WORLD, err_mpi)
@@ -846,16 +730,35 @@ contains
                endif
             endif
             !Serial write for particles
-#ifdef NBODY
-            call serial_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg_desc%cg_src_n(ncg), cg_desc%cg_src_p(ncg), cg_desc%tot_cg_n)
-#endif /* NBODY */
             call ppp_main%stop(wrdc1s_label, PPP_IO + PPP_CG)
          enddo
+#ifdef NBODY_1FILE
+         n_part = count_all_particles()
+         if (n_part .gt. 0) then
+            if (is_multicg) call die("[data_hdf5:write_cg_to_output] multicg is not implemented for NBODY_1FILE")
+            do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+               tmp(:) = 0
+               id=0
+               if (master) then
+                  tmp(:) = cg_desc%pdset_id(:, i)
+               endif
+               if (kind(id) == 4) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER, id, 1, MPI_INTEGER, FIRST, MPI_COMM_WORLD, err_mpi)
+               else if (kind(id) == 8) then
+                  call MPI_Scatter(tmp, 1, MPI_INTEGER8, id, 1, MPI_INTEGER8, FIRST, MPI_COMM_WORLD, err_mpi)
+               else
+                  call die("[data_hdf5:write_cg_to_output] no recognized kind of HID_T")
+               endif
+               if (master) then
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               else
+                  call nbody_datafields(id, gdf_translate(pdsets(i)), n_part)
+               endif
+            enddo
+         endif
+#endif /* NBODY_1FILE */
       else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
-
-         ! It seems that the fastest implementation would use _at most_ single thread per node.
-
          if (can_i_write) then
             ! write own
             n = 0
@@ -881,9 +784,14 @@ contains
                   endif
                enddo
 
-#ifdef NBODY
-               call parallel_nbody_datafields(cg_desc%pdset_id, gdf_translate(pdsets), ncg, cg)
-#endif /* NBODY */
+#ifdef NBODY_1FILE
+               n_part = count_all_particles()
+               if (n_part .gt. 0) then
+                  do i=lbound(pdsets, dim=1, kind=4), ubound(pdsets, dim=1, kind=4)
+                     call nbody_datafields(cg_desc%pdset_id(ncg, i), gdf_translate(pdsets(i)), n_part)
+                  enddo
+               endif
+#endif /* NBODY_1FILE */
 
                cgl => cgl%nxt
                call ppp_main%stop(wrdc1p_label, PPP_IO + PPP_CG)
@@ -924,10 +832,10 @@ contains
                   ! Usually it will mean that there is something wrong with refinement criteria but still the user
                   ! deserves to get the files, not a FPE crash.
                   if (h5_64bit .or. n < 1) then
-                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_DOUBLE, data_dbl, dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   else
-                     call h5dwrite_f(cg_desc%dset_id(1, ip), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
+                     call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, real(data_dbl, kind=FP_REAL), dims, error, &
                           &          xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   endif
                enddo
@@ -1021,13 +929,17 @@ contains
 
    end subroutine get_data_from_cg
 
+#ifdef NBODY_1FILE
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail, n_part, st_g_id)
+#else /* !NBODY_1FILE */
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
+#endif /* !NBODY_1FILE */
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, hdf_vars_avail, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
-#ifdef NBODY
-      use common_hdf5, only: pdsets
-#endif /* NBODY */
+#ifdef NBODY_1FILE
+      use cg_particles_io, only: pdsets
+#endif /* NBODY_1FILE */
 
       implicit none
 
@@ -1035,24 +947,25 @@ contains
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
       integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
-      integer(kind=8),               intent(in) :: n_part
-      integer(HID_T),                intent(in) :: st_g_id
 
       integer :: i
+#ifdef NBODY_1FILE
+      integer(kind=8)                           :: n_part
+      integer(HID_T),                intent(in) :: st_g_id
+#endif /* NBODY_1FILE */
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          if (.not.hdf_vars_avail(i)) cycle
          call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
 
-#ifdef NBODY
-      do i = lbound(pdsets,1), ubound(pdsets,1)
-         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), [n_part], Z_avail, O_OUT)
-      enddo
-#endif /* NBODY */
+      if (.false.) i = size(cg_n_o) ! suppress compiler warning
 
-      return
-      if (.false.) i = size(cg_n_o) + int(n_part) + int(st_g_id) ! suppress compiler warning
+#ifdef NBODY_1FILE
+      do i = lbound(pdsets,1), ubound(pdsets,1)
+         call create_empty_cg_dataset(st_g_id, gdf_translate(pdsets(i)), (/n_part/), Z_avail, O_OUT)
+      enddo
+#endif /* NBODY_1FILE */
 
    end subroutine create_empty_cg_datasets_in_output
 
