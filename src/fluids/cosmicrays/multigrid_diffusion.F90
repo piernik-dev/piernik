@@ -104,6 +104,7 @@ contains
 !<
    subroutine multigrid_diff_par
 
+      use bcast,            only: piernik_MPI_Bcast
       use cg_list_global,   only: all_cg
       use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_CENTER, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
       use dataio_pub,       only: die, warn, msg, nh
@@ -111,7 +112,7 @@ contains
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
       use global,           only: cc_mag
-      use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
+      use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff
       use multigridvars,    only: single_base
       use named_array_list, only: qna
 

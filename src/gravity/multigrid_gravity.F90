@@ -128,11 +128,12 @@ contains
 !<
    subroutine multigrid_grav_par
 
+      use bcast,              only: piernik_MPI_Bcast
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_I2, O_D4, I_ONE, INVALID
       use dataio_pub,         only: msg, die, warn, nh
       use domain,             only: dom, is_multicg !, is_uneven
       use func,               only: operator(.notequals.)
-      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
+      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, multidim_code_3D, nsmool, &
            &                        overrelax, coarsest_tol
       use multigrid_gravity_helper, only: nsmoob

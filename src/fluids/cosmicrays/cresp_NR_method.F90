@@ -1412,9 +1412,9 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_NR_mpi_exchange(hdr_share)
 
+      use bcast,         only: piernik_MPI_Bcast
       use constants,     only: LO, HI
       use cresp_helpers, only: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, map_header
-      use mpisetup,      only: piernik_MPI_Bcast
 
       implicit none
 

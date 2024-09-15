@@ -77,11 +77,12 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
       use dataio_pub, only: die, warn, nh
       use domain,     only: dom
       use func,       only: operator(.notequals.)
-      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave
 
       implicit none
 

@@ -163,12 +163,13 @@ contains
    subroutine rebalance_all
 
       use allreduce,          only: piernik_MPI_Allreduce
+      use bcast,              only: piernik_MPI_Bcast
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: expanded_domain
       use constants,          only: pSUM, PPP_AMR
       use dataio_pub,         only: warn, msg
-      use mpisetup,           only: master, FIRST, LAST, piernik_MPI_Bcast
+      use mpisetup,           only: master, FIRST, LAST
       use ppp,                only: ppp_main
       use refinement,         only: is_blocky
 
@@ -404,6 +405,7 @@ contains
    subroutine reshuffle
 
       use allreduce,          only: piernik_MPI_Allreduce
+      use bcast,              only: piernik_MPI_Bcast
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
@@ -416,7 +418,7 @@ contains
       use list_of_cg_lists,   only: all_lists
       use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,             only: MPI_Isend, MPI_Irecv, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,           only: master, piernik_MPI_Bcast, proc, err_mpi, req, inflate_req, tag_ub
+      use mpisetup,           only: master, proc, err_mpi, req, inflate_req, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use ppp_mpi,            only: piernik_Waitall

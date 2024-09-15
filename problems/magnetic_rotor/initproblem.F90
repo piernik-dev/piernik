@@ -78,9 +78,10 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: nh
-      use mpisetup,  only: rbuff, master, slave, PIERNIK_MPI_Bcast
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: pi
+      use dataio_pub, only: nh
+      use mpisetup,   only: rbuff, master, slave
 
       implicit none
 

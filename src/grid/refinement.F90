@@ -120,10 +120,11 @@ contains
 !<
    subroutine init_refinement
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ZERO, I_ONE, I_TWO, LO, HI, cbuff_len, refinement_factor, INVALID, V_VERBOSE
       use dataio_pub, only: die, code_progress, warn, msg, printinfo, nh
       use domain,     only: dom
-      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
       use user_hooks, only: problem_domain_update
 
       implicit none
@@ -362,8 +363,8 @@ contains
 
    subroutine set_n_updAMR(n)
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: die
-      use mpisetup,   only: piernik_MPI_Bcast
 
       implicit none
 

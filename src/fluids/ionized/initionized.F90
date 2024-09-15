@@ -197,8 +197,9 @@ contains
 !<
    subroutine init_ionized
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: nh
-      use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, lbuff, master, slave
 
       implicit none
 

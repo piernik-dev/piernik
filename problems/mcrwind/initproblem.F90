@@ -70,8 +70,9 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: nh
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave
 #if defined(COSM_RAYS) && defined(SN_SRC)
       use snsources,  only: amp_ecr_sn
 #endif /* COSM_RAYS && SN_SRC */

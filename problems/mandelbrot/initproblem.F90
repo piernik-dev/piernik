@@ -90,10 +90,11 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: ydim, LO, HI, dpi
       use dataio_pub, only: warn, die, nh
       use domain,     only: dom
-      use mpisetup,   only: lbuff, ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: lbuff, ibuff, rbuff, master, slave
 
       implicit none
 

@@ -77,11 +77,12 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,          only: piernik_MPI_Bcast
       use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN
       use dataio_pub,     only: die, nh
       use domain,         only: dom
       use func,           only: operator(.equals.)
-      use mpisetup,       only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,       only: ibuff, rbuff, master, slave
 #ifdef COSM_RAYS
       use constants,      only: AT_NO_B
       use cg_list_global, only: all_cg

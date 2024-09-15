@@ -167,10 +167,11 @@ contains
 !<
    subroutine init_grav
 
+      use bcast,            only: piernik_MPI_Bcast
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_MPI, gp_n, gpot_n, hgpot_n, O_I2, O_I4
       use dataio_pub,       only: printinfo, warn, die, code_progress, nh
-      use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
+      use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff
       use named_array_list, only: qna
       use units,            only: newtong
 #ifdef SELF_GRAV

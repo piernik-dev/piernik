@@ -116,12 +116,13 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len, I_ONE, I_TWO, half, big, O_I2, O_I3, base_level_id
-      use cr_data,         only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
-      use diagnostics,     only: ma1d, my_allocate
-      use dataio_pub,      only: die, warn, nh
-      use func,            only: operator(.notequals.)
-      use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
+      use bcast,       only: piernik_MPI_Bcast
+      use constants,   only: cbuff_len, I_ONE, I_TWO, half, big, O_I2, O_I3, base_level_id
+      use cr_data,     only: init_cr_species, cr_species_tables, cr_gpess, cr_spectral, ncrsp_auto
+      use diagnostics, only: ma1d, my_allocate
+      use dataio_pub,  only: die, warn, nh
+      use func,        only: operator(.notequals.)
+      use mpisetup,    only: ibuff, rbuff, lbuff, cbuff, master, slave
 
       implicit none
 

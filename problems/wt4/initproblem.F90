@@ -101,10 +101,11 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,          only: piernik_MPI_Bcast
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
       use dataio_pub,     only: nh
-      use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave
 
       implicit none
 

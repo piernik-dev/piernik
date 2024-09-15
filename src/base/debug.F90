@@ -62,9 +62,10 @@ contains
 
    subroutine init_piernikdebug
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_MPI  !, cbuff_len
       use dataio_pub, only: code_progress, die, nh
-      use mpisetup,   only: master, slave, rbuff, piernik_MPI_Bcast  ! lbuff, cbuff, ibuff, buffer_dim
+      use mpisetup,   only: master, slave, rbuff  ! lbuff, cbuff, ibuff, buffer_dim
 
       implicit none
 

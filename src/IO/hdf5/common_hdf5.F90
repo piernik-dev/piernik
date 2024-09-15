@@ -842,6 +842,7 @@ contains
 
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
+      use bcast,        only: piernik_MPI_Bcast
       use cg_leaves,    only: leaves
       use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, INT4, LO, HI, &
          &                    GEO_XYZ, GEO_RPZ
@@ -856,7 +857,7 @@ contains
       use helpers_hdf5, only: create_attribute!, create_corefile
       use MPIF,         only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Allgather, MPI_Recv, MPI_Send
-      use mpisetup,     only: FIRST, LAST, master, err_mpi, piernik_MPI_Bcast
+      use mpisetup,     only: FIRST, LAST, master, err_mpi
 #ifdef NBODY
       use constants,    only: I_FIVE, I_SIX
       !use particle_utils, only: count_all_particles
@@ -1268,9 +1269,10 @@ contains
 
    function output_fname(wr_rd, ext, no, allproc, bcast, prefix) result(filename)
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, domlen, fnamelen
       use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
-      use mpisetup,   only: master, piernik_MPI_Bcast, proc
+      use mpisetup,   only: master, proc
 
       implicit none
 

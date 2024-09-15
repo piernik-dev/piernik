@@ -82,10 +82,11 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,            only: piernik_MPI_Bcast
       use cg_list_global,   only: all_cg
       use constants,        only: INVALID, cbuff_len, pi
       use dataio_pub,       only: die, msg, nh
-      use mpisetup,         only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,         only: rbuff, ibuff, cbuff, master, slave
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
       use unified_ref_crit_list, only: urc_list

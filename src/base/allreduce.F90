@@ -52,6 +52,8 @@ module allreduce
                     & dimension(pSUM:pLAND) :: mpiop
 
 #ifdef NO_F2018
+   ! We keep that spaghetti to not break compatibility with systems where only
+   ! the old mpi interface or compilers are available.
    interface piernik_MPI_Allreduce
       module procedure MPI_Allreduce_single_logical
       module procedure MPI_Allreduce_single_real4
