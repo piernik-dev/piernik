@@ -240,7 +240,7 @@ contains
       endif
 
       if (single_base .and. nproc > 1) then
-         call warn("[multigrid_diffusion:multigrid_diff_par] single_base disabled just in case")
+         if (master) call warn("[multigrid_diffusion:multigrid_diff_par] single_base disabled just in case")
          single_base = (nproc == 1)
       endif
 
