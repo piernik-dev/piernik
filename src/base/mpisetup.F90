@@ -134,6 +134,9 @@ contains
 #if defined(__INTEL_COMPILER)
       use ifport,        only: getpid, getcwd, hostnm
 #endif /* __INTEL_COMPILER */
+#ifndef MPIF08
+      use dataio_pub,    only: warn
+#endif /* !MPIF08 */
 
       implicit none
 
@@ -166,6 +169,7 @@ contains
       is_spawned = (intercomm%mpi_val /= MPI_COMM_NULL%mpi_val)
 #else /* !MPIF08 */
       is_spawned = (intercomm /= MPI_COMM_NULL)
+      call warn("[mpisetup:init_mpi] using old, deprecated Fortran interface to MPI library")
 #endif /* !MPIF08 */
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, err_mpi)
