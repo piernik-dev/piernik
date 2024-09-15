@@ -31,7 +31,7 @@
 module allreduce
 
    use constants,  only: pSUM, pLAND
-   use dataio_pub, only: die  ! QA_WARN this is needed only when MPIF08 is set, which is not known at the setup time
+   use dataio_pub, only: die  ! QA_WARN this is needed only when NO_F2018 is not set, which is determined at compile time, so Makefile should not depend on it.
 #ifdef MPIF08
    use MPIF,       only: MPI_Op
 #endif /* MPIF08 */
@@ -51,7 +51,7 @@ module allreduce
 #endif /* !MPIF08 */
                     & dimension(pSUM:pLAND) :: mpiop
 
-#ifndef MPIF08
+#ifdef NO_F2018
    interface piernik_MPI_Allreduce
       module procedure MPI_Allreduce_single_logical
       module procedure MPI_Allreduce_single_real4
@@ -66,7 +66,7 @@ module allreduce
       module procedure MPI_Allreduce_arr2d_real8
       module procedure MPI_Allreduce_arr3d_real8
    end interface piernik_MPI_Allreduce
-#endif /* !MPIF08 */
+#endif /* NO_F2018 */
 
 contains
 
@@ -82,7 +82,7 @@ contains
 
    end subroutine init_allreduce
 
-#ifdef MPIF08
+#ifndef NO_F2018
 !>
 !! \brief Polymorphic wrapper for MPI_Allreduce with MPI_IN_PLACE
 !!
@@ -95,15 +95,23 @@ contains
 
       use dataio_pub, only: die
       use MPIF,       only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
-           &                MPI_IN_PLACE, MPI_COMM_WORLD, MPI_Datatype
+           &                MPI_IN_PLACE, MPI_COMM_WORLD
       use MPIFUN,     only: MPI_Allreduce
+#ifdef MPIF08
+      use MPIF,       only: MPI_Datatype
+#endif /* MPIF08 */
 
       implicit none
 
       class(*), dimension(..), target, intent(inout) :: var       !< variable that will be reduced
       integer(kind=4),                 intent(in)    :: reduction !< integer to mark a reduction type
 
+#ifdef MPIF08
       type(MPI_Datatype) :: dtype
+#else /* !MPIF08 */
+      integer(kind=4) :: dtype
+#endif /* !MPIF08 */
+
       class(*), pointer :: pvar
       logical, target :: dummy
 
@@ -144,7 +152,7 @@ contains
 
    end subroutine piernik_MPI_Allreduce
 
-#else /* !MPIF08 */
+#else /* NO_F2018 */
 
 !> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for logical
 
@@ -343,6 +351,6 @@ contains
 
    end subroutine MPI_Allreduce_arr2d_real4
 
-#endif /* !MPIF08 */
+#endif /* NO_F2018 */
 
 end module allreduce
