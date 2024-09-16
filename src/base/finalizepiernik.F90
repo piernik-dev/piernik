@@ -41,6 +41,7 @@ contains
 !<
    subroutine cleanup_piernik
 
+      use allreduce,             only: cleanup_allreduce
       use dataio_pub,            only: flush_to_log
       use decomposition,         only: cleanup_decomposition
       use diagnostics,           only: cleanup_diagnostics
@@ -121,6 +122,7 @@ contains
 #ifdef THERM
      call cleanup_thermal;         call nextdot
 #endif /* THERM */
+     call cleanup_allreduce;       call nextdot
 
    end subroutine cleanup_piernik
 

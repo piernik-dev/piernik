@@ -30,6 +30,7 @@
 
 module allreduce
 
+   use cnt_array,  only: arrcnt
    use constants,  only: pSUM, pLAND
    use dataio_pub, only: die  ! QA_WARN this is needed only when NO_F2018 is not set, which is determined at compile time, so Makefile should not depend on it.
 #ifdef MPIF08
@@ -39,7 +40,7 @@ module allreduce
    implicit none
 
    private
-   public :: piernik_MPI_Allreduce, init_allreduce
+   public :: piernik_MPI_Allreduce, init_allreduce, cleanup_allreduce
 
    integer(kind=4) :: err_mpi  !< error status
 
@@ -50,6 +51,12 @@ module allreduce
    integer(kind=4), &
 #endif /* !MPIF08 */
                     & dimension(pSUM:pLAND) :: mpiop
+   type(arrcnt) :: cnt_allr, size_allr
+   enum, bind(C)
+      enumerator :: T_BOO = 1, T_I4, T_I8, T_R4, T_R8
+   end enum
+   integer, parameter :: max_dtype = T_R8  ! required for stats gathering
+   integer, parameter :: max_rank = 4
 
 #ifdef NO_F2018
    ! We keep that spaghetti to not break compatibility with systems where only
@@ -82,7 +89,28 @@ contains
 
       mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]  ! this must match the ordering in constants enum
 
+      call cnt_allr%init( [max_rank + 1, max_dtype])
+      call size_allr%init([max_rank + 1, max_dtype])
+
    end subroutine init_allreduce
+
+   subroutine cleanup_allreduce
+
+      use constants, only: V_DEBUG
+      use global,    only: MPI_wrapper_stats
+      use mpisetup,  only: master
+
+      implicit none
+
+      if (master .and. MPI_wrapper_stats) then
+         call cnt_allr%print("Allreduce counters (logical, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
+         call size_allr%print("Allreduce total elements (logical, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
+      endif
+
+      call cnt_allr%cleanup
+      call size_allr%cleanup
+
+   end subroutine cleanup_allreduce
 
 #ifndef NO_F2018
 !>
@@ -96,6 +124,7 @@ contains
    subroutine piernik_MPI_Allreduce(var, reduction)
 
       use dataio_pub, only: die
+      use global,     only: MPI_wrapper_stats
       use MPIF,       only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
            &                MPI_IN_PLACE, MPI_COMM_WORLD
       use MPIFUN,     only: MPI_Allreduce
@@ -116,6 +145,7 @@ contains
 
       class(*), pointer :: pvar
       logical, target :: dummy
+      integer :: it
 
       ! duplicated code: see bcast
       select rank (var)
@@ -127,7 +157,7 @@ contains
             pvar => var(lbound(var, 1), lbound(var, 2))
          rank (3)  ! most likely never used
             pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
-         rank (4)  ! most likely never used
+         rank (max_rank)  ! most likely never used
             pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
          rank default
             call die("[allreduce:piernik_MPI_Allreduce] non-implemented rank")
@@ -139,17 +169,28 @@ contains
       select type (pvar)
          type is (logical)
             dtype = MPI_LOGICAL
+            it = T_BOO
          type is (integer(kind=4))
             dtype = MPI_INTEGER
+            it = T_I4
          type is (integer(kind=8))  ! most likely never used
             dtype = MPI_INTEGER8
+            it = T_I8
          type is (real(kind=4))  ! most likely never used
             dtype = MPI_REAL
+            it = T_R4
          type is (real(kind=8))
             dtype = MPI_DOUBLE_PRECISION
+            it = T_R8
          class default
             call die("[allreduce:piernik_MPI_Allreduce] non-implemented type")
+            it = huge(1)
       end select
+
+      if (MPI_wrapper_stats) then
+         call cnt_allr%incr([rank(var)+1, it])
+         call size_allr%add([rank(var)+1, it], size(var, kind=8))
+      endif
 
       call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), dtype, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
