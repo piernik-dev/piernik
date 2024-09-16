@@ -44,7 +44,7 @@ module global
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_cur_shrink, dt_min, dt_max, dt_old, dt_full, dtm, t, t_saved, nstep, nstep_saved, max_redostep_attempts, &
         &    repetitive_steps, integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, skip_sweep, geometry25D, &
-        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, &
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, MPI_wrapper_stats, &
         &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
 
    logical         :: dn_negative = .false.
@@ -114,9 +114,10 @@ module global
         &                     max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
 
-   logical                       :: prefer_merged_MPI !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
+   logical :: prefer_merged_MPI  !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
+   logical :: MPI_wrapper_stats  !< collect usage statistics in piernik_MPI_* wrappers
 
-   namelist /PARALLEL_SETUP/ extra_barriers, prefer_merged_MPI
+   namelist /PARALLEL_SETUP/ extra_barriers, prefer_merged_MPI, MPI_wrapper_stats
 
 contains
 
@@ -168,8 +169,9 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>prefer_merged_MPI </td><td>.true.  </td><td>logical </td><td>\copydoc global::prefer_merged_MPI </td></tr>
+!!   <tr><td>prefer_merged_MPI </td><td>.true.  </td><td>logical </td><td>\copydoc global::prefer_merged_MPI   </td></tr>
 !!   <tr><td>extra_barriers    </td><td>.false. </td><td>logical </td><td>\copydoc mpi_wrapper::extra_barriers </td></tr>
+!!   <tr><td>MPI_wrapper_stats </td><td>.false. </td><td>logical </td><td>\copydoc global::MPI_wrapper_stats   </td></tr>
 !! </table>
 !! \n \n
 
@@ -254,6 +256,7 @@ contains
       solver_str = ""
 
       prefer_merged_MPI = .false.  ! non-merged MPI in internal_boundaries are implemented without buffers, which often is faster
+      MPI_wrapper_stats = .false.
 
       if (master) then
 
@@ -348,6 +351,7 @@ contains
          lbuff(13)  = disallow_CRnegatives
          lbuff(14)  = prefer_merged_MPI
          lbuff(15)  = extra_barriers
+         lbuff(16)  = MPI_wrapper_stats
 
       endif
 
@@ -371,6 +375,7 @@ contains
          disallow_CRnegatives  = lbuff(13)
          prefer_merged_MPI     = lbuff(14)
          extra_barriers        = lbuff(15)
+         MPI_wrapper_stats     = lbuff(16)
 
          smalld                = rbuff( 1)
          smallc                = rbuff( 2)
