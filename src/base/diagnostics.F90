@@ -29,11 +29,13 @@ module diagnostics
 
    implicit none
 
+   ! With Fortran 2018 features we can rewrite that spaghetti in a polymorphic way as it was done in allreduce module.
+
    interface my_allocate_with_index  ! < works only for 1D arrays!
-      module procedure allocate_1D_arr_w_ind_int4        ! < not in PIERNIK
-      module procedure allocate_1D_arr_w_ind_real8       ! < not in PIERNIK
-      module procedure allocate_1D_arr_w_ind_logical     ! < not in PIERNIK
-   end interface my_allocate_with_index       ! < not in PIERNIK
+      module procedure allocate_1D_arr_w_ind_int4
+      module procedure allocate_1D_arr_w_ind_real8
+      module procedure allocate_1D_arr_w_ind_logical
+   end interface my_allocate_with_index
 
    interface my_allocate
       module procedure allocate_array_1D_int4
@@ -112,15 +114,8 @@ contains
 
    end subroutine check_environment
 
-!>
-!! \todo Decide are we using lhs realloc or not
-!! \n   Against:
-!! \n     * the whole code needs to be reviewed for possible unintentional usage
-!! \n     * requires heightened awareness, i.e. BE C4R3FUL WH4T Y0U TYP3 !!
-!! \n   In favour:
-!! \n     * it can be handy (especially in mc module)
-!! \n     * supported by both gcc and intel
-!<
+!> \brief We're using LHS reallocation in so many places that we have to make sure that it is not disabled by compiler options
+
    subroutine check_lhs_realloc
 
       use dataio_pub,   only: die
@@ -132,12 +127,11 @@ contains
       integer :: i, nsize
 
       allocate(ivec(n))
-      ivec  = [(i,i=1,n+1)]       ! valgrind: Invalid write of size 4 \deprecated BEWARE: lhs reallocation
+      ivec  = [(i,i=1,n+1)]
       nsize = abs(n-size(ivec))
       deallocate(ivec)
 
       if (nsize == 0) call die("[diagnostics:check_lhs_realloc]: No lhs realloc!")
-!      if (nsize /= 0) call die("[diagnostics:check_lhs_realloc]: LHS realloc detected.")
 
    end subroutine check_lhs_realloc
 

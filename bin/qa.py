@@ -187,6 +187,7 @@ def qa_checks(files, options):
     f90files = select_sources(files)
     warns = []
     errors = []
+    # ToDo: try to parallelize this loop with multiprocessing module
     for f in f90files:
         pfile = []
         lines = open(f, 'r').readlines()
