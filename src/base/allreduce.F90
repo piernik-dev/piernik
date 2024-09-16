@@ -117,6 +117,7 @@ contains
       class(*), pointer :: pvar
       logical, target :: dummy
 
+      ! duplicated code: see bcast
       select rank (var)
          rank (0)
             pvar => var
@@ -154,7 +155,7 @@ contains
 
    end subroutine piernik_MPI_Allreduce
 
-#else /* NO_F2018 */
+#else /* !NO_F2018 */
 
 !> \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE for logical
 
@@ -353,6 +354,6 @@ contains
 
    end subroutine MPI_Allreduce_arr2d_real4
 
-#endif /* NO_F2018 */
+#endif /* !NO_F2018 */
 
 end module allreduce

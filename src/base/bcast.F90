@@ -37,7 +37,7 @@ module bcast
 
    integer(kind=4) :: err_mpi  !< error status
 
-!#ifdef NO_F2018
+#ifdef NO_F2018
    ! We keep that spaghetti to not break compatibility with systems where only
    ! the old mpi interface or compilers are available.
    interface piernik_MPI_Bcast
@@ -62,15 +62,87 @@ module bcast
       module procedure MPI_Bcast_arr3d_real4
       module procedure MPI_Bcast_arr3d_real8
    end interface piernik_MPI_Bcast
-!#endif /* NO_F2018 */
+#endif /* NO_F2018 */
 
 contains
 
-!#ifndef NO_F2018
+#ifndef NO_F2018
 
 !> \brief Polymorphic wrapper for MPI_Bcast
 
-!#else /* NO_F2018 */
+   subroutine piernik_MPI_Bcast(var, clen)
+
+      use dataio_pub, only: die
+      use mpisetup,   only: FIRST
+      use MPIF,       only: MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER, MPI_INTEGER8, &
+           &                MPI_REAL, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Bcast
+#ifdef MPIF08
+      use MPIF,       only: MPI_Datatype
+#endif /* MPIF08 */
+
+      implicit none
+
+      class(*), dimension(..), target, intent(inout) :: var   !< variable that will be broadcasted
+      integer(kind=4), optional,       intent(in)    :: clen  !< length of the string (only when type(var) is character)
+
+      class(*), pointer :: pvar
+      logical, target :: is_string
+      integer(kind=4) :: lenmul
+#ifdef MPIF08
+      type(MPI_Datatype) :: dtype
+#else /* !MPIF08 */
+      integer(kind=4) :: dtype
+#endif /* !MPIF08 */
+
+      ! duplicated code: see allreduce
+      select rank (var)
+         rank (0)
+            pvar => var
+         rank (1)
+            pvar => var(lbound(var, 1))
+         rank (2)
+            pvar => var(lbound(var, 1), lbound(var, 2))
+         rank (3)
+            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
+         rank (4)
+            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
+         rank default
+            call die("[bcast:piernik_MPI_Bcast] non-implemented rank")
+            pvar => is_string  ! suppress compiler warning
+      end select
+      ! In Fortran 2023 it should be possible to reduce the above construct to just
+      !     pvar => var(@lbound(var))
+
+      is_string = .false.
+      lenmul = 1
+      select type (pvar)
+         type is (character(len=*))
+            dtype = MPI_CHARACTER
+            if (.not. present(clen)) call die("[bcast:piernik_MPI_Bcast] clen is required for strings")
+            is_string = .true.
+            lenmul = clen
+         type is (logical)
+            dtype = MPI_LOGICAL
+         type is (integer(kind=4))
+            dtype = MPI_INTEGER
+         type is (integer(kind=8))
+            dtype = MPI_INTEGER8
+         type is (real(kind=4))
+            dtype = MPI_REAL
+         type is (real(kind=8))
+            dtype = MPI_DOUBLE_PRECISION
+         class default
+            call die("[bcast:piernik_MPI_Bcast] non-implemented type")
+      end select
+
+      if (present(clen) .and. .not. is_string) call die("[bcast:piernik_MPI_Bcast] clen makes no sense for non-strings")
+
+      call MPI_Bcast(var, lenmul*size(var, kind=4), dtype, FIRST, MPI_COMM_WORLD, err_mpi)
+
+   end subroutine piernik_MPI_Bcast
+
+#else /* !NO_F2018 */
 
 !> \brief Wrapper for MPI_Bcast for logical
 
@@ -399,6 +471,6 @@ contains
 
    end subroutine MPI_Bcast_arr3d_int8
 
-!#endif /* NO_F2018 */
+#endif /* !NO_F2018 */
 
 end module bcast
