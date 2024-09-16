@@ -45,7 +45,7 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, req2, err_mpi, tag_ub, &
         &    master, slave, nproc, proc, FIRST, LAST, have_mpi, is_spawned, &
-        &    piernik_MPI_Barrier, report_to_master, report_string_to_master, extra_barriers
+        &    report_to_master, report_string_to_master, extra_barriers
 
    integer(kind=4), protected :: nproc          !< number of processes
    integer(kind=4), protected :: proc           !< rank of my process
@@ -326,20 +326,6 @@ contains
       call MPI_Finalize(err_mpi)
 
    end subroutine cleanup_mpi
-
-!-----------------------------------------------------------------------------
-!>
-!! \brief Wrapper for MPI_Barrier
-!<
-   subroutine piernik_MPI_Barrier
-
-      use MPIF, only: MPI_COMM_WORLD, MPI_Barrier
-
-      implicit none
-
-      call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
-
-   end subroutine piernik_MPI_Barrier
 
 !-----------------------------------------------------------------------------
 !>

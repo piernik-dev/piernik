@@ -48,7 +48,8 @@ program piernik
    use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
    use load_balance,      only: n_rebalance, flexible_balance, r_rebalance, rebalance_asap
-   use mpisetup,          only: master, piernik_MPI_Barrier, cleanup_mpi
+   use mpi_wrappers,      only: piernik_MPI_Barrier
+   use mpisetup,          only: master, cleanup_mpi
    use named_array_list,  only: qna, wna
    use ppp,               only: cleanup_profiling, update_profiling, ppp_main
    use refinement,        only: emergency_fix, updAMR_after
