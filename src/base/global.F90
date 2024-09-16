@@ -33,8 +33,8 @@
 !<
 module global
 
-   use constants, only: cbuff_len, xdim, zdim
-   use mpisetup,  only: extra_barriers
+   use constants,    only: cbuff_len, xdim, zdim
+   use mpi_wrappers, only: extra_barriers
 
    implicit none
 
@@ -169,7 +169,7 @@ contains
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>prefer_merged_MPI </td><td>.true.  </td><td>logical </td><td>\copydoc global::prefer_merged_MPI </td></tr>
-!!   <tr><td>extra_barriers    </td><td>.false. </td><td>logical </td><td>\copydoc mpisetup::extra_barriers  </td></tr>
+!!   <tr><td>extra_barriers    </td><td>.false. </td><td>logical </td><td>\copydoc mpi_wrapper::extra_barriers </td></tr>
 !! </table>
 !! \n \n
 

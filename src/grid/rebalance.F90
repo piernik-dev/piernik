@@ -55,7 +55,8 @@ contains
       use constants,          only: LO, I_ONE, ndims, PPP_AMR
       use dataio_pub,         only: warn
       use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
-      use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST, extra_barriers
+      use mpi_wrappers,       only: extra_barriers
+      use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST
       use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_COMM_WORLD
       use MPIFUN,             only: MPI_Gather, MPI_Recv, MPI_Isend, MPI_Waitall
       use procnames,          only: pnames

@@ -45,7 +45,7 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, req2, err_mpi, tag_ub, &
         &    master, slave, nproc, proc, FIRST, LAST, have_mpi, is_spawned, &
-        &    report_to_master, report_string_to_master, extra_barriers
+        &    report_to_master, report_string_to_master
 
    integer(kind=4), protected :: nproc          !< number of processes
    integer(kind=4), protected :: proc           !< rank of my process
@@ -61,8 +61,6 @@ module mpisetup
    logical, protected :: slave       !< .True. if proc != FIRST
    logical, protected :: have_mpi    !< .True. when run on more than one processor
    logical, protected :: is_spawned  !< .True. if Piernik was run via MPI_Spawn
-
-   logical, save :: extra_barriers = .false.  !< when changed to .true. additional MPI_Barriers will be called.
 
 #ifdef MPIF08
    type(MPI_Request), allocatable, dimension(:), target :: req        !< request array for MPI_Waitall
