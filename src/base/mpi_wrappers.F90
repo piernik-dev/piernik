@@ -33,9 +33,10 @@ module mpi_wrappers
    implicit none
 
    private
-   public :: piernik_MPI_Barrier, extra_barriers
+   public :: piernik_MPI_Barrier, extra_barriers, MPI_wrapper_stats
 
-   logical, save :: extra_barriers = .false.  !< when changed to .true. additional MPI_Barriers will be called.
+   logical, save :: extra_barriers = .false.     !< when changed to .true. additional MPI_Barriers will be called.
+   logical, save :: MPI_wrapper_stats = .false.  !< collect usage statistics in piernik_MPI_* wrappers
 
    integer(kind=4) :: err_mpi  !< error status
 

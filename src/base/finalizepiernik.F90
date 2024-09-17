@@ -42,6 +42,7 @@ contains
    subroutine cleanup_piernik
 
       use allreduce,             only: cleanup_allreduce
+      use bcast,                 only: cleanup_bcast
       use dataio_pub,            only: flush_to_log
       use decomposition,         only: cleanup_decomposition
       use diagnostics,           only: cleanup_diagnostics
@@ -123,6 +124,7 @@ contains
      call cleanup_thermal;         call nextdot
 #endif /* THERM */
      call cleanup_allreduce;       call nextdot
+     call cleanup_bcast;           call nextdot
 
    end subroutine cleanup_piernik
 

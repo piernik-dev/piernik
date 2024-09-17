@@ -96,9 +96,9 @@ contains
 
    subroutine cleanup_allreduce
 
-      use constants, only: V_DEBUG
-      use global,    only: MPI_wrapper_stats
-      use mpisetup,  only: master
+      use constants,    only: V_DEBUG
+      use mpi_wrappers, only: MPI_wrapper_stats
+      use mpisetup,     only: master
 
       implicit none
 
@@ -123,13 +123,13 @@ contains
 
    subroutine piernik_MPI_Allreduce(var, reduction)
 
-      use dataio_pub, only: die
-      use global,     only: MPI_wrapper_stats
-      use MPIF,       only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
-           &                MPI_IN_PLACE, MPI_COMM_WORLD
-      use MPIFUN,     only: MPI_Allreduce
+      use dataio_pub,   only: die
+      use mpi_wrappers, only: MPI_wrapper_stats
+      use MPIF,         only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
+           &                  MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Allreduce
 #ifdef MPIF08
-      use MPIF,       only: MPI_Datatype
+      use MPIF,         only: MPI_Datatype
 #endif /* MPIF08 */
 
       implicit none
@@ -142,7 +142,6 @@ contains
 #else /* !MPIF08 */
       integer(kind=4) :: dtype
 #endif /* !MPIF08 */
-
       class(*), pointer :: pvar
       logical, target :: dummy
       integer :: it
