@@ -41,8 +41,6 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use allreduce,             only: cleanup_allreduce
-      use bcast,                 only: cleanup_bcast
       use dataio_pub,            only: flush_to_log
       use decomposition,         only: cleanup_decomposition
       use diagnostics,           only: cleanup_diagnostics
@@ -60,6 +58,7 @@ contains
       use timer,                 only: cleanup_timers
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: cleanup_problem
+      use wrapper_stats,         only: cleanup_wstats
 #ifdef RANDOMIZE
       use randomization,         only: cleanup_randomization
 #endif /* RANDOMIZE */
@@ -123,8 +122,7 @@ contains
 #ifdef THERM
      call cleanup_thermal;         call nextdot
 #endif /* THERM */
-     call cleanup_allreduce;       call nextdot
-     call cleanup_bcast;           call nextdot
+     call cleanup_wstats;          call nextdot
 
    end subroutine cleanup_piernik
 
@@ -133,8 +131,8 @@ contains
 !<
    subroutine nextdot(print_t)
 
-      use mpisetup,  only: master
       use constants, only: stdout, tmr_fu
+      use mpisetup,  only: master
       use timer,     only: set_timer
 
       implicit none
