@@ -232,18 +232,22 @@ contains
 
 !> \brief Summarize all registered fields and their properties
 
-   subroutine print_vars(this, to_stdout)
+   subroutine print_vars(this, verbosity)
 
-      use constants,  only: INVALID
+      use constants,  only: INVALID, V_LOG
       use dataio_pub, only: printinfo, warn, msg
       use mpisetup,   only: slave
 
       implicit none
 
-      class(na_var_list), intent(in) :: this
-      logical, optional,  intent(in) :: to_stdout
+      class(na_var_list),        intent(in) :: this
+      integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
 
       integer :: i, d3
+      integer(kind=4) :: v
+
+      v = V_LOG
+      if (present(verbosity)) v = verbosity
 
       if (slave) return
 
@@ -251,11 +255,11 @@ contains
 
       if (d3 /= 0) then
          write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
       endif
       if (count(this%lst(:)%dim4 /= INVALID) /= 0) then
          write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
          if (d3 /=0) call warn("[named_array_list:print_vars] Both rank-3 and rank-4 named arrays are present in the same list!")
       endif
 
@@ -278,7 +282,7 @@ contains
                write(msg(len_trim(msg)+1:), '(a,i4,a)') "[ ", size(this%lst(i)%position), " * 0 ]"
             endif
          endif
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
       enddo
 
    end subroutine print_vars

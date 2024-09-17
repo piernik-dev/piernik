@@ -241,6 +241,7 @@ contains
 
    subroutine update_profiling
 
+      use constants,     only: V_VERBOSE
       use dataio_pub,    only: printinfo
       use global,        only: nstep
       use mpisetup,      only: master
@@ -252,7 +253,7 @@ contains
 
       if (turn_off <= nstep) then  ! turn off ppp_main profiling
          call ppp_main%publish
-         if (master) call printinfo("[ppprofiling:update_profiling] Stop PPP")
+         if (master) call printinfo("[ppprofiling:update_profiling] Stop PPP", V_VERBOSE)
          use_profiling = .false.
          turn_off = huge(1)
       endif
@@ -267,7 +268,7 @@ contains
       if (.not. use_profiling) then  ! turn on ppp_main profiling
          use_profiling = .true.
          call ppp_main%init("main", xxl)
-         if (master) call printinfo("[ppprofiling:update_profiling] Start PPP")
+         if (master) call printinfo("[ppprofiling:update_profiling] Start PPP", V_VERBOSE)
       endif
 
    end subroutine update_profiling

@@ -197,6 +197,7 @@ contains
       subroutine log_elaborate
 
          use cg_cost_stats, only: I_SUM2
+         use constants,     only: V_INFO
          use dataio_pub,    only: printinfo
          use procnames,     only: pnames
 
@@ -216,7 +217,7 @@ contains
                              write(msg(len_trim(msg)+1:), '(3a,f10.3,3a)') merge(": ", ", ", j == lbound(stat_labels, 1)), &
                              &                                             trim(stat_labels(j)), "= ", mul*stat(j), " ", trim(prefix), "s "
                      enddo
-                     call printinfo(msg)
+                     call printinfo(msg, V_INFO)
                   endif
                enddo
             endif
@@ -227,7 +228,7 @@ contains
       subroutine log_detailed
 
          use cg_cost_stats, only: I_AVG, I_SIGMA
-         use constants,     only: I_ZERO
+         use constants,     only: I_ZERO, V_INFO
          use dataio_pub,    only: printinfo
          use procnames,     only: pnames
 
@@ -242,7 +243,7 @@ contains
             endif
          enddo
          write(msg(len_trim(msg)+1:), '(a)') " (per cg)"
-         call printinfo(msg)
+         call printinfo(msg, V_INFO)
 
          do p = FIRST, LAST
             write(msg, '(2a,i5,a)')"@", pnames%procnames(p)(:max(h_l, pnames%maxnamelen)), p, " :"
@@ -258,7 +259,7 @@ contains
                   endif
                endif
             enddo
-            call printinfo(msg)
+            call printinfo(msg, V_INFO)
          enddo
 
       end subroutine log_detailed
@@ -267,7 +268,7 @@ contains
 
          use cg_cost_data,  only: cg_cost_data_t
          use cg_cost_stats, only: I_AVG, I_SUM, I_SUM2
-         use constants,     only: I_ZERO
+         use constants,     only: I_ZERO, V_INFO
          use dataio_pub,    only: printinfo
          use procnames,     only: pnames
 
@@ -283,7 +284,7 @@ contains
             endif
          enddo
          write(msg(len_trim(msg)+1:), '(a)') " (per cg, on whole host)"
-         call printinfo(msg)
+         call printinfo(msg, V_INFO)
 
          do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
             ! this is a bit awkward but we need to find moments over a host from already computed moments on threads
@@ -312,7 +313,7 @@ contains
                      endif
                   endif
                enddo
-               call printinfo(msg)
+               call printinfo(msg, V_INFO)
             end associate
          enddo
 
@@ -320,6 +321,7 @@ contains
 
       subroutine log_summary
 
+         use constants,  only: V_INFO
          use dataio_pub, only: printinfo
          use mpisetup,   only: nproc
          use procnames,  only: pnames
@@ -335,7 +337,7 @@ contains
             dt_wall = MPI_Wtime() - prev_time
 
             write(msg, '(a,f11.3,3a,f5.1,a)') "All accumulated cg costs out of ", mul*dt_wall, " ", trim(prefix), "s, ", 100*sum(all_proc_stats(N_STATS, I_ONE, :))/nproc/dt_wall, "% spent on cg (averaged globally)"
-            call printinfo(msg)
+            call printinfo(msg, V_INFO)
 
             do host = lbound(pnames%proc_on_node, 1), ubound(pnames%proc_on_node, 1)
                associate (ph => pnames%proc_on_node(host))
@@ -358,7 +360,7 @@ contains
                            write(msg(len_trim(msg)+1:), '(a7)') "-"
                         endif
                      enddo
-                     call printinfo(msg)
+                     call printinfo(msg, V_INFO)
                   else
                      lines = ceiling(real(size(ph%proc)) / max_per_line)
                      per_line = ceiling(real(size(ph%proc)) / lines)  ! or max_per_line for extremely heterogeneous set of nodes
@@ -373,7 +375,7 @@ contains
                               write(msg(len_trim(msg)+1:), '(a11)') "-"
                            endif
                         enddo
-                        call printinfo(msg)
+                        call printinfo(msg, V_INFO)
                      enddo
                      do l = 1, lines
                         write(msg, '(2a)') repeat(" ", pnames%maxnamelen + 1), " | "
@@ -386,7 +388,7 @@ contains
                               write(msg(len_trim(msg)+1:), '(a11)') "-"
                            endif
                         enddo
-                        call printinfo(msg)
+                        call printinfo(msg, V_INFO)
                      enddo
                   endif
 
@@ -399,7 +401,7 @@ contains
 
       subroutine log_speed
 
-         use constants,  only: fmt_len
+         use constants,  only: fmt_len, V_INFO
          use dataio_pub, only: printinfo, warn
          use procnames,  only: pnames
 
@@ -431,7 +433,7 @@ contains
                      else
                         write(msg, '(3a)') "@", ph%nodename(:pnames%maxnamelen), " <MHD speed> = N/A"
                      endif
-                     call printinfo(msg)
+                     call printinfo(msg, V_INFO)
 
                   end associate
                enddo

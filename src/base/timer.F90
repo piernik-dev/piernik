@@ -228,6 +228,7 @@ contains
 
    function time_left(this, wall_to_end) result (tf)
 
+      use constants,  only: V_ESSENTIAL
       use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: slave
 
@@ -280,7 +281,7 @@ contains
             mm = int(ss,kind=8)
             ss = (ss - mm)*60.0
             write(msg,'("Walltime left until ",A,": ",I4,":",I2.2,":",F5.2)') trim(this%description), hh, mm, ss
-            call printinfo(msg)
+            call printinfo(msg, V_ESSENTIAL)
          endif
       endif
 
@@ -294,7 +295,7 @@ contains
 #ifdef PERFMON
    subroutine timer_stop(nstep, total_ncells)
 
-      use constants,  only: I_ONE, half
+      use constants,  only: I_ONE, half, V_VERBOSE
       use dataio_pub, only: msg, printinfo
       use MPIF,       only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD
       use MPIFUN,     only: MPI_Reduce
@@ -331,14 +332,14 @@ contains
 
          zcps  = real(nstep) * real(total_ncells) / cpuallp
 
-         call printinfo("", .true.)
+         call printinfo("", V_VERBOSE)
          write(msg, "('CPU time        = ', f12.2,' s')") cpuallp
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
          write(msg, "('Wall clock time = ', f12.2,' s')") wctot
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
          write(msg, "('Zone-cycles / s = ',en14.5)") zcps
-         call printinfo(msg)
-         call printinfo("", .true.)
+         call printinfo(msg, V_VERBOSE)
+         call printinfo("", V_VERBOSE)
 
       endif
 

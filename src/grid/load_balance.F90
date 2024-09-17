@@ -105,7 +105,7 @@ contains
 !<
    subroutine init_load_balance
 
-      use constants,  only: INVALID, cbuff_len, I_ONE
+      use constants,  only: INVALID, cbuff_len, I_ONE, V_VERBOSE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -124,7 +124,7 @@ contains
       balance_thread   = .false.
       cost_to_balance  = "all"
       verbosity        = VB_HOST
-      verbosity_nstep  = 0
+      verbosity_nstep  = huge(1_4)
       enable_exclusion = .false.
       watch_cost       = "MHD"
       exclusion_thr    = intolerable_perf
@@ -215,10 +215,7 @@ contains
          exclusion_thr = huge(1.)
       endif
 
-      if (verbosity_nstep <= 0) then
-         if (master) call warn("[load_balance] verbosity_nstep <= 0 (disabling)")
-         verbosity_nstep = huge(1_4)
-      endif
+      if (verbosity_nstep <= 0) verbosity_nstep = huge(1_4)
 
       if (balance_host > 1.) then
          if (balance_host > insane_factor) then
@@ -253,11 +250,11 @@ contains
             if (balance_host > 0.) write(msg(len_trim(msg)+1:), '(a,f5.2,a)') &
                  " balance_host = ", balance_host, " (" // trim(merge("thread", "host  ", balance_thread)) // "-based)"
             if (balance_cg > 0.) write(msg(len_trim(msg)+1:), '(a,f5.2)') " balance_cg = ", balance_cg
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
          if (watch_ind /= INVALID .and. enable_exclusion) then
             write(msg, '(a,f4.1,a)')"[load_balance] Thread exclusion enabled (threshold = ", exclusion_thr, ")"
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
       endif
 

@@ -471,6 +471,7 @@ contains
       use grid_cont,        only: grid_container
       use mpisetup,         only: piernik_MPI_Allreduce
 #ifdef DEBUG
+      use constants,        only: V_DEBUG
       use dataio_pub,       only: msg, printinfo
       use mpisetup,         only: master
       use named_array_list, only: qna
@@ -518,7 +519,7 @@ contains
 #ifdef DEBUG
       if (master) then
          write(msg, '(2a,2(a,g15.7))')"[cg_list_dataop:subtract_average] Average of '",qna%lst(iv)%name,"' over volume ",vol," is ",avg
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       endif
 #endif /* DEBUG */
 

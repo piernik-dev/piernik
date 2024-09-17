@@ -99,7 +99,7 @@ contains
    subroutine read_problem_par
 
       use cg_list_global,        only: all_cg
-      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI, cbuff_len, INVALID
+      use constants,             only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI, cbuff_len, INVALID, V_VERBOSE, V_INFO
       use dataio_pub,            only: die, warn, msg, printinfo, nh
       use domain,                only: dom
       use fluidindex,            only: iarr_all_dn
@@ -253,7 +253,7 @@ contains
          else
             write(msg, '(a)')"[initproblem:problem_initial_conditions] Set up point-like mass"
          endif
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_INFO)
          if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:problem_initial_conditions] Part of the spheroid is outside the domain in the X-direction.")
          if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
               (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
@@ -263,7 +263,7 @@ contains
          else
             write(msg,'(a,g12.5)')   "[initproblem:problem_initial_conditions] Mass = ", d0
          endif
-         call printinfo(msg, .true.)
+         call printinfo(msg, V_VERBOSE)
       endif
 
       call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
@@ -291,7 +291,7 @@ contains
       use cg_cost_data,      only: I_IC
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
-      use constants,         only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, LO, HI
+      use constants,         only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, LO, HI, V_DEBUG
       use dataio_pub,        only: die, msg, printinfo
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -430,11 +430,11 @@ contains
       n_res = leaves%norm_sq(qna%ind(ares_n))
       if (abs(dm) > tiny(1.)) then  ! An FP overflow will occur when n_res > dm/tiny(1.)
          write(msg, '(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ", n_res/dm
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_DEBUG)
       else
          write(msg, '(2(a,g14.6))')"[initproblem:problem_initial_conditions] Analytical norm residual= ", n_res, " point mass= ", d0
          ! Is n_res ~ sqrt(cg%dvol) ?
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_DEBUG)
       endif
 
    end subroutine problem_initial_conditions
@@ -685,7 +685,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX, idlen
+      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX, idlen, V_ESSENTIAL
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -741,7 +741,7 @@ contains
          ffmt = "f12"
          if (any(abs(dev) > 1e6) .or. any(abs(dev) < 1e-4)) ffmt = "g14"
          write(msg,'(a,' // ffmt // '.6,a,2' // ffmt // '.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
-         call printinfo(msg)
+         call printinfo(msg, V_ESSENTIAL)
       endif
 
    end subroutine finalize_problem_maclaurin

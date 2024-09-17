@@ -38,7 +38,7 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants, only: dsetnamelen
+   use constants, only: dsetnamelen, V_VERBOSE
 
    implicit none
 
@@ -54,9 +54,9 @@ module multigridvars
    integer(kind=4) :: source, solution, defect, correction !< indices to the fields described above
 
    ! namelist parameters
-   integer(kind=4)  :: ord_prolong     !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
-   logical          :: stdout          !< print verbose messages to stdout
-   logical          :: verbose_vcycle  !< Print one line of log per V-cycle, summary otherwise
+   integer(kind=4)  :: ord_prolong       !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
+   logical          :: verbose_vcycle    !< Print one line of log per V-cycle, summary otherwise
+   integer(kind=4)  :: v_mg = V_VERBOSE  !< Multigrid verbosity
 
    ! miscellaneous
    real             :: ts                !< time for runtime profiling

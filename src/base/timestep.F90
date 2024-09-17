@@ -136,6 +136,7 @@ contains
       use resistivity,        only: timestep_resist
 #endif /* RESISTIVE */
 #ifdef DEBUG
+      use constants,          only: V_DEBUG
       use dataio_pub,         only: printinfo
       use piernikdebug,       only: has_const_dt, constant_dt
 #endif /* DEBUG */
@@ -224,7 +225,7 @@ contains
       if (has_const_dt) then
          dt = constant_dt
          write(msg,*) "[timestep:time_step]: (constant_dt) c_all = ", c_all
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       endif
 #endif /* DEBUG */
       call compare_array1D([dt])  ! just in case

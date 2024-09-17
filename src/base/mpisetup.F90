@@ -142,14 +142,13 @@ contains
 
    subroutine init_mpi
 
-      use constants,     only: cwdlen, I_ONE
+      use constants,     only: cwdlen, I_ONE, V_LOG, V_DEBUG, V_INFO
+      use dataio_pub,    only: die, print_char_line, printinfo, msg, tmp_log_file, par_file, lun
       use MPIF,          only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL, &
            &                   MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND, MPI_TAG_UB, &
            &                   MPI_Wtime, MPI_Init, MPI_Comm_get_parent, &
            &                   MPI_Comm_rank, MPI_Comm_size
       use MPIFUN,        only: MPI_Gather, MPI_Comm_get_attr
-      use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
-      use dataio_pub,    only: par_file, lun
       use signalhandler, only: SIGINT, register_sighandler
 #if defined(__INTEL_COMPILER)
       use ifport,        only: getpid, getcwd, hostnm
@@ -193,7 +192,7 @@ contains
       call MPI_Comm_size(MPI_COMM_WORLD, nproc, err_mpi)
       call MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, tag_ub, flag, err_mpi)
 
-      LAST = nproc-I_ONE
+      LAST = nproc - I_ONE
       master = (proc == FIRST)
       slave  = .not. master
       have_mpi = (LAST /= FIRST)
@@ -206,11 +205,8 @@ contains
             open(newunit=lun, file=tmp_log_file)
             close(lun, status="delete")
          endif
-#ifdef VERBOSE
-         call printinfo("[mpisetup:init_mpi]: commencing...")
-#endif /* VERBOSE */
-         if (is_spawned) &
-              call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!")
+         call printinfo("[mpisetup:init_mpi]: commencing...", V_DEBUG)
+         if (is_spawned) call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!", V_INFO)
       endif
 
       if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) &
@@ -223,10 +219,9 @@ contains
       cwd_status  = getcwd(cwd_proc)
 
       if (cwd_status /= 0) call die("[mpisetup:init_mpi] problems accessing current working directory.")
-#ifdef DEBUG
-      write(msg,'(3a,i8,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
-      call printinfo(msg)
-#endif /* DEBUG */
+
+!!$      write(msg,'(3a,i8,3a)') 'mpisetup: host="',trim(host_proc),'", PID=',pid_proc,' CWD="',trim(cwd_proc),'"'
+!!$      call printinfo(msg, V_DEBUG)
 
       call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, MPI_COMM_WORLD, err_mpi)
@@ -238,19 +233,19 @@ contains
          inquire(file=par_file, exist=par_file_exist)
          if (.not. par_file_exist) call die('[mpisetup:init_mpi] Cannot find "problem.par" in the working directory',0)
 
-         call printinfo("------------------------------------------------------------------------------------------------------", .false.)
-         call printinfo("###############     Environment     ###############", .false.)
-         call printinfo("", .false.)
-         call printinfo("PROCESSES:", .false.)
+         call print_char_line("-")
+         call printinfo("###############     Environment     ###############", V_LOG)
+         call printinfo("", V_LOG)
+         call printinfo("PROCESSES:", V_LOG)
          do iproc = FIRST, LAST
             write(msg,"(a,i4,a,i6,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
-            call printinfo(msg, .false.)
+            call printinfo(msg, V_LOG)
          enddo
-         call printinfo("", .true.)
-         write(msg,"(5a,i5)") 'Start of the',ansi_white,' PIERNIK ',ansi_black,'code. No. of procs = ', nproc
-         call printinfo(msg, .true.)
-         call printinfo("", .true.)
-         call printinfo("###############     Namelist parameters     ###############", .false.)
+         call printinfo("", V_INFO, .true.)
+         write(msg, "(a,i5,a)")'   Start of the PIERNIK code on ', nproc, " processes"
+         call printinfo(msg, V_INFO, .true.)
+         call printinfo("", V_INFO, .true.)
+         call printinfo("###############     Namelist parameters     ###############", V_LOG)
       endif
 
       deallocate(host_all, pid_all, cwd_all)
@@ -351,7 +346,7 @@ contains
 
    subroutine cleanup_mpi
 
-      use dataio_pub,      only: printinfo, close_logs
+      use dataio_pub,      only: print_char_line, close_logs
       use MPIF,            only: MPI_COMM_WORLD, MPI_Barrier, MPI_Comm_disconnect, MPI_Finalize
       use piernik_mpi_sig, only: sig
 #if defined(__INTEL_COMPILER)
@@ -363,7 +358,7 @@ contains
       if (allocated(req)) deallocate(req)
       if (allocated(req2)) deallocate(req2)
 
-      if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
+      if (master) call print_char_line("+")
       call MPI_Barrier(MPI_COMM_WORLD,err_mpi)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
       if (is_spawned) then

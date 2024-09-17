@@ -112,7 +112,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list_dataop,     only: ind_val
-      use constants,          only: tmr_mg
+      use constants,          only: tmr_mg, V_VERBOSE
       use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: master
       use multigrid_Laplace,  only: residual, vT_A_v
@@ -156,7 +156,7 @@ contains
             write(msg,'(a,i3,a,f12.8,a,es10.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          endif
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_VERBOSE)
          if (norm_lhs/norm_rhs <= norm_tol) exit                                                  ! if {r}_{k+1} is sufficiently small then exit loop
          norm_old = norm_lhs
          call precond(defect, correction)                                                         ! {z}_{k+1} := {M}^{-1} {r}_{k+1}
@@ -171,7 +171,7 @@ contains
       tot_ts = tot_ts + ts
       loc_ts = loc_ts + ts
       write(msg, '(a,i4,a,f8.3)')"MG-PCG: ",k," iterations, total time spent =", loc_ts
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine mgpcg
 

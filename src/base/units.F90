@@ -178,7 +178,7 @@ contains
 !<
    subroutine init_units
 
-      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI, U_TEMP
+      use constants,  only: pi, fpi, dirtyL, PIERNIK_INIT_MPI, U_TEMP, V_VERBOSE, V_INFO
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
       use func,       only: operator(.equals.)
       use mpisetup,   only: master
@@ -186,16 +186,13 @@ contains
       implicit none
 
       logical, save            :: scale_me = .false.
-      logical                  :: to_stdout
+      integer(kind=4) :: v
+
+      v = V_VERBOSE
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[units:init_units] MPI not initialized.")
 
       call units_par_io
-
-      to_stdout = .false.
-#ifdef VERBOSE
-      to_stdout = .true.
-#endif /* VERBOSE */
 
       s_lmtvB(U_ENER) = "complex "
       select case (trim(units_set))
@@ -314,7 +311,7 @@ contains
             if (master) call warn("[units:init_units] PIERNIK will use 'cm', 'sek', 'gram' defined in problem.par")
             if (any([cm.equals.dirtyL, sek.equals.dirtyL, gram.equals.dirtyL])) &
                call die("[units:init_units] units_set=='user', yet one of {'cm','sek','gram'} is not set in problem.par") ! Don't believe in coincidence
-            to_stdout = .true.               ! Force output in case someone is not aware what he/she is doing
+            v = V_INFO               ! Increase verbosity in case someone is not aware what he/she is doing
             if (trim(s_len_u)  == ' undefined') s_len_u   = ' [user unit]'
             if (trim(s_time_u) == ' undefined') s_time_u  = ' [user unit]'
             if (trim(s_mass_u) == ' undefined') s_mass_u  = ' [user unit]'
@@ -337,11 +334,11 @@ contains
 
       if (master .and. .not. scale_me) then
          write(msg,'(a,es14.7,a)') '[units:init_units] cm   = ', cm,   trim(s_len_u)
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
          write(msg,'(a,es14.7,a)') '[units:init_units] sek  = ', sek,  trim(s_time_u)
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
          write(msg,'(a,es14.7,a)') '[units:init_units] gram = ', gram, trim(s_mass_u)
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
       endif
 
 ! length units:
@@ -412,9 +409,9 @@ contains
 
       if (master) then
          write(msg,'(a,es20.13)') '[units:init_units] newtong = ', newtong
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
          write(msg,'(a,es20.13)') '[units:init_units] kboltz  = ', kboltz
-         call printinfo(msg, to_stdout)
+         call printinfo(msg, v)
       endif
 
    end subroutine init_units

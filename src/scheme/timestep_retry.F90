@@ -234,7 +234,7 @@ contains
    subroutine restart_arrays
 
       use cg_list_global,   only: all_cg
-      use constants,        only: AT_BACKUP, AT_IGNORE, dsetnamelen, INVALID
+      use constants,        only: AT_BACKUP, AT_IGNORE, dsetnamelen, INVALID, V_VERBOSE
       use dataio_pub,       only: printinfo, msg
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
@@ -257,7 +257,7 @@ contains
                   if (.not. na%exists(rname)) then
                      if (master) then
                         write(msg,'(3a)')"[timestep_retry:restart_arrays] creating backup field '", rname, "'"
-                        call printinfo(msg)
+                        call printinfo(msg, V_VERBOSE)
                      endif
                      allocate(pos_copy(size(na%lst(i)%position)))
                      pos_copy = na%lst(i)%position

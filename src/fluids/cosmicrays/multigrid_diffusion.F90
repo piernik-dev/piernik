@@ -240,7 +240,7 @@ contains
       endif
 
       if (single_base .and. nproc > 1) then
-         call warn("[multigrid_diffusion:multigrid_diff_par] single_base disabled just in case")
+         if (master) call warn("[multigrid_diffusion:multigrid_diff_par] single_base disabled just in case")
          single_base = (nproc == 1)
       endif
 
@@ -281,7 +281,7 @@ contains
       use global,         only: dt
       use initcosmicrays, only: use_CRdiff
       use mpisetup,       only: master
-      use multigridvars,  only: stdout
+      use multigridvars,  only: v_mg
 
       implicit none
 
@@ -300,7 +300,7 @@ contains
       else
          if (dt < 0.99999 * diff_dt_crs_orig * diff_tstep_fac .and. .not. halfstep .and. master) then
             write(msg,'(a,f8.3,a)')"[multigrid_diffusion:inworth_mg_diff] Timestep limited somewhere else: dt = ", dt / diff_dt_crs_orig, " of explicit dt_crs."
-            call printinfo(msg, stdout)
+            call printinfo(msg, v_mg)
          endif
          call multigrid_solve_diff
          call all_fluid_boundaries

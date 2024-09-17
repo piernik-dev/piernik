@@ -296,8 +296,8 @@ contains
 
    subroutine publish(this)
 
-      use constants,    only: I_ZERO, I_ONE
-      use dataio_pub,   only: printinfo, msg
+      use constants,    only: I_ZERO, I_ONE, V_INFO
+      use dataio_pub,   only: warn, printinfo, msg
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Isend, MPI_Recv, MPI_Waitall
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req, piernik_MPI_Barrier, extra_barriers
@@ -317,7 +317,7 @@ contains
       if (.not. use_profiling) return
 
       if (this%overflown) then
-         call printinfo("[ppp_eventlist:publish] Profile timings have overflown the allowed buffers and thus are partially broken. Skipping.")
+         call warn("[ppp_eventlist:publish] Profile timings have overflown the allowed buffers and thus are partially broken. Skipping.")
          call this%cleanup
          return
       endif
@@ -329,7 +329,7 @@ contains
             msg = "all events categories are enabled"
          endif
 
-         call printinfo("[ppp_eventlist:publish] Profile timings will be written to '" // trim(profile_file) // "' file, " // trim(msg))
+         call printinfo("[ppp_eventlist:publish] Profile timings will be written to '" // trim(profile_file) // "' file, " // trim(msg), V_INFO)
          open(newunit=profile_lun, file=profile_file)
       endif
 

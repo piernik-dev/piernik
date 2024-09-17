@@ -61,7 +61,7 @@ contains
 
    function init(rp) result(this)
 
-      use constants,  only: base_level_id, ndims
+      use constants,  only: base_level_id, ndims, V_VERBOSE
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: master
       use refinement, only: ref_point
@@ -79,7 +79,7 @@ contains
       this%ijk = uninit
       if (master) then
          write(msg, '(a,3g13.5,a,i3)')"[URC point] Initializing refinement at point: [ ", this%coords, " ] at level ", this%level
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
    end function init

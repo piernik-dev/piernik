@@ -94,6 +94,7 @@ contains
 
    subroutine print(this)
 
+      use constants,  only: V_DEBUG
       use dataio_pub, only: msg, printinfo
 
       implicit none
@@ -104,7 +105,7 @@ contains
 
       do i = lbound(this%blist, dim=1), ubound(this%blist, dim=1)
          write(msg,*)"[box_list:print] #",i," [ ",this%blist(i)%b(:, LO),"]..[",this%blist(i)%b(:, HI),"]",product(this%blist(i)%b(:, HI)-this%blist(i)%b(:, LO)+1)," cells"
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       enddo
 
    end subroutine print

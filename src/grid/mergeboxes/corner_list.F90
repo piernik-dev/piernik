@@ -72,6 +72,7 @@ contains
 
    subroutine print(this)
 
+      use constants,  only: V_DEBUG
       use dataio_pub, only: warn, printinfo, msg
 
       implicit none
@@ -91,7 +92,7 @@ contains
 
       do i = lbound(this%clist, dim=1), ubound(this%clist, dim=1)
          write(msg,*)"[corner_list:print] #",i," @ ",this%clist(i)%pos," -> ",this%clist(i)%ivec, " dist(CoM) ", this%clist(i)%dist
-         call printinfo(msg)
+         call printinfo(msg, V_DEBUG)
       enddo
 
    end subroutine print

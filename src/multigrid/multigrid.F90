@@ -63,7 +63,6 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>level_depth          </td><td>1      </td><td>integer value </td><td>\copydoc multigrid::init_multigrid::level_depth</td></tr>
 !! <tr><td>ord_prolong          </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong          </td></tr>
-!! <tr><td>stdout               </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::stdout               </td></tr>
 !! <tr><td>verbose_vcycle       </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::verbose_vcycle       </td></tr>
 !! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc global::do_ascii_dump               </td></tr>
 !! <tr><td>dirty_debug          </td><td>.false.</td><td>logical       </td><td>\copydoc global::dirty_debug                 </td></tr>
@@ -79,7 +78,7 @@ contains
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,       only: single_base, ord_prolong, stdout, verbose_vcycle, tot_ts, &
+      use multigridvars,       only: single_base, ord_prolong, verbose_vcycle, tot_ts, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
       use named_array_list,    only: qna
 #ifdef SELF_GRAV
@@ -93,7 +92,7 @@ contains
 
       logical, save         :: frun = .true.          !< First run flag
 
-      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
+      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:multigrid_par] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
@@ -106,7 +105,6 @@ contains
       ord_prolong           = O_D3
       show_n_dirtys         = 16
       ! May all the logical parameters be .false. by default
-      stdout                = .false.
       verbose_vcycle        = .false.
       do_ascii_dump         = .false.
       dirty_debug           = .false.
@@ -133,10 +131,9 @@ contains
          ibuff(2) = ord_prolong
          ibuff(3) = show_n_dirtys
 
-         lbuff(1) = stdout
-         lbuff(2) = verbose_vcycle
-         lbuff(3) = do_ascii_dump
-         lbuff(4) = dirty_debug
+         lbuff(1) = verbose_vcycle
+         lbuff(2) = do_ascii_dump
+         lbuff(3) = dirty_debug
 
       endif
 
@@ -145,22 +142,21 @@ contains
 
       if (slave) then
 
-         level_depth           = ibuff(1)
-         ord_prolong           = int(ibuff(2), kind=4)
-         show_n_dirtys         = ibuff(3)
+         level_depth    = ibuff(1)
+         ord_prolong    = int(ibuff(2), kind=4)
+         show_n_dirtys  = ibuff(3)
 
-         stdout           = lbuff(1)
-         verbose_vcycle   = lbuff(2)
-         do_ascii_dump    = lbuff(3)
-         dirty_debug      = lbuff(4)
+         verbose_vcycle = lbuff(1)
+         do_ascii_dump  = lbuff(2)
+         dirty_debug    = lbuff(3)
 
       endif
 
-      stdout = stdout .and. master
-
       single_base = (nproc == 1)
 
+#ifndef DEBUG
       if (dirty_debug .and. master) call warn("[multigrid:multigrid_par] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
+#endif /* !DEBUG */
       if (dom%eff_dim < 0 .or. dom%eff_dim > 3) call die("[multigrid:multigrid_par] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
@@ -195,7 +191,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
-      use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
+      use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor, V_VERBOSE
       use dataio_pub,         only: printinfo, warn, die, code_progress, msg
       use domain,             only: dom, minsize
       use grid_cont,          only: grid_container
@@ -229,7 +225,7 @@ contains
          if (master) then
             if (level_depth /= level_incredible) call warn("[multigrid:init_multigrid] level_depth is too big,")
             write(msg,'(a,i3)')"[multigrid:init_multigrid] Automatically set level_depth = ",j
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
          level_depth = j
       endif
@@ -280,7 +276,7 @@ contains
       if (master) then
          write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%l%id - coarsest%level%l%id, &
               &                      " coarse levels, coarsest level resolution [ ", coarsest%level%l%n_d(:)," ]"
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
 
    end subroutine init_multigrid
@@ -353,7 +349,7 @@ contains
 
    subroutine cleanup_multigrid
 
-      use constants,           only: I_ONE
+      use constants,           only: I_ONE, V_LOG
       use dataio_pub,          only: msg, printinfo
       use MPIF,                only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,              only: MPI_Gather
@@ -384,7 +380,7 @@ contains
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."
-         call printinfo(msg, .false.)
+         call printinfo(msg, V_LOG)
       endif
 
       if (allocated(all_ts)) deallocate(all_ts)

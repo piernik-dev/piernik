@@ -144,6 +144,8 @@ module constants
    integer(kind=4), parameter :: idlen = 3                  !< COMMENT ME
    integer(kind=4), parameter :: singlechar = 1             !< a single character
 
+   integer(kind=4), parameter :: rep_len = 112              !< default length of "---...", "+++..." and "===..." strings in the log
+
    ! simulation state
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization
@@ -158,6 +160,31 @@ module constants
       enumerator :: PIERNIK_FINISHED                     ! finished simulation
       enumerator :: PIERNIK_CLEANUP                      ! finished post-simulation computations and I/O
    end enum
+
+   ! verbosity levels for printinfo
+   enum, bind(C)
+      enumerator :: V_SILENT                 ! messages that are supposed to be only in the log, not on stdout
+      enumerator :: V_DEBUG                  ! debugging information
+      enumerator :: V_VERBOSE                ! extra details
+      enumerator :: V_INFO                   ! printed by default
+      enumerator :: V_ESSENTIAL              ! to make the output very brief
+      enumerator :: V_WARN                   ! redirect to warn()
+      ! aliases
+      enumerator :: V_LOG     = V_SILENT
+      enumerator :: V_NORMAL  = V_INFO
+      enumerator :: V_LACONIC = V_ESSENTIAL
+      ! special aliases
+      enumerator :: V_LOWEST = V_SILENT
+      enumerator :: V_HIGHEST = V_WARN
+   end enum
+
+   character(len=*), dimension(V_LOWEST:V_HIGHEST), parameter :: v_name = [ &
+        "log      ", &
+        "debug    ", &
+        "verbose  ", &
+        "standard ", &
+        "essential", &
+        "warn     " ]
 
    ! grid geometry type
    enum, bind(C)

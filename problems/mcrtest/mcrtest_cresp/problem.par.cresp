@@ -93,7 +93,6 @@ $BASE_DOMAIN
  /
 
  $MULTIGRID_SOLVER
-!    stdout = .true.
     dirty_debug = .true.
  /
 

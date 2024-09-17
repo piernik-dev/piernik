@@ -86,7 +86,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
-      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, INVALID, tmr_amr, PPP_AMR
+      use constants,          only: pSUM, pMAX, base_level_id, refinement_factor, INVALID, tmr_amr, PPP_AMR, V_VERBOSE
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
@@ -100,8 +100,8 @@ contains
 
       implicit none
 
-      class(cg_leaves_t),         intent(inout) :: this  !< object invoking type-bound procedure
-      character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
+      class(cg_leaves_t), intent(inout) :: this  !< object invoking type-bound procedure
+      character(len=*),   intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
       type(cg_level_connected_t), pointer :: curl
       type(cg_list_element),      pointer :: cgl
@@ -121,8 +121,7 @@ contains
       call leaves%delete
       call all_lists%register(this, "leaves")
 
-      msg = "[cg_leaves:update] Grids on levels: "
-      if (present(str)) msg(len_trim(msg)+1:) = str
+      msg = "[cg_leaves:update] Grids on levels:" // str
       ih = len_trim(msg) + 1
 
       curl => finest%level
@@ -185,7 +184,8 @@ contains
             write(msg(len_trim(msg)+1:), '(" ",e9.2)') lf
          endif
       endif
-      if (master .and. (msg(ih:is) /= prev_msg(ih:prev_is))) call printinfo(msg)
+      ! Consider a higher verbosity when str == ' ( derefine )'
+      if (master .and. (msg(ih:is) /= prev_msg(ih:prev_is))) call printinfo(msg, V_VERBOSE)
       prev_msg = msg
       prev_is = is
 
@@ -193,7 +193,7 @@ contains
       lb_part = global_balance_particles()
       if (master .and. (lb_part .notequals. prev_lb_part)) then
          write(msg, '(a,f7.4)')"[cg_leaves:update] particles load balance: ", lb_part
-         call printinfo(msg)
+         call printinfo(msg, V_VERBOSE)
       endif
       prev_lb_part = lb_part
 #endif /* NBODY */
@@ -214,8 +214,8 @@ contains
 
       implicit none
 
-      class(cg_leaves_t),         intent(inout) :: this  !< object invoking type-bound procedure
-      character(len=*), optional, intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
+      class(cg_leaves_t), intent(inout) :: this  !< object invoking type-bound procedure
+      character(len=*),   intent(in)    :: str   !< optional string identifier to show the progress of updating refinement
 
       type(cg_level_connected_t), pointer :: curl
       character(len=*), parameter :: bu_label = "leaves_balance_and_update"

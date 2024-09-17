@@ -357,7 +357,7 @@ contains
 
    subroutine print(this)
 
-      use constants,        only: I_ZERO, I_ONE
+      use constants,        only: I_ZERO, I_ONE, V_VERBOSE
       use dataio_pub,       only: msg, printinfo
       use global,           only: t
       use mpisetup,         only: master
@@ -382,7 +382,7 @@ contains
             class default
                write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
          end select
-         if (master) call printinfo(msg)
+         if (master) call printinfo(msg, V_VERBOSE)
          os => os%earlier
          if (cnt > too_long) os => null()
       enddo
@@ -393,7 +393,7 @@ contains
             write(msg(len_trim(msg)+1:), '(a,l2)') " is valid? ", this%is_valid()
          class default
       end select
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine print
 

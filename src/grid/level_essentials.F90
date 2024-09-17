@@ -66,7 +66,7 @@ contains
 
    subroutine init(this, id, n_d, off)
 
-      use constants,  only: ndims, LONG, INT4
+      use constants,  only: base_level_id, ndims, LONG, INT4, V_INFO
       use dataio_pub, only: msg, printinfo, die
       use domain,     only: dom
       use mpisetup,   only: master
@@ -82,13 +82,14 @@ contains
 
       call this%write(id, n_d, off)
 
-      write(msg, '(a,i4,a,3i11,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
+      write(msg, '(a,i3,a,3i11,a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], "
       if (any(dom%has_dir .and. (this%off /= 0))) then
          write(msg(len_trim(msg)+1:), '(a,3i8,a)') " offset=[", this%off, "]"
       else
          write(msg(len_trim(msg)+1:), '(a)') " no offset"
       endif
-      if (master) call printinfo(msg)
+      if (this%id == base_level_id) write(msg(len_trim(msg)+1:), '(a)') " (base level)"
+      if (master) call printinfo(msg, V_INFO)
 
    end subroutine init
 
@@ -96,7 +97,7 @@ contains
 
    subroutine update(this, id, n_d, off)
 
-      use constants,  only: ndims
+      use constants,  only: ndims, V_VERBOSE
       use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: master
 
@@ -113,7 +114,7 @@ contains
       call this%write(id, n_d, off)
 
       write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Updating level", this%id, ", new size=[", this%n_d, "], new offset=[", this%off, "]"
-      if (master) call printinfo(msg)
+      if (master) call printinfo(msg, V_VERBOSE)
 
    end subroutine update
 

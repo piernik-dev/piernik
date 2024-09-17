@@ -30,7 +30,7 @@
 !<
 module dataio_pub
 
-   use constants, only: cbuff_len, domlen, idlen, cwdlen
+   use constants, only: cbuff_len, domlen, idlen, cwdlen, V_INFO
 
    implicit none
 
@@ -38,7 +38,7 @@ module dataio_pub
    private :: err_mpi, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
         &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
         &     namelist_handler_t, logbuffer                                            ! QA_WARN
-   private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
+   private :: cbuff_len, domlen, idlen, cwdlen, V_INFO ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
    real, parameter             :: piernik_hdf5_version = 1.19    !< output version
@@ -113,18 +113,18 @@ module dataio_pub
 
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
 
+   !< enum for message types
    ! stdout and logfile messages
-   integer, parameter :: T_PLAIN  = 0, &                         !< enum for message types
-        &                T_ERR    = T_PLAIN  + 1, &
-        &                T_WARN   = T_ERR    + 1, &
-        &                T_INFO   = T_WARN   + 1, &
-        &                T_IO     = T_INFO   + 1, &
-        &                T_IO_NOA = T_IO     + 1, &
-        &                T_SILENT = T_IO_NOA + 1
+   enum, bind(C)
+      enumerator ::  T_PLAIN = 0
+      enumerator :: T_PLAIN_NOA, T_ERR, T_WARN, T_INFO, T_IO, T_IO_NOA, T_SILENT
+   end enum
    character(len=msglen)       :: msg                            !< buffer for messages
    character(len=ansirst)      :: ansi_black
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    real                        :: thdf                           !< hdf dump wallclock
+
+   integer(kind=4)             :: piernik_verbosity = V_INFO
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
@@ -165,6 +165,11 @@ module dataio_pub
    end type namelist_handler_t
 
    type(namelist_handler_t) :: nh
+
+   interface printinfo
+      module procedure printinfo_legacy
+      module procedure printinfo_v
+   end interface printinfo
 
 contains
 
@@ -246,7 +251,7 @@ contains
       implicit none
 
       character(len=*),  intent(in) :: nm
-      integer,           intent(in) :: mode
+      integer(kind=4),   intent(in) :: mode
 
       character(len=ansilen)        :: ansicolor
       integer, parameter            :: msg_type_len = len("Warning")
@@ -257,7 +262,7 @@ contains
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
       adv = 'yes'
-      if (mode == T_IO_NOA) adv = 'no'
+      if ((mode == T_IO_NOA) .or. (mode == T_PLAIN_NOA)) adv = 'no'
       select case (mode)
          case (T_ERR)
             ansicolor = ansi_red
@@ -279,7 +284,7 @@ contains
             ansicolor = ansi_black
             outunit   = stdout
             msg_type_str = ''
-         case default ! T_PLAIN
+         case default ! T_PLAIN, T_PLAIN_NOA
             ansicolor = ansi_black
             outunit   = stdout
             msg_type_str = ''
@@ -288,7 +293,7 @@ contains
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, err_mpi)
 
       if (mode /= T_SILENT) then
-         if (mode == T_PLAIN) then
+         if ((mode == T_PLAIN) .or. (mode == T_PLAIN_NOA)) then
             write(outunit,'(a)') trim(nm)
          else
             write(outunit,'(a,a," @",a,i5,2a)', advance=adv) trim(ansicolor), msg_type_str, ansi_black, proc, ': ', trim(nm)
@@ -362,25 +367,85 @@ contains
       if (allocated(parfile)) deallocate(parfile)
 
    end subroutine cleanup_text_buffers
-!-----------------------------------------------------------------------------
-   subroutine printinfo(nm, to_stdout)
+
+   !> \brief Printinfo variant which prints a line of repeated characters
+
+   subroutine print_char_line(c, verbosity)
+
+      use constants, only: I_ONE, rep_len, V_LOG
 
       implicit none
 
-      character(len=*),  intent(in) :: nm
-      logical, optional, intent(in) :: to_stdout
+      character(len=I_ONE),      intent(in) :: c          !< the character to repeat
+      integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
 
-      if (present(to_stdout)) then
-         if (to_stdout) then
-            call colormessage(nm, T_PLAIN)
-         else
-            call colormessage(nm, T_SILENT)
-         endif
+      integer(kind=4) :: v
+
+      v = V_LOG
+      if (present(verbosity)) v = verbosity
+
+      call printinfo(repeat(c, rep_len), v)
+
+   end subroutine print_char_line
+
+   !> \brief Printinfo variant which does not print colored tag (legacy)
+
+   subroutine printinfo_legacy(nm, to_stdout)
+
+      use constants, only: cbuff_len, V_LOG, V_DEBUG, V_INFO
+
+      implicit none
+
+      character(len=*), intent(in) :: nm         !< message
+      logical,          intent(in) :: to_stdout  !< to print or only to log
+
+      character(len=cbuff_len) :: l
+
+      l = ""
+      if (piernik_verbosity <= V_DEBUG) l = "<Legacy>"
+
+!      call colormessage(nm, merge(T_PLAIN, T_SILENT, to_stdout))
+      call printinfo_v(trim(l) // nm, merge(V_INFO, V_LOG, to_stdout), .true.)
+
+   end subroutine printinfo_legacy
+
+   !> \brief New printinfo implementation that does the filtering wrt. verbosity level
+
+   subroutine printinfo_v(nm, verbosity, no_tag)
+
+      use constants, only: V_DEBUG, V_INFO, V_WARN, V_LOWEST, V_HIGHEST
+
+      implicit none
+
+      character(len=*),          intent(in) :: nm         !< message
+      integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
+      logical,         optional, intent(in) :: no_tag     !< use plain formatting (no color tag, ignored for V_WARN)
+
+      integer :: v, i
+      logical :: plain
+      character(len=V_HIGHEST-V_LOWEST+1) :: v_lev
+
+      v = V_INFO
+      if (present(verbosity)) v = verbosity
+
+      if (piernik_verbosity <= V_DEBUG) then  ! add verbosity level info to the messages
+         do i = V_LOWEST, V_HIGHEST-1
+            v_lev(i-V_LOWEST+1:i-V_LOWEST+1) = merge(merge("+", ".", present(verbosity)), " ", i < v)
+         enddo
+         v_lev(V_HIGHEST-V_LOWEST+1:V_HIGHEST-V_LOWEST+1) = ":"
       else
-         call colormessage(nm, T_INFO)
+         v_lev = ""
       endif
 
-   end subroutine printinfo
+      if (v >= V_WARN) then  ! now it is also possible to implement several warning levels, if necessary
+         call warn(nm)
+      else                   ! emit standard green-tagged message if verbosity level allows, print everything to the logile
+         plain = .false.
+         if (present(no_tag)) plain = no_tag
+         call colormessage(trim(v_lev) // nm, merge(merge(T_PLAIN, T_INFO, plain), T_SILENT, v >= piernik_verbosity))
+      endif
+
+   end subroutine printinfo_v
 !-----------------------------------------------------------------------------
    subroutine printio(nm, noadvance)
 
@@ -392,17 +457,22 @@ contains
       logical :: adv
 
       adv  = .true.
-      if (present(noadvance)) then
-         if (noadvance) adv = .false.
-      endif
+      if (present(noadvance)) adv = .not. noadvance
 
-      if (adv) then
-         call colormessage(nm, T_IO)
-      else
-         call colormessage(nm, T_IO_NOA)
-      endif
+      call colormessage(nm, merge(T_IO, T_IO_NOA, adv))
 
    end subroutine printio
+!-----------------------------------------------------------------------------
+   subroutine print_plain(nm, noadvance)
+
+      implicit none
+
+      character(len=*), intent(in) :: nm
+      logical,          intent(in) :: noadvance
+
+      call colormessage(nm, merge(T_PLAIN_NOA, T_PLAIN, noadvance))
+
+   end subroutine print_plain
 !-----------------------------------------------------------------------------
    subroutine warn(nm)
 
@@ -449,6 +519,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine namelist_errh(ierrh,nm,skip_eof)
 
+      use constants, only: V_VERBOSE
+
       implicit none
 
       integer(kind=4),   intent(in) :: ierrh
@@ -474,7 +546,7 @@ contains
                if (skip_eof) return
             endif
             write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par. Assuming defaults." ! Can happen also when there is no EOL after the namelist in problem.par
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          case (239, 5010)
             write(msg,'(3a)') "A problem with one of the variables that belong to the ",trim(nm)," namelist was found in problem.par:"
             call warn(msg)
@@ -493,7 +565,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine compare_namelist(this)
 
-      use constants, only: PIERNIK_INIT_IO_IC
+      use constants, only: PIERNIK_INIT_IO_IC, V_LOG
       use MPIF,      only: MPI_COMM_WORLD, MPI_Comm_rank
 
       implicit none
@@ -520,7 +592,7 @@ contains
          else
             write(msg,'(a1,a)') ' ',trim(sb)
          endif
-         call printinfo(msg, .false.)
+         call printinfo(msg, V_LOG)
       enddo
       close(lun_aft, status="delete")
       close(lun_bef, status="delete")

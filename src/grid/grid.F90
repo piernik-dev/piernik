@@ -49,7 +49,7 @@ contains
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_finest,    only: finest
-      use constants,          only: PIERNIK_INIT_DOMAIN, tmr_amr
+      use constants,          only: PIERNIK_INIT_DOMAIN, tmr_amr, V_DEBUG
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
       use mpisetup,           only: master
@@ -62,9 +62,7 @@ contains
       ts =  set_timer(tmr_amr, .true.)  ! we need it here for call leaves%update()
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
-#ifdef VERBOSE
-      call printinfo("[grid:init_grid]: commencing...")
-#endif /* VERBOSE */
+      if (master) call printinfo("[grid:init_grid]: commencing...", V_DEBUG)
 
       ! Create the empty main lists.with the base level
 
@@ -80,9 +78,7 @@ contains
 
       call leaves%update(" (base level) ")
 
-#ifdef VERBOSE
-      call printinfo("[grid:init_grid]: cg finished. \o/")
-#endif /* VERBOSE */
+      if (master) call printinfo("[grid:init_grid]: cg finished. \o/", V_DEBUG)
 
    end subroutine init_grid
 

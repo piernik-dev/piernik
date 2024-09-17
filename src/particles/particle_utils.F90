@@ -523,7 +523,7 @@ contains
 
    integer(kind=8) function global_count_all_particles(message) result(gpcount)
 
-      use constants,  only: pSUM, fmt_len
+      use constants,  only: pSUM, fmt_len, V_INFO
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: piernik_MPI_Allreduce, master
 
@@ -545,7 +545,7 @@ contains
                   fmt = '(2a,i20)'
             end select
             write(msg, fmt) trim(message), " Total number of particles is ", gpcount
-            call printinfo(msg)
+            call printinfo(msg, V_INFO)
          endif
       endif
 

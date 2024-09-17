@@ -91,7 +91,6 @@
  /
 
  $MULTIGRID_SOLVER
-    stdout    = .true.
     level_depth = 0       ! Turn off multigrid solve only on base level
  /
 

@@ -95,6 +95,7 @@ contains
 
    subroutine print(this)
 
+      use constants,  only: V_DEBUG, fmt_len
       use dataio_pub, only: msg, printinfo
       use mpisetup,   only: master
 
@@ -102,10 +103,12 @@ contains
 
       class(primes_t), intent(inout) :: this !< object invoking type-bound procedure
 
+      character(len=fmt_len) :: fmt
+
       if (master) then
-         write(msg,'(a,i5,a,i9,a)') "There are ", size(this%tab), " prime numbers smaller than", this%max,":"
-         call printinfo(msg)
-         print "(15i7)", this%tab
+         write(fmt, '(a,i0,a)')'(a,i0,a,i0,a,', ubound(this%tab, 1), '(" ",i0))'
+         write(msg, fmt) "There are ", size(this%tab), " prime numbers smaller than ", this%max," :", this%tab
+         call printinfo(msg, V_DEBUG)
       endif
 
    end subroutine print

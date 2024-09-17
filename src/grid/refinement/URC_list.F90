@@ -191,6 +191,7 @@ contains
 
    subroutine summary(this)
 
+      use constants,  only: V_VERBOSE
       use dataio_pub, only: msg, printinfo
       use mpisetup,   only: master
 
@@ -204,9 +205,9 @@ contains
       if (master) then
          if (this%cnt() /= 0) then  ! unfortunately this%cnt() can not be pure due to pointer assignment
             if (first_run) then
-               call printinfo(msg)
+               call printinfo(msg, V_VERBOSE)
             else
-               call printinfo(trim(msg) // " (update)")
+               call printinfo(trim(msg) // " (update)", V_VERBOSE)
             endif
          endif
       endif
@@ -271,7 +272,7 @@ contains
 
    subroutine create_plotfields(this)
 
-      use constants,              only: INVALID, dsetnamelen
+      use constants,              only: INVALID, dsetnamelen, V_VERBOSE
       use dataio_pub,             only: printinfo, msg, warn
       use named_array_list,       only: qna, wna
       use mpisetup,               only: master
@@ -303,26 +304,26 @@ contains
                      write(msg(len_trim(msg)+1:), '(a)') trim(qna%lst(p%iv)%name)
                   endif
                   write(msg(len_trim(msg)+1:), '(3a)') "' is stored in array '", trim(ref_n), "'"
-                  if (master) call printinfo(msg)
+                  if (master) call printinfo(msg, V_VERBOSE)
                endif
             class is (urc_jeans)
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field("nJ")
                   write(msg, '(3a)') "[URC_list:create_plotfields] Jeans refinement criterion is stored in array '", trim(ref_n), "'"
-                  if (master) call printinfo(msg)
+                  if (master) call printinfo(msg, V_VERBOSE)
                endif
             class is (urc_nbody)
                ! unused at the moment of implementation
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field("nparticles")
                   write(msg, '(3a)') "[URC_list:create_plotfields] particle count criterion is stored in array '", trim(ref_n), "'"
-                  if (master) call printinfo(msg)
+                  if (master) call printinfo(msg, V_VERBOSE)
                endif
             class is (urc_user)
                if (p%plotfield .and. p%iplot == INVALID) then
                   p%iplot = new_ref_field()
                   write(msg, '(3a)') "[URC_list:create_plotfields] user-provided refinement criterion is stored in array '", trim(ref_n), "'"
-                  if (master) call printinfo(msg)
+                  if (master) call printinfo(msg, V_VERBOSE)
                endif
             class default
                if (p%iplot /= INVALID) then

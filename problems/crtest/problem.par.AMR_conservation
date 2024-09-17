@@ -78,7 +78,6 @@
  /
 
  $MULTIGRID_SOLVER
-    stdout = .true.
     dirty_debug = .true.
  /
 

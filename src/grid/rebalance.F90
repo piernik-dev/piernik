@@ -221,7 +221,7 @@ contains
 
          use cg_level_base,     only: base
          use cg_level_coarsest, only: coarsest
-         use constants,         only: fmt_len, INVALID, I_ONE, base_level_id
+         use constants,         only: fmt_len, INVALID, I_ONE, base_level_id, V_VERBOSE
          use dataio_pub,        only: printinfo, die
          use load_balance,      only: balance_cg, balance_levels, oop_thr
          use mpisetup,          only: slave
@@ -315,7 +315,7 @@ contains
                  &                      size(cnt_gp), "i", int(log10(real(maxval([cnt_gp, 1]))))+3, ",a,f6.3,a)"
             write(msg, fmt)"Rebalance: ^", lbound(cnt_gp, 1), " .. ", ubound(cnt_gp, 1), " OutOfPlace grids = [", cnt_mv, " ] / [ ", cnt_gp, &
                  " ] (", s/real(sum(cnt_gp)), " -> " // trim(merge("reshuffling)       ", "skipping reshuffle)", rebalance_necessary))
-            call printinfo(msg)
+            call printinfo(msg, V_VERBOSE)
          endif
 
          if (.not. rebalance_necessary) s = 0.
