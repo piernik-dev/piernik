@@ -58,6 +58,7 @@ program piernik
    use timer,             only: walltime_end
    use timestep,          only: time_step, check_cfl_violation
    use user_hooks,        only: finalize_problem, problem_domain_update
+   use wrapper_stats,     only: cleanup_wstats
 #ifdef PERFMON
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
@@ -267,6 +268,7 @@ program piernik
    call ppp_main%stop(f_label)
    call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
    call cleanup_profiling
+   call cleanup_wstats
    call cleanup_mpi       ! No calls to warn() or printinfo() are allowed beyond this point.
    call cleanup_dataio
 

@@ -296,11 +296,11 @@ contains
 
    subroutine publish(this)
 
-      use constants,    only: I_ZERO, I_ONE, V_INFO
+      use constants,    only: I_ZERO, I_ONE, V_INFO, LONG
       use dataio_pub,   only: warn, printinfo, msg
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
+      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, upd_wall
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
 
       implicit none
@@ -382,6 +382,7 @@ contains
             endif
          enddo
       else
+         call upd_wall(int(t, LONG))
          call MPI_Waitall(t, req(:t), MPI_STATUSES_IGNORE, err_mpi)
          deallocate(buflabel, buftime)
       endif

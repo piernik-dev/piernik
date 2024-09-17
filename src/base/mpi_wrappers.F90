@@ -35,13 +35,17 @@ module mpi_wrappers
    implicit none
 
    private
-   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, extra_barriers, MPI_wrapper_stats
+   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, extra_barriers, MPI_wrapper_stats, cnt_wall, req_wall, upd_wall, C_REQ1, C_REQ2, C_NWRAP
 
    logical, save :: extra_barriers = .false.     !< when changed to .true. additional MPI_Barriers will be called.
    logical, save :: MPI_wrapper_stats = .false.  !< collect usage statistics in piernik_MPI_* wrappers
 
-   integer(kind=4) :: err_mpi  !< error status
    type(arrcnt) :: cnt_bar
+
+   type(arrcnt) :: cnt_wall, req_wall  ! counters for ppp_mpi, avoiding circular dependencies
+   enum, bind(C)
+      enumerator :: C_REQ1 = 1, C_REQ2, C_NWRAP  ! for both request arrays and calls without wrapper
+   end enum
 
 contains
 
@@ -69,7 +73,8 @@ contains
 
    subroutine piernik_MPI_Barrier
 
-      use MPIF, only: MPI_COMM_WORLD, MPI_Barrier
+      use mpisetup, only: err_mpi
+      use MPIF,     only: MPI_COMM_WORLD, MPI_Barrier
 
       implicit none
 
@@ -77,5 +82,20 @@ contains
       call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
 
    end subroutine piernik_MPI_Barrier
+
+!> \brief Update the stats counters for non-wrapped calls to MPI_Waitall
+
+   subroutine upd_wall(cntr)
+
+      use constants, only: LONG
+
+      implicit none
+
+      integer(LONG), intent(in) :: cntr
+
+      call cnt_wall%incr(int([C_NWRAP]))
+      call req_wall%add(int([C_NWRAP]), cntr)
+
+   end subroutine upd_wall
 
 end module mpi_wrappers

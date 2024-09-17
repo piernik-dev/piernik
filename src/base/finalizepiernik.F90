@@ -58,7 +58,6 @@ contains
       use timer,                 only: cleanup_timers
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: cleanup_problem
-      use wrapper_stats,         only: cleanup_wstats
 #ifdef RANDOMIZE
       use randomization,         only: cleanup_randomization
 #endif /* RANDOMIZE */
@@ -122,7 +121,6 @@ contains
 #ifdef THERM
      call cleanup_thermal;         call nextdot
 #endif /* THERM */
-     call cleanup_wstats;          call nextdot
 
    end subroutine cleanup_piernik
 
