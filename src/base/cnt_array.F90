@@ -60,28 +60,33 @@ contains
 
       implicit none
 
-      class(arrcnt),         intent(inout) :: this   !< an object invoking the type-bound procedure
-      integer, dimension(:), intent(in)    :: sizes  !< array of sizes for this%c (1-based)
+      class(arrcnt),                   intent(inout) :: this   !< an object invoking the type-bound procedure
+      integer, dimension(:), optional, intent(in)    :: sizes  !< array of sizes for this%c (1-based)
 
       if (allocated(this%c0) .or. allocated(this%c1) .or. allocated(this%c2) .or. allocated(this%c3)) &
            call die("[cnt_array:init] already initialized")
 
-      select case (size(sizes))
-         case (0)
-            allocate(this%c0)
-            this%c0 = 0
-         case (1)
-            allocate(this%c1(sizes(1)))
-            this%c1 = 0
-         case (2)
-            allocate(this%c2(sizes(1), sizes(2)))
-            this%c2 = 0
-         case (3)
-            allocate(this%c3(sizes(1), sizes(2), sizes(3)))
-            this%c3 = 0
-         case default
-            call die("[cnt_array:init] rank not implemented")
-      end select
+      if (present(sizes)) then
+         select case (size(sizes))
+            case (0)  ! the harder way for a scalar counter
+               allocate(this%c0)
+               this%c0 = 0
+            case (1)
+               allocate(this%c1(sizes(1)))
+               this%c1 = 0
+            case (2)
+               allocate(this%c2(sizes(1), sizes(2)))
+               this%c2 = 0
+            case (3)
+               allocate(this%c3(sizes(1), sizes(2), sizes(3)))
+               this%c3 = 0
+            case default
+               call die("[cnt_array:init] rank not implemented")
+         end select
+      else  ! the easier way for a scalar counter
+         allocate(this%c0)
+         this%c0 = 0
+      endif
 
    end subroutine init
 
@@ -106,8 +111,8 @@ contains
 
       implicit none
 
-      class(arrcnt),         intent(inout) :: this  !< an object invoking the type-bound procedure
-      integer, dimension(:), intent(in)    :: ind   !< position at which we need +1
+      class(arrcnt),                   intent(inout) :: this  !< an object invoking the type-bound procedure
+      integer, dimension(:), optional, intent(in)    :: ind   !< position at which we need +1
 
       call this%add(ind, 1_LONG)
 
@@ -121,26 +126,31 @@ contains
 
       implicit none
 
-      class(arrcnt),         intent(inout) :: this  !< an object invoking the type-bound procedure
-      integer, dimension(:), intent(in)    :: ind   !< position at which we need +val
-      integer(LONG),         intent(in)    :: val   !< value to add to selected counter
+      class(arrcnt),                   intent(inout) :: this  !< an object invoking the type-bound procedure
+      integer, dimension(:), optional, intent(in)    :: ind   !< position at which we need +val
+      integer(LONG),                   intent(in)    :: val   !< value to add to selected counter
 
-      select case (size(ind))
-         case (0)
-            if (.not. allocated(this%c0)) call die("[cnt_array:add] c0 not allocated")
-            this%c0 = this%c0 + val
-         case (1)
-            if (.not. allocated(this%c1)) call die("[cnt_array:add] c1 not allocated")
-            this%c1(ind(1)) = this%c1(ind(1)) + val
-         case (2)
-            if (.not. allocated(this%c2)) call die("[cnt_array:add] c2 not allocated")
-            this%c2(ind(1), ind(2)) = this%c2(ind(1), ind(2)) + val
-         case (3)
-            if (.not. allocated(this%c3)) call die("[cnt_array:add] c3 not allocated")
-            this%c3(ind(1), ind(2), ind(3)) = this%c3(ind(1), ind(2), ind(3)) + val
-         case default
-            call die("[cnt_array:add] rank not implemented")
-      end select
+      if (present(ind)) then
+         select case (size(ind))
+            case (0)
+               if (.not. allocated(this%c0)) call die("[cnt_array:add] c0 not allocated (1)")
+               this%c0 = this%c0 + val
+            case (1)
+               if (.not. allocated(this%c1)) call die("[cnt_array:add] c1 not allocated")
+               this%c1(ind(1)) = this%c1(ind(1)) + val
+            case (2)
+               if (.not. allocated(this%c2)) call die("[cnt_array:add] c2 not allocated")
+               this%c2(ind(1), ind(2)) = this%c2(ind(1), ind(2)) + val
+            case (3)
+               if (.not. allocated(this%c3)) call die("[cnt_array:add] c3 not allocated")
+               this%c3(ind(1), ind(2), ind(3)) = this%c3(ind(1), ind(2), ind(3)) + val
+            case default
+               call die("[cnt_array:add] rank not implemented")
+         end select
+      else
+         if (.not. allocated(this%c0)) call die("[cnt_array:add] c0 not allocated (2)")
+         this%c0 = this%c0 + val
+      endif
 
    end subroutine add
 

@@ -41,13 +41,15 @@ contains
 
    subroutine init_wstats
 
-      use allreduce, only: init_allreduce
-      use bcast,     only: init_bcast
+      use allreduce,    only: init_allreduce
+      use bcast,        only: init_bcast
+      use mpi_wrappers, only: init_bar
 
       implicit none
 
       call init_allreduce
       call init_bcast
+      call init_bar
 
    end subroutine init_wstats
 
@@ -55,11 +57,12 @@ contains
 
    subroutine cleanup_wstats
 
-      use allreduce,  only: cleanup_allreduce
-      use bcast,      only: cleanup_bcast
-      use constants,  only: stdout, V_DEBUG
-      use dataio_pub, only: piernik_verbosity
-      use mpisetup,   only: master
+      use allreduce,    only: cleanup_allreduce
+      use bcast,        only: cleanup_bcast
+      use constants,    only: stdout, V_DEBUG
+      use dataio_pub,   only: piernik_verbosity
+      use mpi_wrappers, only: cleanup_bar
+      use mpisetup,     only: master
 
       implicit none
 
@@ -68,6 +71,7 @@ contains
 
       call cleanup_allreduce
       call cleanup_bcast
+      call cleanup_bar
 
    end subroutine cleanup_wstats
 

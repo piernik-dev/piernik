@@ -30,17 +30,40 @@
 
 module mpi_wrappers
 
+   use cnt_array, only: arrcnt
+
    implicit none
 
    private
-   public :: piernik_MPI_Barrier, extra_barriers, MPI_wrapper_stats
+   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, extra_barriers, MPI_wrapper_stats
 
    logical, save :: extra_barriers = .false.     !< when changed to .true. additional MPI_Barriers will be called.
    logical, save :: MPI_wrapper_stats = .false.  !< collect usage statistics in piernik_MPI_* wrappers
 
    integer(kind=4) :: err_mpi  !< error status
+   type(arrcnt) :: cnt_bar
 
 contains
+
+   subroutine init_bar
+
+      implicit none
+
+      call cnt_bar%init
+
+   end subroutine init_bar
+
+   subroutine cleanup_bar
+
+      use constants, only: V_DEBUG
+      use mpisetup,  only: master
+
+      implicit none
+
+      if (master .and. MPI_wrapper_stats) call cnt_bar%print("Barrier counter:", V_DEBUG)
+      call cnt_bar%cleanup
+
+   end subroutine cleanup_bar
 
 !> \brief Wrapper for MPI_Barrier
 
@@ -50,6 +73,7 @@ contains
 
       implicit none
 
+      call cnt_bar%incr
       call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
 
    end subroutine piernik_MPI_Barrier
