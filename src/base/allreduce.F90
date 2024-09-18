@@ -30,7 +30,7 @@
 
 module allreduce
 
-   use cnt_array,  only: arrcnt
+   use cnt_array,  only: arrsum
    use constants,  only: pSUM, pLAND
    use dataio_pub, only: die  ! QA_WARN this is needed only when NO_F2018 is not set, which is determined at compile time, so Makefile should not depend on it.
 #ifdef MPIF08
@@ -51,7 +51,7 @@ module allreduce
    integer(kind=4), &
 #endif /* !MPIF08 */
                     & dimension(pSUM:pLAND) :: mpiop
-   type(arrcnt) :: cnt_allr, size_allr
+   type(arrsum) :: size_allr
    enum, bind(C)
       enumerator :: T_BOO = 1, T_I4, T_I8, T_R4, T_R8
    end enum
@@ -89,7 +89,6 @@ contains
 
       mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]  ! this must match the ordering in constants enum
 
-      call cnt_allr%init( [max_rank + 1, max_dtype])
       call size_allr%init([max_rank + 1, max_dtype])
 
    end subroutine init_allreduce
@@ -103,11 +102,10 @@ contains
       implicit none
 
       if (master .and. MPI_wrapper_stats) then
-         call cnt_allr%print("Allreduce counters (logical, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
+         !call cnt_allr%print("Allreduce counters (logical, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
          call size_allr%print("Allreduce total elements (logical, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
       endif
 
-      call cnt_allr%cleanup
       call size_allr%cleanup
 
    end subroutine cleanup_allreduce
@@ -186,10 +184,7 @@ contains
             it = huge(1)
       end select
 
-      if (MPI_wrapper_stats) then
-         call cnt_allr%incr([rank(var)+1, it])
-         call size_allr%add([rank(var)+1, it], size(var, kind=8))
-      endif
+      if (MPI_wrapper_stats) call size_allr%add([rank(var)+1, it], size(var, kind=8))
 
       call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), dtype, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 

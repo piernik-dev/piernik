@@ -40,11 +40,10 @@ contains
 
    subroutine init_wall
 
-      use mpi_wrappers, only: C_NWRAP, cnt_wall, req_wall
+      use mpi_wrappers, only: C_NWRAP, req_wall
 
       implicit none
 
-      call cnt_wall%init(int([C_NWRAP]))
       call req_wall%init(int([C_NWRAP]))
 
    end subroutine init_wall
@@ -52,17 +51,16 @@ contains
    subroutine cleanup_wall
 
       use constants,    only: V_DEBUG
-      use mpi_wrappers, only: MPI_wrapper_stats, cnt_wall, req_wall
+      use mpi_wrappers, only: MPI_wrapper_stats, req_wall
       use mpisetup,     only: master
 
       implicit none
 
       if (master .and. MPI_wrapper_stats) then
-         call cnt_wall%print("Waitall calls (req, req2, non-wrapped):", V_DEBUG)
+         !call cnt_wall%print("Waitall calls (req, req2, non-wrapped):", V_DEBUG)
          call req_wall%print("Waitall requests (req, req2, non-wrapped):", V_DEBUG)
       endif
 
-      call cnt_wall%cleanup
       call req_wall%cleanup
 
    end subroutine cleanup_wall
@@ -76,7 +74,7 @@ contains
    subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
 
       use constants,    only: PPP_MPI, LONG
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, C_REQ1, C_REQ2, cnt_wall, req_wall
+      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, C_REQ1, C_REQ2, req_wall
       use mpisetup,     only: err_mpi, req, req2
       use MPIF,         only: MPI_STATUSES_IGNORE
       use MPIFUN,       only: MPI_Waitall
@@ -102,7 +100,6 @@ contains
          r2 = .false.
          if (present(use_req2)) r2 = use_req2
 
-         call cnt_wall%incr(int([merge(C_REQ2, C_REQ1, r2)]))
          call req_wall%add(int([merge(C_REQ2, C_REQ1, r2)]), int(nr, kind=LONG))
          if (r2) then
             call MPI_Waitall(nr, req2(:nr), MPI_STATUSES_IGNORE, err_mpi)

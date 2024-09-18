@@ -30,19 +30,19 @@
 
 module mpi_wrappers
 
-   use cnt_array, only: arrcnt
+   use cnt_array, only: arrcnt, arrsum
 
    implicit none
 
    private
-   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, extra_barriers, MPI_wrapper_stats, cnt_wall, req_wall, upd_wall, C_REQ1, C_REQ2, C_NWRAP
+   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, upd_wall, &
+        &    extra_barriers, MPI_wrapper_stats, req_wall, C_REQ1, C_REQ2, C_NWRAP
 
    logical, save :: extra_barriers = .false.     !< when changed to .true. additional MPI_Barriers will be called.
    logical, save :: MPI_wrapper_stats = .false.  !< collect usage statistics in piernik_MPI_* wrappers
 
    type(arrcnt) :: cnt_bar
-
-   type(arrcnt) :: cnt_wall, req_wall  ! counters for ppp_mpi, avoiding circular dependencies
+   type(arrsum) :: req_wall  ! counter for ppp_mpi, avoiding circular dependencies
    enum, bind(C)
       enumerator :: C_REQ1 = 1, C_REQ2, C_NWRAP  ! for both request arrays and calls without wrapper
    end enum
@@ -93,7 +93,6 @@ contains
 
       integer(LONG), intent(in) :: cntr
 
-      call cnt_wall%incr(int([C_NWRAP]))
       call req_wall%add(int([C_NWRAP]), cntr)
 
    end subroutine upd_wall

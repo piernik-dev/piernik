@@ -30,7 +30,7 @@
 
 module bcast
 
-   use cnt_array, only: arrcnt
+   use cnt_array, only: arrsum
 
    implicit none
 
@@ -38,7 +38,7 @@ module bcast
    public :: piernik_MPI_Bcast, init_bcast, cleanup_bcast
 
    integer(kind=4) :: err_mpi  !< error status
-   type(arrcnt) :: cnt_bcast, size_bcast
+   type(arrsum) :: size_bcast
    enum, bind(C)
       enumerator :: T_BOO = 1, T_STR, T_I4, T_I8, T_R4, T_R8
    end enum
@@ -78,7 +78,6 @@ contains
 
       implicit none
 
-      call cnt_bcast%init( [max_rank + 1, max_dtype])
       call size_bcast%init([max_rank + 1, max_dtype])
 
    end subroutine init_bcast
@@ -92,11 +91,10 @@ contains
       implicit none
 
       if (master .and. MPI_wrapper_stats) then
-         call cnt_bcast%print("Bcast counters (logical, character, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
+!         call cnt_bcast%print("Bcast counters (logical, character, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
          call size_bcast%print("Bcast total elements (logical, character, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
       endif
 
-      call cnt_bcast%cleanup
       call size_bcast%cleanup
 
    end subroutine cleanup_bcast
@@ -180,10 +178,7 @@ contains
 
       if (present(clen) .and. (it /= T_STR)) call die("[bcast:piernik_MPI_Bcast] clen makes no sense for non-strings")
 
-      if (MPI_wrapper_stats) then
-         call cnt_bcast%incr([rank(var)+1, it])
-         call size_bcast%add([rank(var)+1, it], lenmul*size(var, kind=8))
-      endif
+      if (MPI_wrapper_stats) call size_bcast%add([rank(var)+1, it], lenmul*size(var, kind=8))
 
       call MPI_Bcast(var, lenmul*size(var, kind=4), dtype, FIRST, MPI_COMM_WORLD, err_mpi)
 
