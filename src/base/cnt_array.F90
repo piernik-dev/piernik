@@ -35,9 +35,9 @@ module cnt_array
    implicit none
 
    private
-   public :: arrcnt
+   public :: arrcnt, arrsum
 
-   type :: arrcnt
+   type :: arrcnt  ! array of counters
       integer(LONG),                   allocatable, private :: c0
       integer(LONG), dimension(:),     allocatable, private :: c1
       integer(LONG), dimension(:,:),   allocatable, private :: c2
@@ -49,6 +49,10 @@ module cnt_array
       procedure :: add      !< add some value to the selected counter
       procedure :: print    !< print the collected values
    end type arrcnt
+
+   type, extends(arrcnt) :: arrsum  ! array of sumators + array of counters
+      type(arrcnt) :: cnt
+   end type arrsum
 
 contains
 
@@ -88,6 +92,11 @@ contains
          this%c0 = 0
       endif
 
+      select type (this)
+         type is (arrsum)
+            call this%cnt%init(sizes)
+      end select
+
    end subroutine init
 
 !> \brief Deallocate everything
@@ -102,6 +111,11 @@ contains
       if (allocated(this%c1)) deallocate(this%c1)
       if (allocated(this%c2)) deallocate(this%c2)
       if (allocated(this%c3)) deallocate(this%c3)
+
+      select type (this)
+         type is (arrsum)
+            call this%cnt%cleanup
+      end select
 
    end subroutine cleanup
 
@@ -152,6 +166,11 @@ contains
          this%c0 = this%c0 + val
       endif
 
+      select type (this)
+         type is (arrsum)
+            call this%cnt%incr(ind)
+      end select
+
    end subroutine add
 
 !> \brief Print the collected values
@@ -167,6 +186,11 @@ contains
       integer(kind=4),  intent(in) :: v      !< verbosity level
 
       integer :: i, j
+
+      select type (this)
+         type is (arrsum)
+            call this%cnt%print(trim(title) // " (cnt)", v)
+      end select
 
       call printinfo(trim(title), v)
 
