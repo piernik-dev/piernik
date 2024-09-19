@@ -90,10 +90,8 @@ contains
 
       implicit none
 
-      if (master .and. MPI_wrapper_stats) then
-!         call cnt_bcast%print("Bcast counters (logical, character, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
-         call size_bcast%print("Bcast total elements (logical, character, int32, int64, real32, real64) from scalars to rank-4:", V_DEBUG)
-      endif
+      if (master .and. MPI_wrapper_stats) &
+           call size_bcast%print("Bcast total elements(calls). Columns: logical, character, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
 
       call size_bcast%cleanup
 
