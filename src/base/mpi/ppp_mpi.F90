@@ -57,7 +57,7 @@ contains
       implicit none
 
       if (master .and. MPI_wrapper_stats) &
-           call req_wall%print("Waitall requests(calls). Columns: req, req2, non-wrapped.", V_DEBUG)
+           call req_wall%print("Waitall requests(calls). Columns: req, req2, req%, non-wrapped.", V_DEBUG)
 
       call req_wall%cleanup
 

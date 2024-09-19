@@ -39,6 +39,7 @@
 module dot
 
    use decomposition, only: cuboid
+   use req_array,     only: req_arr
 
    implicit none
 
@@ -79,6 +80,8 @@ module dot
    integer(kind=8), parameter :: huge_SFC = huge(1_8)
    integer, dimension(:), allocatable :: pp  ! an array used in find_grid
 
+   type(req_arr) :: req
+
 contains
 
 !> \brief Deallocate everything
@@ -92,6 +95,8 @@ contains
       if (allocated(this%gse)) deallocate(this%gse) ! this%gse(:)%c should be deallocated automagically
       if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
       if (allocated(pp)) deallocate(pp)
+
+      call req%cleanup
 
    end subroutine cleanup
 
