@@ -249,7 +249,7 @@ contains
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: piernik_Waitall
+      use ppp_mpi,          only: req_ppp
 #ifdef MAGNETIC
       use constants,        only: four
       use global,           only: cc_mag
@@ -272,7 +272,7 @@ contains
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
-      integer(kind=4) :: nr, nr_recv
+      type(req_ppp) :: req
       logical :: all_received
       integer(kind=4) :: ord_save, max_lev
       real, parameter :: flux_factor = half
@@ -297,8 +297,7 @@ contains
       call all_fluid_boundaries  ! overkill?
       wna%lst(wna%fi)%ord_prolong = ord_save
 
-      nr_recv = compute_nr_recv(crdim, max_lev - I_ONE)
-      nr = nr_recv  ! at this point we may have some requests posted by compute_nr_recv()
+      call compute_nr_recv(req, crdim, max_lev - I_ONE)
 
       cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
@@ -389,13 +388,13 @@ contains
             enddo
          enddo
 
-         call send_cg_coarsebnd(crdim, cg, nr)
+         call send_cg_coarsebnd(req, crdim, cg)
 
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "cr_diff")
+      call req%waitall("cr_diff")
 
       nullify(cgl)
       if (max_lev - I_ONE >= base_level_id) cgl => leaves%up_to_level(max_lev - I_ONE)%p
@@ -403,7 +402,7 @@ contains
          cg => cgl%cg
          call cg%costs%start
 
-         call recv_cg_finebnd(crdim, cg, all_received)
+         call recv_cg_finebnd(req, crdim, cg, all_received)
          if (.not. all_received) call die("[crdiffusion:cr_diff] incomplete fluxes")
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt

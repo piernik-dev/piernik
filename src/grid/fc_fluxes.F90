@@ -35,7 +35,7 @@
 !!     recv_cg_finebnd and send_cg_coarsebnd have to be called for each cg
 !!     finalize_fcflx does a clean-up
 !!
-!! No other Piernik MPI communicatin should take place between calls to compute_nr_recv and finalize_fcflx because of use the req(:) array.
+!! No other Piernik MPI communication should take place between calls to compute_nr_recv and finalize_fcflx because of use the req%r array.
 !!
 !! See sweeps module for more hints about proper usage.
 !!
@@ -67,20 +67,22 @@ contains
 !! Returns number of requests in `nr`
 !<
 
-   integer(kind=4) function compute_nr_recv(cdim, max_level) result(nr)
+   subroutine compute_nr_recv(req, cdim, max_level)
 
       use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, I_ONE, base_level_id
+      use constants,    only: LO, HI, base_level_id
       use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Irecv, MPI_Comm_dup
-      use mpisetup,     only: err_mpi, req, inflate_req
+      use mpisetup,     only: err_mpi
+      use ppp_mpi,      only: req_ppp
 
       implicit none
 
-      integer(kind=4),           intent(in) :: cdim
-      integer(kind=4), optional, intent(in) :: max_level
+      type(req_ppp),             intent(inout) :: req
+      integer(kind=4),           intent(in)    :: cdim
+      integer(kind=4), optional, intent(in)    :: max_level
 
       type(cg_list_element), pointer    :: cgl
       integer(kind=8), dimension(LO:HI) :: jc
@@ -88,7 +90,7 @@ contains
 
       ! Prepare own communicator
       call MPI_Comm_dup(MPI_COMM_WORLD, fcflx_comm, err_mpi)
-      nr = 0
+      call req%init
 
       nullify(cgl)
       if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)
@@ -110,10 +112,8 @@ contains
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
                   jc = seg(g)%se(cdim, :)
                   if (jc(LO) == jc(HI)) then
-                     nr = nr + I_ONE
-                     if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req(nr), err_mpi)
-                     seg(g)%req => req(nr)
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req%nxt(), err_mpi)
+                     seg(g)%ireq = req%n
                   endif
                enddo
             end associate
@@ -123,11 +123,11 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end function compute_nr_recv
+   end subroutine compute_nr_recv
 
 !> \brief Test if expected fluxes from fine grids have already arrived.
 
-   subroutine recv_cg_finebnd(cdim, cg, all_received)
+   subroutine recv_cg_finebnd(req, cdim, cg, all_received)
 
       use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI
       use dataio_pub, only: die
@@ -136,12 +136,14 @@ contains
       use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test
       use mpisetup,   only: err_mpi
       use ppp,        only: ppp_main
+      use ppp_mpi,    only: req_ppp
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: cdim
+      type(req_ppp),                 intent(inout) :: req
+      integer(kind=4),               intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      logical, intent(out)                         :: all_received
+      logical,                       intent(out)   :: all_received
 
       integer :: g, lh
       logical(kind=4) :: received
@@ -156,7 +158,7 @@ contains
          do g = lbound(seg, dim=1), ubound(seg, dim=1)
             jc = seg(g)%se(cdim, :)
             if (jc(LO) == jc(HI)) then
-               call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Test(req%r(seg(g)%ireq), received, MPI_STATUS_IGNORE, err_mpi)
                if (received) then  !> \warning: partially duplicated code (see send_cg_coarsebnd())
                   j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
                   j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
@@ -184,23 +186,24 @@ contains
 
 !> \brief Do a non-blocking MPI Send of fluxes for coarse neighbors.
 
-   subroutine send_cg_coarsebnd(cdim, cg, nr)
+   subroutine send_cg_coarsebnd(req, cdim, cg)
 
-      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID, PPP_MPI
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
       use MPIF,         only: MPI_DOUBLE_PRECISION
       use MPIFUN,       only: MPI_Isend
-      use mpisetup,     only: err_mpi, req, inflate_req
+      use mpisetup,     only: err_mpi
       use ppp,          only: ppp_main
+      use ppp_mpi,      only: req_ppp
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: cdim
+      type(req_ppp),                 intent(inout) :: req
+      integer(kind=4),               intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4), intent(inout)               :: nr  !< number of requests already set up on mpisetup::req array
 
       integer :: g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
@@ -237,10 +240,8 @@ contains
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
 
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req(nr), err_mpi)
-               seg(g)%req => req(nr)
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req%nxt(), err_mpi)
+               seg(g)%ireq = req%n
             endif
          enddo
          end associate

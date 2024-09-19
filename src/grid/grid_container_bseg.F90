@@ -33,7 +33,7 @@ module grid_cont_bseg
    use constants,    only: xdim, zdim, LO, HI
    use grid_cont_na, only: grid_container_na_t
 #ifdef MPIF08
-   use MPIF,         only: MPI_Request, MPI_Datatype
+   use MPIF,         only: MPI_Datatype
 #endif /* MPIF08 */
 
    implicit none
@@ -48,11 +48,10 @@ module grid_cont_bseg
       integer(kind=4) :: tag                               !< unique tag for data exchange
       real, allocatable, dimension(:,:,:)   :: buf         !< buffer for the 3D (scalar) data to be sent or received
       real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
+      integer :: ireq  !< request index (for MPI_Test in fc_fluxes)
 #ifdef MPIF08
-      type(MPI_Request), pointer :: req                    !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
       type(MPI_Datatype) :: sub_type                       !< MPI type related to this segment
 #else /* !MPIF08 */
-      integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
       integer(kind=4) :: sub_type                          !< MPI type related to this segment
 #endif /* !MPIF08 */
 
