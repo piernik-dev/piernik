@@ -46,7 +46,6 @@ module cg_list_misc
    contains
       procedure :: numbered_ascii_dump  !< Construct name of emergency ASCII dump
       procedure :: ascii_dump           !< Emergency routine for quick ASCII dumps
-      procedure :: update_req           !< Update mpisetup:req(:)
       procedure :: prevent_prolong      !< Mark grids as untouchable for prolongation
       procedure :: enable_prolong       !< Mark grids eligible for prolongation
       procedure :: set_is_old           !< Mark grids as existing in the previous timestep
@@ -145,55 +144,6 @@ contains
       call printio(msg)
 
    end subroutine ascii_dump
-
-!> \brief Update mpisetup::req(:)
-
-   subroutine update_req(this)
-
-      use constants, only: I_TWO
-      use cg_list,   only: cg_list_element
-      use mpisetup,  only: inflate_req
-
-      implicit none
-
-      class(cg_list_misc_t), intent(in) :: this  !< object invoking type-bound procedure
-
-      integer                        :: d
-      integer(kind=4)                :: nrq, dr, dp
-      type(cg_list_element), pointer :: cgl
-
-      ! calculate number of boundaries to communicate
-      nrq = 0
-      cgl => this%first
-      do while (associated(cgl))
-
-         do d = lbound(cgl%cg%i_bnd, dim=1), ubound(cgl%cg%i_bnd, dim=1)
-            if (allocated(cgl%cg%i_bnd(d)%seg)) nrq = nrq + I_TWO * size(cgl%cg%i_bnd(d)%seg, kind=4)
-         enddo
-
-         cgl => cgl%nxt
-      enddo
-      call inflate_req(nrq)
-
-      ! calculate number of prolongation-restriction pairs
-      nrq = 0
-      cgl => this%first
-      do while (associated(cgl))
-         dr = 0
-         if (allocated(cgl%cg%ri_tgt%seg)) dr =      size(cgl%cg%ri_tgt%seg(:), dim=1, kind=4)
-         if (allocated(cgl%cg%ro_tgt%seg)) dr = dr + size(cgl%cg%ro_tgt%seg(:), dim=1, kind=4)
-
-         dp = 0
-         if (allocated(cgl%cg%pi_tgt%seg)) dp =      size(cgl%cg%pi_tgt%seg(:), dim=1, kind=4)
-         if (allocated(cgl%cg%po_tgt%seg)) dp = dp + size(cgl%cg%po_tgt%seg(:), dim=1, kind=4)
-
-         nrq = nrq + max(dr, dp)
-
-         cgl => cgl%nxt
-      enddo
-      call inflate_req(nrq)
-
-   end subroutine update_req
 
 !> \brief Mark grids as untouchable for prolongation
 

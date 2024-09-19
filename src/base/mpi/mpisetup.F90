@@ -36,14 +36,14 @@ module mpisetup
    use constants, only: cbuff_len, INT4
    use MPIF,      only: MPI_ADDRESS_KIND
 #ifdef MPIF08
-   use MPIF, only: MPI_Comm, MPI_Request
+   use MPIF, only: MPI_Comm
 #endif /* MPIF08 */
 
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, inflate_req, bigbang, bigbang_shift, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, req2, err_mpi, tag_ub, &
+   public :: cleanup_mpi, init_mpi, bigbang, bigbang_shift, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, err_mpi, tag_ub, &
         &    master, slave, nproc, proc, FIRST, LAST, have_mpi, is_spawned, &
         &    report_to_master, report_string_to_master
 
@@ -63,29 +63,16 @@ module mpisetup
    logical, protected :: is_spawned  !< .True. if Piernik was run via MPI_Spawn
 
 #ifdef MPIF08
-   type(MPI_Request), allocatable, dimension(:), target :: req        !< request array for MPI_Waitall
-   type(MPI_Request), allocatable, dimension(:), target :: req2       !< second request array for MPI_Waitall
-   type(MPI_Comm), protected                            :: intercomm  !< intercommunicator
+   type(MPI_Comm), protected  :: intercomm  !< intercommunicator
 #else /* !MPIF08 */
-   integer(kind=4), allocatable, dimension(:),   target :: req        !< request array for MPI_Waitall
-   integer(kind=4), allocatable, dimension(:),   target :: req2       !< second request array for MPI_Waitall
-   integer(kind=4), protected                           :: intercomm  !< intercommunicator
+   integer(kind=4), protected :: intercomm  !< intercommunicator
 #endif /* !MPIF08 */
-
-   !> \warning Because we use centralized req(:) and req2(:) arrays, the routines that are using them should not call each other to avoid any interference.
-   !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
-   !< All other sets of communication should define their own req(:) array
 
    integer, parameter :: buffer_dim = 200                   !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff !< buffer for character parameters
    integer(kind=4),          dimension(buffer_dim) :: ibuff !< buffer for integer parameters
    real,                     dimension(buffer_dim) :: rbuff !< buffer for real parameters
    logical,                  dimension(buffer_dim) :: lbuff !< buffer for logical parameters
-
-   interface inflate_req
-      module procedure doublesize_req
-      module procedure setsize_req
-   end interface inflate_req
 
 contains
 
@@ -207,96 +194,6 @@ contains
 
    end subroutine init_mpi
 
-!> \brief Set size of req(:) or req2(:) array for non-blocking communication on request.
-
-   subroutine setsize_req(nreq, use_req2)
-
-      implicit none
-
-      integer(kind=4),   intent(in) :: nreq      !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
-      logical, optional, intent(in) :: use_req2  !< use req2 if .true.
-
-      integer :: sreq
-      logical :: r2
-
-      r2 = .false.
-      if (present(use_req2)) r2 = use_req2
-
-      ! warning: spaghetti
-      if (r2) then
-         if (allocated(req2)) then
-            sreq = size(req2)
-            if (sreq < nreq) deallocate(req2)
-         else
-            sreq = 0
-         endif
-
-         if (sreq < nreq) allocate(req2(nreq))
-      else
-         if (allocated(req)) then
-            sreq = size(req)
-            if (sreq < nreq) deallocate(req)
-         else
-            sreq = 0
-         endif
-
-         if (sreq < nreq) allocate(req(nreq))
-      endif
-
-   end subroutine setsize_req
-
-!>
-!! \brief Double size of req(:) or req2(:) array for non-blocking communication on request.
-!!
-!! \details Perform an emergency resize by a factor of 2. Save existing values stored in req(:).
-!<
-
-   subroutine doublesize_req(use_req2)
-
-      use dataio_pub, only: warn, msg, die
-#ifdef MPIF08
-      use MPIF,       only: MPI_Request
-#endif /* MPIF08 */
-
-      implicit none
-
-      logical, optional, intent(in) :: use_req2  !< use req2 if .true.
-
-      integer :: sreq
-#ifdef MPIF08
-      type(MPI_Request), allocatable, dimension(:) :: new_req    !< new request array for MPI_Waitall
-#else /* !MPIF08 */
-      integer(kind=4), allocatable, dimension(:)   :: new_req    !< new request array for MPI_Waitall
-#endif /* !MPIF08 */
-      logical :: r2
-
-      r2 = .false.
-      if (present(use_req2)) r2 = use_req2
-
-      if (r2) then
-         if (.not. allocated(req2)) call die("[mpisetup:doublesize_req] req2 not allocated")
-         sreq = size(req2)
-      else
-         if (.not. allocated(req)) call die("[mpisetup:doublesize_req] req not allocated")
-         sreq = size(req)
-      endif
-
-      if (sreq <= 0) call die("[mpisetup:doublesize_req] req or req2 is a 0-sized array")
-
-      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req or req2 from ", sreq, " to ", 2 * sreq
-      if (master) call warn(msg)
-      allocate(new_req(2*sreq))
-
-      if (r2) then
-         new_req(1:sreq) = req2(:)
-         call move_alloc(from=new_req, to=req2)
-      else
-         new_req(1:sreq) = req(:)
-         call move_alloc(from=new_req, to=req)
-      endif
-
-   end subroutine doublesize_req
-
 !> \brief Prepare to clean exit from the code
 
    subroutine cleanup_mpi
@@ -309,9 +206,6 @@ contains
 #endif /* __INTEL_COMPILER */
 
       implicit none
-
-      if (allocated(req)) deallocate(req)
-      if (allocated(req2)) deallocate(req2)
 
       if (master) call print_char_line("+")
       call MPI_Barrier(MPI_COMM_WORLD,err_mpi)
