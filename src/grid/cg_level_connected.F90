@@ -402,7 +402,6 @@ contains
 
       this%ord_prolong_set = all_cg%ord_prolong_nb
 
-      call all_cg%update_req
       call ppp_main%stop(vp_label, PPP_AMR)
 
    end subroutine vertical_prep
