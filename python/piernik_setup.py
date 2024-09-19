@@ -617,8 +617,8 @@ def setup_piernik(data=None):
             break
 
     # assign color to boxes according to their location in source tree
-    # some more colors that can be used: tan, lavender, beige, mauve, salmon
-    colors = {'src': 'red', 'src/base': 'green', 'src/grid': 'purple', 'src/particles': 'seagreen',
+    # some more colors that can be used: tan, lavender, beige, mauve
+    colors = {'src': 'red', 'src/base': 'green', 'src/base/mpi': 'seagreen', 'src/grid': 'purple', 'src/particles': 'salmon',
               'src/multigrid': 'orange', 'src/gravity': 'gold3', 'src/scheme': 'brown', 'src/grid/refinement': 'magenta',
               'src/fluids': 'blue', 'src/fluids/cosmicrays': 'cyan', 'src/IO': 'yellow', 'problems': 'pink', 'src/magnetic': 'gray'}
 
