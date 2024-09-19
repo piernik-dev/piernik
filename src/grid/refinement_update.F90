@@ -138,8 +138,8 @@ contains
          use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
          use MPIF,               only: MPI_INTEGER, MPI_COMM_WORLD
          use MPIFUN,             only: MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
-         use mpisetup,           only: req, err_mpi, inflate_req
-         use ppp_mpi,            only: piernik_Waitall
+         use mpisetup,           only: err_mpi
+         use ppp_mpi,            only: req_ppp
          use refinement,         only: nbody_ref
 #ifdef MPIF08
          use MPIF,               only: MPI_Comm
@@ -151,7 +151,7 @@ contains
          type(cg_level_connected_t), pointer :: curl
          type(cg_list_element), pointer :: cgl
 #if defined(GRAV) && defined(NBODY)
-         integer(kind=4) :: nr
+         type(req_ppp) :: req
          integer :: i, j, k, g
 #ifdef MPIF08
          type(MPI_Comm)  :: cp_comm
@@ -187,7 +187,7 @@ contains
          if (nbody_ref > I_ZERO) then
 
             call MPI_Comm_dup(MPI_COMM_WORLD, cp_comm, err_mpi)
-            nr = 0
+            call req%init
 
             curl => base%level
             do while (associated(curl))
@@ -197,10 +197,8 @@ contains
                   if (.not. associated(curl, base%level)) then
                      associate (ro => cgl%cg%ro_tgt)
                         if (allocated(ro%seg)) then
-                           if (nr + size(ro%seg) > size(req, dim=1)) call inflate_req
                            do g = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
-                              nr = nr + I_ONE
-                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, cp_comm, req%nxt(), err_mpi)
                            enddo
                         endif
                      end associate
@@ -208,14 +206,12 @@ contains
 
                   associate (ri => cgl%cg%ri_tgt)
                      if (allocated(ri%seg)) then
-                        if (nr + size(ri%seg) > size(req, dim=1)) call inflate_req
                         do g = lbound(ri%seg(:), dim=1), ubound(ri%seg(:), dim=1)
-                           nr = nr + I_ONE
                            ! This looks a bit too tricky or fragile
                            i = merge(LO, HI, ri%seg(g)%se(xdim, LO) <= cgl%cg%ijkse(xdim, LO))
                            j = merge(LO, HI, ri%seg(g)%se(ydim, LO) <= cgl%cg%ijkse(ydim, LO))
                            k = merge(LO, HI, ri%seg(g)%se(zdim, LO) <= cgl%cg%ijkse(zdim, LO))
-                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, cp_comm, req%nxt(), err_mpi)
                         enddo
                      endif
                   end associate
@@ -225,7 +221,7 @@ contains
                curl => curl%finer
             enddo
 
-            call piernik_Waitall(nr, "parent_particle_cnt")
+            call req%waitall("parent_particle_cnt")
 
             call MPI_Comm_free(cp_comm, err_mpi)
          endif
@@ -338,8 +334,8 @@ contains
       use domain,             only: dom
       use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
-      use ppp_mpi,            only: piernik_Waitall
+      use mpisetup,           only: FIRST, LAST, err_mpi, proc
+      use ppp_mpi,            only: req_ppp
 #ifdef MPIF08
       use MPIF,       only: MPI_Comm
 #endif /* MPIF08 */
@@ -349,8 +345,9 @@ contains
       type(cg_level_connected_t), pointer, intent(in) :: lev
 
       type(cg_list_element), pointer :: cgl
+      type(req_ppp) :: req
       integer :: i
-      integer(kind=4) :: nr, g
+      integer(kind=4) :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer, parameter :: perimeter = 2
       integer(kind=4), dimension(FIRST:LAST) :: gscnt, grcnt
@@ -420,12 +417,10 @@ contains
 
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
       call MPI_Comm_dup(MPI_COMM_WORLD, ref_comm, err_mpi)
-      nr = 0
+      call req%init
       if (pt_cnt > 0) then
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
-            nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, ref_comm, req(nr), err_mpi)
+            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, ref_comm, req%nxt(), err_mpi)
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
@@ -440,7 +435,7 @@ contains
          endif
       enddo
 
-      call piernik_Waitall(nr, "prevent_derefinement")
+      call req%waitall("prevent_derefinement")
       call MPI_Comm_free(ref_comm, err_mpi)
 
       deallocate(pt_list)
@@ -862,20 +857,21 @@ contains
          use grid_cont,      only: grid_container
          use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
          use MPIFUN,         only: MPI_Alltoall, MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
-         use mpisetup,       only: proc, req, err_mpi, FIRST, LAST, inflate_req
+         use mpisetup,       only: proc, err_mpi, FIRST, LAST
          use particle_func,  only: particle_in_area
          use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
          use particle_utils, only: is_part_in_cg
          use ppp,            only: ppp_main
-         use ppp_mpi,        only: piernik_Waitall
+         use ppp_mpi,        only: req_ppp
 #ifdef MPIF08
          use MPIF,           only: MPI_Comm
 #endif /* MPIF08 */
 
          implicit none
 
+         type(req_ppp) :: req
          integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv
-         integer(kind=4) :: nr, g
+         integer(kind=4) :: g
          integer :: i, j, p
          enum, bind(C)
             enumerator :: I_GID  ! cg%grid_id
@@ -964,23 +960,20 @@ contains
 
          call ppp_main%start(srmeta_label, PPP_AMR)
          if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
-         nr = 0
+         call req%init
          do g = FIRST, LAST
             if (g /= proc) then
-               if (nr + 2 > size(req, dim=1)) call inflate_req
                if (nsend(g) > 0) then
-                  nr = nr + I_ONE
                   allocate(cgsend(g)%pbuf(npf, sum(cgsend(g)%gl(I_NP, :))))
-                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
                endif
                if (nrecv(g) > 0) then
-                  nr = nr + I_ONE
-                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
                endif
             endif
          enddo
 
-         call piernik_Waitall(nr, "particle_derefinement_cnt")
+         call req%waitall("particle_derefinement_cnt")
          call ppp_main%stop(srmeta_label, PPP_AMR)
 
          ! set up cgrecv(:)%cgp based on received cgrecv(g)%gl, don't exclude g == proc here
@@ -1014,12 +1007,10 @@ contains
 
          ! Third, communicate the particles
          call ppp_main%start(srpart_label, PPP_AMR)
-         nr = 0
+         call req%init
          do g = FIRST, LAST
             if (g /= proc) then
-               ! no need to call inflate_req as it should be already big enough
                if (nsend(g) > 0) then
-                  nr = nr + I_ONE
                   p = 0
                   do i = lbound(cgsend(g)%gl, dim=2), ubound(cgsend(g)%gl, dim=2)
                      ! copy outgoing particles
@@ -1040,12 +1031,11 @@ contains
                         part => part%nxt
                      enddo
                   enddo
-                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
                endif
                if (nrecv(g) > 0) then
-                  nr = nr + I_ONE
                   allocate(cgrecv(g)%pbuf(npf, sum(cgrecv(g)%gl(I_NP, :))))
-                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
                endif
             endif
          enddo
@@ -1063,14 +1053,13 @@ contains
          endif
          call ppp_main%stop(ownpart_label, PPP_AMR)
 
-         call piernik_Waitall(nr, "particle_derefinement_p")
+         call req%waitall("particle_derefinement_p")
          call ppp_main%stop(srpart_label, PPP_AMR)
 
          ! copy incoming particles
          call ppp_main%start(get_label, PPP_AMR)
          do g = FIRST, LAST
             if (g /= proc) then
-               ! no need to call inflate_req as it should be already big enough
                if (nrecv(g) > 0) then
                   p = 0
                   do i = lbound(cgrecv(g)%cgp, dim=1), ubound(cgrecv(g)%cgp, dim=1)
