@@ -48,11 +48,12 @@ module req_array
 #endif /* !MPIF08 */
       integer(kind=4) :: n
    contains
-      procedure :: nxt             !< give next unused request
-      procedure :: waitall         !< wait for completion of the requests and do cleanup
-      procedure :: setsize_req     !< set the storage for this%r
-      procedure :: doublesize_req  !< double the storage size for this%r
+      procedure :: nxt              !< give next unused request
+      procedure :: waitall_on_some  !< wait for completion of the requests on selected procs
+      procedure :: setsize_req      !< set the storage for this%r
+      procedure :: doublesize_req   !< double the storage size for this%r
       generic, public :: init => doublesize_req, setsize_req
+      generic, public :: waitall => waitall_on_some
    end type req_arr
 
 contains
@@ -79,47 +80,34 @@ contains
    end function nxt
 
 !>
-!! \brief a PPP wrapper for MPI_Waitall
+!! \brief Simple wrapper for MPI_Waitall
 !!
-!! BEWARE: Cannot use extra_barriers when this routine is called only by a subset of MPI ranks.
+!! For PPP-instrumented variant see req_ppp::waitall_ppp (in ppp_mpi module)
 !<
 
-   subroutine waitall(this, ppp_label, x_mask)
+   subroutine waitall_on_some(this)
 
-      use constants,    only: PPP_MPI, LONG
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, C_REQA, req_wall
+      use constants,    only: LONG
+      use mpi_wrappers, only: C_REQS, req_wall
       use mpisetup,     only: err_mpi
       use MPIF,         only: MPI_STATUSES_IGNORE
       use MPIFUN,       only: MPI_Waitall
-      use ppp,          only: ppp_main
 
       implicit none
 
-      class(req_arr),            intent(inout) :: this       !< an object invoking the type-bound procedure
-      character(len=*),          intent(in)    :: ppp_label  !< identifier for PPP entry
-      integer(kind=4), optional, intent(in)    :: x_mask     !< extra mask, if necessary
-
-      character(len=*), parameter :: mpiw = "req:MPI_Waitall:"
-      integer(kind=4) :: mask
+      class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
 
       if (this%n > 0) then
-         mask = PPP_MPI
-         if (present(x_mask)) mask = mask + x_mask
-         call ppp_main%start(mpiw // ppp_label, mask)
 
-         call req_wall%add(int([C_REQA]), int(this%n, kind=LONG))
-
+         call req_wall%add(int([C_REQS]), int(this%n, kind=LONG))
          call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
          this%n = 0
 
-         call ppp_main%stop(mpiw // ppp_label, mask)
       endif
 
       if (allocated(this%r)) deallocate(this%r)
 
-      if (extra_barriers) call piernik_MPI_Barrier
-
-   end subroutine waitall
+   end subroutine waitall_on_some
 
 !> \brief Set size of this%r(:) array for non-blocking communication on request.
 

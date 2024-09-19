@@ -31,10 +31,18 @@
 
 module ppp_mpi
 
+   use req_array, only: req_arr
+
    implicit none
 
    private
-   public :: piernik_Waitall, init_wall, cleanup_wall
+   public :: piernik_Waitall, init_wall, cleanup_wall, req_ppp
+
+   type, extends(req_arr) :: req_ppp  ! array of requests with PPP capabilities
+   contains
+      procedure :: waitall_ppp      !< wait for completion of the requests on all procs
+      generic, public :: waitall => waitall_ppp
+   end type req_ppp
 
 contains
 
@@ -57,14 +65,60 @@ contains
       implicit none
 
       if (master .and. MPI_wrapper_stats) &
-           call req_wall%print("Waitall requests(calls). Columns: req, req2, req%, non-wrapped.", V_DEBUG)
+           call req_wall%print("Waitall requests(calls). Columns: req, req2, req_all%, req_some%, non-wrapped.", V_DEBUG)
 
       call req_wall%cleanup
 
    end subroutine cleanup_wall
 
 !>
-!! \brief a PPP wrapper for MPI_Waitall
+!! \brief A req_arr PPP wrapper for MPI_Waitall
+!!
+!! \details This is a bit expanded version of req_arr::waitall_on_some that had to be
+!! moved here to avoid circular dependencies at ppp_eventlist.
+!!
+!! BEWARE: Cannot use extra_barriers when this routine is called only by a subset of MPI ranks.
+!<
+
+   subroutine waitall_ppp(this, ppp_label, x_mask)
+
+      use constants,    only: PPP_MPI, LONG
+      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, C_REQA, req_wall
+      use mpisetup,     only: err_mpi
+      use MPIF,         only: MPI_STATUSES_IGNORE
+      use MPIFUN,       only: MPI_Waitall
+      use ppp,          only: ppp_main
+
+      implicit none
+
+      class(req_ppp),            intent(inout) :: this       !< an object invoking the type-bound procedure
+      character(len=*),          intent(in)    :: ppp_label  !< identifier for PPP entry
+      integer(kind=4), optional, intent(in)    :: x_mask     !< extra mask, if necessary
+
+      character(len=*), parameter :: mpiw = "req:MPI_Waitall:"
+      integer(kind=4) :: mask
+
+      if (this%n > 0) then
+         mask = PPP_MPI
+         if (present(x_mask)) mask = mask + x_mask
+         call ppp_main%start(mpiw // ppp_label, mask)
+
+         call req_wall%add(int([C_REQA]), int(this%n, kind=LONG))
+
+         call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
+         this%n = 0
+
+         call ppp_main%stop(mpiw // ppp_label, mask)
+      endif
+
+      if (allocated(this%r)) deallocate(this%r)
+
+      if (extra_barriers) call piernik_MPI_Barrier
+
+   end subroutine waitall_ppp
+
+!>
+!! \brief a legacy PPP wrapper for MPI_Waitall
 !!
 !! Cannot use extra_barriers when this routine is called only by a subset of MPI ranks.
 !<
