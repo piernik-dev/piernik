@@ -329,9 +329,9 @@ contains
       use merge_segments,   only: IN, OUT
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, req2, inflate_req, nproc
+      use mpisetup,         only: FIRST, LAST, proc, err_mpi
       use named_array_list, only: wna
-      use ppp_mpi,          only: piernik_Waitall
+      use ppp_mpi,          only: req_ppp
 #ifdef MPIF08
       use MPIF,             only: MPI_Comm
 #endif /* MPIF08 */
@@ -345,7 +345,7 @@ contains
 
       integer :: i
       integer(kind=4) :: p
-      integer(kind=4) :: nr !< index of first free slot in req array
+      type(req_ppp) :: req1, req2
 #ifdef MPIF08
       type(MPI_Comm)  :: ibmpi_comm
 #else /* !MPIF08 */
@@ -354,10 +354,9 @@ contains
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
 
-      call inflate_req(nproc, .true.)
-
       call MPI_Comm_dup(MPI_COMM_WORLD, ibmpi_comm, err_mpi)
-      nr = 0
+      call req1%init
+      call req2%init
       do p = FIRST, LAST
          if (p /= proc) then
             call this%ms%sl(p, IN )%find_offsets(dmask)
@@ -406,17 +405,14 @@ contains
                      endif
                   enddo
                endif
-               if (nr+I_ONE >  ubound(req(:), dim=1)) call inflate_req
-               if (nr+I_ONE >  ubound(req2(:), dim=1)) call inflate_req(.true.)
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    ibmpi_comm, req( nr+I_ONE), err_mpi)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, ibmpi_comm, req2(nr+I_ONE), err_mpi)
-               nr = nr + I_ONE
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    ibmpi_comm, req1%nxt(), err_mpi)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, ibmpi_comm, req2%nxt(), err_mpi)
             endif
 
          endif
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_merged_R")
+      call req1%waitall("int_bnd_merged_R")
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -470,7 +466,7 @@ contains
          endif
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_merged_S", use_req2 = .true.)
+      call req2%waitall("int_bnd_merged_S")
       call MPI_Comm_free(ibmpi_comm, err_mpi)
 
       do p = FIRST, LAST
@@ -494,16 +490,16 @@ contains
 
       use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
+      use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_THREE, I_FOUR
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use grid_cont_bseg,   only: segment
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
            &                      MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,         only: err_mpi, req, inflate_req
+      use mpisetup,         only: err_mpi
       use named_array_list, only: wna
-      use ppp_mpi,          only: piernik_Waitall
+      use ppp_mpi,          only: req_ppp
 #ifdef MPIF08
       use MPIF,             only: MPI_Comm
 #endif /* MPIF08 */
@@ -515,13 +511,12 @@ contains
       logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
-      integer                                      :: g, d
-      integer(kind=4)                              :: nr     !< index of first free slot in req array
-      type(grid_container),     pointer            :: cg
-      type(cg_list_element),    pointer            :: cgl
-      type(segment), pointer                       :: i_seg, o_seg !< shortcuts
-
-      integer(kind=4), parameter :: rank3 = I_THREE, rank4 = I_FOUR
+      integer                           :: g, d
+      type(grid_container), pointer     :: cg
+      type(cg_list_element), pointer    :: cgl
+      type(segment), pointer            :: i_seg, o_seg !< shortcuts
+      type(req_ppp)                     :: req
+      integer(kind=4), parameter        :: rank3 = I_THREE, rank4 = I_FOUR
       integer(kind=4), dimension(rank3) :: b3sz, b3su, b3st
       integer(kind=4), dimension(rank4) :: b4sz, b4su, b4st
 #ifdef MPIF08
@@ -531,7 +526,7 @@ contains
 #endif /* !MPIF08 */
 
       call MPI_Comm_dup(MPI_COMM_WORLD, ib1by1_comm, err_mpi)
-      nr = 0
+      call req%init
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -554,8 +549,6 @@ contains
                        call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     if (nr+I_TWO > ubound(req(:), dim=1)) call inflate_req
-
                      i_seg => cg%i_bnd(d)%seg(g)
                      o_seg => cg%o_bnd(d)%seg(g)
 
@@ -567,13 +560,13 @@ contains
                         b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, ib1by1_comm, req(nr+I_ONE), err_mpi)
+                        call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, ib1by1_comm, req%nxt(), err_mpi)
 
                         b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
                         b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, ib1by1_comm, req(nr+I_TWO), err_mpi)
+                        call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, ib1by1_comm, req%nxt(), err_mpi)
 
                      else
 
@@ -581,16 +574,15 @@ contains
                         b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, ib1by1_comm, req(nr+I_ONE), err_mpi)
+                        call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, ib1by1_comm, req%nxt(), err_mpi)
 
                         b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
                         b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, ib1by1_comm, req(nr+I_TWO), err_mpi)
+                        call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, ib1by1_comm, req%nxt(), err_mpi)
 
                      endif
-                     nr = nr + I_TWO
                   enddo
                else
                   if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%o_bnd without cg%i_bnd")
@@ -602,7 +594,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_1by1")
+      call req%waitall("int_bnd_1by1")
       call MPI_Comm_free(ib1by1_comm, err_mpi)
 
       cgl => this%first
