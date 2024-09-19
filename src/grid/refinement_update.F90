@@ -730,8 +730,6 @@ contains
       emergency_fix = .false.
       call print_time("[refinement_update] Finishing (" // trim(merge("full update", "fixup only ", full_update)) // ")")
 
-      call log_req
-
    contains
 
       !>
@@ -754,35 +752,6 @@ contains
          if (master) call printinfo(msg, V_VERBOSE)
 
       end subroutine print_time
-
-      !> \brief Notify when the size of the req arrays has increased
-
-      subroutine log_req
-
-         use allreduce,  only: piernik_MPI_Allreduce
-         use constants,  only: pMAX, V_DEBUG
-         use dataio_pub, only: printinfo, msg
-         use mpisetup,   only: master, req, req2
-
-         implicit none
-
-         integer, save :: oldsize = 0
-         integer :: cursize
-
-         cursize = 0
-         if (allocated(req)) cursize = cursize + size(req)
-         if (allocated(req2)) cursize = cursize + size(req2)
-
-         call piernik_MPI_Allreduce(cursize, pMAX)
-         if (cursize > oldsize) then
-            if (master) then
-               write(msg, *) cursize
-               call printinfo("[refinement_update] Total number of simultaneous nonblocking MPI requests increased to " // trim(adjustl(msg)), V_DEBUG)
-            endif
-            oldsize = cursize
-         endif
-
-      end subroutine log_req
 
    end subroutine update_refinement_wrapped
 
