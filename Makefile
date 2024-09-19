@@ -17,7 +17,7 @@
 #                            but does not compile them
 #   'make ctags'           # recreate ctags for {src,problems}
 #   'make dep [P=problem]' # create and show dependency graph
-#                            $P defaults to mcrwind
+#                            $P defaults to testing_and_debuging/chimaera
 #   'make qa'              # run qa.py on all F90 files in src and problems
 #                            directories
 #   'make pep8'            # run pep8 on all Python scripts, ignore long lines
@@ -116,7 +116,7 @@ doxy:
 	doxygen piernik.doxy
 
 ifndef P
-P = "mcrwind"
+P = "testing_and_debuging/chimaera"
 endif
 dep:
 	TMPDIR=$$(mktemp XXXXXX) ;\
