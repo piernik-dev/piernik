@@ -241,7 +241,7 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half, I_ONE, base_level_id
       use dataio_pub,       only: die
       use domain,           only: dom
-      use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
+      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -297,7 +297,7 @@ contains
       call all_fluid_boundaries  ! overkill?
       wna%lst(wna%fi)%ord_prolong = ord_save
 
-      call compute_nr_recv(req, crdim, max_lev - I_ONE)
+      call initiate_flx_recv(req, crdim, max_lev - I_ONE)
 
       cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
