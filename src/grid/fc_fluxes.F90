@@ -31,11 +31,11 @@
 !!
 !! These routines have to be called in particular order:
 !!
-!!     compute_nr_recv(cdim) initializes the transfer for the specified direction and returns number of messages
+!!     initiate_flx_recv(cdim) initializes the transfer for the specified direction and returns number of messages
 !!     recv_cg_finebnd and send_cg_coarsebnd have to be called for each cg
 !!     finalize_fcflx does a clean-up
 !!
-!! No other Piernik MPI communication should take place between calls to compute_nr_recv and finalize_fcflx because of use the req%r array.
+!! No other Piernik MPI communication should take place between calls to initiate_flx_recv and finalize_fcflx because of use the req%r array.
 !!
 !! See sweeps module for more hints about proper usage.
 !!
@@ -52,7 +52,7 @@ module fc_fluxes
    implicit none
 
    private
-   public :: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
+   public :: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
 
 #ifdef MPIF08
    type(MPI_Comm)  :: fcflx_comm
@@ -67,7 +67,7 @@ contains
 !! Returns number of requests in `nr`
 !<
 
-   subroutine compute_nr_recv(req, cdim, max_level)
+   subroutine initiate_flx_recv(req, cdim, max_level)
 
       use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
@@ -123,7 +123,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine compute_nr_recv
+   end subroutine initiate_flx_recv
 
 !> \brief Test if expected fluxes from fine grids have already arrived.
 
