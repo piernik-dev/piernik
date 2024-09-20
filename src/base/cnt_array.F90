@@ -266,19 +266,38 @@ contains
          integer(LONG), dimension(:), optional, intent(in) :: c  ! extra data line (counters) to print
 
          integer :: i
-         logical :: non0
 
-         non0 = any(d /= 0)
          if (present(c)) then
             write(msg, f)"  ", (d(i), c(i), i = 1, ubound(d, 1))
-            non0 = non0 .or. any(c /= 0)
          else
             write(msg, f)"  ", d
          endif
-         if (.not. non0) msg = "  (no data)"
+         call hide_zeroes(msg)
          call printinfo(trim(msg), v)
 
       end subroutine data_line
+
+!> \brief replace "0( 0)" by "." in the log for better readability
+
+      subroutine hide_zeroes(m)
+
+         implicit none
+
+         character(len=*), intent(inout) :: m
+
+         integer :: i
+
+         do while (index(m, " 0( ") /= 0)
+            i = index(m, " 0( ") + 1
+            m(i:i+1) = "  "
+         enddo
+
+         do while (index(m, " 0) ") /= 0)
+            i = index(m, " 0) ") + 1
+            m(i:i+1) = " ."
+         enddo
+
+      end subroutine hide_zeroes
 
    end subroutine print
 
