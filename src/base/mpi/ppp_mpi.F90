@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Module for PPP-guarded MPI calls
+!> \brief Module for PPP-guarded MPI waitall calls
 
 module ppp_mpi
 
@@ -46,6 +46,8 @@ module ppp_mpi
 
 contains
 
+!> \brief Initialize MPI_Waitall stat counters
+
    subroutine init_wall
 
       use mpi_wrappers, only: C_REQS, req_wall
@@ -55,6 +57,8 @@ contains
       call req_wall%init(int([C_REQS]))
 
    end subroutine init_wall
+
+!> \brief Print log and clean up MPI_Waitall stat counters
 
    subroutine cleanup_wall
 

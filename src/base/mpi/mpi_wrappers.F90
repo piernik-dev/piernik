@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief MPI wrappers
+!> \brief MPI remaining wrappers
 
 module mpi_wrappers
 
@@ -49,6 +49,8 @@ module mpi_wrappers
 
 contains
 
+!> \brief Initialize MPI_Barrier stat counter
+
    subroutine init_bar
 
       implicit none
@@ -56,6 +58,8 @@ contains
       call cnt_bar%init
 
    end subroutine init_bar
+
+!> \brief Print log and clean up MPI_Barrier stat counter
 
    subroutine cleanup_bar
 
