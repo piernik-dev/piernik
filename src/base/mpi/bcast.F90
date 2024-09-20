@@ -74,6 +74,8 @@ module bcast
 
 contains
 
+!> \brief Initialize MPI_Bcast stat counter
+
    subroutine init_bcast
 
       implicit none
@@ -81,6 +83,8 @@ contains
       call size_bcast%init([max_rank + 1, max_dtype])
 
    end subroutine init_bcast
+
+!> \brief Print log and clean up MPI_Bcast stat counter
 
    subroutine cleanup_bcast
 
@@ -99,7 +103,13 @@ contains
 
 #ifndef NO_F2018
 
-!> \brief Polymorphic wrapper for MPI_Bcast
+!>
+!! \brief Polymorphic wrapper for MPI_Bcast
+!!
+!! Unlimited polymorphism here still requires some spaghetti code but much less than in non-f08 way
+!!
+!! Requires Fortran 2018 for SELECT RANK and DIMENSION(..)
+!<
 
    subroutine piernik_MPI_Bcast(var, clen)
 

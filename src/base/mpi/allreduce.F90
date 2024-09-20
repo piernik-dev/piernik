@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 
-!> \brief MPI wrappers for MPI_Allreduce in place and most simplified.
+!> \brief MPI wrappers for MPI_Allreduce - in place and most simplified.
 
 module allreduce
 
@@ -79,7 +79,10 @@ module allreduce
 
 contains
 
-!> \brief Initialize mpiop translation array as some MPI implementations create MPI_SUM, MPI_MIN, etc. as non-constants
+!>
+!! \brief Initialize mpiop translation array as some MPI implementations create MPI_SUM, MPI_MIN, etc. as non-constants.
+!! Initialize MPI_Allreduce stat counter
+!<
 
    subroutine init_allreduce
 
@@ -87,11 +90,14 @@ contains
 
       implicit none
 
-      mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]  ! this must match the ordering in constants enum
+      ! this must match the ordering in constants enum
+      mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]
 
       call size_allr%init([max_rank + 1, max_dtype])
 
    end subroutine init_allreduce
+
+!> \brief Print log and clean up MPI_Allreduce stat counter
 
    subroutine cleanup_allreduce
 

@@ -109,7 +109,7 @@ contains
 
    end subroutine waitall_on_some
 
-!> \brief Set size of this%r(:) array for non-blocking communication on request.
+!> \brief Initialize by setting the size of this%r(:) array for non-blocking communication on request.
 
    subroutine setsize_req(this, nreq)
 
