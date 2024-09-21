@@ -30,7 +30,8 @@
 
 module bcast
 
-   use cnt_array, only: arrsum
+   use cnt_array,  only: arrsum
+   use dataio_pub, only: die  ! QA_WARN this is needed for correct calculation of dependencies when NO_F2018 is not set. NO_F2018 is determined at compile time.
 
    implicit none
 

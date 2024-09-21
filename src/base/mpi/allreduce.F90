@@ -32,7 +32,7 @@ module allreduce
 
    use cnt_array,  only: arrsum
    use constants,  only: pSUM, pLAND
-   use dataio_pub, only: die  ! QA_WARN this is needed only when NO_F2018 is not set, which is determined at compile time, so Makefile should not depend on it.
+   use dataio_pub, only: die  ! QA_WARN this is needed for correct calculation of dependencies when NO_F2018 is not set. NO_F2018 is determined at compile time.
 #ifdef MPIF08
    use MPIF,       only: MPI_Op
 #endif /* MPIF08 */
