@@ -45,20 +45,11 @@
 module fc_fluxes
 
 ! pulled by ANY
-#ifdef MPIF08
-   use MPIF, only: MPI_Comm
-#endif /* MPIF08 */
 
    implicit none
 
    private
-   public :: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
-
-#ifdef MPIF08
-   type(MPI_Comm)  :: fcflx_comm
-#else /* !MPIF08 */
-   integer(kind=4) :: fcflx_comm
-#endif /* !MPIF08 */
+   public :: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
 
 contains
 
@@ -73,8 +64,8 @@ contains
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, base_level_id
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,       only: MPI_Irecv, MPI_Comm_dup
+      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use MPIFUN,       only: MPI_Irecv
       use mpisetup,     only: err_mpi
       use ppp_mpi,      only: req_ppp
 
@@ -88,9 +79,7 @@ contains
       integer(kind=8), dimension(LO:HI) :: jc
       integer :: g
 
-      ! Prepare own communicator
-      call MPI_Comm_dup(MPI_COMM_WORLD, fcflx_comm, err_mpi)
-      call req%init
+      call req%init(owncomm = .true.)
 
       nullify(cgl)
       if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)
@@ -112,7 +101,7 @@ contains
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
                   jc = seg(g)%se(cdim, :)
                   if (jc(LO) == jc(HI)) then
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req%nxt(), err_mpi)
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
                      seg(g)%ireq = req%n
                   endif
                enddo
@@ -245,7 +234,7 @@ contains
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
 
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req%nxt(), err_mpi)
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
                seg(g)%ireq = req%n
             endif
          enddo
@@ -255,18 +244,5 @@ contains
       call ppp_main%stop(send_label, PPP_MPI)
 
    end subroutine send_cg_coarsebnd
-
-!> \brief Do a clean-up
-
-   subroutine finalize_fcflx
-
-      use mpisetup, only: err_mpi
-      use MPIFUN,   only: MPI_Comm_free
-
-      implicit none
-
-      call MPI_Comm_free(fcflx_comm, err_mpi)
-
-   end subroutine finalize_fcflx
 
 end module fc_fluxes

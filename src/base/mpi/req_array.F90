@@ -79,7 +79,7 @@ contains
 #endif /* !MPIF08 */
 
       this%n = this%n + I_ONE
-      if (this%n > ubound(this%r, 1)) call this%doublesize_req
+      if (this%n > ubound(this%r, 1)) call this%doublesize_req(owncomm = .false.)  ! the communicator was already duplicated, if required
       nxt => this%r(this%n)
 
    end function nxt
@@ -127,15 +127,11 @@ contains
 
       implicit none
 
-      class(req_arr),    intent(inout) :: this     !< an object invoking the type-bound procedure
-      integer(kind=4),   intent(in)    :: nreq     !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
-      logical, optional, intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
+      class(req_arr),  intent(inout) :: this     !< an object invoking the type-bound procedure
+      integer(kind=4), intent(in)    :: nreq     !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
+      logical,         intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
 
       integer :: sreq
-      logical :: oc
-
-      oc = .false.
-      if (present(owncomm)) oc = owncomm
 
       if (allocated(this%r)) then
          sreq = size(this%r)
@@ -148,7 +144,7 @@ contains
 
       if (sreq < nreq) allocate(this%r(nreq))
 
-      if (oc) then
+      if (owncomm) then
          if (this%owncomm) then
             call die("[req_array:setsize_req] communicator already duplicated")
          else
@@ -175,8 +171,8 @@ contains
 
       implicit none
 
-      class(req_arr),    intent(inout) :: this  !< an object invoking the type-bound procedure
-      logical, optional, intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
+      class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
+      logical,        intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
 
       !< new request array for MPI_Waitall
 #ifdef MPIF08

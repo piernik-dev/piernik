@@ -241,7 +241,7 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half, I_ONE, base_level_id
       use dataio_pub,       only: die
       use domain,           only: dom
-      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
+      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -404,8 +404,6 @@ contains
       enddo
 
       call req%waitall("cr_diff")
-
-      call finalize_fcflx
 
       call all_wcr_boundaries(crdim)
 
