@@ -31,7 +31,7 @@
 module req_array
 
 #ifdef MPIF08
-   use MPIF, only: MPI_Request
+   use MPIF, only: MPI_Request, MPI_Comm
 #endif /* MPIF08 */
 
    implicit none
@@ -42,11 +42,14 @@ module req_array
    type :: req_arr  ! array of requests
       !< request array for MPI_Waitall
 #ifdef MPIF08
-      type(MPI_Request), allocatable, dimension(:) :: r
+      type(MPI_Request), allocatable, dimension(:) :: r     !< array of requests
+      type(MPI_Comm)                               :: comm  !< own communicator
 #else /* !MPIF08 */
       integer(kind=4),   allocatable, dimension(:) :: r
+      integer(kind=4)                              :: comm
 #endif /* !MPIF08 */
-      integer(kind=4) :: n
+      integer(kind=4) :: n  !< number of requests
+      logical :: owncomm    !< was the own communicator requested?
    contains
       procedure :: nxt              !< give next unused request
       procedure :: waitall_on_some  !< wait for completion of the requests on selected procs
@@ -55,6 +58,8 @@ module req_array
       generic, public :: init => doublesize_req, setsize_req
       generic, public :: waitall => waitall_on_some
    end type req_arr
+
+   integer(kind=4) :: err_mpi  !< error status
 
 contains
 
@@ -89,9 +94,8 @@ contains
 
       use constants,    only: LONG
       use mpi_wrappers, only: C_REQS, req_wall
-      use mpisetup,     only: err_mpi
       use MPIF,         only: MPI_STATUSES_IGNORE
-      use MPIFUN,       only: MPI_Waitall
+      use MPIFUN,       only: MPI_Waitall, MPI_Comm_free
 
       implicit none
 
@@ -106,28 +110,52 @@ contains
       endif
 
       if (allocated(this%r)) deallocate(this%r)
+      if (this%owncomm) then
+         call MPI_Comm_free(this%comm, err_mpi)
+         this%owncomm = .false.
+      endif
 
    end subroutine waitall_on_some
 
 !> \brief Initialize by setting the size of this%r(:) array for non-blocking communication on request.
 
-   subroutine setsize_req(this, nreq)
+   subroutine setsize_req(this, nreq, owncomm)
+
+      use dataio_pub, only: die
+      use MPIF,       only: MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Comm_dup
 
       implicit none
 
-      class(req_arr),  intent(inout) :: this  !< an object invoking the type-bound procedure
-      integer(kind=4), intent(in)    :: nreq  !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
+      class(req_arr),    intent(inout) :: this     !< an object invoking the type-bound procedure
+      integer(kind=4),   intent(in)    :: nreq     !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
+      logical, optional, intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
 
       integer :: sreq
+      logical :: oc
+
+      oc = .false.
+      if (present(owncomm)) oc = owncomm
 
       if (allocated(this%r)) then
          sreq = size(this%r)
          if (sreq < nreq) deallocate(this%r)
       else
          sreq = 0
+         this%owncomm = .false.
+         this%comm = MPI_COMM_WORLD  ! just copy it
       endif
 
       if (sreq < nreq) allocate(this%r(nreq))
+
+      if (oc) then
+         if (this%owncomm) then
+            call die("[req_array:setsize_req] communicator already duplicated")
+         else
+            call MPI_Comm_dup(MPI_COMM_WORLD, this%comm, err_mpi)  ! create a separate duplicate
+            this%owncomm = .true.
+         endif
+      endif
       this%n = 0
 
    end subroutine setsize_req
@@ -138,7 +166,7 @@ contains
 !! \details Perform a resize by a factor of 2. Save existing values stored in this%r(:).
 !<
 
-   subroutine doublesize_req(this)
+   subroutine doublesize_req(this, owncomm)
 
       use dataio_pub, only: die
 #ifdef MPIF08
@@ -147,7 +175,8 @@ contains
 
       implicit none
 
-      class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
+      class(req_arr),    intent(inout) :: this  !< an object invoking the type-bound procedure
+      logical, optional, intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
 
       !< new request array for MPI_Waitall
 #ifdef MPIF08
@@ -159,7 +188,7 @@ contains
       integer(kind=4), parameter :: default_cnt = 16  ! with no better guess let's allocate some entries
 
       if (.not. allocated(this%r)) then
-         call this%setsize_req(default_cnt)
+         call this%setsize_req(default_cnt, owncomm)
       else
          sreq = size(this%r)
          if (sreq <= 0) call die("[req_array:doublesize_req] size(req) <= 0")
