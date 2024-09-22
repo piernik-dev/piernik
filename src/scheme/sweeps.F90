@@ -120,7 +120,7 @@ contains
       use constants,        only: ydim, ndims, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
            &                      RTVD_SPLIT, RIEMANN_SPLIT, PPP_CG
       use dataio_pub,       only: die
-      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
+      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
       use MPIF,             only: MPI_STATUS_IGNORE
@@ -267,7 +267,6 @@ contains
          enddo
 
          call req%waitall("sweeps")
-         call finalize_fcflx
 
          call update_boundaries(cdim, istep)
       enddo

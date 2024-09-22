@@ -85,7 +85,7 @@ contains
       curl => finest%level
       do while (associated(curl))
 
-         call req%init(tag_cost)
+         call req%init(tag_cost, owncomm = .false.)
 
          ! invalid_speed = .false.
          curl%recently_changed = .false.
@@ -417,15 +417,12 @@ contains
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use list_of_cg_lists,   only: all_lists
-      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Isend, MPI_Irecv, MPI_Comm_dup, MPI_Comm_free
+      use MPIF,               only: MPI_DOUBLE_PRECISION
+      use MPIFUN,             only: MPI_Isend, MPI_Irecv
       use mpisetup,           only: master, proc, err_mpi, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use ppp_mpi,            only: req_ppp
-#ifdef MPIF08
-      use MPIF,               only: MPI_Comm
-#endif /* MPIF08 */
 #if defined(GRAV) && defined(NBODY)
       use domain,             only: dom
       use particle_func,      only: particle_in_area
@@ -464,11 +461,6 @@ contains
          enumerator :: I_NP                   ! number of particles to transfer
       end enum
       character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv", cp_label = "reshuffle_copy", gp_label = "reshuffle_gptemp"
-#ifdef MPIF08
-      type(MPI_Comm)  :: shuff_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: shuff_comm
-#endif /* !MPIF08 */
 #if defined(GRAV) && defined(NBODY)
       logical :: in, phy, out, fin, indomain
       type(particle), pointer :: part
@@ -518,9 +510,8 @@ contains
       call ppp_main%stop(gp_label, PPP_AMR)
 
       ! Irecv & Isend
-      call MPI_Comm_dup(MPI_COMM_WORLD, shuff_comm, err_mpi)
       call ppp_main%start(ISR_label, PPP_AMR)
-      call req%init
+      call req%init(owncomm = .true.)
       curl => finest%level
       do while (associated(curl))
 
@@ -581,11 +572,11 @@ contains
                      cgl => cgl%nxt
                   enddo
                   if (.not. found) call die("[rebalance:reshuffle] Grid id not found")
-                  call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  shuff_comm, req%nxt(), err_mpi)
+                  call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  req%comm, req%nxt(), err_mpi)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Isend for particles
-                  call MPI_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, shuff_comm, req%nxt(), err_mpi)
+                  call MPI_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, req%comm, req%nxt(), err_mpi)
 #endif /* GRAV && NBODY */
 
                endif
@@ -604,12 +595,12 @@ contains
                      if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(curl%last%cg)
                   enddo
                   call all_cg%add(curl%last%cg)
-                  call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, shuff_comm, req%nxt(), err_mpi)
+                  call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, req%comm, req%nxt(), err_mpi)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Irecv for particles
                   allocate(cglepa(i)%pbuf(npf, gptemp(I_NP, i)))
-                  call MPI_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, shuff_comm, req%nxt(), err_mpi)
+                  call MPI_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, req%comm, req%nxt(), err_mpi)
 #endif /* GRAV && NBODY */
 
                endif
@@ -622,7 +613,6 @@ contains
       call ppp_main%stop(ISR_label, PPP_AMR)
 
       call req%waitall("reshuffle", PPP_AMR)
-      call MPI_Comm_free(shuff_comm, err_mpi)
 
       call ppp_main%start(cp_label, PPP_AMR)
       curl => finest%level

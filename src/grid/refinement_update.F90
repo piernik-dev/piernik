@@ -136,14 +136,11 @@ contains
 #if defined(GRAV) && defined(NBODY)
          use cg_level_base,      only: base
          use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
-         use MPIF,               only: MPI_INTEGER, MPI_COMM_WORLD
-         use MPIFUN,             only: MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
+         use MPIF,               only: MPI_INTEGER
+         use MPIFUN,             only: MPI_Isend, MPI_Irecv
          use mpisetup,           only: err_mpi
          use ppp_mpi,            only: req_ppp
          use refinement,         only: nbody_ref
-#ifdef MPIF08
-         use MPIF,               only: MPI_Comm
-#endif /* MPIF08 */
 #endif /* GRAV && NBODY */
 
          implicit none
@@ -153,11 +150,6 @@ contains
 #if defined(GRAV) && defined(NBODY)
          type(req_ppp) :: req
          integer :: i, j, k, g
-#ifdef MPIF08
-         type(MPI_Comm)  :: cp_comm
-#else /* !MPIF08 */
-         integer(kind=4) :: cp_comm
-#endif /* !MPIF08 */
 #endif /* GRAV && NBODY */
 
          curl => finest%level
@@ -185,9 +177,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
          ! Update the number of particles on children for URC_nbody
          if (nbody_ref > I_ZERO) then
-
-            call MPI_Comm_dup(MPI_COMM_WORLD, cp_comm, err_mpi)
-            call req%init
+            call req%init(owncomm = .true.)
 
             curl => base%level
             do while (associated(curl))
@@ -198,7 +188,7 @@ contains
                      associate (ro => cgl%cg%ro_tgt)
                         if (allocated(ro%seg)) then
                            do g = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
-                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, cp_comm, req%nxt(), err_mpi)
+                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, req%comm, req%nxt(), err_mpi)
                            enddo
                         endif
                      end associate
@@ -211,7 +201,7 @@ contains
                            i = merge(LO, HI, ri%seg(g)%se(xdim, LO) <= cgl%cg%ijkse(xdim, LO))
                            j = merge(LO, HI, ri%seg(g)%se(ydim, LO) <= cgl%cg%ijkse(ydim, LO))
                            k = merge(LO, HI, ri%seg(g)%se(zdim, LO) <= cgl%cg%ijkse(zdim, LO))
-                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, cp_comm, req%nxt(), err_mpi)
+                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, req%comm, req%nxt(), err_mpi)
                         enddo
                      endif
                   end associate
@@ -222,8 +212,6 @@ contains
             enddo
 
             call req%waitall("parent_particle_cnt")
-
-            call MPI_Comm_free(cp_comm, err_mpi)
          endif
 #endif /* GRAV && NBODY */
 
@@ -333,12 +321,9 @@ contains
       use dataio_pub,         only: die, warn
       use domain,             only: dom
       use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Comm_dup, MPI_Comm_free
+      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv
       use mpisetup,           only: FIRST, LAST, err_mpi, proc
       use ppp_mpi,            only: req_ppp
-#ifdef MPIF08
-      use MPIF,       only: MPI_Comm
-#endif /* MPIF08 */
 
       implicit none
 
@@ -358,11 +343,6 @@ contains
       type(pt), dimension(:), allocatable :: pt_list
       integer(kind=4) :: pt_cnt
       integer(kind=4) :: rtag
-#ifdef MPIF08
-      type(MPI_Comm)  :: ref_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: ref_comm
-#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -416,11 +396,10 @@ contains
       call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
-      call MPI_Comm_dup(MPI_COMM_WORLD, ref_comm, err_mpi)
-      call req%init
+      call req%init(owncomm = .true.)
       if (pt_cnt > 0) then
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
-            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, ref_comm, req%nxt(), err_mpi)
+            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, req%comm, req%nxt(), err_mpi)
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
@@ -429,14 +408,13 @@ contains
          if (grcnt(g) /= 0) then
             if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as local thing
             do i = 1, grcnt(g)
-               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, ref_comm, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, req%comm, MPI_STATUS_IGNORE, err_mpi)
                call disable_derefine_by_tag(lev%finer, rtag)  ! beware: O(leaves%cnt^2)
             enddo
          endif
       enddo
 
       call req%waitall("prevent_derefinement")
-      call MPI_Comm_free(ref_comm, err_mpi)
 
       deallocate(pt_list)
 
@@ -856,16 +834,13 @@ contains
          use domain,         only: dom
          use grid_cont,      only: grid_container
          use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
-         use MPIFUN,         only: MPI_Alltoall, MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
+         use MPIFUN,         only: MPI_Alltoall, MPI_Isend, MPI_Irecv
          use mpisetup,       only: proc, err_mpi, FIRST, LAST
          use particle_func,  only: particle_in_area
          use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
          use particle_utils, only: is_part_in_cg
          use ppp,            only: ppp_main
          use ppp_mpi,        only: req_ppp
-#ifdef MPIF08
-         use MPIF,           only: MPI_Comm
-#endif /* MPIF08 */
 
          implicit none
 
@@ -893,11 +868,6 @@ contains
          logical :: in, phy, out, fin, indomain
          character(len=*), parameter :: dp_label = "ru:deref_part", allmeta_label = "ru:deref:All2All", srmeta_label = "ru:deref:SR_meta", &
               srpart_label = "ru:deref:SR_part", ownpart_label = "ru:deref:copy_own_part", get_label = "ru:deref:add_part"
-#ifdef MPIF08
-         type(MPI_Comm)  :: dp_comm
-#else /* !MPIF08 */
-         integer(kind=4) :: dp_comm
-#endif /* !MPIF08 */
 
          call ppp_main%start(dp_label, PPP_AMR)
 
@@ -929,8 +899,6 @@ contains
 
          ! nsend/nrecv are expected to represent a quite sparse communication matrix with most nonzero elements located around the diagonal so we may proceed with point-to-point MPI calls only
 
-         call MPI_Comm_dup(MPI_COMM_WORLD, dp_comm, err_mpi)
-
          ! Second, describe, what to communicate
          do g = FIRST, LAST
             if (nsend(g) > 0) then
@@ -960,15 +928,15 @@ contains
 
          call ppp_main%start(srmeta_label, PPP_AMR)
          if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
-         call req%init
+         call req%init(owncomm = .true.)
          do g = FIRST, LAST
             if (g /= proc) then
                if (nsend(g) > 0) then
                   allocate(cgsend(g)%pbuf(npf, sum(cgsend(g)%gl(I_NP, :))))
-                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
+                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req%comm, req%nxt(), err_mpi)
                endif
                if (nrecv(g) > 0) then
-                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
+                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req%comm, req%nxt(), err_mpi)
                endif
             endif
          enddo
@@ -1007,7 +975,7 @@ contains
 
          ! Third, communicate the particles
          call ppp_main%start(srpart_label, PPP_AMR)
-         call req%init
+         call req%init(owncomm = .true.)
          do g = FIRST, LAST
             if (g /= proc) then
                if (nsend(g) > 0) then
@@ -1031,11 +999,11 @@ contains
                         part => part%nxt
                      enddo
                   enddo
-                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
+                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req%comm, req%nxt(), err_mpi)
                endif
                if (nrecv(g) > 0) then
                   allocate(cgrecv(g)%pbuf(npf, sum(cgrecv(g)%gl(I_NP, :))))
-                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req%nxt(), err_mpi)
+                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req%comm, req%nxt(), err_mpi)
                endif
             endif
          enddo
@@ -1087,7 +1055,6 @@ contains
          call ppp_main%stop(get_label, PPP_AMR)
 
          ! Cleanup
-         call MPI_Comm_free(dp_comm, err_mpi)
          do g = FIRST, LAST
             if (allocated(cgsend(g)%gl))   deallocate(cgsend(g)%gl)
             if (allocated(cgsend(g)%cgp))  deallocate(cgsend(g)%cgp)
