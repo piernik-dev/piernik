@@ -43,6 +43,7 @@ contains
 
       use allreduce,    only: init_allreduce
       use bcast,        only: init_bcast
+      use isend_irecv,  only: init_sr
       use mpi_wrappers, only: init_bar
       use ppp_mpi,      only: init_wall
 
@@ -51,6 +52,7 @@ contains
       call init_allreduce
       call init_bcast
       call init_bar
+      call init_sr
       call init_wall
 
    end subroutine init_wstats
@@ -63,6 +65,7 @@ contains
       use bcast,        only: cleanup_bcast
       use constants,    only: stdout, V_DEBUG
       use dataio_pub,   only: piernik_verbosity
+      use isend_irecv,  only: cleanup_sr
       use mpi_wrappers, only: cleanup_bar
       use mpisetup,     only: master
       use ppp_mpi,      only: cleanup_wall
@@ -75,6 +78,7 @@ contains
       call cleanup_allreduce
       call cleanup_bcast
       call cleanup_bar
+      call cleanup_sr
       call cleanup_wall
 
    end subroutine cleanup_wstats

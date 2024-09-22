@@ -41,7 +41,7 @@ module cnt_array
       integer(LONG),                   allocatable, private :: c0
       integer(LONG), dimension(:),     allocatable, private :: c1
       integer(LONG), dimension(:,:),   allocatable, private :: c2
-      integer(LONG), dimension(:,:,:), allocatable, private :: c3  ! most likely never used
+      integer(LONG), dimension(:,:,:), allocatable, private :: c3
    contains
       procedure :: init     !< allocate the array of counters
       procedure :: cleanup  !< deallocate everything
