@@ -52,11 +52,6 @@ module allreduce
 #endif /* !MPIF08 */
                     & dimension(pSUM:pLAND) :: mpiop
    type(arrsum) :: size_allr
-   enum, bind(C)
-      enumerator :: T_BOO = 1, T_I4, T_I8, T_R4, T_R8
-   end enum
-   integer, parameter :: max_dtype = T_R8  ! required for stats gathering
-   integer, parameter :: max_rank = 4
 
 #ifdef NO_F2018
    ! We keep that spaghetti to not break compatibility with systems where only
@@ -86,14 +81,15 @@ contains
 
    subroutine init_allreduce
 
-      use MPIF, only: MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND
+      use mpi_wrappers, only: max_rank, T_LAST
+      use MPIF,         only: MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND
 
       implicit none
 
       ! this must match the ordering in constants enum
       mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]
 
-      call size_allr%init([max_rank + 1, max_dtype])
+      call size_allr%init([max_rank + 1, T_LAST])
 
    end subroutine init_allreduce
 
@@ -108,7 +104,7 @@ contains
       implicit none
 
       if (master .and. MPI_wrapper_stats) &
-           call size_allr%print("Allreduce total elements(calls). Columns: logical, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
+           call size_allr%print("Allreduce total elements(calls). Columns: logical, character, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
 
       call size_allr%cleanup
 
@@ -120,77 +116,25 @@ contains
 !!
 !! Unlimited polymorphism here still requires some spaghetti code but much less than in non-f08 way
 !!
-!! Requires Fortran 2018 for SELECT RANK and DIMENSION(..)
+!! Requires Fortran 2018 for DIMENSION(..)
 !<
 
    subroutine piernik_MPI_Allreduce(var, reduction)
 
-      use dataio_pub,   only: die
-      use mpi_wrappers, only: MPI_wrapper_stats
-      use MPIF,         only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
-           &                  MPI_IN_PLACE, MPI_COMM_WORLD
+      use mpi_wrappers, only: MPI_wrapper_stats, what_type, mpi_type
+      use MPIF,         only: MPI_IN_PLACE, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,         only: MPI_Datatype
-#endif /* MPIF08 */
 
       implicit none
 
       class(*), dimension(..), target, intent(inout) :: var       !< variable that will be reduced
       integer(kind=4),                 intent(in)    :: reduction !< integer to mark a reduction type
 
-#ifdef MPIF08
-      type(MPI_Datatype) :: dtype
-#else /* !MPIF08 */
-      integer(kind=4) :: dtype
-#endif /* !MPIF08 */
-      class(*), pointer :: pvar
-      logical, target :: dummy
       integer :: it
 
-      ! duplicated code: see bcast
-      select rank (var)
-         rank (0)
-            pvar => var
-         rank (1)
-            pvar => var(lbound(var, 1))
-         rank (2)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2))
-         rank (3)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
-         rank (max_rank)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
-         rank default
-            call die("[allreduce:piernik_MPI_Allreduce] non-implemented rank")
-            pvar => dummy  ! suppress compiler warning
-      end select
-      ! In Fortran 2023 it should be possible to reduce the above construct to just
-      !     pvar => var(@lbound(var))
-
-      select type (pvar)
-         type is (logical)
-            dtype = MPI_LOGICAL
-            it = T_BOO
-         type is (integer(kind=4))
-            dtype = MPI_INTEGER
-            it = T_I4
-         type is (integer(kind=8))  ! most likely never used
-            dtype = MPI_INTEGER8
-            it = T_I8
-         type is (real(kind=4))  ! most likely never used
-            dtype = MPI_REAL
-            it = T_R4
-         type is (real(kind=8))
-            dtype = MPI_DOUBLE_PRECISION
-            it = T_R8
-         class default
-            call die("[allreduce:piernik_MPI_Allreduce] non-implemented type")
-            it = huge(1)
-      end select
-
+      it = what_type(var)
       if (MPI_wrapper_stats) call size_allr%add([rank(var)+1, it], size(var, kind=8))
-
-      call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), dtype, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
+      call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), mpi_type(it), mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine piernik_MPI_Allreduce
 
