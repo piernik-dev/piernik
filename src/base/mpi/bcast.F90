@@ -40,11 +40,6 @@ module bcast
 
    integer(kind=4) :: err_mpi  !< error status
    type(arrsum) :: size_bcast
-   enum, bind(C)
-      enumerator :: T_BOO = 1, T_STR, T_I4, T_I8, T_R4, T_R8
-   end enum
-   integer, parameter :: max_dtype = T_R8  ! required for stats gathering
-   integer, parameter :: max_rank = 4
 
 #ifdef NO_F2018
    ! We keep that spaghetti to not break compatibility with systems where only
@@ -79,9 +74,11 @@ contains
 
    subroutine init_bcast
 
+      use mpi_wrappers, only: max_rank, T_LAST
+
       implicit none
 
-      call size_bcast%init([max_rank + 1, max_dtype])
+      call size_bcast%init([max_rank + 1, T_LAST + 1])  ! one extra slot for strings
 
    end subroutine init_bcast
 
@@ -109,16 +106,15 @@ contains
 !!
 !! Unlimited polymorphism here still requires some spaghetti code but much less than in non-f08 way
 !!
-!! Requires Fortran 2018 for SELECT RANK and DIMENSION(..)
+!! Requires Fortran 2018 for DIMENSION(..)
 !<
 
    subroutine piernik_MPI_Bcast(var, clen)
 
       use dataio_pub,   only: die
-      use mpi_wrappers, only: MPI_wrapper_stats
+      use mpi_wrappers, only: MPI_wrapper_stats, first_element, what_type, mpi_type, T_STR
       use mpisetup,     only: FIRST
-      use MPIF,         only: MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER, MPI_INTEGER8, &
-           &                  MPI_REAL, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
+      use MPIF,         only: MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Bcast
 #ifdef MPIF08
       use MPIF,         only: MPI_Datatype
@@ -135,54 +131,18 @@ contains
       integer(kind=4) :: dtype
 #endif /* !MPIF08 */
       class(*), pointer :: pvar
-      logical, target :: dummy
       integer(kind=4) :: lenmul
       integer :: it
 
-      ! duplicated code: see allreduce
-      select rank (var)
-         rank (0)
-            pvar => var
-         rank (1)
-            pvar => var(lbound(var, 1))
-         rank (2)
-            pvar => var(lbound(var, 1), lbound(var, 2))
-         rank (3)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
-         rank (4)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
-         rank default
-            call die("[bcast:piernik_MPI_Bcast] non-implemented rank")
-            pvar => dummy  ! suppress compiler warning
-      end select
-      ! In Fortran 2023 it should be possible to reduce the above construct to just
-      !     pvar => var(@lbound(var))
+      pvar => first_element(var)
 
+      it = what_type(pvar)
+      dtype = mpi_type(it)
       lenmul = 1
       select type (pvar)
          type is (character(len=*))
-            dtype = MPI_CHARACTER
             if (.not. present(clen)) call die("[bcast:piernik_MPI_Bcast] clen is required for strings")
             lenmul = clen
-            it = T_STR
-         type is (logical)
-            dtype = MPI_LOGICAL
-            it = T_BOO
-         type is (integer(kind=4))
-            dtype = MPI_INTEGER
-            it = T_I4
-         type is (integer(kind=8))
-            dtype = MPI_INTEGER8
-            it = T_I8
-         type is (real(kind=4))  ! most likely never used
-            dtype = MPI_REAL
-            it = T_R4
-         type is (real(kind=8))
-            dtype = MPI_DOUBLE_PRECISION
-            it = T_R8
-         class default
-            call die("[bcast:piernik_MPI_Bcast] non-implemented type")
-            it = huge(1)
       end select
 
       if (present(clen) .and. (it /= T_STR)) call die("[bcast:piernik_MPI_Bcast] clen makes no sense for non-strings")

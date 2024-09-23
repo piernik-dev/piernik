@@ -41,13 +41,8 @@ module isend_irecv
 
    type(arrsum) :: size_sr
    enum, bind(C)
-      enumerator :: T_BOO = 1, T_I4, T_I8, T_R4, T_R8
-   end enum
-   enum, bind(C)
       enumerator :: I_S = 1, I_R
    end enum
-   integer, parameter :: max_dtype = T_R8  ! required for stats gathering
-   integer, parameter :: max_rank = 4
    integer, parameter :: max_op = I_R  ! separate counters for send and recaive operations
 
 contains
@@ -56,9 +51,11 @@ contains
 
    subroutine init_sr
 
+      use mpi_wrappers, only: max_rank, T_LAST
+
       implicit none
 
-      call size_sr%init([max_op, max_rank + 1, max_dtype])
+      call size_sr%init([max_op, max_rank + 1, T_LAST])
 
    end subroutine init_sr
 
@@ -73,7 +70,7 @@ contains
       implicit none
 
       if (master .and. MPI_wrapper_stats) &
-           call size_sr%print("Isend/Irecv total elements(calls). Columns: logical, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
+           call size_sr%print("Isend/Irecv total elements(calls). Columns: logical, character, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
 
       call size_sr%cleanup
 
@@ -82,19 +79,19 @@ contains
 !>
 !! \brief Polymorphic wrapper for MPI_Isend
 !!
-!! Requires Fortran 2018 for SELECT RANK and DIMENSION(..)
+!! Requires Fortran 2018 for DIMENSION(..)
 !<
 
    subroutine piernik_Isend(buf, count, datatype, dest, tag, req)
 
-      use dataio_pub,   only: die
-      use mpi_wrappers, only: MPI_wrapper_stats
-      use MPIF,         only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION
       use MPIFUN,       only: MPI_Isend
       use req_array,    only: req_arr
 #ifdef MPIF08
       use MPIF,         only: MPI_Datatype, MPI_Request
 #endif /* MPIF08 */
+#ifndef NO_F2018
+      use mpi_wrappers, only: MPI_wrapper_stats, what_type
+#endif /* !NO_F2018 */
 
       implicit none
 
@@ -110,57 +107,15 @@ contains
       class(req_arr),                  intent(inout) :: req       !< array for requests
 
 #ifdef MPIF08
-      type(MPI_Datatype) :: dtype
       type(MPI_Request), pointer :: r
 #else /* !MPIF08 */
-      integer(kind=4) :: dtype
       integer(kind=4),   pointer :: r
 #endif /* !MPIF08 */
-      class(*), pointer :: pbuf
-      logical, target :: dummy
-      integer :: it
 
-      ! duplicated code: see bcast
-      select rank (buf)
-         rank (0)
-            pbuf => buf
-         rank (1)
-            pbuf => buf(lbound(buf, 1))
-         rank (2)  ! most likely never used
-            pbuf => buf(lbound(buf, 1), lbound(buf, 2))
-         rank (3)  ! most likely never used
-            pbuf => buf(lbound(buf, 1), lbound(buf, 2), lbound(buf, 3))
-         rank (max_rank)  ! most likely never used
-            pbuf => buf(lbound(buf, 1), lbound(buf, 2), lbound(buf, 3), lbound(buf, 4))
-         rank default
-            call die("[isend_irecv:piernik_Isend] non-implemented rank")
-            pbuf => dummy  ! suppress compiler warning
-      end select
-      ! In Fortran 2023 it should be possible to reduce the above construct to just
-      !     pbuf => buf(@lbound(buf))
-
-      select type (pbuf)
-         type is (logical)
-            dtype = MPI_LOGICAL
-            it = T_BOO
-         type is (integer(kind=4))
-            dtype = MPI_INTEGER
-            it = T_I4
-         type is (integer(kind=8))  ! most likely never used
-            dtype = MPI_INTEGER8
-            it = T_I8
-         type is (real(kind=4))  ! most likely never used
-            dtype = MPI_REAL
-            it = T_R4
-         type is (real(kind=8))
-            dtype = MPI_DOUBLE_PRECISION
-            it = T_R8
-         class default
-            call die("[isend_irecv:piernik_Isend] non-implemented type")
-            it = huge(1)
-      end select
-
-      if (MPI_wrapper_stats) call size_sr%add([int(I_S), rank(buf)+1, it], size(buf, kind=8))
+#ifndef NO_F2018
+      if (MPI_wrapper_stats) &
+           call size_sr%add([int(I_S), rank(buf)+1, what_type(buf)], size(buf, kind=8))
+#endif /* !NO_F2018 */
 
       ! No idea why MPI_Irecv here doesn't work correctly when req%nxt() is passed directly.
       r => req%nxt()
@@ -168,16 +123,22 @@ contains
 
    end subroutine piernik_Isend
 
+!>
+!! \brief Polymorphic wrapper for MPI_Irecv
+!!
+!! Requires Fortran 2018 for DIMENSION(..)
+!<
+
    subroutine piernik_Irecv(buf, count, datatype, source, tag, req)
 
-      use dataio_pub,   only: die
-      use mpi_wrappers, only: MPI_wrapper_stats
-      use MPIF,         only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION
       use MPIFUN,       only: MPI_Irecv
       use req_array,    only: req_arr
 #ifdef MPIF08
       use MPIF,         only: MPI_Datatype, MPI_Request
 #endif /* MPIF08 */
+#ifndef NO_F2018
+      use mpi_wrappers, only: MPI_wrapper_stats, what_type
+#endif /* !NO_F2018 */
 
       implicit none
 
@@ -193,57 +154,15 @@ contains
       class(req_arr),                  intent(inout) :: req       !< array for requests
 
 #ifdef MPIF08
-      type(MPI_Datatype) :: dtype
       type(MPI_Request), pointer :: r
 #else /* !MPIF08 */
-      integer(kind=4) :: dtype
       integer(kind=4),   pointer :: r
 #endif /* !MPIF08 */
-      class(*), pointer :: pbuf
-      logical, target :: dummy
-      integer :: it
 
-      ! duplicated code: see bcast
-      select rank (buf)
-         rank (0)
-            pbuf => buf
-         rank (1)
-            pbuf => buf(lbound(buf, 1))
-         rank (2)  ! most likely never used
-            pbuf => buf(lbound(buf, 1), lbound(buf, 2))
-         rank (3)  ! most likely never used
-            pbuf => buf(lbound(buf, 1), lbound(buf, 2), lbound(buf, 3))
-         rank (max_rank)  ! most likely never used
-            pbuf => buf(lbound(buf, 1), lbound(buf, 2), lbound(buf, 3), lbound(buf, 4))
-         rank default
-            call die("[isend_irecv:piernik_Irecv] non-implemented rank")
-            pbuf => dummy  ! suppress compiler warning
-      end select
-      ! In Fortran 2023 it should be possible to reduce the above construct to just
-      !     pbuf => buf(@lbound(buf))
-
-      select type (pbuf)
-         type is (logical)
-            dtype = MPI_LOGICAL
-            it = T_BOO
-         type is (integer(kind=4))
-            dtype = MPI_INTEGER
-            it = T_I4
-         type is (integer(kind=8))  ! most likely never used
-            dtype = MPI_INTEGER8
-            it = T_I8
-         type is (real(kind=4))  ! most likely never used
-            dtype = MPI_REAL
-            it = T_R4
-         type is (real(kind=8))
-            dtype = MPI_DOUBLE_PRECISION
-            it = T_R8
-         class default
-            call die("[isend_irecv:piernik_Irecv] non-implemented type")
-            it = huge(1)
-      end select
-
-      if (MPI_wrapper_stats) call size_sr%add([int(I_R), rank(buf)+1, it], size(buf, kind=8))
+#ifndef NO_F2018
+      if (MPI_wrapper_stats) &
+           call size_sr%add([int(I_R), rank(buf)+1, what_type(buf)], size(buf, kind=8))
+#endif /* !NO_F2018 */
 
       ! No idea why MPI_Irecv here doesn't work correctly when req%nxt() is passed directly.
       r => req%nxt()
