@@ -120,6 +120,7 @@ contains
       ! No idea why MPI_Irecv here doesn't work correctly when req%nxt() is passed directly.
       r => req%nxt()
       call MPI_Isend(buf, count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, I_S)
 
    end subroutine piernik_Isend
 
@@ -167,6 +168,7 @@ contains
       ! No idea why MPI_Irecv here doesn't work correctly when req%nxt() is passed directly.
       r => req%nxt()
       call MPI_Irecv(buf, count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, I_R)
 
    end subroutine piernik_Irecv
 
