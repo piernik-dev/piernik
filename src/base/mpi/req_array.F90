@@ -30,6 +30,7 @@
 
 module req_array
 
+   use tag_array, only: tag_arr
 #ifdef MPIF08
    use MPIF, only: MPI_Request, MPI_Comm
 #endif /* MPIF08 */
@@ -48,10 +49,13 @@ module req_array
       integer(kind=4),   allocatable, dimension(:) :: r
       integer(kind=4)                              :: comm
 #endif /* !MPIF08 */
-      integer(kind=4) :: n  !< number of requests
-      logical :: owncomm    !< was the own communicator requested?
+      integer(kind=4) :: n   !< number of requests
+      logical :: owncomm     !< was the own communicator requested?
+      type(tag_arr) :: tags  !< list of tags for each proc in current communication
    contains
       procedure :: nxt              !< give next unused request
+      procedure :: cleanup          !< free the resources
+      procedure :: store_tag        !< store tags for inspection upon Waitall
       procedure :: waitall_on_some  !< wait for completion of the requests on selected procs
       procedure :: setsize_req      !< set the storage for this%r
       procedure :: doublesize_req   !< double the storage size for this%r
@@ -84,6 +88,40 @@ contains
 
    end function nxt
 
+!> \brief clean up
+
+   subroutine cleanup(this)
+
+      use MPIFUN, only: MPI_Comm_free
+
+      implicit none
+
+      class(req_arr), intent(inout), target :: this  !< an object invoking the type-bound procedure
+
+      if (allocated(this%r)) deallocate(this%r)
+      if (this%owncomm) then
+         call MPI_Comm_free(this%comm, err_mpi)
+         this%owncomm = .false.
+      endif
+      call this%tags%cleanup
+
+   end subroutine cleanup
+
+!> brief Accumulate tags for inspection
+
+   subroutine store_tag(this, tag, other_proc, id)
+
+      implicit none
+
+      class(req_arr),  intent(inout) :: this        !< an object invoking the type-bound procedure
+      integer(kind=4), intent(in)    :: tag         !< the tag
+      integer(kind=4), intent(in)    :: other_proc  !< source or destination
+      integer(kind=4), intent(in)    :: id          !< send or receive or other interesting data
+
+      call this%tags%store_tag(tag, other_proc, this%n, id)
+
+   end subroutine store_tag
+
 !>
 !! \brief Simple wrapper for MPI_Waitall
 !!
@@ -95,7 +133,7 @@ contains
       use constants,    only: LONG
       use mpi_wrappers, only: C_REQS, req_wall
       use MPIF,         only: MPI_STATUSES_IGNORE
-      use MPIFUN,       only: MPI_Waitall, MPI_Comm_free
+      use MPIFUN,       only: MPI_Waitall
 
       implicit none
 
@@ -109,11 +147,7 @@ contains
 
       endif
 
-      if (allocated(this%r)) deallocate(this%r)
-      if (this%owncomm) then
-         call MPI_Comm_free(this%comm, err_mpi)
-         this%owncomm = .false.
-      endif
+      call this%cleanup
 
    end subroutine waitall_on_some
 
@@ -197,4 +231,4 @@ contains
 
    end subroutine doublesize_req
 
-end module
+end module req_array

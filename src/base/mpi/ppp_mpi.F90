@@ -90,7 +90,7 @@ contains
       use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, C_REQA, req_wall
       use mpisetup,     only: err_mpi
       use MPIF,         only: MPI_STATUSES_IGNORE
-      use MPIFUN,       only: MPI_Waitall, MPI_Comm_free
+      use MPIFUN,       only: MPI_Waitall
       use ppp,          only: ppp_main
 
       implicit none
@@ -115,11 +115,7 @@ contains
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif
 
-      if (allocated(this%r)) deallocate(this%r)
-      if (this%owncomm) then
-         call MPI_Comm_free(this%comm, err_mpi)
-         this%owncomm = .false.
-      endif
+      call this%cleanup
 
       if (extra_barriers) call piernik_MPI_Barrier
 
