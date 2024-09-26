@@ -270,12 +270,12 @@ contains
 
    subroutine check_blocky(this)
 
-      use allreduce, only: piernik_MPI_Allreduce
-      use constants, only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,      only: MPI_INTEGER
-      use MPIFUN,    only: MPI_Irecv, MPI_Isend
-      use mpisetup,  only: proc, err_mpi, LAST, slave
-      use ppp_mpi,   only: req_ppp
+      use allreduce,   only: piernik_MPI_Allreduce
+      use constants,   only: ndims, LO, HI, pLAND, I_ONE
+      use isend_irecv, only: piernik_Isend, piernik_Irecv
+      use MPIF,        only: MPI_INTEGER
+      use mpisetup,    only: proc, LAST, slave
+      use ppp_mpi,     only: req_ppp
 
       implicit none
 
@@ -303,8 +303,8 @@ contains
          endif
       endif
 
-      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, req%comm, req%nxt(), err_mpi)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, req%comm, req%nxt(), err_mpi)
+      if (slave)     call piernik_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, req)
+      if (proc<LAST) call piernik_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, req)
 
       call req%waitall("dot:chk_blocky")
 

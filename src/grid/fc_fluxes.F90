@@ -64,9 +64,8 @@ contains
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, base_level_id
+      use isend_irecv,  only: piernik_Irecv
       use MPIF,         only: MPI_DOUBLE_PRECISION
-      use MPIFUN,       only: MPI_Irecv
-      use mpisetup,     only: err_mpi
       use ppp_mpi,      only: req_ppp
 
       implicit none
@@ -101,7 +100,7 @@ contains
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
                   jc = seg(g)%se(cdim, :)
                   if (jc(LO) == jc(HI)) then
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                     call piernik_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                      seg(g)%ireq = req%n
                   endif
                enddo
@@ -187,9 +186,8 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
+      use isend_irecv,  only: piernik_Isend
       use MPIF,         only: MPI_DOUBLE_PRECISION
-      use MPIFUN,       only: MPI_Isend
-      use mpisetup,     only: err_mpi
       use ppp,          only: ppp_main
       use ppp_mpi,      only: req_ppp
 
@@ -234,7 +232,7 @@ contains
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
 
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+               call piernik_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                seg(g)%ireq = req%n
             endif
          enddo

@@ -327,9 +327,9 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend
-      use mpisetup,         only: FIRST, LAST, proc, err_mpi
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
+      use MPIF,             only: MPI_DOUBLE_PRECISION
+      use mpisetup,         only: FIRST, LAST, proc
       use named_array_list, only: wna
       use ppp_mpi,          only: req_ppp
 
@@ -347,8 +347,8 @@ contains
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
 
       ! for some reasons
-      call req1%init(owncomm = .false.)
-      call req2%init(owncomm = .false.)
+      call req1%init(owncomm = .false., label = "clb:ib.m1")
+      call req2%init(owncomm = .false., label = "clb:ib.m2")
       do p = FIRST, LAST
          if (p /= proc) then
             call this%ms%sl(p, IN )%find_offsets(dmask)
@@ -397,8 +397,8 @@ contains
                      endif
                   enddo
                endif
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    MPI_COMM_WORLD, req1%nxt(), err_mpi)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, MPI_COMM_WORLD, req2%nxt(), err_mpi)
+               call piernik_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    req1)
+               call piernik_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, req2)
             endif
 
          endif
@@ -485,8 +485,8 @@ contains
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use grid_cont_bseg,   only: segment
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use mpisetup,         only: err_mpi
       use named_array_list, only: wna
       use ppp_mpi,          only: req_ppp
@@ -507,7 +507,7 @@ contains
       integer(kind=4), dimension(rank3) :: b3sz, b3su, b3st
       integer(kind=4), dimension(rank4) :: b4sz, b4su, b4st
 
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "clb:ib.1by1")
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -541,13 +541,13 @@ contains
                         b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req%comm, req%nxt(), err_mpi)
+                        call piernik_Irecv(cg%q(ind)%arr, I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
 
                         b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
                         b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req%comm, req%nxt(), err_mpi)
+                        call piernik_Isend(cg%q(ind)%arr, I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
 
                      else
 
@@ -555,13 +555,15 @@ contains
                         b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req%comm, req%nxt(), err_mpi)
+                        call piernik_Irecv(cg%w(ind)%arr, I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
+                        ! valgrind: Invalid read of size 8,  Address <blahblah> is 0 bytes after a block of size 272 alloc'd
 
                         b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
                         b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req%comm, req%nxt(), err_mpi)
+                        call piernik_Isend(cg%w(ind)%arr, I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
+                        ! valgrind: Invalid read of size 8,  Address <blahblah> is 0 bytes after a block of size 272 alloc'd
 
                      endif
                   enddo

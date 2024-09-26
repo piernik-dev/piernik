@@ -940,9 +940,9 @@ contains
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c, c2f
-      use mpisetup,         only: err_mpi, master
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
+      use mpisetup,         only: master
       use MPIF,             only: MPI_DOUBLE_PRECISION
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
       use ppp_mpi,          only: req_ppp
@@ -1026,9 +1026,9 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                if (d4) then
                   allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
-                  call MPI_Irecv(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                else
-                  call MPI_Irecv(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                endif
             enddo
          endif
@@ -1052,11 +1052,11 @@ contains
                allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                p4d => cg%w(iv)%span(cse)
                seg(g)%buf4(:, :, :, :) = p4d
-               call MPI_Isend(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+               call piernik_Isend(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
             else
                p3d => cg%q(iv)%span(cse)
                seg(g)%buf(:, :, :) = p3d
-               call MPI_Isend(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+               call piernik_Isend(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
             endif
          enddo
          end associate
@@ -1174,9 +1174,9 @@ contains
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use grid_helpers,     only: c2f
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
       use MPIF,             only: MPI_DOUBLE_PRECISION
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend
-      use mpisetup,         only: err_mpi, master
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
       use ppp_mpi,          only: req_ppp
@@ -1239,9 +1239,9 @@ contains
                if (present(arr4d)) then
                   if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pib buf4")
                   allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
-                  call MPI_Irecv(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                else
-                  call MPI_Irecv(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                endif
             enddo
          endif
@@ -1268,10 +1268,10 @@ contains
                   if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pob buf4")
                   allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                   seg(g)%buf4(:, :, :, :) = cgl%cg%w(ind)%arr(:, cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-                  call MPI_Isend(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(seg(g)%buf4, size(seg(g)%buf4, kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                else
                   seg(g)%buf(:, :, :)     = cgl%cg%q(ind)%arr(   cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-                  call MPI_Isend(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(seg(g)%buf,  size(seg(g)%buf,  kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
                endif
             enddo
          endif
@@ -1504,9 +1504,9 @@ contains
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use mpisetup,         only: err_mpi, master
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
+      use mpisetup,         only: master
       use MPIF,             only: MPI_DOUBLE_PRECISION
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend
       use named_array,      only: p3, p4
       use named_array_list, only: qna, wna
       use ppp_mpi,          only: req_ppp
@@ -1565,9 +1565,9 @@ contains
                associate (seg => cg%ri_tgt%seg(g))
                   if (d4) then
                      allocate(seg%buf4(wna%lst(iv)%dim4, size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
-                     call MPI_Irecv(seg%buf4, size(seg%buf4, kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req%comm, req%nxt(), err_mpi)
+                     call piernik_Irecv(seg%buf4, size(seg%buf4, kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req)
                   else
-                     call MPI_Irecv(seg%buf,  size(seg%buf,  kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req%comm, req%nxt(), err_mpi)
+                     call piernik_Irecv(seg%buf,  size(seg%buf,  kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req)
                   endif
                end associate
             enddo
@@ -1669,9 +1669,9 @@ contains
                   enddo
                endif
                if (d4) then
-                  call MPI_Isend(seg%buf4, size(seg%buf4, kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(seg%buf4, size(seg%buf4, kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req)
                else
-                  call MPI_Isend(seg%buf,  size(seg%buf,  kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(seg%buf,  size(seg%buf,  kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, req)
                endif
             end associate
          enddo
