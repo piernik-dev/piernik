@@ -287,7 +287,7 @@ contains
       integer :: i
       type(req_ppp) :: req
 
-      call req%init(nr, owncomm = .true.)
+      call req%init(nr, owncomm = .true., label = "dot")
       this%is_blocky = .true.
       shape = 0
       shape1 = 0

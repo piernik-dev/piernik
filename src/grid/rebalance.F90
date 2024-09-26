@@ -85,8 +85,6 @@ contains
       curl => finest%level
       do while (associated(curl))
 
-         call req%init(tag_cost, owncomm = .false.)
-
          ! invalid_speed = .false.
          curl%recently_changed = .false.
          allocate(gptemp(I_OFF:I_NP, curl%cnt), costs(curl%cnt), curl%cnt_all(FIRST:LAST))
@@ -141,8 +139,10 @@ contains
             enddo
          else
             if (curl%cnt > 0) then
+               call req%init(tag_cost, owncomm = .false., label = "rebalance:costs")
                call MPI_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  MPI_COMM_WORLD, req%nxt(), err_mpi)
                call MPI_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, MPI_COMM_WORLD, req%nxt(), err_mpi)
+
                if (extra_barriers) then
                   call req%waitall
                else
@@ -511,7 +511,7 @@ contains
 
       ! Irecv & Isend
       call ppp_main%start(ISR_label, PPP_AMR)
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "reshuffle")
       curl => finest%level
       do while (associated(curl))
 

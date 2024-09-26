@@ -346,7 +346,7 @@ contains
          endif
       enddo
       if (slave) then
-         call req%init(TAG_ARR_T, owncomm = .false.)
+         call req%init(TAG_ARR_T, owncomm = .false., label = "ppp_ev")
          call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, MPI_COMM_WORLD, req%nxt(), err_mpi)
       endif
 

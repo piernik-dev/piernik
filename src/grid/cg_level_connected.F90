@@ -1014,7 +1014,7 @@ contains
          call this%check_dirty(iv, "prolong-")
       endif
 
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "clc:p1v")
       ! be ready to receive everything into right buffers
       cgl => fine%first
       do while (associated(cgl))
@@ -1227,7 +1227,7 @@ contains
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
       ! OPT: actual stencil range should be used instead
 
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "clc:pb")
       ! be ready to receive everything into right buffers
       cgl => this%first
       do while (associated(cgl))
@@ -1554,7 +1554,7 @@ contains
       call coarse%vertical_prep
 
       ! be ready to receive everything into right buffers
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "clc:r1v")
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg

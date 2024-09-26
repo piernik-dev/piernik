@@ -30,6 +30,7 @@
 
 module tag_array
 
+   use constants, only: cbuff_len
    use sort_tags, only: sort_tags_t
 
    implicit none
@@ -39,6 +40,7 @@ module tag_array
 
    type :: tag_arr  ! array of tag arrays
       type(sort_tags_t), allocatable, dimension(:) :: t  !< list of tags for each proc in current communication
+      character(len = cbuff_len) :: label  !< identificator
    contains
       procedure :: cleanup     !< free the resources
       procedure :: store_tag   !< store tags for inspection upon Waitall
@@ -109,7 +111,7 @@ contains
                   call this%t(i)%sort
                   do j = lbound(this%t(i)%list, 1) + 1, this%t(i)%cnt
                      if (this%t(i)%list(j-1)%tag >= this%t(i)%list(j)%tag) then
-                        write(msg, '(3(a,i0))')"[tag_array:are_unique] @", proc, " : tag collision detected in communication with ", i, " tag=", this%t(i)%list(j-1)%tag
+                        write(msg, '(3(a,i0))')"[tag_array:are_unique] " // trim(this%label) // " @", proc, " : tag collision detected in communication with ", i, " tag=", this%t(i)%list(j-1)%tag
                         call printinfo(msg, V_DEBUG)
                         cnt = cnt +1
                      endif
@@ -120,7 +122,7 @@ contains
       endif
 
       if (cnt /= 0) then
-         write(msg, '(2(a,i0),a)')"[tag_array:are_unique] @", proc, " : ", cnt, " tag collisions detected in communication"
+         write(msg, '(2(a,i0),a)')"[tag_array:are_unique] " // trim(this%label) // " @", proc, " : ", cnt, " tag collisions detected in communication"
          call warn(msg)
       endif
 

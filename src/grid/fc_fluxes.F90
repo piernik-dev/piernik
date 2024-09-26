@@ -79,7 +79,7 @@ contains
       integer(kind=8), dimension(LO:HI) :: jc
       integer :: g
 
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "fc_flx")
 
       nullify(cgl)
       if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)

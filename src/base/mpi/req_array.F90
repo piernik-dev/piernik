@@ -153,17 +153,19 @@ contains
 
 !> \brief Initialize by setting the size of this%r(:) array for non-blocking communication on request.
 
-   subroutine setsize_req(this, nreq, owncomm)
+   subroutine setsize_req(this, nreq, owncomm, label)
 
+      use constants,  only: cbuff_len
       use dataio_pub, only: die
       use MPIF,       only: MPI_COMM_WORLD
       use MPIFUN,     only: MPI_Comm_dup
 
       implicit none
 
-      class(req_arr),  intent(inout) :: this     !< an object invoking the type-bound procedure
-      integer(kind=4), intent(in)    :: nreq     !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
-      logical,         intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
+      class(req_arr),             intent(inout) :: this     !< an object invoking the type-bound procedure
+      integer(kind=4),            intent(in)    :: nreq     !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
+      logical,                    intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
+      character(len=*), optional, intent(in)    :: label    !< identification
 
       integer :: sreq
 
@@ -174,6 +176,15 @@ contains
          sreq = 0
          this%owncomm = .false.
          this%comm = MPI_COMM_WORLD  ! just copy it
+         this%tags%label = " "
+      endif
+
+      if (present(label)) then
+         if (len_trim(this%tags%label) > 0) then
+            call die("[req_array:setsize_req] label already set: '" // label // "' vs '" // this%tags%label // "'")
+         else
+            this%tags%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
+         endif
       endif
 
       if (sreq < nreq) allocate(this%r(nreq))
@@ -196,7 +207,7 @@ contains
 !! \details Perform a resize by a factor of 2. Save existing values stored in this%r(:).
 !<
 
-   subroutine doublesize_req(this, owncomm)
+   subroutine doublesize_req(this, owncomm, label)
 
       use dataio_pub, only: die
 #ifdef MPIF08
@@ -205,8 +216,9 @@ contains
 
       implicit none
 
-      class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
-      logical,        intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
+      class(req_arr),             intent(inout) :: this     !< an object invoking the type-bound procedure
+      logical,                    intent(in)    :: owncomm  !< operate on own communicator, duplicated from MPI_COMM_WORLD
+      character(len=*), optional, intent(in)    :: label    !< identification
 
       !< new request array for MPI_Waitall
 #ifdef MPIF08
@@ -218,8 +230,9 @@ contains
       integer(kind=4), parameter :: default_cnt = 16  ! with no better guess let's allocate some entries
 
       if (.not. allocated(this%r)) then
-         call this%setsize_req(default_cnt, owncomm)
+         call this%setsize_req(default_cnt, owncomm, label)
       else
+         if (present(label)) call die("[req_array:doublesize_req] label for non-fresh req?")
          sreq = size(this%r)
          if (sreq <= 0) call die("[req_array:doublesize_req] size(req) <= 0")
 
