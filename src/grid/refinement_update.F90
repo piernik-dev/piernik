@@ -177,7 +177,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
          ! Update the number of particles on children for URC_nbody
          if (nbody_ref > I_ZERO) then
-            call req%init(owncomm = .true.)
+            call req%init(owncomm = .true., label = "ru:scan")
 
             curl => base%level
             do while (associated(curl))
@@ -396,7 +396,7 @@ contains
       call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
-      call req%init(owncomm = .true.)
+      call req%init(owncomm = .true., label = "ru:ppdl")
       if (pt_cnt > 0) then
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
             call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, req%comm, req%nxt(), err_mpi)
@@ -928,7 +928,7 @@ contains
 
          call ppp_main%start(srmeta_label, PPP_AMR)
          if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
-         call req%init(owncomm = .true.)
+         call req%init(owncomm = .true., label = "ru:deref")
          do g = FIRST, LAST
             if (g /= proc) then
                if (nsend(g) > 0) then
@@ -975,7 +975,7 @@ contains
 
          ! Third, communicate the particles
          call ppp_main%start(srpart_label, PPP_AMR)
-         call req%init(owncomm = .true.)
+         call req%init(owncomm = .true., label = "ru:deref.p")
          do g = FIRST, LAST
             if (g /= proc) then
                if (nsend(g) > 0) then
