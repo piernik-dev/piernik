@@ -54,11 +54,12 @@ contains
       use cg_list_balance,    only: I_N_B, I_OFF
       use constants,          only: LO, I_ONE, ndims, PPP_AMR
       use dataio_pub,         only: warn
+      use isend_irecv,        only: piernik_Isend
       use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
       use mpi_wrappers,       only: extra_barriers
       use mpisetup,           only: err_mpi, master, FIRST, LAST
       use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Gather, MPI_Recv, MPI_Isend
+      use MPIFUN,             only: MPI_Gather, MPI_Recv
       use procnames,          only: pnames
       use ppp,                only: ppp_main
       use ppp_mpi,            only: req_ppp
@@ -140,8 +141,8 @@ contains
          else
             if (curl%cnt > 0) then
                call req%init(tag_cost, owncomm = .false., label = "rebalance:costs")
-               call MPI_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  MPI_COMM_WORLD, req%nxt(), err_mpi)
-               call MPI_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, MPI_COMM_WORLD, req%nxt(), err_mpi)
+               call piernik_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  req)
+               call piernik_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, req)
 
                if (extra_barriers) then
                   call req%waitall
@@ -416,10 +417,10 @@ contains
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
+      use isend_irecv,        only: piernik_Isend, piernik_Irecv
       use list_of_cg_lists,   only: all_lists
       use MPIF,               only: MPI_DOUBLE_PRECISION
-      use MPIFUN,             only: MPI_Isend, MPI_Irecv
-      use mpisetup,           only: master, proc, err_mpi, tag_ub
+      use mpisetup,           only: master, proc, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
       use ppp_mpi,            only: req_ppp
@@ -572,11 +573,11 @@ contains
                      cgl => cgl%nxt
                   enddo
                   if (.not. found) call die("[rebalance:reshuffle] Grid id not found")
-                  call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  req)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Isend for particles
-                  call MPI_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, req)
 #endif /* GRAV && NBODY */
 
                endif
@@ -595,12 +596,12 @@ contains
                      if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(curl%last%cg)
                   enddo
                   call all_cg%add(curl%last%cg)
-                  call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, req)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Irecv for particles
                   allocate(cglepa(i)%pbuf(npf, gptemp(I_NP, i)))
-                  call MPI_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, req)
 #endif /* GRAV && NBODY */
 
                endif

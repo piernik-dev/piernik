@@ -298,8 +298,9 @@ contains
 
       use constants,    only: I_ZERO, I_ONE, V_INFO
       use dataio_pub,   only: warn, printinfo, msg
+      use isend_irecv,  only: piernik_Isend
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,       only: MPI_Isend, MPI_Recv
+      use MPIFUN,       only: MPI_Recv
       use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST
       use req_array,    only: req_arr
@@ -347,7 +348,7 @@ contains
       enddo
       if (slave) then
          call req%init(TAG_ARR_T, owncomm = .false., label = "ppp_ev")
-         call MPI_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, MPI_COMM_WORLD, req%nxt(), err_mpi)
+         call piernik_Isend(ne, I_ONE, MPI_INTEGER, FIRST, TAG_CNT, req)
       endif
 
       if (ne > 0) then
@@ -364,8 +365,8 @@ contains
             call publish_buffers(proc, buflabel, buftime)
             deallocate(buflabel, buftime)
          else
-            call MPI_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, MPI_COMM_WORLD, req%nxt(), err_mpi)
-            call MPI_Isend(buftime,  size(buftime,  kind=4),                          MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, MPI_COMM_WORLD, req%nxt(), err_mpi)
+            call piernik_Isend(buflabel, size(buflabel, kind=4)*len(buflabel(1), kind=4), MPI_CHARACTER,        FIRST, TAG_ARR_L, req)
+            call piernik_Isend(buftime,  size(buftime,  kind=4),                          MPI_DOUBLE_PRECISION, FIRST, TAG_ARR_T, req)
          endif
       endif
 

@@ -136,9 +136,8 @@ contains
 #if defined(GRAV) && defined(NBODY)
          use cg_level_base,      only: base
          use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
+         use isend_irecv,        only: piernik_Isend, piernik_Irecv
          use MPIF,               only: MPI_INTEGER
-         use MPIFUN,             only: MPI_Isend, MPI_Irecv
-         use mpisetup,           only: err_mpi
          use ppp_mpi,            only: req_ppp
          use refinement,         only: nbody_ref
 #endif /* GRAV && NBODY */
@@ -149,7 +148,7 @@ contains
          type(cg_list_element), pointer :: cgl
 #if defined(GRAV) && defined(NBODY)
          type(req_ppp) :: req
-         integer :: i, j, k, g
+         integer :: i, j, k, g, c
 #endif /* GRAV && NBODY */
 
          curl => finest%level
@@ -188,7 +187,8 @@ contains
                      associate (ro => cgl%cg%ro_tgt)
                         if (allocated(ro%seg)) then
                            do g = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
-                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                              c = cgl%cg%count_particles()
+                              call piernik_Isend(c, I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, req)
                            enddo
                         endif
                      end associate
@@ -201,7 +201,7 @@ contains
                            i = merge(LO, HI, ri%seg(g)%se(xdim, LO) <= cgl%cg%ijkse(xdim, LO))
                            j = merge(LO, HI, ri%seg(g)%se(ydim, LO) <= cgl%cg%ijkse(ydim, LO))
                            k = merge(LO, HI, ri%seg(g)%se(zdim, LO) <= cgl%cg%ijkse(zdim, LO))
-                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, req%comm, req%nxt(), err_mpi)
+                           call piernik_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, req)
                         enddo
                      endif
                   end associate
@@ -400,6 +400,7 @@ contains
       if (pt_cnt > 0) then
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
             call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, req%comm, req%nxt(), err_mpi)
+            ! No need to use piernik_Isend here because we just gather anything with tag I_ZERO.
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
@@ -833,8 +834,9 @@ contains
          use dataio_pub,     only: die, msg
          use domain,         only: dom
          use grid_cont,      only: grid_container
+         use isend_irecv,    only: piernik_Isend, piernik_Irecv
          use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
-         use MPIFUN,         only: MPI_Alltoall, MPI_Isend, MPI_Irecv
+         use MPIFUN,         only: MPI_Alltoall
          use mpisetup,       only: proc, err_mpi, FIRST, LAST
          use particle_func,  only: particle_in_area
          use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
@@ -933,10 +935,10 @@ contains
             if (g /= proc) then
                if (nsend(g) > 0) then
                   allocate(cgsend(g)%pbuf(npf, sum(cgsend(g)%gl(I_NP, :))))
-                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req)
                endif
                if (nrecv(g) > 0) then
-                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req)
                endif
             endif
          enddo
@@ -999,11 +1001,11 @@ contains
                         part => part%nxt
                      enddo
                   enddo
-                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req%comm, req%nxt(), err_mpi)
+                  call piernik_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req)
                endif
                if (nrecv(g) > 0) then
                   allocate(cgrecv(g)%pbuf(npf, sum(cgrecv(g)%gl(I_NP, :))))
-                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req%comm, req%nxt(), err_mpi)
+                  call piernik_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req)
                endif
             endif
          enddo
