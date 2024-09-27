@@ -30,7 +30,6 @@
 
 module tag_array
 
-   use constants, only: cbuff_len
    use sort_tags, only: sort_tags_t
 
    implicit none
@@ -40,27 +39,27 @@ module tag_array
 
    type :: tag_arr  ! array of tag arrays
       type(sort_tags_t), allocatable, dimension(:) :: t  !< list of tags for each proc in current communication
-      character(len = cbuff_len) :: label  !< identificator
    contains
-      procedure :: cleanup     !< free the resources
-      procedure :: store_tag   !< store tags for inspection upon Waitall
-      procedure :: are_unique  !< are the stored tags unique?
+      procedure          :: cleanup     !< find problems free the resources
+      procedure          :: store_tag   !< store tags for inspection upon Waitall
+      procedure, private :: are_unique  !< are the stored tags unique?
    end type tag_arr
 
 contains
 
 !> \brief clean up
 
-   subroutine cleanup(this)
+   subroutine cleanup(this, label)
 
       implicit none
 
-      class(tag_arr), intent(inout), target :: this  !< an object invoking the type-bound procedure
+      class(tag_arr), target, intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*),       intent(in)    :: label  !< identification
 
       integer :: i
 
       if (allocated(this%t)) then
-         call this%are_unique
+         call this%are_unique(label)
          do i = lbound(this%t, 1), ubound(this%t, 1)
             if (allocated(this%t(i)%list)) deallocate(this%t(i)%list)
          enddo
@@ -71,7 +70,7 @@ contains
 
 !> brief Accumulate tags for inspection
 
-   subroutine store_tag(this, tag, other_proc, n, id)
+   subroutine store_tag(this, tag, other_proc, n)
 
       use mpisetup,  only: FIRST, LAST
       use sort_tags, only: req_data
@@ -82,16 +81,15 @@ contains
       integer(kind=4), intent(in)    :: tag         !< the tag
       integer(kind=4), intent(in)    :: other_proc  !< source or destination
       integer(kind=4), intent(in)    :: n           !< request number
-      integer(kind=4), intent(in)    :: id          !< send or receive or other interesting data
 
       if (.not. allocated(this%t)) allocate(this%t(FIRST:LAST))
-      call this%t(other_proc)%dump(req_data(tag, n, id))
+      call this%t(other_proc)%dump(req_data(tag, n))
 
    end subroutine store_tag
 
 !> \brief Are the stored tags unique?
 
-   subroutine are_unique(this)
+   subroutine are_unique(this, label)
 
       use constants,  only: V_DEBUG
       use dataio_pub, only: msg, printinfo, warn
@@ -99,7 +97,8 @@ contains
 
       implicit none
 
-      class(tag_arr), intent(inout) :: this !< an object invoking the type-bound procedure
+      class(tag_arr),   intent(inout) :: this   !< an object invoking the type-bound procedure
+      character(len=*), intent(in)    :: label  !< identification
 
       integer :: i, j, cnt
 
@@ -111,7 +110,7 @@ contains
                   call this%t(i)%sort
                   do j = lbound(this%t(i)%list, 1) + 1, this%t(i)%cnt
                      if (this%t(i)%list(j-1)%tag >= this%t(i)%list(j)%tag) then
-                        write(msg, '(3(a,i0))')"[tag_array:are_unique] " // trim(this%label) // " @", proc, " : tag collision detected in communication with ", i, " tag=", this%t(i)%list(j-1)%tag
+                        write(msg, '(3(a,i0))')"[tag_array:are_unique] " // trim(label) // " @", proc, " : tag collision detected in communication with ", i, " tag=", this%t(i)%list(j-1)%tag
                         call printinfo(msg, V_DEBUG)
                         cnt = cnt +1
                      endif
@@ -122,7 +121,7 @@ contains
       endif
 
       if (cnt /= 0) then
-         write(msg, '(2(a,i0),a)')"[tag_array:are_unique] " // trim(this%label) // " @", proc, " : ", cnt, " tag collisions detected in communication"
+         write(msg, '(2(a,i0),a)')"[tag_array:are_unique] " // trim(label) // " @", proc, " : ", cnt, " tag collisions detected in communication"
          call warn(msg)
       endif
 
