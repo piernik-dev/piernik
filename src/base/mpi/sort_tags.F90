@@ -42,7 +42,6 @@ module sort_tags
    type :: req_data
       integer(kind=4) :: tag  !< the tag
       integer(kind=4) :: ir   !< request index
-      integer(kind=4) :: sr   !< send or receive
    end type req_data
 
    type, extends(sortable_list_t) :: sort_tags_t

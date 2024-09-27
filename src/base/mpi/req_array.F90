@@ -30,7 +30,7 @@
 
 module req_array
 
-   use tag_array, only: tag_arr
+   use tag_arrays, only: tag_arrs
 #ifdef MPIF08
    use MPIF, only: MPI_Request, MPI_Comm
 #endif /* MPIF08 */
@@ -51,7 +51,7 @@ module req_array
 #endif /* !MPIF08 */
       integer(kind=4) :: n   !< number of requests
       logical :: owncomm     !< was the own communicator requested?
-      type(tag_arr) :: tags  !< list of tags for each proc in current communication
+      type(tag_arrs) :: tags !< list of tags for each proc in current communication
    contains
       procedure :: nxt              !< give next unused request
       procedure :: cleanup          !< free the resources
@@ -109,16 +109,16 @@ contains
 
 !> brief Accumulate tags for inspection
 
-   subroutine store_tag(this, tag, other_proc, id)
+   subroutine store_tag(this, tag, other_proc, recv)
 
       implicit none
 
       class(req_arr),  intent(inout) :: this        !< an object invoking the type-bound procedure
       integer(kind=4), intent(in)    :: tag         !< the tag
       integer(kind=4), intent(in)    :: other_proc  !< source or destination
-      integer(kind=4), intent(in)    :: id          !< send or receive or other interesting data
+      logical,         intent(in)    :: recv        !< send or receive?
 
-      call this%tags%store_tag(tag, other_proc, this%n, id)
+      call this%tags%store_tag(tag, other_proc, this%n, recv)
 
    end subroutine store_tag
 
@@ -155,7 +155,6 @@ contains
 
    subroutine setsize_req(this, nreq, owncomm, label)
 
-      use constants,  only: cbuff_len
       use dataio_pub, only: die
       use MPIF,       only: MPI_COMM_WORLD
       use MPIFUN,     only: MPI_Comm_dup
@@ -176,16 +175,10 @@ contains
          sreq = 0
          this%owncomm = .false.
          this%comm = MPI_COMM_WORLD  ! just copy it
-         this%tags%label = " "
+         this%tags%label = ""
       endif
 
-      if (present(label)) then
-         if (len_trim(this%tags%label) > 0) then
-            call die("[req_array:setsize_req] label already set: '" // label // "' vs '" // this%tags%label // "'")
-         else
-            this%tags%label = label(1:min(cbuff_len, len_trim(label, kind=4)))
-         endif
-      endif
+      if (present(label)) call this%tags%set_label(label)
 
       if (sreq < nreq) allocate(this%r(nreq))
 
