@@ -37,7 +37,7 @@ module mpi_wrappers
    private
    public :: piernik_MPI_Barrier, init_bar, cleanup_bar, mpi_type, &
         &    extra_barriers, MPI_wrapper_stats, req_wall, C_REQA, C_REQS, &
-        &    max_rank, T_BOO, T_STR, T_I4, T_I8, T_R4, T_R8, T_LAST
+        &    max_rank, row_descr, T_BOO, T_STR, T_I4, T_I8, T_R4, T_R8, T_LAST, col_descr
 #ifndef NO_F2018
    public :: first_element, what_type
 #endif /* !NO_F2018 */
@@ -52,11 +52,15 @@ module mpi_wrappers
       enumerator :: C_REQA = 1, C_REQS  ! for both req% waitall methods
    end enum
 
+   integer, parameter :: descr_len = 128
    integer, parameter :: max_rank = 4
+   character(len=descr_len) :: row_descr = "Rows from scalars to rank-4."
+
    enum, bind(C)
       enumerator :: T_BOO = 1, T_STR, T_I4, T_I8, T_R4, T_R8
    end enum
    integer, parameter :: T_LAST = T_R8
+   character(len=descr_len) :: col_descr = "Columns: logical, character, int32, int64, real32, real64."
 
 contains
 
@@ -88,10 +92,11 @@ contains
 
    subroutine piernik_MPI_Barrier
 
-      use mpisetup, only: err_mpi
-      use MPIF,     only: MPI_COMM_WORLD, MPI_Barrier
+      use MPIF, only: MPI_COMM_WORLD, MPI_Barrier
 
       implicit none
+
+      integer(kind=4) :: err_mpi
 
       call cnt_bar%incr
       call MPI_Barrier(MPI_COMM_WORLD, err_mpi)

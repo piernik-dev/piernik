@@ -112,7 +112,7 @@ contains
                      if (this%t(i)%list(j-1)%tag >= this%t(i)%list(j)%tag) then
                         write(msg, '(3(a,i0))')"[tag_array:are_unique] " // trim(label) // " @", proc, " : tag collision detected in communication with ", i, " tag=", this%t(i)%list(j-1)%tag
                         call printinfo(msg, V_DEBUG)
-                        cnt = cnt +1
+                        cnt = cnt + 1
                      endif
                   enddo
                endif

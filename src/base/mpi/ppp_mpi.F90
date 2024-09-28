@@ -40,8 +40,8 @@ module ppp_mpi
 
    type, extends(req_arr) :: req_ppp  ! array of requests with PPP capabilities
    contains
-      procedure :: waitall_ppp      !< wait for completion of the requests on all procs
-      generic, public :: waitall => waitall_ppp
+      procedure :: waitall_ppp  !< wait for completion of the requests on all procs
+      generic, public :: waitall => waitall_ppp  ! overloading: the other method is waitall_on_some
    end type req_ppp
 
 contains

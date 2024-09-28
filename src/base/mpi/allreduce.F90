@@ -98,13 +98,13 @@ contains
    subroutine cleanup_allreduce
 
       use constants,    only: V_DEBUG
-      use mpi_wrappers, only: MPI_wrapper_stats
+      use mpi_wrappers, only: MPI_wrapper_stats, row_descr, col_descr
       use mpisetup,     only: master
 
       implicit none
 
       if (master .and. MPI_wrapper_stats) &
-           call size_allr%print("Allreduce total elements(calls). Columns: logical, character, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
+           call size_allr%print("Allreduce total elements(calls). " // trim(col_descr) // " " // trim(row_descr), V_DEBUG)
 
       call size_allr%cleanup
 

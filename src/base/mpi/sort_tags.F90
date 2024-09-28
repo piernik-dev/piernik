@@ -61,6 +61,8 @@ module sort_tags
 
 contains
 
+!> \brief Append an element to the list. Allocate list first or expand it when necessary.
+
    subroutine dump(this, el)
 
       use dataio_pub, only: die
