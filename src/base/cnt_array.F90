@@ -38,10 +38,12 @@ module cnt_array
    public :: arrcnt, arrsum
 
    type :: arrcnt  ! array of counters
-      integer(LONG),                   allocatable, private :: c0
-      integer(LONG), dimension(:),     allocatable, private :: c1
-      integer(LONG), dimension(:,:),   allocatable, private :: c2
-      integer(LONG), dimension(:,:,:), allocatable, private :: c3
+      ! There's no polymorphic way to declare only one variable here in Fortran 2018.
+      ! We're supposed to use only one counter at a time.
+      integer(LONG),                   allocatable, private :: c0  ! single (scalar) counter
+      integer(LONG), dimension(:),     allocatable, private :: c1  ! vector of counters
+      integer(LONG), dimension(:,:),   allocatable, private :: c2  ! array (matrix) of counters
+      integer(LONG), dimension(:,:,:), allocatable, private :: c3  ! rank-3 array of counters
    contains
       procedure :: init     !< allocate the array of counters
       procedure :: cleanup  !< deallocate everything

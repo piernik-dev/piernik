@@ -26,7 +26,13 @@
 !
 #include "piernik.h"
 
-!> \brief MPI wrappers for MPI_Allreduce - in place and most simplified.
+!>
+!! \brief MPI wrappers for MPI_Isend and MPI_Irecv.
+!!
+!! These are supposed to be used only where we expect 1-to-1 correspondence
+!! between send and receive, i.e. no tag duplicates are allowed between any pair
+!! of processes.
+!<
 
 module isend_irecv
 
@@ -38,7 +44,6 @@ module isend_irecv
    public :: piernik_Isend, piernik_Irecv, init_sr, cleanup_sr
 
    integer(kind=4) :: err_mpi  !< error status
-
    type(arrsum) :: size_sr
    enum, bind(C)
       enumerator :: I_S = 1, I_R
@@ -64,13 +69,13 @@ contains
    subroutine cleanup_sr
 
       use constants,    only: V_DEBUG
-      use mpi_wrappers, only: MPI_wrapper_stats
+      use mpi_wrappers, only: MPI_wrapper_stats, row_descr, col_descr
       use mpisetup,     only: master
 
       implicit none
 
       if (master .and. MPI_wrapper_stats) &
-           call size_sr%print("Isend/Irecv total elements(calls). Columns: logical, character, int32, int64, real32, real64. Rows from scalars to rank-4.", V_DEBUG)
+           call size_sr%print("Isend/Irecv total elements(calls). " // trim(col_descr) // " " // trim(row_descr), V_DEBUG)
 
       call size_sr%cleanup
 

@@ -51,9 +51,9 @@ contains
 
       call init_allreduce
       call init_bcast
-      call init_bar
       call init_sr
       call init_wall
+      call init_bar
 
    end subroutine init_wstats
 
@@ -77,9 +77,9 @@ contains
 
       call cleanup_allreduce
       call cleanup_bcast
-      call cleanup_bar
       call cleanup_sr
       call cleanup_wall
+      call cleanup_bar
 
    end subroutine cleanup_wstats
 
