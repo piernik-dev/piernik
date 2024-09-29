@@ -75,7 +75,11 @@ module sortable_list
    end interface
 
    integer, parameter :: temp_index = -huge(1) !< Symbolic index indicating temporary storage
-   integer, dimension(:), allocatable :: gaps  !< Auxiliary array for the sorting routine. Can be expanded and reused, so it is detached from the type sortable_list_t
+
+   integer, dimension(:), allocatable :: gaps  !< Auxiliary array for the sorting routine.
+   ! It can be expanded and reused, so it is detached from the type sortable_list_t.
+   ! allocate(gaps(ceiling(log(1.25*ub + 1) / log(2.25) )))
+   ! gaps(:) = [ (tokuda(i), i = 1, size(gaps)) ]
 
 contains
 
@@ -94,11 +98,7 @@ contains
 !!
 !! \details Gap sequence according to:
 !! Tokuda, Naoyuki (1992). "An Improved Shellsort". In van Leeuven, Jan. Proceedings of the IFIP 12th World Computer Congress on Algorithms, Software, Architecture.
-!! Alternatively one can use gaps provided by M. Ciura  "Best Increments for the Average Case of Shellsort".
-!! Proceedings of the 13th International Symposium on Fundamentals of Computation Theory. London: pp. 106~117. ISBN 3-540-42487-3.
-!! The Tokuda's gaps were chosen here due to their algebraic prescription.
-!! Ciura's gaps are: [ 1, 4, 10, 23, 57, 132, 301, 701 ] and were obtained by numerical searching of optimal average sorting time of the algorithm
-!! Larger Ciura's gaps can be obtained approximately with multiplier 2.25
+!! Alternatively one can use gaps provided by M. Ciura or any other newer sequence but it seems that the gains are incremental at best.
 !!
 !! \todo Consider rewriting to mergesort if this routine consumes too much CPU power
 !<
@@ -121,6 +121,7 @@ contains
       endif
 
       do while (gaps(ubound(gaps, dim=1)) < ub)
+         ! This is quite short list, so we can afford for slowest, simplest algorithm here
          gaps = [ gaps, tokuda(ubound(gaps, dim=1)+1) ]
       enddo
 
