@@ -397,8 +397,9 @@ contains
                      endif
                   enddo
                endif
-               call piernik_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    req1)
-               call piernik_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, req2)
+               ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+               call piernik_Irecv(this%ms%sl(p, IN )%buf(lbound(this%ms%sl(p, IN )%buf, 1):), size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    req1)
+               call piernik_Isend(this%ms%sl(p, OUT)%buf(lbound(this%ms%sl(p, OUT)%buf, 1):), size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, req2)
             endif
 
          endif
@@ -535,19 +536,23 @@ contains
 
                      !> \deprecated: A lot of semi-duplicated code below
                      ! array_of_starts has to be C-like, so b3st(:) = 0  points to lbound(cg%q(ind)%arr)
+                     !
+                     ! explicit lbound in piernik_I{send,recv} calls to prevent
+                     !    valgrind: Invalid read of size 8,  Address <blahblah> is 0 bytes after a block of size 272 alloc'd
+                     ! (at least with gfortran 12.3)
                      if (tgt3d) then
 
                         b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
                         b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call piernik_Irecv(cg%q(ind)%arr, I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
+                        call piernik_Irecv(cg%q(ind)%arr(lbound(cg%q(ind)%arr, 1):, lbound(cg%q(ind)%arr, 2):, lbound(cg%q(ind)%arr, 3):), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
 
                         b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
                         b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call piernik_Isend(cg%q(ind)%arr, I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
+                        call piernik_Isend(cg%q(ind)%arr(lbound(cg%q(ind)%arr, 1):, lbound(cg%q(ind)%arr, 2):, lbound(cg%q(ind)%arr, 3):), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
 
                      else
 
@@ -555,15 +560,13 @@ contains
                         b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call piernik_Irecv(cg%w(ind)%arr, I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
-                        ! valgrind: Invalid read of size 8,  Address <blahblah> is 0 bytes after a block of size 272 alloc'd
+                        call piernik_Irecv(cg%w(ind)%arr(lbound(cg%w(ind)%arr, 1):, lbound(cg%w(ind)%arr, 2):, lbound(cg%w(ind)%arr, 3):, lbound(cg%w(ind)%arr, 4):), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
 
                         b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
                         b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call piernik_Isend(cg%w(ind)%arr, I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
-                        ! valgrind: Invalid read of size 8,  Address <blahblah> is 0 bytes after a block of size 272 alloc'd
+                        call piernik_Isend(cg%w(ind)%arr(lbound(cg%w(ind)%arr, 1):, lbound(cg%w(ind)%arr, 2):, lbound(cg%w(ind)%arr, 3):, lbound(cg%w(ind)%arr, 4):), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
 
                      endif
                   enddo
