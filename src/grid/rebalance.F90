@@ -573,11 +573,12 @@ contains
                      cgl => cgl%nxt
                   enddo
                   if (.not. found) call die("[rebalance:reshuffle] Grid id not found")
-                  call piernik_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  req)
+                  ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+                  call piernik_Isend(cglepa(i)%tbuf(lbound(cglepa(i)%tbuf, 1):, lbound(cglepa(i)%tbuf, 2):, lbound(cglepa(i)%tbuf, 3):, lbound(cglepa(i)%tbuf, 4):), size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  req)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Isend for particles
-                  call piernik_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, req)
+                  call piernik_Isend(cglepa(i)%pbuf(lbound(cglepa(i)%pbuf, 1):, lbound(cglepa(i)%pbuf, 2):), size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, req)
 #endif /* GRAV && NBODY */
 
                endif
@@ -596,12 +597,13 @@ contains
                      if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(curl%last%cg)
                   enddo
                   call all_cg%add(curl%last%cg)
-                  call piernik_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, req)
+                  ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+                  call piernik_Irecv(cglepa(i)%tbuf(lbound(cglepa(i)%tbuf, 1):, lbound(cglepa(i)%tbuf, 2):, lbound(cglepa(i)%tbuf, 3):, lbound(cglepa(i)%tbuf, 4):), size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, req)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Irecv for particles
                   allocate(cglepa(i)%pbuf(npf, gptemp(I_NP, i)))
-                  call piernik_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, req)
+                  call piernik_Irecv(cglepa(i)%pbuf(lbound(cglepa(i)%pbuf, 1):, lbound(cglepa(i)%pbuf, 2):), size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, req)
 #endif /* GRAV && NBODY */
 
                endif
