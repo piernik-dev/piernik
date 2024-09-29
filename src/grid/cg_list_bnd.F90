@@ -351,57 +351,47 @@ contains
       call req2%init(owncomm = .false., label = "clb:ib.m2")
       do p = FIRST, LAST
          if (p /= proc) then
-            call this%ms%sl(p, IN )%find_offsets(dmask)
+            call this%ms%sl(p, IN)%find_offsets(dmask)
             call this%ms%sl(p, OUT)%find_offsets(dmask)
-            if (this%ms%sl(p, IN)%total_size /= this%ms%sl(p, OUT)%total_size) &
+            associate (slin => this%ms%sl(p, IN), slout => this%ms%sl(p, OUT))
+            if (slin%total_size /= slout%total_size) &
                  call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%sl(p, :)%total_size /=")
 
-            if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something to communicate with process p
+            if (slin%total_size /= 0) then ! we have something to communicate with process p
                if (tgt3d) then
-                  allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size))
-                  allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
-                     if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
-                        this     %ms%sl(p, OUT)%buf( &
-                             this%ms%sl(p, OUT)%list(i)%offset: &
-                             this%ms%sl(p, OUT)%list(i)%off_ceil) = reshape( &
-                             this%ms%sl(p, OUT)%list(i)%cg%q(ind)%arr( &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, HI)), [ &
-                             this%ms%sl(p, OUT)%list(i)%off_ceil - &
-                             this%ms%sl(p, OUT)%list(i)%offset + I_ONE ] )
+                  allocate(slin%buf(slin%total_size))
+                  allocate(slout%buf(slout%total_size))
+                  do i = lbound(slout%list, dim=1), slout%cur_last
+                     if (dmask( slout%list(i)%dir)) then
+                        slout%buf(slout%list(i)%offset:slout%list(i)%off_ceil) = reshape( &
+                             slout%list(i)%cg%q(ind)%arr( &
+                             slout%list(i)%se(xdim, LO):slout%list(i)%se(xdim, HI), &
+                             slout%list(i)%se(ydim, LO):slout%list(i)%se(ydim, HI), &
+                             slout%list(i)%se(zdim, LO):slout%list(i)%se(zdim, HI)), &
+                             [ slout%list(i)%off_ceil - slout%list(i)%offset + I_ONE ] )
                      endif
                   enddo
                else
-                  allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size*wna%lst(ind)%dim4))
-                  allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size*wna%lst(ind)%dim4))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
-                     if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
-                        this     %ms%sl(p, OUT)%buf( &
-                            (this%ms%sl(p, OUT)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
-                             this%ms%sl(p, OUT)%list(i)%off_ceil        * wna%lst(ind)%dim4 ) = reshape( &
-                             this%ms%sl(p, OUT)%list(i)%cg%w(ind)%arr( &
-                             1:wna%lst(ind)%dim4, &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, HI)), [ &
-                            (this%ms%sl(p, OUT)%list(i)%off_ceil - &
-                             this%ms%sl(p, OUT)%list(i)%offset + I_ONE) * wna%lst(ind)%dim4 ] )
+                  allocate(slin%buf(slin%total_size*wna%lst(ind)%dim4))
+                  allocate(slout%buf(slout%total_size*wna%lst(ind)%dim4))
+                  do i = lbound(slout%list, dim=1), slout%cur_last
+                     if (dmask( slout%list(i)%dir)) then
+                        slout%buf( &
+                            (slout%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
+                             slout%list(i)%off_ceil        * wna%lst(ind)%dim4 ) = reshape( &
+                             slout%list(i)%cg%w(ind)%arr( 1:wna%lst(ind)%dim4, &
+                             slout%list(i)%se(xdim, LO):slout%list(i)%se(xdim, HI), &
+                             slout%list(i)%se(ydim, LO):slout%list(i)%se(ydim, HI), &
+                             slout%list(i)%se(zdim, LO):slout%list(i)%se(zdim, HI)), &
+                             [ (slout%list(i)%off_ceil - slout%list(i)%offset + I_ONE) * wna%lst(ind)%dim4 ] )
                      endif
                   enddo
                endif
                ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
-               call piernik_Irecv(this%ms%sl(p, IN )%buf(lbound(this%ms%sl(p, IN )%buf, 1):), size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    req1)
-               call piernik_Isend(this%ms%sl(p, OUT)%buf(lbound(this%ms%sl(p, OUT)%buf, 1):), size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, req2)
+               call piernik_Irecv(slin%buf( lbound(slin%buf,  1):), size(slin%buf,  kind=4), MPI_DOUBLE_PRECISION, p, p,    req1)
+               call piernik_Isend(slout%buf(lbound(slout%buf, 1):), size(slout%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, req2)
             endif
-
+            end associate
          endif
       enddo
 
@@ -409,53 +399,44 @@ contains
 
       do p = FIRST, LAST
          if (p /= proc) then
-            if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something received from process p
+            associate (slin => this%ms%sl(p, IN))
+            if (slin%total_size /= 0) then ! we have something received from process p
                if (tgt3d) then
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
-                     if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
-                        this     %ms%sl(p, IN)%list(i)%cg%q(ind)%arr( &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI)) = reshape ( &
-                             this%ms%sl(p, IN)%buf( &
-                             this%ms%sl(p, IN)%list(i)%offset: &
-                             this%ms%sl(p, IN)%list(i)%off_ceil), [ &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO) + I_ONE ] )
+                  do i = lbound(slin%list, dim=1), slin%cur_last
+                     associate (li => slin%list(i))
+                     if (dmask( li%dir)) then
+                        li%cg%q(ind)%arr( &
+                             li%se(xdim, LO):li%se(xdim, HI), &
+                             li%se(ydim, LO):li%se(ydim, HI), &
+                             li%se(zdim, LO):li%se(zdim, HI)) = reshape ( &
+                             slin%buf(li%offset:li%off_ceil), [ &
+                             li%se(xdim, HI) - li%se(xdim, LO) + I_ONE, &
+                             li%se(ydim, HI) - li%se(ydim, LO) + I_ONE, &
+                             li%se(zdim, HI) - li%se(zdim, LO) + I_ONE ] )
                      endif
+                     end associate
                   enddo
                else
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
-                     if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
-                        this     %ms%sl(p, IN)%list(i)%cg%w(ind)%arr( &
-                             1:wna%lst(ind)%dim4, &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI)) = reshape ( &
-                             this%ms%sl(p, IN)%buf( &
-                            (this%ms%sl(p, IN)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
-                             this%ms%sl(p, IN)%list(i)%off_ceil * wna%lst(ind)%dim4 ), [ &
+                  do i = lbound(slin%list, dim=1), slin%cur_last
+                     associate (li => slin%list(i))
+                     if (dmask( li%dir)) then
+                        li%cg%w(ind)%arr( 1:wna%lst(ind)%dim4, &
+                             li%se(xdim, LO):li%se(xdim, HI), &
+                             li%se(ydim, LO):li%se(ydim, HI), &
+                             li%se(zdim, LO):li%se(zdim, HI)) = reshape ( &
+                             slin%buf( &
+                            (li%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
+                             li%off_ceil        * wna%lst(ind)%dim4 ), [ &
                              int(wna%lst(ind)%dim4, kind=8), &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO) + I_ONE ] )
+                             li%se(xdim, HI) - li%se(xdim, LO) + I_ONE, &
+                             li%se(ydim, HI) - li%se(ydim, LO) + I_ONE, &
+                             li%se(zdim, HI) - li%se(zdim, LO) + I_ONE ] )
                      endif
+                     end associate
                   enddo
                endif
             endif
+            end associate
          endif
       enddo
 
