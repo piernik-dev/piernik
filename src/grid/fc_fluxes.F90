@@ -64,8 +64,6 @@ contains
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, base_level_id
-      use isend_irecv,  only: piernik_Irecv
-      use MPIF,         only: MPI_DOUBLE_PRECISION
       use ppp_mpi,      only: req_ppp
 
       implicit none
@@ -74,8 +72,7 @@ contains
       integer(kind=4),           intent(in)    :: cdim
       integer(kind=4), optional, intent(in)    :: max_level
 
-      type(cg_list_element), pointer    :: cgl
-      integer(kind=8), dimension(LO:HI) :: jc
+      type(cg_list_element), pointer :: cgl
       integer :: g
 
       call req%init(owncomm = .true., label = "fc_flx")
@@ -98,11 +95,7 @@ contains
          if (allocated(cgl%cg%rif_tgt%seg)) then
             associate ( seg => cgl%cg%rif_tgt%seg )
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
-                  jc = seg(g)%se(cdim, :)
-                  if (jc(LO) == jc(HI)) then
-                     call piernik_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
-                     seg(g)%ireq = req%n
-                  endif
+                  if (seg(g)%se(cdim, LO) == seg(g)%se(cdim, HI)) call seg(g)%recv_buf(req)
                enddo
             end associate
          endif
@@ -186,8 +179,6 @@ contains
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use isend_irecv,  only: piernik_Isend
-      use MPIF,         only: MPI_DOUBLE_PRECISION
       use ppp,          only: ppp_main
       use ppp_mpi,      only: req_ppp
 
@@ -231,9 +222,7 @@ contains
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
-
-               call piernik_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, req)
-               seg(g)%ireq = req%n
+               call seg(g)%send_buf(req)
             endif
          enddo
          end associate
