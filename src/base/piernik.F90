@@ -55,6 +55,7 @@ program piernik
    use refinement,        only: emergency_fix, updAMR_after
    use refinement_update, only: update_refinement
    use repeatstep,        only: repeat_step
+   use sortable_list,     only: cleanup_sortable_list
    use timer,             only: walltime_end
    use timestep,          only: time_step, check_cfl_violation
    use user_hooks,        only: finalize_problem, problem_domain_update
@@ -267,6 +268,7 @@ program piernik
 
    call ppp_main%stop(f_label)
    call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call cleanup_sortable_list
    call cleanup_profiling
    call cleanup_wstats
    call cleanup_mpi       ! No calls to warn() or printinfo() are allowed beyond this point.
