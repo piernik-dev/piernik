@@ -170,7 +170,7 @@ contains
 
       implicit none
 
-      class(generic_na), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
+      class(generic_na), intent(inout) :: this
 
       check = .false.
       select type(this)
