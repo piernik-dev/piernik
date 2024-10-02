@@ -65,11 +65,12 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,       only: piernik_MPI_Bcast
       use constants,   only: xdim, ydim, zdim, pi
       use dataio_pub,  only: msg, die, warn, nh
       use domain,      only: dom
       use fluidindex,  only: flind
-      use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,    only: rbuff, ibuff, master, slave
       use problem_pub, only: jeans_d0, jeans_mode
       use units,       only: fpiG
 

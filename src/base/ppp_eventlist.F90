@@ -300,7 +300,8 @@ contains
       use dataio_pub,   only: warn, printinfo, msg
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Isend, MPI_Recv, MPI_Waitall
-      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req, piernik_MPI_Barrier, extra_barriers
+      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
+      use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST, req, inflate_req
 
       implicit none
 

@@ -79,6 +79,7 @@ contains
 !<
    subroutine init_resistivity
 
+      use bcast,            only: piernik_MPI_Bcast
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
@@ -86,7 +87,7 @@ contains
       use dataio_pub,       only: die, code_progress, nh
       use domain,           only: dom
       use func,             only: operator(.equals.)
-      use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,         only: rbuff, ibuff, master, slave
       use named_array_list, only: qna
 #ifdef ISO
       use constants,        only: zero
@@ -295,13 +296,14 @@ contains
 
    subroutine timestep_resist(dt)
 
+      use allreduce,        only: piernik_MPI_Allreduce
+      use bcast,            only: piernik_MPI_Bcast
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: big, zero, pMIN, MAXL
       use grid_cont,        only: grid_container
       use func,             only: operator(.notequals.)
-      use mpisetup,         only: piernik_MPI_Allreduce, piernik_MPI_Bcast
       use named_array_list, only: qna
       use types,            only: value
 #ifndef ISO

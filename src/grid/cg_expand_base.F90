@@ -52,12 +52,13 @@ contains
    subroutine expand_base(sides)
 
       use all_boundaries,    only: all_fluid_boundaries
+      use allreduce,         only: piernik_MPI_Allreduce
       use cg_level_coarsest, only: coarsest
       use cg_level_finest,   only: finest
       use constants,         only: xdim, zdim, LO, HI, pLOR
       use dataio_pub,        only: msg, warn
       use domain,            only: dom
-      use mpisetup,          only: piernik_MPI_Allreduce, master
+      use mpisetup,          only: master
 #ifdef MULTIGRID
       use multigrid,         only: init_multigrid
 #endif /* MULTIGRID */

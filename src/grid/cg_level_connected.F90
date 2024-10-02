@@ -112,8 +112,8 @@ contains
 
    subroutine sync_ru(this)
 
+      use allreduce, only: piernik_MPI_Allreduce
       use constants, only: pLOR, INVALID
-      use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
 

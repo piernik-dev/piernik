@@ -135,6 +135,7 @@ contains
 
    subroutine find_img_CoM
 
+      use allreduce,    only: piernik_MPI_Allreduce
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero, V_DEBUG !, GEO_RPZ
@@ -142,7 +143,7 @@ contains
       use domain,       only: dom
       use func,         only: operator(.notequals.)
       use grid_cont,    only: grid_container
-      use mpisetup,     only: piernik_MPI_Allreduce, master
+      use mpisetup,     only: master
       use units,        only: fpiG
 #ifdef NBODY
       use particle_types, only: particle

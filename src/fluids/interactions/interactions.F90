@@ -87,11 +87,12 @@ contains
 !<
    subroutine init_interactions
 
-      use constants,     only: PIERNIK_INIT_FLUIDS, cbuff_len
-      use dataio_pub,    only: die, code_progress, nh
-      use fluidindex,    only: flind
-      use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, piernik_MPI_Bcast
-      use units,         only: cm, gram
+      use bcast,      only: piernik_MPI_Bcast
+      use constants,  only: PIERNIK_INIT_FLUIDS, cbuff_len
+      use dataio_pub, only: die, code_progress, nh
+      use fluidindex, only: flind
+      use mpisetup,   only: master, slave, cbuff, lbuff, rbuff
+      use units,      only: cm, gram
 
       implicit none
 

@@ -143,8 +143,9 @@ contains
 !<
    subroutine init_cr_species
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: nh
-      use mpisetup,   only: lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: lbuff, master, slave
 
       implicit none
 

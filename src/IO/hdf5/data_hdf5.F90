@@ -637,11 +637,12 @@ contains
 
    subroutine h5_write_to_single_file_v2(fname)
 
-      use constants,   only: PPP_IO
-      use common_hdf5, only: write_to_hdf5_v2, O_OUT
-      use gdf,         only: gdf_create_root_group
-      use mpisetup,    only: master, piernik_MPI_Barrier
-      use ppp,         only: ppp_main
+      use constants,    only: PPP_IO
+      use common_hdf5,  only: write_to_hdf5_v2, O_OUT
+      use gdf,          only: gdf_create_root_group
+      use mpi_wrappers, only: piernik_MPI_Barrier
+      use mpisetup,     only: master
+      use ppp,          only: ppp_main
 
       implicit none
 

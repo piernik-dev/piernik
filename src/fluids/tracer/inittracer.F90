@@ -61,9 +61,10 @@ contains
 !<
    subroutine init_tracer
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: INT4
       use dataio_pub, only: warn, nh
-      use mpisetup,   only: master, slave, ibuff, piernik_MPI_Bcast
+      use mpisetup,   only: master, slave, ibuff
 
       implicit none
 

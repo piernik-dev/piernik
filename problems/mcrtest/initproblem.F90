@@ -52,10 +52,11 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: die, nh
       use domain,     only: dom
       use func,       only: operator(.equals.)
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave
 
       implicit none
 
@@ -142,12 +143,13 @@ contains
       use func,           only: ekin, emag
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS
+      use allreduce,      only: piernik_MPI_Allreduce
       use constants,      only: ndims, LO, HI, pMAX, BND_PER
       use cr_data,        only: eCRSP, icr_H1, icr_C12, cr_index
       use dataio_pub,     only: msg, warn, printinfo
       use func,           only: operator(.equals.), operator(.notequals.)
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_cr_1, K_cr_paral, K_cr_perp
-      use mpisetup,       only: master, piernik_MPI_Allreduce
+      use mpisetup,       only: master
 #endif /* COSM_RAYS */
 
       implicit none

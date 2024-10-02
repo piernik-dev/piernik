@@ -46,11 +46,12 @@ contains
 
    subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
 
-      use constants, only: PPP_MPI
-      use mpisetup,  only: err_mpi, req, req2, piernik_MPI_Barrier, extra_barriers
-      use MPIF,      only: MPI_STATUSES_IGNORE
-      use MPIFUN,    only: MPI_Waitall
-      use ppp,       only: ppp_main
+      use constants,    only: PPP_MPI
+      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
+      use mpisetup,     only: err_mpi, req, req2
+      use MPIF,         only: MPI_STATUSES_IGNORE
+      use MPIFUN,       only: MPI_Waitall
+      use ppp,          only: ppp_main
 
       implicit none
 

@@ -128,11 +128,12 @@ contains
 !<
    subroutine multigrid_grav_par
 
+      use bcast,              only: piernik_MPI_Bcast
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_I2, O_D4, I_ONE, INVALID
       use dataio_pub,         only: msg, die, warn, nh
       use domain,             only: dom, is_multicg !, is_uneven
       use func,               only: operator(.notequals.)
-      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
+      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, multidim_code_3D, nsmool, &
            &                        overrelax, coarsest_tol
       use multigrid_gravity_helper, only: nsmoob
@@ -382,16 +383,17 @@ contains
 
    subroutine init_multigrid_grav
 
-      use cg_leaves,           only: leaves
-      use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_t
-      use cg_list,             only: cg_list_element
-      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX, V_VERBOSE
-      use dataio_pub,          only: die, warn, printinfo, msg
-      use domain,              only: dom
-      use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
-      use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
-      use named_array_list,    only: qna
+      use allreduce,          only: piernik_MPI_Allreduce
+      use cg_leaves,          only: leaves
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_t
+      use cg_list,            only: cg_list_element
+      use constants,          only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX, V_VERBOSE
+      use dataio_pub,         only: die, warn, printinfo, msg
+      use domain,             only: dom
+      use mpisetup,           only: master, FIRST, LAST
+      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
+      use named_array_list,   only: qna
 
       implicit none
 

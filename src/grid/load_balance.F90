@@ -105,10 +105,11 @@ contains
 !<
    subroutine init_load_balance
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: INVALID, cbuff_len, I_ONE, V_VERBOSE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: msg, printinfo, warn
-      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
 
       implicit none
 

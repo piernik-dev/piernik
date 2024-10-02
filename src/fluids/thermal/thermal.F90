@@ -60,10 +60,11 @@ contains
 
    subroutine init_thermal
 
+      use bcast,            only: piernik_MPI_Bcast
       use cg_list_global,   only: all_cg
       use constants,        only: PIERNIK_INIT_MPI
       use dataio_pub,       only: code_progress, die, nh, printinfo, warn
-      use mpisetup,         only: cbuff, lbuff, rbuff,ibuff,  master, slave, piernik_MPI_Bcast
+      use mpisetup,         only: cbuff, lbuff, rbuff,ibuff,  master, slave
       use named_array_list, only: qna
       use units,            only: cm, erg, sek, mH
 

@@ -72,12 +72,13 @@ contains
 !<
    subroutine multigrid_par
 
+      use bcast,               only: piernik_MPI_Bcast
       use cg_list_global,      only: all_cg
       use constants,           only: PIERNIK_INIT_DOMAIN, O_LIN, O_D3, I_ZERO
       use dataio_pub,          only: warn, die, code_progress, nh
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
-      use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
+      use mpisetup,            only: master, slave, nproc, ibuff, lbuff
       use multigridvars,       only: single_base, ord_prolong, verbose_vcycle, tot_ts, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
       use named_array_list,    only: qna

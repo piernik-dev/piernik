@@ -523,9 +523,10 @@ contains
 
    integer(kind=8) function global_count_all_particles(message) result(gpcount)
 
+      use allreduce,  only: piernik_MPI_Allreduce
       use constants,  only: pSUM, fmt_len, V_INFO
       use dataio_pub, only: printinfo, msg
-      use mpisetup,   only: piernik_MPI_Allreduce, master
+      use mpisetup,   only: master
 
       implicit none
 
@@ -555,8 +556,9 @@ contains
 
    real function global_balance_particles() result(lb_particles)
 
+      use allreduce, only: piernik_MPI_Allreduce
       use constants, only: pMAX, pSUM, one
-      use mpisetup,  only: piernik_MPI_Allreduce, nproc
+      use mpisetup,  only: nproc
 
       implicit none
 

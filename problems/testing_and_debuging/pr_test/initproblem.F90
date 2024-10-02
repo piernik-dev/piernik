@@ -63,9 +63,10 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_MPI, xdim, zdim
       use dataio_pub, only: code_progress, die, nh
-      use mpisetup,   only: master, slave, ibuff, lbuff, rbuff, piernik_MPI_Bcast
+      use mpisetup,   only: master, slave, ibuff, lbuff, rbuff
 
       implicit none
 

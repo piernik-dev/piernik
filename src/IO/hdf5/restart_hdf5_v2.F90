@@ -558,7 +558,8 @@ contains
       use global,             only: t, dt, nstep
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use mass_defect,        only: magic_mass
-      use mpisetup,           only: master, piernik_MPI_Barrier
+      use mpi_wrappers,       only: piernik_MPI_Barrier
+      use mpisetup,           only: master
       use overlap,            only: is_overlap
       use ppp,                only: ppp_main
       use read_attr,          only: read_attribute

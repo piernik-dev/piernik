@@ -137,6 +137,7 @@ contains
 
    subroutine refresh(this)
 
+      use allreduce,          only: piernik_MPI_Allreduce
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_level_coarsest,  only: coarsest
@@ -145,7 +146,7 @@ contains
       use dataio_pub,         only: die, warn, msg, printinfo
       use domain,             only: dom
       use memory_usage,       only: check_mem_usage
-      use mpisetup,           only: piernik_MPI_Allreduce, master
+      use mpisetup,           only: master
 
       implicit none
 
@@ -342,8 +343,8 @@ contains
 
    subroutine red_int_norm(this)
 
+      use allreduce, only: piernik_MPI_Allreduce
       use constants, only: pSUM, PPP_GRAV, PPP_MPI
-      use mpisetup,  only: piernik_MPI_Allreduce
       use ppp,       only: ppp_main
 
       implicit none

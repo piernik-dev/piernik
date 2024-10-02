@@ -63,11 +63,12 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,                 only: piernik_MPI_Bcast
       use constants,             only: DST
       use dataio_pub,            only: msg, printinfo, die, nh
       use domain,                only: dom
       use fluidindex,            only: flind
-      use mpisetup,              only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,              only: ibuff, rbuff, master, slave
       use named_array_list,      only: wna
       use unified_ref_crit_list, only: urc_list
       use user_hooks,            only: problem_domain_update
@@ -292,9 +293,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)
 
+      use allreduce,   only: piernik_MPI_Allreduce
       use constants,   only: pSUM
       use diagnostics, only: pop_vector
-      use mpisetup,    only: proc, master, piernik_MPI_Allreduce
+      use mpisetup,    only: proc, master
 
       implicit none
 

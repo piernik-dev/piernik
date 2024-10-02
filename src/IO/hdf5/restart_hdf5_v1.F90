@@ -466,6 +466,7 @@ contains
 
    subroutine read_restart_hdf5_v1
 
+      use bcast,            only: piernik_MPI_Bcast
       use common_hdf5,      only: output_fname
       use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
       use dataio_pub,       only: msg, warn, die, printio, require_problem_IC, problem_name, piernik_hdf5_version, fix_string, &
@@ -480,7 +481,7 @@ contains
       use h5lt,             only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mass_defect,      only: magic_mass
       use MPIF,             only: MPI_INFO_NULL, MPI_COMM_WORLD
-      use mpisetup,         only: master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
+      use mpisetup,         only: master, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
       use timestep_pub,     only: c_all_old, cfl_c, stepcfl
 #ifdef RANDOMIZE

@@ -80,10 +80,11 @@ contains
 !<
    subroutine init_snsources
 
+      use bcast,          only: piernik_MPI_Bcast
       use constants,      only: PIERNIK_INIT_GRID, xdim, ydim, zdim, pi, I_ONE
       use dataio_pub,     only: die, code_progress, nh
       use domain,         only: dom
-      use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,       only: rbuff, master, slave
       use units,          only: erg, kpc, Myr
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff

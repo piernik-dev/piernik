@@ -142,10 +142,10 @@ contains
 
    subroutine get_angmom_totener(ang_momentum, total_energy)
 
+      use allreduce,      only: piernik_MPI_Allreduce
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: pSUM, xdim, ydim, zdim, zero
-      use mpisetup,       only: piernik_MPI_Allreduce
       use particle_types, only: particle
 
       implicit none

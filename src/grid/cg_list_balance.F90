@@ -128,12 +128,13 @@ contains
 
    subroutine balance_fill_lowest(this)
 
-      use constants,       only: pSUM, I_ZERO, I_ONE
-      use dataio_pub,      only: die
-      use MPIF,            only: MPI_INTEGER, MPI_COMM_WORLD
-      use MPIFUN,          only: MPI_Gather
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, err_mpi
-      use procnames,       only: pnames
+      use allreduce,  only: piernik_MPI_Allreduce
+      use constants,  only: pSUM, I_ZERO, I_ONE
+      use dataio_pub, only: die
+      use MPIF,       only: MPI_INTEGER, MPI_COMM_WORLD
+      use MPIFUN,     only: MPI_Gather
+      use mpisetup,   only: master, FIRST, LAST, err_mpi
+      use procnames,  only: pnames
 
       use sort_piece_list, only: grid_piece_list
 

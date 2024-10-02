@@ -89,13 +89,14 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,            only: piernik_MPI_Bcast
       use constants,        only: I_ONE, xdim, zdim
       use dataio_pub,       only: warn, die, nh
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn
       use func,             only: operator(.notequals.)
       use global,           only: smalld, smallei
-      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST
       use named_array_list, only: wna
       use refinement,       only: set_n_updAMR, n_updAMR
       use unified_ref_crit_list, only: urc_list
@@ -546,6 +547,7 @@ contains
 
    subroutine calculate_error_norm
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use constants,        only: pSUM, pMIN, pMAX, idlen
@@ -554,7 +556,7 @@ contains
       use func,             only: operator(.notequals.)
       use global,           only: t
       use grid_cont,        only: grid_container
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: qna
 #ifdef MAGNETIC
       use div_B,            only: print_divB_norm

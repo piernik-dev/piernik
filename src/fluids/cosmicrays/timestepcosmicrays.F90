@@ -48,12 +48,12 @@ contains
 !<
    subroutine timestep_crs(dt)
 
+      use allreduce,           only: piernik_MPI_Allreduce
       use cg_leaves,           only: leaves
       use cg_list,             only: cg_list_element
       use constants,           only: pMIN
       use domain,              only: is_multicg
       use initcosmicrays,      only: def_dtcrs, K_crs_valid, diff_max_lev
-      use mpisetup,            only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */

@@ -748,9 +748,9 @@ contains
 
       integer(kind=4) function max_tag(this)
 
+         use allreduce, only: piernik_MPI_Allreduce
          use cg_list,   only: cg_list_element
          use constants, only: pMAX, I_ZERO
-         use mpisetup,  only: piernik_MPI_Allreduce
 
          implicit none
 

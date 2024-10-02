@@ -82,10 +82,11 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,            only: piernik_MPI_Bcast
       use cg_list_global,   only: all_cg
       use constants,        only: INVALID, cbuff_len, pi
       use dataio_pub,       only: die, msg, nh
-      use mpisetup,         only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,         only: rbuff, ibuff, cbuff, master, slave
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
       use unified_ref_crit_list, only: urc_list
@@ -338,13 +339,14 @@ contains
 
    subroutine finalize_problem_app
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: qna
 
       implicit none

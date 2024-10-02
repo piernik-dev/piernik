@@ -107,8 +107,9 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: nh
-      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave
 
       implicit none
 
@@ -340,18 +341,19 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use constants,          only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI, pMAX, half
-      use dataio_pub,         only: msg, printinfo, die
-      use domain,             only: dom, is_multicg
-      use fluidindex,         only: flind
-      use fluidtypes,         only: component_fluid
-      use gravity,            only: r_smooth, ptmass
-      use grid_cont,          only: grid_container
-      use mpisetup,           only: master, piernik_MPI_Allreduce
-      use named_array_list,   only: wna
-      use units,              only: newtong, kboltz, mH
+      use allreduce,        only: piernik_MPI_Allreduce
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI, pMAX, half
+      use dataio_pub,       only: msg, printinfo, die
+      use domain,           only: dom, is_multicg
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use gravity,          only: r_smooth, ptmass
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
+      use named_array_list, only: wna
+      use units,            only: newtong, kboltz, mH
 
       implicit none
 
@@ -638,6 +640,7 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler(forward)
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, pSUM, I_ONE
@@ -647,7 +650,6 @@ contains
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
-      use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: wna
 
       implicit none

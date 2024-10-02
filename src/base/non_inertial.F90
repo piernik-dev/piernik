@@ -47,10 +47,11 @@ contains
 
    subroutine init_non_inertial
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
       use dataio_pub, only: die, code_progress, nh
       use domain,     only: dom
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave
 #ifdef VERBOSE
       use dataio_pub, only: printinfo
 #endif /* VERBOSE */

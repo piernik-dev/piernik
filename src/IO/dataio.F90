@@ -165,11 +165,13 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG
-      use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
-           &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
-           &                move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
-      use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST
+      use bcast,        only: piernik_MPI_Bcast
+      use constants,    only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG
+      use dataio_pub,   only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
+           &                  tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
+           &                  move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
+      use mpi_wrappers, only: piernik_MPI_Barrier
+      use mpisetup,     only: master, nproc, proc, FIRST, LAST
 
       implicit none
 
@@ -255,9 +257,10 @@ contains
 
    subroutine dataio_par_io
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors, piernik_verbosity
-      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
+      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc
 
       implicit none
 
@@ -624,11 +627,12 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
+      use bcast,        only: piernik_MPI_Bcast
       use cg_leaves,    only: leaves
       use constants,    only: I_ONE, V_LOWEST, V_ESSENTIAL, V_HIGHEST, v_name
       use dataio_pub,   only: msg, printinfo, warn, piernik_verbosity
       use load_balance, only: umsg_verbosity, VB_HOST
-      use mpisetup,     only: master, piernik_MPI_Bcast
+      use mpisetup,     only: master
       use ppp,          only: umsg_request
       use procnames,    only: pnames
       use refinement,   only: emergency_fix
@@ -795,10 +799,11 @@ contains
       use constants,    only: FINAL_DUMP, LOGF
       use dataio_user,  only: user_post_write_data
 #ifdef HDF5
+      use bcast,        only: piernik_MPI_Bcast
       use constants,    only: HDF
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: last_res_time, last_hdf_time
-      use mpisetup,     only: master, piernik_MPI_Bcast
+      use mpisetup,     only: master
       use restart_hdf5, only: write_restart_hdf5
 #endif /* HDF5 */
 
@@ -951,6 +956,7 @@ contains
 
    subroutine write_timeslice
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -969,7 +975,7 @@ contains
       use global,           only: t, dt, smalld, nstep
       use grid_cont,        only: grid_container
       use mass_defect,      only: update_tsl_magic_mass
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: wna
       use ppp,              only: ppp_main
 #ifdef GRAV
@@ -1361,8 +1367,8 @@ contains
       use named_array_list, only: qna
       use units,            only: mH, kboltz
 #ifdef ISO
+      use allreduce,        only: piernik_MPI_Allreduce
       use constants,        only: pMIN, pMAX
-      use mpisetup,         only: piernik_MPI_Allreduce
 #else /* !ISO */
       use constants,        only: DST, I_ZERO
 #ifdef MAGNETIC
@@ -1662,9 +1668,9 @@ contains
       use ppp,                only: ppp_main
       use types,              only: value
 #ifdef COSM_RAYS
+      use allreduce,          only: piernik_MPI_Allreduce
       use constants,          only: pMIN
       use fluidindex,         only: iarr_all_crn
-      use mpisetup,           only: piernik_MPI_Allreduce
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #ifdef CRESP

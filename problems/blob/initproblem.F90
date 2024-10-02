@@ -70,9 +70,10 @@ contains
 
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use constants,  only: cwdlen
       use dataio_pub, only: nh
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave
 
       implicit none
 
@@ -352,13 +353,14 @@ contains
 
    subroutine clump_mass(user_vars, tsl_names)
 
+      use allreduce,   only: piernik_MPI_Allreduce
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use constants,   only: pSUM
       use diagnostics, only: pop_vector
       use fluidindex,  only: flind
       use grid_cont,   only: grid_container
-      use mpisetup,    only: master, piernik_MPI_Allreduce
+      use mpisetup,    only: master
 
       implicit none
 

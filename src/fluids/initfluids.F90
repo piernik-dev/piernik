@@ -212,6 +212,7 @@ contains
 
    subroutine sanitize_smallx_checks
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use constants,        only: INVALID
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -222,7 +223,7 @@ contains
       use func,             only: ekin, emag
       use global,           only: smalld, smallp
       use grid_cont,        only: grid_container
-      use mpisetup,         only: master, piernik_MPI_Allreduce
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna
 
       implicit none

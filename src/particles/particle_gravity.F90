@@ -243,12 +243,12 @@ contains
 
    real function find_Mtot() result(Mtot)
 
+      use allreduce,      only: piernik_MPI_Allreduce
       use cg_cost_data,   only: I_PARTICLE
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: pSUM
       use grid_cont,      only: grid_container
-      use mpisetup,       only: piernik_MPI_Allreduce
       use particle_types, only: particle
 
       implicit none

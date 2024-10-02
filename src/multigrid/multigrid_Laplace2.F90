@@ -180,6 +180,7 @@ contains
 
    subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
 
+      use allreduce,          only: piernik_MPI_Allreduce
       use cg_cost_data,       only: I_MULTIGRID
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_t
@@ -190,7 +191,7 @@ contains
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
       use func,               only: operator(.notequals.)
-      use mpisetup,           only: piernik_MPI_Allreduce, master
+      use mpisetup,           only: master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
       use multigridvars,      only: multidim_code_3D, overrelax, coarsest_tol, nc_growth, dirty_label
 
@@ -390,13 +391,13 @@ contains
 
    real function vT_A_v_2(var)
 
+      use allreduce,  only: piernik_MPI_Allreduce
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: GEO_XYZ, BND_NEGREF, ndims, pSUM
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
-      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 

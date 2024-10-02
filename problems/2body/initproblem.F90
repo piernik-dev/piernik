@@ -56,8 +56,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
+      use bcast,      only: piernik_MPI_Bcast
       use dataio_pub, only: nh, restarted_sim
-      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, rbuff, master, slave
 
       implicit none
 

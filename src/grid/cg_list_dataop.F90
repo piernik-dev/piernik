@@ -463,13 +463,13 @@ contains
 
    subroutine subtract_average(this, iv)
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
       use constants,        only: GEO_XYZ, GEO_RPZ, pSUM
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use mpisetup,         only: piernik_MPI_Allreduce
 #ifdef DEBUG
       use constants,        only: V_DEBUG
       use dataio_pub,       only: msg, printinfo
@@ -535,13 +535,13 @@ contains
 
    real function norm_sq(this, iv, nomask) result (norm)
 
+      use allreduce,    only: piernik_MPI_Allreduce
       use cg_cost_data, only: I_OTHER
       use cg_list,      only: cg_list_element
       use constants,    only: GEO_XYZ, GEO_RPZ, pSUM
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
-      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -596,10 +596,10 @@ contains
 
    real function scalar_product(this, var1, var2)
 
+      use allreduce,    only: piernik_MPI_Allreduce
       use cg_cost_data, only: I_OTHER
       use cg_list,      only: cg_list_element
       use constants,    only: pSUM
-      use mpisetup,     only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -787,12 +787,13 @@ contains
 
    subroutine check_dirty(this, iv, label, expand, subfield, warn_only)
 
+      use allreduce,        only: piernik_MPI_Allreduce
       use cg_list,          only: cg_list_element
       use constants,        only: dirtyL, pSUM
       use dataio_pub,       only: warn, msg, die
       use domain,           only: dom
       use global,           only: dirty_debug, show_n_dirtys, no_dirty_checks
-      use mpisetup,         only: proc, master, piernik_MPI_Allreduce
+      use mpisetup,         only: proc, master
       use named_array_list, only: qna, wna
 
       implicit none

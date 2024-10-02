@@ -134,6 +134,7 @@ contains
 !<
    subroutine fargo_mean_omega
 
+      use allreduce,          only: piernik_MPI_Allreduce
       use constants,          only: xdim, ydim, zdim, I_ONE, pSUM
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_t
@@ -143,7 +144,6 @@ contains
       use grid_cont,          only: grid_container
       use fluidindex,         only: flind
       use fluidtypes,         only: component_fluid
-      use mpisetup,           only: piernik_MPI_Allreduce
 
       implicit none
 

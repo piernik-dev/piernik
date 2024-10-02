@@ -83,6 +83,7 @@ contains
    subroutine update(this, str)
 
 !      use cg_level_base,      only: base  ! can't use it because of cyclic dependency
+      use allreduce,          only: piernik_MPI_Allreduce
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_t
       use cg_list,            only: cg_list_element
@@ -90,7 +91,7 @@ contains
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use list_of_cg_lists,   only: all_lists
-      use mpisetup,           only: master, piernik_MPI_Allreduce, nproc
+      use mpisetup,           only: master, nproc
       use ppp,                only: ppp_main
       use timer,              only: set_timer
 #ifdef NBODY

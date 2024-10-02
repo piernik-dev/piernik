@@ -62,9 +62,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
+      use bcast,          only: piernik_MPI_Bcast
       use cg_list_global, only: all_cg
       use dataio_pub,     only: nh
-      use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,       only: rbuff, master, slave
 
       implicit none
 

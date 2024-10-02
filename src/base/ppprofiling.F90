@@ -133,10 +133,11 @@ contains
 
    subroutine init_profiling
 
+      use bcast,         only: piernik_MPI_Bcast
       use constants,     only: PPP_IO, PPP_MG, PPP_GRAV, PPP_CR, PPP_PART, PPP_MPI, &
            &                   PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX
       use dataio_pub,    only: nh, log_wr, problem_name, run_id, nrestart
-      use mpisetup,      only: lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,      only: lbuff, master, slave
       use ppp_eventlist, only: use_profiling, disable_mask, profile_file
 
       implicit none

@@ -67,10 +67,11 @@ contains
 !<
    subroutine init_shear
 
-      use constants,      only: PIERNIK_INIT_GRID
-      use dataio_pub,     only: printinfo, die, code_progress, nh
-      use fluidindex,     only: flind
-      use mpisetup,       only: master, slave, rbuff, piernik_MPI_Bcast
+      use bcast,      only: piernik_MPI_Bcast
+      use constants,  only: PIERNIK_INIT_GRID
+      use dataio_pub, only: printinfo, die, code_progress, nh
+      use fluidindex, only: flind
+      use mpisetup,   only: master, slave, rbuff
 
       implicit none
       integer       :: i
