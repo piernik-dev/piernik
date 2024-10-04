@@ -42,9 +42,9 @@ contains
    subroutine init_wstats
 
       use allreduce,    only: init_allreduce
+      use barrier,      only: init_bar
       use bcast,        only: init_bcast
       use isend_irecv,  only: init_sr
-      use mpi_wrappers, only: init_bar
       use req_array,    only: init_wall
 
       implicit none
@@ -62,11 +62,11 @@ contains
    subroutine cleanup_wstats
 
       use allreduce,    only: cleanup_allreduce
+      use barrier,      only: cleanup_bar
       use bcast,        only: cleanup_bcast
       use constants,    only: stdout, V_DEBUG
       use dataio_pub,   only: piernik_verbosity
       use isend_irecv,  only: cleanup_sr
-      use mpi_wrappers, only: cleanup_bar
       use mpisetup,     only: master
       use req_array,    only: cleanup_wall
 

@@ -57,8 +57,8 @@ contains
 
    subroutine waitall_ppp(this, ppp_label, x_mask)
 
+      use barrier,      only: piernik_MPI_Barrier
       use constants,    only: PPP_MPI, LONG
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
       use mpisetup,     only: err_mpi
       use MPIF,         only: MPI_STATUSES_IGNORE
       use MPIFUN,       only: MPI_Waitall
@@ -89,7 +89,7 @@ contains
 
       call this%cleanup
 
-      if (extra_barriers) call piernik_MPI_Barrier
+      call piernik_MPI_Barrier
 
    end subroutine waitall_ppp
 

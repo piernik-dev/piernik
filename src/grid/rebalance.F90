@@ -48,6 +48,7 @@ contains
 
    subroutine collect_costs
 
+      use barrier,            only: extra_barriers
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
@@ -56,7 +57,6 @@ contains
       use dataio_pub,         only: warn
       use isend_irecv,        only: piernik_Isend
       use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
-      use mpi_wrappers,       only: extra_barriers
       use mpisetup,           only: err_mpi, master, FIRST, LAST
       use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,             only: MPI_Gather, MPI_Recv
@@ -145,9 +145,9 @@ contains
                call piernik_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, req)
 
                if (extra_barriers) then
-                  call req%waitall
+                  call req%waitall  ! waitall_on_some, without MPI_Barrier call, without PPP
                else
-                  call req%waitall("rebalance")
+                  call req%waitall("rebalance")  ! we can have PPP if there are no extra MPI_Barrier call
                endif
             endif
             deallocate(gptemp, costs)

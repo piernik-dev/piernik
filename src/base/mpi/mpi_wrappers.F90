@@ -26,78 +26,32 @@
 !
 #include "piernik.h"
 
-!> \brief MPI remaining wrappers
+!> \brief MPI wrappers - helpers, parameters and variables
 
 module mpi_wrappers
-
-   use cnt_array, only: arrcnt
 
    implicit none
 
    private
-   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, mpi_type, &
-        &    extra_barriers, MPI_wrapper_stats, &
+   public :: mpi_type, MPI_wrapper_stats, &
         &    max_rank, row_descr, T_BOO, T_STR, T_I4, T_I8, T_R4, T_R8, T_LAST, col_descr
 #ifndef NO_F2018
    public :: first_element, what_type
 #endif /* !NO_F2018 */
 
-
-   logical, save :: extra_barriers = .false.     !< when changed to .true. additional MPI_Barriers will be called.
    logical, save :: MPI_wrapper_stats = .false.  !< collect usage statistics in piernik_MPI_* wrappers
-
-   type(arrcnt) :: cnt_bar
 
    integer, parameter :: descr_len = 128
    integer, parameter :: max_rank = 4
-   character(len=descr_len) :: row_descr = "Rows from scalars to rank-4."
+   character(len=descr_len), parameter :: row_descr = "Rows from scalars to rank-4."
 
    enum, bind(C)
       enumerator :: T_BOO = 1, T_STR, T_I4, T_I8, T_R4, T_R8
    end enum
    integer, parameter :: T_LAST = T_R8
-   character(len=descr_len) :: col_descr = "Columns: logical, character, int32, int64, real32, real64."
+   character(len=descr_len), parameter :: col_descr = "Columns: logical, character, int32, int64, real32, real64."
 
 contains
-
-!> \brief Initialize MPI_Barrier stat counter
-
-   subroutine init_bar
-
-      implicit none
-
-      call cnt_bar%init
-
-   end subroutine init_bar
-
-!> \brief Print log and clean up MPI_Barrier stat counter
-
-   subroutine cleanup_bar
-
-      use constants, only: V_DEBUG
-      use mpisetup,  only: master
-
-      implicit none
-
-      if (master .and. MPI_wrapper_stats) call cnt_bar%print("Barrier counter:", V_DEBUG)
-      call cnt_bar%cleanup
-
-   end subroutine cleanup_bar
-
-!> \brief Wrapper for MPI_Barrier
-
-   subroutine piernik_MPI_Barrier
-
-      use MPIF, only: MPI_COMM_WORLD, MPI_Barrier
-
-      implicit none
-
-      integer(kind=4) :: err_mpi
-
-      call cnt_bar%incr
-      call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
-
-   end subroutine piernik_MPI_Barrier
 
 #ifndef NO_F2018
 !>

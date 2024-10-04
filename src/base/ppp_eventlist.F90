@@ -296,12 +296,12 @@ contains
 
    subroutine publish(this)
 
+      use barrier,      only: piernik_MPI_Barrier
       use constants,    only: I_ZERO, I_ONE, V_INFO
       use dataio_pub,   only: warn, printinfo, msg
       use isend_irecv,  only: piernik_Isend
       use MPIF,         only: MPI_STATUS_IGNORE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
       use MPIFUN,       only: MPI_Recv
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
       use mpisetup,     only: proc, master, slave, err_mpi, FIRST, LAST
       use req_array,    only: req_arr
 
@@ -389,7 +389,7 @@ contains
          deallocate(buflabel, buftime)
       endif
 
-      if (extra_barriers) call piernik_MPI_Barrier
+      call piernik_MPI_Barrier
 
       call this%cleanup
 

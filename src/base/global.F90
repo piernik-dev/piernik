@@ -33,8 +33,9 @@
 !<
 module global
 
+   use barrier,      only: extra_barriers
    use constants,    only: cbuff_len, xdim, zdim
-   use mpi_wrappers, only: extra_barriers, MPI_wrapper_stats
+   use mpi_wrappers, only: MPI_wrapper_stats
 
    implicit none
 
