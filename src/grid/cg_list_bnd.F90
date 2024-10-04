@@ -204,6 +204,9 @@ contains
       !
       ! OPT: at what size of cg%w array (number of components, size of block) one approach wins over another?
       ! it seems that at [5, 16, 16, 16] internal_boundaries_MPI_merged and internal_boundaries_MPI_1by1 have similar performance
+      ! On blocks as large as 32×32×32 cells, the 1-by-1 variant seems to be abit faster. On small blocks (like 8×8×8) it can be twice as slow as MPI_merged.
+      !
+      ! In some non-periodic setups internal_boundaries_MPI_1by1 can have tag collisions on refinements at the boundary, so MPI_merged is currently safer.
 
       if (this%ms%valid .and. (prefer_merged_MPI .or. tgt3d) .and. this%l%id >= base_level_id) then
          call ppp_main%start(ibl_label)
