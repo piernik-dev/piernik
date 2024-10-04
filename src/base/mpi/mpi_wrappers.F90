@@ -30,13 +30,13 @@
 
 module mpi_wrappers
 
-   use cnt_array, only: arrcnt, arrsum
+   use cnt_array, only: arrcnt
 
    implicit none
 
    private
    public :: piernik_MPI_Barrier, init_bar, cleanup_bar, mpi_type, &
-        &    extra_barriers, MPI_wrapper_stats, req_wall, C_REQA, C_REQS, &
+        &    extra_barriers, MPI_wrapper_stats, &
         &    max_rank, row_descr, T_BOO, T_STR, T_I4, T_I8, T_R4, T_R8, T_LAST, col_descr
 #ifndef NO_F2018
    public :: first_element, what_type
@@ -47,10 +47,6 @@ module mpi_wrappers
    logical, save :: MPI_wrapper_stats = .false.  !< collect usage statistics in piernik_MPI_* wrappers
 
    type(arrcnt) :: cnt_bar
-   type(arrsum) :: req_wall  ! counter for ppp_mpi, avoiding circular dependencies
-   enum, bind(C)
-      enumerator :: C_REQA = 1, C_REQS  ! for both req% waitall methods
-   end enum
 
    integer, parameter :: descr_len = 128
    integer, parameter :: max_rank = 4

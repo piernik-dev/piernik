@@ -45,7 +45,7 @@ contains
       use bcast,        only: init_bcast
       use isend_irecv,  only: init_sr
       use mpi_wrappers, only: init_bar
-      use ppp_mpi,      only: init_wall
+      use req_array,    only: init_wall
 
       implicit none
 
@@ -68,7 +68,7 @@ contains
       use isend_irecv,  only: cleanup_sr
       use mpi_wrappers, only: cleanup_bar
       use mpisetup,     only: master
-      use ppp_mpi,      only: cleanup_wall
+      use req_array,    only: cleanup_wall
 
       implicit none
 

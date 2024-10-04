@@ -30,6 +30,7 @@
 
 module req_array
 
+   use cnt_array,  only: arrsum
    use tag_arrays, only: tag_arrs
 #ifdef MPIF08
    use MPIF, only: MPI_Request, MPI_Comm
@@ -38,7 +39,7 @@ module req_array
    implicit none
 
    private
-   public :: req_arr
+   public :: req_arr, req_wall, init_wall, cleanup_wall, C_REQA
 
    type :: req_arr  ! array of requests
       !< request array for MPI_Waitall
@@ -63,9 +64,41 @@ module req_array
       generic, public :: waitall => waitall_on_some
    end type req_arr
 
+   type(arrsum) :: req_wall  ! counter for ppp_mpi
+   enum, bind(C)
+      enumerator :: C_REQA = 1, C_REQS  ! for both req% waitall methods
+   end enum
+
    integer(kind=4) :: err_mpi  !< error status
 
 contains
+
+!> \brief Initialize MPI_Waitall stat counters
+
+   subroutine init_wall
+
+      implicit none
+
+      call req_wall%init(int([C_REQS]))
+
+   end subroutine init_wall
+
+!> \brief Print log and clean up MPI_Waitall stat counters
+
+   subroutine cleanup_wall
+
+      use constants,    only: V_DEBUG
+      use mpi_wrappers, only: MPI_wrapper_stats
+      use mpisetup,     only: master
+
+      implicit none
+
+      if (master .and. MPI_wrapper_stats) &
+           call req_wall%print("Waitall requests(calls). Columns: req_all%, req_some%.", V_DEBUG)
+
+      call req_wall%cleanup
+
+   end subroutine cleanup_wall
 
 !> \brief provide next free request
 
@@ -130,10 +163,9 @@ contains
 
    subroutine waitall_on_some(this)
 
-      use constants,    only: LONG
-      use mpi_wrappers, only: C_REQS, req_wall
-      use MPIF,         only: MPI_STATUSES_IGNORE
-      use MPIFUN,       only: MPI_Waitall
+      use constants, only: LONG
+      use MPIF,      only: MPI_STATUSES_IGNORE
+      use MPIFUN,    only: MPI_Waitall
 
       implicit none
 

@@ -27,7 +27,7 @@
 
 #include "piernik.h"
 
-!> \brief Module for PPP-guarded MPI waitall calls
+!> \brief Module for PPP-guarded MPI waitall call
 
 module ppp_mpi
 
@@ -36,7 +36,7 @@ module ppp_mpi
    implicit none
 
    private
-   public :: init_wall, cleanup_wall, req_ppp
+   public :: req_ppp
 
    type, extends(req_arr) :: req_ppp  ! array of requests with PPP capabilities
    contains
@@ -45,35 +45,6 @@ module ppp_mpi
    end type req_ppp
 
 contains
-
-!> \brief Initialize MPI_Waitall stat counters
-
-   subroutine init_wall
-
-      use mpi_wrappers, only: C_REQS, req_wall
-
-      implicit none
-
-      call req_wall%init(int([C_REQS]))
-
-   end subroutine init_wall
-
-!> \brief Print log and clean up MPI_Waitall stat counters
-
-   subroutine cleanup_wall
-
-      use constants,    only: V_DEBUG
-      use mpi_wrappers, only: MPI_wrapper_stats, req_wall
-      use mpisetup,     only: master
-
-      implicit none
-
-      if (master .and. MPI_wrapper_stats) &
-           call req_wall%print("Waitall requests(calls). Columns: req_all%, req_some%.", V_DEBUG)
-
-      call req_wall%cleanup
-
-   end subroutine cleanup_wall
 
 !>
 !! \brief A req_arr PPP wrapper for MPI_Waitall
@@ -87,11 +58,12 @@ contains
    subroutine waitall_ppp(this, ppp_label, x_mask)
 
       use constants,    only: PPP_MPI, LONG
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers, C_REQA, req_wall
+      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
       use mpisetup,     only: err_mpi
       use MPIF,         only: MPI_STATUSES_IGNORE
       use MPIFUN,       only: MPI_Waitall
       use ppp,          only: ppp_main
+      use req_array,    only: req_wall, C_REQA
 
       implicit none
 
