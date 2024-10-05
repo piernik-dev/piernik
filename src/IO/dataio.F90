@@ -165,12 +165,12 @@ contains
 !<
    subroutine init_dataio_parameters
 
+      use barrier,      only: piernik_MPI_Barrier
       use bcast,        only: piernik_MPI_Bcast
       use constants,    only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG
       use dataio_pub,   only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                  tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
            &                  move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
-      use mpi_wrappers, only: piernik_MPI_Barrier
       use mpisetup,     only: master, nproc, proc, FIRST, LAST
 
       implicit none

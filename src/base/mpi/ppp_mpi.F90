@@ -27,62 +27,70 @@
 
 #include "piernik.h"
 
-!> \brief Module for PPP-guarded MPI calls
+!> \brief Module for PPP-guarded MPI waitall call
 
 module ppp_mpi
+
+   use req_array, only: req_arr
 
    implicit none
 
    private
-   public :: piernik_Waitall
+   public :: req_ppp
+
+   type, extends(req_arr) :: req_ppp  ! array of requests with PPP capabilities
+   contains
+      procedure :: waitall_ppp  !< wait for completion of the requests on all procs
+      generic, public :: waitall => waitall_ppp  ! overloading: the other method is waitall_on_some
+   end type req_ppp
 
 contains
 
 !>
-!! \brief a PPP wrapper for MPI_Waitall
+!! \brief A req_arr PPP wrapper for MPI_Waitall
 !!
-!! Cannot use extra_barriers when this routine is called only by a subset of MPI ranks.
+!! \details This is a bit expanded version of req_arr::waitall_on_some that had to be
+!! moved here to avoid circular dependencies at ppp_eventlist.
+!!
+!! BEWARE: Cannot use extra_barriers when this routine is called only by a subset of MPI ranks.
 !<
 
-   subroutine piernik_Waitall(nr, ppp_label, x_mask, use_req2)
+   subroutine waitall_ppp(this, ppp_label, x_mask)
 
-      use constants,    only: PPP_MPI
-      use mpi_wrappers, only: piernik_MPI_Barrier, extra_barriers
-      use mpisetup,     only: err_mpi, req, req2
+      use barrier,      only: piernik_MPI_Barrier
+      use constants,    only: PPP_MPI, LONG
+      use mpisetup,     only: err_mpi
       use MPIF,         only: MPI_STATUSES_IGNORE
       use MPIFUN,       only: MPI_Waitall
       use ppp,          only: ppp_main
+      use req_array,    only: req_wall, C_REQA
 
       implicit none
 
-      integer(kind=4),           intent(in) :: nr         !< number of requests in req(:) or req2(:)
-      character(len=*),          intent(in) :: ppp_label  !< identifier for PPP entry
-      integer(kind=4), optional, intent(in) :: x_mask     !< extra mask, if necessary
-      logical,         optional, intent(in) :: use_req2   !< use req2 when .true.
+      class(req_ppp),            intent(inout) :: this       !< an object invoking the type-bound procedure
+      character(len=*),          intent(in)    :: ppp_label  !< identifier for PPP entry
+      integer(kind=4), optional, intent(in)    :: x_mask     !< extra mask, if necessary
 
-      character(len=*), parameter :: mpiw = "MPI_Waitall:"
+      character(len=*), parameter :: mpiw = "req:MPI_Waitall:"
       integer(kind=4) :: mask
-      logical :: r2
 
-      if (nr > 0) then
-
+      if (this%n > 0) then
          mask = PPP_MPI
          if (present(x_mask)) mask = mask + x_mask
          call ppp_main%start(mpiw // ppp_label, mask)
 
-         r2 = .false.
-         if (present(use_req2)) r2 = use_req2
-         if (r2) then
-            call MPI_Waitall(nr, req2(:nr), MPI_STATUSES_IGNORE, err_mpi)
-         else
-            call MPI_Waitall(nr, req(:nr), MPI_STATUSES_IGNORE, err_mpi)
-         endif
+         call req_wall%add(int([C_REQA]), int(this%n, kind=LONG))
+
+         call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
+         this%n = 0
 
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif
 
-      if (extra_barriers) call piernik_MPI_Barrier
+      call this%cleanup
 
-   end subroutine piernik_Waitall
+      call piernik_MPI_Barrier
+
+   end subroutine waitall_ppp
 
 end module ppp_mpi

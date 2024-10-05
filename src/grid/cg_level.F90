@@ -245,7 +245,6 @@ contains
       call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
       call this%dot%update_SFC_id_range(this%l%off)
       call this%find_neighbors ! requires access to whole this%dot%gse(:)%c(:)%se(:,:)
-      call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
       call this%print_segments
 

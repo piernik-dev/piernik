@@ -270,15 +270,12 @@ contains
 
    subroutine check_blocky(this)
 
-      use allreduce, only: piernik_MPI_Allreduce
-      use constants, only: ndims, LO, HI, pLAND, I_ONE
-      use MPIF,      only: MPI_INTEGER, MPI_REQUEST_NULL, MPI_COMM_WORLD
-      use MPIFUN,    only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,  only: proc, req, err_mpi, LAST, inflate_req, slave
-      use ppp_mpi,   only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,      only: MPI_Comm
-#endif /* MPIF08 */
+      use allreduce,   only: piernik_MPI_Allreduce
+      use constants,   only: ndims, LO, HI, pLAND, I_ONE
+      use isend_irecv, only: piernik_Isend, piernik_Irecv
+      use MPIF,        only: MPI_INTEGER
+      use mpisetup,    only: proc, LAST, slave
+      use ppp_mpi,     only: req_ppp
 
       implicit none
 
@@ -288,13 +285,9 @@ contains
       integer(kind=4), parameter :: sh_tag = 7
       integer(kind=4), parameter :: nr = 2
       integer :: i
-#ifdef MPIF08
-      type(MPI_Comm)  :: dot_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: dot_comm
-#endif /* !MPIF08 */
+      type(req_ppp) :: req
 
-      call inflate_req(nr)
+      call req%init(nr, owncomm = .true., label = "dot")
       this%is_blocky = .true.
       shape = 0
       shape1 = 0
@@ -310,13 +303,10 @@ contains
          endif
       endif
 
-      call MPI_Comm_dup(MPI_COMM_WORLD, dot_comm, err_mpi)
-      req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, dot_comm, req(1 ), err_mpi)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, dot_comm, req(nr), err_mpi)
+      if (slave)     call piernik_Irecv(shape1, size(shape1, kind=4), MPI_INTEGER, proc-I_ONE, sh_tag, req)
+      if (proc<LAST) call piernik_Isend(shape,  size(shape, kind=4),  MPI_INTEGER, proc+I_ONE, sh_tag, req)
 
-      call piernik_Waitall(nr, "dot:chk_blocky")
-      call MPI_Comm_free(dot_comm, err_mpi)
+      call req%waitall("dot:chk_blocky")
 
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
          if (any(shape /= shape1)) this%is_blocky = .false.

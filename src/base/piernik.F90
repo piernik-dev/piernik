@@ -32,6 +32,7 @@ program piernik
 ! pulled by ANY
 
    use allreduce,         only: piernik_MPI_Allreduce
+   use barrier,           only: piernik_MPI_Barrier
    use bcast,             only: piernik_MPI_Bcast
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
@@ -48,16 +49,17 @@ program piernik
    use lb_helpers,        only: costs_maintenance
    use list_of_cg_lists,  only: all_lists
    use load_balance,      only: n_rebalance, flexible_balance, r_rebalance, rebalance_asap
-   use mpi_wrappers,      only: piernik_MPI_Barrier
    use mpisetup,          only: master, cleanup_mpi
    use named_array_list,  only: qna, wna
    use ppp,               only: cleanup_profiling, update_profiling, ppp_main
    use refinement,        only: emergency_fix, updAMR_after
    use refinement_update, only: update_refinement
    use repeatstep,        only: repeat_step
+   use sortable_list,     only: cleanup_sortable_list
    use timer,             only: walltime_end
    use timestep,          only: time_step, check_cfl_violation
    use user_hooks,        only: finalize_problem, problem_domain_update
+   use wrapper_stats,     only: cleanup_wstats
 #ifdef PERFMON
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
@@ -266,7 +268,9 @@ program piernik
 
    call ppp_main%stop(f_label)
    call ppp_main%publish  ! we can use HDF5 here because we don't rely on anything that is affected by cleanup_hdf5
+   call cleanup_sortable_list
    call cleanup_profiling
+   call cleanup_wstats
    call cleanup_mpi       ! No calls to warn() or printinfo() are allowed beyond this point.
    call cleanup_dataio
 

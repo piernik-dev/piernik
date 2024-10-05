@@ -136,14 +136,10 @@ contains
 #if defined(GRAV) && defined(NBODY)
          use cg_level_base,      only: base
          use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
-         use MPIF,               only: MPI_INTEGER, MPI_COMM_WORLD
-         use MPIFUN,             only: MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
-         use mpisetup,           only: req, err_mpi, inflate_req
-         use ppp_mpi,            only: piernik_Waitall
+         use isend_irecv,        only: piernik_Isend, piernik_Irecv
+         use MPIF,               only: MPI_INTEGER
+         use ppp_mpi,            only: req_ppp
          use refinement,         only: nbody_ref
-#ifdef MPIF08
-         use MPIF,               only: MPI_Comm
-#endif /* MPIF08 */
 #endif /* GRAV && NBODY */
 
          implicit none
@@ -151,13 +147,8 @@ contains
          type(cg_level_connected_t), pointer :: curl
          type(cg_list_element), pointer :: cgl
 #if defined(GRAV) && defined(NBODY)
-         integer(kind=4) :: nr
-         integer :: i, j, k, g
-#ifdef MPIF08
-         type(MPI_Comm)  :: cp_comm
-#else /* !MPIF08 */
-         integer(kind=4) :: cp_comm
-#endif /* !MPIF08 */
+         type(req_ppp) :: req
+         integer :: i, j, k, g, c
 #endif /* GRAV && NBODY */
 
          curl => finest%level
@@ -185,9 +176,7 @@ contains
 #if defined(GRAV) && defined(NBODY)
          ! Update the number of particles on children for URC_nbody
          if (nbody_ref > I_ZERO) then
-
-            call MPI_Comm_dup(MPI_COMM_WORLD, cp_comm, err_mpi)
-            nr = 0
+            call req%init(owncomm = .true., label = "ru:scan")
 
             curl => base%level
             do while (associated(curl))
@@ -197,10 +186,9 @@ contains
                   if (.not. associated(curl, base%level)) then
                      associate (ro => cgl%cg%ro_tgt)
                         if (allocated(ro%seg)) then
-                           if (nr + size(ro%seg) > size(req, dim=1)) call inflate_req
                            do g = lbound(ro%seg(:), dim=1), ubound(ro%seg(:), dim=1)
-                              nr = nr + I_ONE
-                              call MPI_Isend(cgl%cg%count_particles(), I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                              c = cgl%cg%count_particles()
+                              call piernik_Isend(c, I_ONE, MPI_INTEGER, ro%seg(g)%proc, ro%seg(g)%tag, req)
                            enddo
                         endif
                      end associate
@@ -208,14 +196,12 @@ contains
 
                   associate (ri => cgl%cg%ri_tgt)
                      if (allocated(ri%seg)) then
-                        if (nr + size(ri%seg) > size(req, dim=1)) call inflate_req
                         do g = lbound(ri%seg(:), dim=1), ubound(ri%seg(:), dim=1)
-                           nr = nr + I_ONE
                            ! This looks a bit too tricky or fragile
                            i = merge(LO, HI, ri%seg(g)%se(xdim, LO) <= cgl%cg%ijkse(xdim, LO))
                            j = merge(LO, HI, ri%seg(g)%se(ydim, LO) <= cgl%cg%ijkse(ydim, LO))
                            k = merge(LO, HI, ri%seg(g)%se(zdim, LO) <= cgl%cg%ijkse(zdim, LO))
-                           call MPI_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, cp_comm, req(nr), err_mpi)
+                           call piernik_Irecv(cgl%cg%chld_pcnt(i, j, k), I_ONE, MPI_INTEGER, ri%seg(g)%proc, ri%seg(g)%tag, req)
                         enddo
                      endif
                   end associate
@@ -225,9 +211,7 @@ contains
                curl => curl%finer
             enddo
 
-            call piernik_Waitall(nr, "parent_particle_cnt")
-
-            call MPI_Comm_free(cp_comm, err_mpi)
+            call req%waitall("parent_particle_cnt")
          endif
 #endif /* GRAV && NBODY */
 
@@ -337,20 +321,18 @@ contains
       use dataio_pub,         only: die, warn
       use domain,             only: dom
       use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,           only: FIRST, LAST, err_mpi, proc, req, inflate_req
-      use ppp_mpi,            only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,       only: MPI_Comm
-#endif /* MPIF08 */
+      use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv
+      use mpisetup,           only: FIRST, LAST, err_mpi, proc
+      use ppp_mpi,            only: req_ppp
 
       implicit none
 
       type(cg_level_connected_t), pointer, intent(in) :: lev
 
       type(cg_list_element), pointer :: cgl
+      type(req_ppp) :: req
       integer :: i
-      integer(kind=4) :: nr, g
+      integer(kind=4) :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer, parameter :: perimeter = 2
       integer(kind=4), dimension(FIRST:LAST) :: gscnt, grcnt
@@ -361,11 +343,6 @@ contains
       type(pt), dimension(:), allocatable :: pt_list
       integer(kind=4) :: pt_cnt
       integer(kind=4) :: rtag
-#ifdef MPIF08
-      type(MPI_Comm)  :: ref_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: ref_comm
-#endif /* !MPIF08 */
 
       if (perimeter > dom%nb) call die("[refinement_update:parents_prevent_derefinement_lev] perimeter > dom%nb")
       if (.not. associated(lev%finer)) then
@@ -419,13 +396,11 @@ contains
       call MPI_Alltoall(gscnt, I_ONE, MPI_INTEGER, grcnt, I_ONE, MPI_INTEGER, MPI_COMM_WORLD, err_mpi)
 
       ! Apparently gscnt/grcnt represent quite sparse matrix, so we better do nonblocking point-to-point than MPI_AlltoAllv
-      call MPI_Comm_dup(MPI_COMM_WORLD, ref_comm, err_mpi)
-      nr = 0
+      call req%init(owncomm = .true., label = "ru:ppdl")
       if (pt_cnt > 0) then
          do g = lbound(pt_list, dim=1, kind=4), pt_cnt
-            nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call inflate_req
-            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, ref_comm, req(nr), err_mpi)
+            call MPI_Isend(pt_list(g)%tag, I_ONE, MPI_INTEGER, pt_list(g)%proc, I_ZERO, req%comm, req%nxt(), err_mpi)
+            ! No need to use piernik_Isend here because we just gather anything with tag I_ZERO.
             ! OPT: Perhaps it will be more efficient to allocate arrays according to gscnt and send tags in bunches
          enddo
       endif
@@ -434,14 +409,13 @@ contains
          if (grcnt(g) /= 0) then
             if (g == proc) call die("[refinement_update:parents_prevent_derefinement] MPI_Recv from self")  ! this is not an error but it should've been handled as local thing
             do i = 1, grcnt(g)
-               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, ref_comm, MPI_STATUS_IGNORE, err_mpi)
+               call MPI_Recv(rtag, I_ONE, MPI_INTEGER, g, I_ZERO, req%comm, MPI_STATUS_IGNORE, err_mpi)
                call disable_derefine_by_tag(lev%finer, rtag)  ! beware: O(leaves%cnt^2)
             enddo
          endif
       enddo
 
-      call piernik_Waitall(nr, "prevent_derefinement")
-      call MPI_Comm_free(ref_comm, err_mpi)
+      call req%waitall("prevent_derefinement")
 
       deallocate(pt_list)
 
@@ -730,8 +704,6 @@ contains
       emergency_fix = .false.
       call print_time("[refinement_update] Finishing (" // trim(merge("full update", "fixup only ", full_update)) // ")")
 
-      call log_req
-
    contains
 
       !>
@@ -754,35 +726,6 @@ contains
          if (master) call printinfo(msg, V_VERBOSE)
 
       end subroutine print_time
-
-      !> \brief Notify when the size of the req arrays has increased
-
-      subroutine log_req
-
-         use allreduce,  only: piernik_MPI_Allreduce
-         use constants,  only: pMAX, V_DEBUG
-         use dataio_pub, only: printinfo, msg
-         use mpisetup,   only: master, req, req2
-
-         implicit none
-
-         integer, save :: oldsize = 0
-         integer :: cursize
-
-         cursize = 0
-         if (allocated(req)) cursize = cursize + size(req)
-         if (allocated(req2)) cursize = cursize + size(req2)
-
-         call piernik_MPI_Allreduce(cursize, pMAX)
-         if (cursize > oldsize) then
-            if (master) then
-               write(msg, *) cursize
-               call printinfo("[refinement_update] Total number of simultaneous nonblocking MPI requests increased to " // trim(adjustl(msg)), V_DEBUG)
-            endif
-            oldsize = cursize
-         endif
-
-      end subroutine log_req
 
    end subroutine update_refinement_wrapped
 
@@ -891,22 +834,21 @@ contains
          use dataio_pub,     only: die, msg
          use domain,         only: dom
          use grid_cont,      only: grid_container
+         use isend_irecv,    only: piernik_Isend, piernik_Irecv
          use MPIF,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_COMM_WORLD
-         use MPIFUN,         only: MPI_Alltoall, MPI_Comm_dup, MPI_Comm_free, MPI_Isend, MPI_Irecv
-         use mpisetup,       only: proc, req, err_mpi, FIRST, LAST, inflate_req
+         use MPIFUN,         only: MPI_Alltoall
+         use mpisetup,       only: proc, err_mpi, FIRST, LAST
          use particle_func,  only: particle_in_area
          use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
          use particle_utils, only: is_part_in_cg
          use ppp,            only: ppp_main
-         use ppp_mpi,        only: piernik_Waitall
-#ifdef MPIF08
-         use MPIF,           only: MPI_Comm
-#endif /* MPIF08 */
+         use ppp_mpi,        only: req_ppp
 
          implicit none
 
+         type(req_ppp) :: req
          integer(kind=4), dimension(FIRST:LAST) :: nsend, nrecv
-         integer(kind=4) :: nr, g
+         integer(kind=4) :: g
          integer :: i, j, p
          enum, bind(C)
             enumerator :: I_GID  ! cg%grid_id
@@ -928,11 +870,6 @@ contains
          logical :: in, phy, out, fin, indomain
          character(len=*), parameter :: dp_label = "ru:deref_part", allmeta_label = "ru:deref:All2All", srmeta_label = "ru:deref:SR_meta", &
               srpart_label = "ru:deref:SR_part", ownpart_label = "ru:deref:copy_own_part", get_label = "ru:deref:add_part"
-#ifdef MPIF08
-         type(MPI_Comm)  :: dp_comm
-#else /* !MPIF08 */
-         integer(kind=4) :: dp_comm
-#endif /* !MPIF08 */
 
          call ppp_main%start(dp_label, PPP_AMR)
 
@@ -964,8 +901,6 @@ contains
 
          ! nsend/nrecv are expected to represent a quite sparse communication matrix with most nonzero elements located around the diagonal so we may proceed with point-to-point MPI calls only
 
-         call MPI_Comm_dup(MPI_COMM_WORLD, dp_comm, err_mpi)
-
          ! Second, describe, what to communicate
          do g = FIRST, LAST
             if (nsend(g) > 0) then
@@ -995,23 +930,20 @@ contains
 
          call ppp_main%start(srmeta_label, PPP_AMR)
          if (nsend(proc) > 0) cgrecv(proc)%gl = cgsend(proc)%gl
-         nr = 0
+         call req%init(owncomm = .true., label = "ru:deref")
          do g = FIRST, LAST
             if (g /= proc) then
-               if (nr + 2 > size(req, dim=1)) call inflate_req
                if (nsend(g) > 0) then
-                  nr = nr + I_ONE
                   allocate(cgsend(g)%pbuf(npf, sum(cgsend(g)%gl(I_NP, :))))
-                  call MPI_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call piernik_Isend(cgsend(g)%gl, size(cgsend(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req)
                endif
                if (nrecv(g) > 0) then
-                  nr = nr + I_ONE
-                  call MPI_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call piernik_Irecv(cgrecv(g)%gl, size(cgrecv(g)%gl, kind=4), MPI_INTEGER, g, I_ZERO, req)
                endif
             endif
          enddo
 
-         call piernik_Waitall(nr, "particle_derefinement_cnt")
+         call req%waitall("particle_derefinement_cnt")
          call ppp_main%stop(srmeta_label, PPP_AMR)
 
          ! set up cgrecv(:)%cgp based on received cgrecv(g)%gl, don't exclude g == proc here
@@ -1045,12 +977,10 @@ contains
 
          ! Third, communicate the particles
          call ppp_main%start(srpart_label, PPP_AMR)
-         nr = 0
+         call req%init(owncomm = .true., label = "ru:deref.p")
          do g = FIRST, LAST
             if (g /= proc) then
-               ! no need to call inflate_req as it should be already big enough
                if (nsend(g) > 0) then
-                  nr = nr + I_ONE
                   p = 0
                   do i = lbound(cgsend(g)%gl, dim=2), ubound(cgsend(g)%gl, dim=2)
                      ! copy outgoing particles
@@ -1071,12 +1001,11 @@ contains
                         part => part%nxt
                      enddo
                   enddo
-                  call MPI_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call piernik_Isend(cgsend(g)%pbuf, size(cgsend(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req)
                endif
                if (nrecv(g) > 0) then
-                  nr = nr + I_ONE
                   allocate(cgrecv(g)%pbuf(npf, sum(cgrecv(g)%gl(I_NP, :))))
-                  call MPI_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, dp_comm, req(nr), err_mpi)
+                  call piernik_Irecv(cgrecv(g)%pbuf, size(cgrecv(g)%pbuf, kind=4), MPI_DOUBLE_PRECISION, g, I_ZERO, req)
                endif
             endif
          enddo
@@ -1094,14 +1023,13 @@ contains
          endif
          call ppp_main%stop(ownpart_label, PPP_AMR)
 
-         call piernik_Waitall(nr, "particle_derefinement_p")
+         call req%waitall("particle_derefinement_p")
          call ppp_main%stop(srpart_label, PPP_AMR)
 
          ! copy incoming particles
          call ppp_main%start(get_label, PPP_AMR)
          do g = FIRST, LAST
             if (g /= proc) then
-               ! no need to call inflate_req as it should be already big enough
                if (nrecv(g) > 0) then
                   p = 0
                   do i = lbound(cgrecv(g)%cgp, dim=1), ubound(cgrecv(g)%cgp, dim=1)
@@ -1129,7 +1057,6 @@ contains
          call ppp_main%stop(get_label, PPP_AMR)
 
          ! Cleanup
-         call MPI_Comm_free(dp_comm, err_mpi)
          do g = FIRST, LAST
             if (allocated(cgsend(g)%gl))   deallocate(cgsend(g)%gl)
             if (allocated(cgsend(g)%cgp))  deallocate(cgsend(g)%cgp)

@@ -402,7 +402,6 @@ contains
 
       this%ord_prolong_set = all_cg%ord_prolong_nb
 
-      call all_cg%update_req
       call ppp_main%stop(vp_label, PPP_AMR)
 
    end subroutine vertical_prep
@@ -941,15 +940,10 @@ contains
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c, c2f
-      use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,             only: MPI_Comm
-#endif /* MPIF08 */
+      use ppp_mpi,          only: req_ppp
 
       implicit none
 
@@ -959,24 +953,20 @@ contains
       integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
       logical, optional,                   intent(in)    :: dim4     !< operate on wna instead
 
-      type(cg_level_connected_t), pointer                :: fine
-      integer                                            :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse, fse         !< shortcuts for coarse and fine segments
-      integer(kind=4)                                    :: nr, iw
-      type(cg_list_element),            pointer          :: cgl
-      type(grid_container),             pointer          :: cg               !< current grid container
-      real, dimension(:,:,:),           pointer          :: p3d
-      real, dimension(:,:,:,:),         pointer          :: p4d
-      logical, save                                      :: warned = .false.
-      integer                                            :: position
-      integer(kind=8), dimension(ndims, LO:HI)           :: box_8            !< temporary storage
-      character(len=*), parameter                        :: pq1_label = "prolong_1v"
-      logical                                            :: d4
-#ifdef MPIF08
-      type(MPI_Comm)  :: p1v_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: p1v_comm
-#endif /* !MPIF08 */
+      type(cg_level_connected_t), pointer          :: fine
+      type(req_ppp)                                :: req
+      integer                                      :: g
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse  !< shortcuts for coarse and fine segments
+      integer(kind=4)                              :: iw
+      type(cg_list_element),    pointer            :: cgl
+      type(grid_container),     pointer            :: cg        !< current grid container
+      real, dimension(:,:,:),   pointer            :: p3d
+      real, dimension(:,:,:,:), pointer            :: p4d
+      logical, save                                :: warned = .false.
+      integer                                      :: position
+      integer(kind=8), dimension(ndims, LO:HI)     :: box_8     !< temporary storage
+      character(len=*), parameter                  :: pq1_label = "prolong_1v"
+      logical                                      :: d4
 
       d4 = .false.
       if (present(dim4)) d4 = dim4
@@ -1022,8 +1012,7 @@ contains
          call this%check_dirty(iv, "prolong-")
       endif
 
-      call MPI_Comm_dup(MPI_COMM_WORLD, p1v_comm, err_mpi)
-      nr = 0
+      call req%init(owncomm = .true., label = "clc:p1v")
       ! be ready to receive everything into right buffers
       cgl => fine%first
       do while (associated(cgl))
@@ -1033,13 +1022,11 @@ contains
          associate( seg => cg%pi_tgt%seg )
          if (allocated(cg%pi_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
                if (d4) then
                   allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
-                  call MPI_Irecv(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, p1v_comm, req(nr), err_mpi)
+                  call seg(g)%recv_buf4(req)
                else
-                  call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, p1v_comm, req(nr), err_mpi)
+                  call seg(g)%recv_buf(req)
                endif
             enddo
          endif
@@ -1059,17 +1046,15 @@ contains
          do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
             cse = seg(g)%se
-            nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call inflate_req
             if (d4) then
                allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                p4d => cg%w(iv)%span(cse)
                seg(g)%buf4(:, :, :, :) = p4d
-               call MPI_Isend(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, p1v_comm, req(nr), err_mpi)
+               call seg(g)%send_buf4(req)
             else
                p3d => cg%q(iv)%span(cse)
                seg(g)%buf(:, :, :) = p3d
-               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, p1v_comm, req(nr), err_mpi)
+               call seg(g)%send_buf(req)
             endif
          enddo
          end associate
@@ -1078,8 +1063,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "prolong_1v")
-      call MPI_Comm_free(p1v_comm, err_mpi)
+      call req%waitall("prolong_1v")
 
       ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first
@@ -1183,20 +1167,15 @@ contains
       use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: I_ONE, xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR  !, dirtyH1
+      use constants,        only: xdim, ydim, zdim, LO, HI, base_level_id, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use grid_helpers,     only: c2f
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,         only: err_mpi, req, inflate_req, master
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,             only: MPI_Comm
-#endif /* MPIF08 */
+      use ppp_mpi,          only: req_ppp
 
       implicit none
 
@@ -1209,17 +1188,13 @@ contains
       type(cg_level_connected_t), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
+      type(req_ppp) :: req
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse ! shortcuts for fine segment and coarse segment
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
-      integer(kind=4) :: nr, iw
+      integer(kind=4) :: iw
       integer :: g
       logical, save :: firstcall = .true.
       character(len=*), parameter :: pbc_label = "prolong_bnd_from_coarser" , pbcv_label = "prolong_bnd_from_coarser:vbp"
-#ifdef MPIF08
-      type(MPI_Comm)  :: pbfc_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: pbfc_comm
-#endif /* !MPIF08 */
 
       if (present(dir)) then
          if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
@@ -1248,8 +1223,7 @@ contains
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
       ! OPT: actual stencil range should be used instead
 
-      call MPI_Comm_dup(MPI_COMM_WORLD, pbfc_comm, err_mpi)
-      nr = 0
+      call req%init(owncomm = .true., label = "clc:pb")
       ! be ready to receive everything into right buffers
       cgl => this%first
       do while (associated(cgl))
@@ -1258,14 +1232,12 @@ contains
          associate ( seg => cgl%cg%pib_tgt%seg )
          if (allocated(cgl%cg%pib_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
                if (present(arr4d)) then
                   if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pib buf4")
                   allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
-                  call MPI_Irecv(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, pbfc_comm, req(nr), err_mpi)
+                  call seg(g)%recv_buf4(req)
                else
-                  call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, pbfc_comm, req(nr), err_mpi)
+                  call seg(g)%recv_buf(req)
                endif
             enddo
          endif
@@ -1288,16 +1260,14 @@ contains
                cse(:, LO) = cse(:, LO) - ext_buf
                cse(:, HI) = cse(:, HI) + ext_buf
 
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
                if (present(arr4d)) then
                   if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pob buf4")
                   allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                   seg(g)%buf4(:, :, :, :) = cgl%cg%w(ind)%arr(:, cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-                  call MPI_Isend(seg(g)%buf4(1, 1, 1, 1), size(seg(g)%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, pbfc_comm, req(nr), err_mpi)
+                  call seg(g)%send_buf4(req)
                else
                   seg(g)%buf(:, :, :)     = cgl%cg%q(ind)%arr(   cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-                  call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, pbfc_comm, req(nr), err_mpi)
+                  call seg(g)%send_buf(req)
                endif
             enddo
          endif
@@ -1307,8 +1277,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "prolong_bnd_from_coarser", PPP_AMR)
-      call MPI_Comm_free(pbfc_comm, err_mpi)
+      call req%waitall("prolong_bnd_from_coarser", PPP_AMR)
 
       ! merge received coarse data into one array and interpolate it into the right place
       per(:) = 0
@@ -1531,15 +1500,10 @@ contains
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use mpisetup,         only: err_mpi, req, inflate_req, master
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
+      use mpisetup,         only: master
       use named_array,      only: p3, p4
       use named_array_list, only: qna, wna
-      use ppp_mpi,          only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,             only: MPI_Comm
-#endif /* MPIF08 */
+      use ppp_mpi,          only: req_ppp
 
       implicit none
 
@@ -1548,23 +1512,18 @@ contains
       integer(kind=4), optional,           intent(in)    :: pos   !< position of the variable within cell
       logical, optional,                   intent(in)    :: dim4  !< operate on wna instead
 
-      type(cg_level_connected_t), pointer                :: coarse
-      integer                                            :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: fse, cse              !< shortcuts for fine segment and coarse segment
-      integer(kind=8)                                    :: i, j, k, ic, jc, kc
-      integer(kind=8), dimension(xdim:zdim)              :: off1
-      real                                               :: norm
-      integer(kind=4)                                    :: nr
-      type(cg_list_element), pointer                     :: cgl
-      type(grid_container),  pointer                     :: cg                    !< current grid container
-      logical, save                                      :: warned = .false.
-      integer                                            :: position
-      logical                                            :: d4
-#ifdef MPIF08
-      type(MPI_Comm)  :: r1v_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: r1v_comm
-#endif /* !MPIF08 */
+      type(cg_level_connected_t), pointer          :: coarse
+      type(req_ppp)                                :: req
+      integer                                      :: g
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse              !< shortcuts for fine segment and coarse segment
+      integer(kind=8)                              :: i, j, k, ic, jc, kc
+      integer(kind=8), dimension(xdim:zdim)        :: off1
+      real                                         :: norm
+      type(cg_list_element), pointer               :: cgl
+      type(grid_container),  pointer               :: cg                    !< current grid container
+      logical, save                                :: warned = .false.
+      integer                                      :: position
+      logical                                      :: d4
 
       d4 = .false.
       if (present(dim4)) d4 = dim4
@@ -1589,8 +1548,7 @@ contains
       call coarse%vertical_prep
 
       ! be ready to receive everything into right buffers
-      call MPI_Comm_dup(MPI_COMM_WORLD, r1v_comm, err_mpi)
-      nr = 0
+      call req%init(owncomm = .true., label = "clc:r1v")
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -1598,14 +1556,12 @@ contains
 
          if (allocated(cg%ri_tgt%seg)) then
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
                associate (seg => cg%ri_tgt%seg(g))
                   if (d4) then
                      allocate(seg%buf4(wna%lst(iv)%dim4, size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
-                     call MPI_Irecv(seg%buf4(1, 1, 1, 1), size(seg%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, r1v_comm, req(nr), err_mpi)
+                     call seg%recv_buf4(req)
                   else
-                     call MPI_Irecv(seg%buf(1, 1, 1), size(seg%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, r1v_comm, req(nr), err_mpi)
+                     call seg%recv_buf(req)
                   endif
                end associate
             enddo
@@ -1706,12 +1662,10 @@ contains
                      enddo
                   enddo
                endif
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
                if (d4) then
-                  call MPI_Isend(seg%buf4(1, 1, 1, 1), size(seg%buf4(:, :, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, r1v_comm, req(nr), err_mpi)
+                  call seg%send_buf4(req)
                else
-                  call MPI_Isend(seg%buf(1, 1, 1), size(seg%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg%proc, seg%tag, r1v_comm, req(nr), err_mpi)
+                  call seg%send_buf(req)
                endif
             end associate
          enddo
@@ -1720,8 +1674,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "restrict_1v")
-      call MPI_Comm_free(r1v_comm, err_mpi)
+      call req%Waitall("restrict_1v")
 
       ! copy the received buffers to the right places
       cgl => coarse%first

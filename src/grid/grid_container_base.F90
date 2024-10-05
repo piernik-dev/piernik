@@ -203,9 +203,6 @@ contains
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 
-!      call inflate_req
-      ! write_plot_hdf5 requires nproc entries for the status array
-
       if (any(dom%bnd(xdim:ydim, :) == BND_COR)) call die("[grid_container_base:init_gc_base] BND_COR unimplemented")
       if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container_base:init_gc_base] Corner BC not allowed for z-direction")
 
