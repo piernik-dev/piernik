@@ -31,11 +31,11 @@
 !!
 !! These routines have to be called in particular order:
 !!
-!!     compute_nr_recv(cdim) initializes the transfer for the specified direction and returns number of messages
+!!     initiate_flx_recv(cdim) initializes the transfer for the specified direction and returns number of messages
 !!     recv_cg_finebnd and send_cg_coarsebnd have to be called for each cg
 !!     finalize_fcflx does a clean-up
 !!
-!! No other Piernik MPI communicatin should take place between calls to compute_nr_recv and finalize_fcflx because of use the req(:) array.
+!! No other Piernik MPI communication should take place between calls to initiate_flx_recv and finalize_fcflx because of use the req%r array.
 !!
 !! See sweeps module for more hints about proper usage.
 !!
@@ -45,20 +45,11 @@
 module fc_fluxes
 
 ! pulled by ANY
-#ifdef MPIF08
-   use MPIF, only: MPI_Comm
-#endif /* MPIF08 */
 
    implicit none
 
    private
-   public :: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
-
-#ifdef MPIF08
-   type(MPI_Comm)  :: fcflx_comm
-#else /* !MPIF08 */
-   integer(kind=4) :: fcflx_comm
-#endif /* !MPIF08 */
+   public :: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
 
 contains
 
@@ -67,28 +58,24 @@ contains
 !! Returns number of requests in `nr`
 !<
 
-   integer(kind=4) function compute_nr_recv(cdim, max_level) result(nr)
+   subroutine initiate_flx_recv(req, cdim, max_level)
 
       use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, I_ONE, base_level_id
-      use MPIF,         only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,       only: MPI_Irecv, MPI_Comm_dup
-      use mpisetup,     only: err_mpi, req, inflate_req
+      use constants,    only: LO, HI, base_level_id
+      use ppp_mpi,      only: req_ppp
 
       implicit none
 
-      integer(kind=4),           intent(in) :: cdim
-      integer(kind=4), optional, intent(in) :: max_level
+      type(req_ppp),             intent(inout) :: req
+      integer(kind=4),           intent(in)    :: cdim
+      integer(kind=4), optional, intent(in)    :: max_level
 
-      type(cg_list_element), pointer    :: cgl
-      integer(kind=8), dimension(LO:HI) :: jc
+      type(cg_list_element), pointer :: cgl
       integer :: g
 
-      ! Prepare own communicator
-      call MPI_Comm_dup(MPI_COMM_WORLD, fcflx_comm, err_mpi)
-      nr = 0
+      call req%init(owncomm = .true., label = "fc_flx")
 
       nullify(cgl)
       if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)
@@ -108,13 +95,7 @@ contains
          if (allocated(cgl%cg%rif_tgt%seg)) then
             associate ( seg => cgl%cg%rif_tgt%seg )
                do g = lbound(seg, dim=1), ubound(seg, dim=1)
-                  jc = seg(g)%se(cdim, :)
-                  if (jc(LO) == jc(HI)) then
-                     nr = nr + I_ONE
-                     if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req(nr), err_mpi)
-                     seg(g)%req => req(nr)
-                  endif
+                  if (seg(g)%se(cdim, LO) == seg(g)%se(cdim, HI)) call seg(g)%recv_buf(req)
                enddo
             end associate
          endif
@@ -123,11 +104,11 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end function compute_nr_recv
+   end subroutine initiate_flx_recv
 
 !> \brief Test if expected fluxes from fine grids have already arrived.
 
-   subroutine recv_cg_finebnd(cdim, cg, all_received)
+   subroutine recv_cg_finebnd(req, cdim, cg, all_received)
 
       use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI
       use dataio_pub, only: die
@@ -136,12 +117,14 @@ contains
       use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test
       use mpisetup,   only: err_mpi
       use ppp,        only: ppp_main
+      use ppp_mpi,    only: req_ppp
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: cdim
+      type(req_ppp),                 intent(inout) :: req
+      integer(kind=4),               intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      logical, intent(out)                         :: all_received
+      logical, optional,             intent(out)   :: all_received
 
       integer :: g, lh
       logical(kind=4) :: received
@@ -150,13 +133,18 @@ contains
 
       call ppp_main%start(recv_label, PPP_MPI)
 
-      all_received = .true.
+      if (present(all_received)) all_received = .true.
       if (allocated(cg%rif_tgt%seg)) then
          associate ( seg => cg%rif_tgt%seg )
          do g = lbound(seg, dim=1), ubound(seg, dim=1)
             jc = seg(g)%se(cdim, :)
             if (jc(LO) == jc(HI)) then
-               call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, err_mpi)
+               if (present(all_received)) then
+                  call MPI_Test(req%r(seg(g)%ireq), received, MPI_STATUS_IGNORE, err_mpi)
+               else
+                  call MPI_Wait(req%r(seg(g)%ireq), MPI_STATUS_IGNORE, err_mpi)
+                  received = .true.
+               endif
                if (received) then  !> \warning: partially duplicated code (see send_cg_coarsebnd())
                   j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
                   j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
@@ -171,7 +159,7 @@ contains
                   cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
                   if (allocated(cg%finebnd(cdim, lh)%bflx)) cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else
-                  all_received = .false.
+                  if (present(all_received)) all_received = .false.
                endif
             endif
          enddo
@@ -184,23 +172,21 @@ contains
 
 !> \brief Do a non-blocking MPI Send of fluxes for coarse neighbors.
 
-   subroutine send_cg_coarsebnd(cdim, cg, nr)
+   subroutine send_cg_coarsebnd(req, cdim, cg)
 
-      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID, PPP_MPI
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
-      use MPIF,         only: MPI_DOUBLE_PRECISION
-      use MPIFUN,       only: MPI_Isend
-      use mpisetup,     only: err_mpi, req, inflate_req
       use ppp,          only: ppp_main
+      use ppp_mpi,      only: req_ppp
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: cdim
+      type(req_ppp),                 intent(inout) :: req
+      integer(kind=4),               intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4), intent(inout)               :: nr  !< number of requests already set up on mpisetup::req array
 
       integer :: g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
@@ -236,11 +222,7 @@ contains
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
-
-               nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :), kind=4), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, fcflx_comm, req(nr), err_mpi)
-               seg(g)%req => req(nr)
+               call seg(g)%send_buf(req)
             endif
          enddo
          end associate
@@ -249,18 +231,5 @@ contains
       call ppp_main%stop(send_label, PPP_MPI)
 
    end subroutine send_cg_coarsebnd
-
-!> \brief Do a clean-up
-
-   subroutine finalize_fcflx
-
-      use mpisetup, only: err_mpi
-      use MPIFUN,   only: MPI_Comm_free
-
-      implicit none
-
-      call MPI_Comm_free(fcflx_comm, err_mpi)
-
-   end subroutine finalize_fcflx
 
 end module fc_fluxes

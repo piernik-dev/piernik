@@ -31,12 +31,11 @@
 
 module cg_list_balance
 
-   use cg_list_bnd,      only: cg_list_bnd_t
-   use constants,        only: ndims, I_ONE
-   use dot,              only: dot_t
-   use level_essentials, only: level_t
-   use patch_list,       only: patch_list_t
-   use sort_piece_list,  only: grid_piece_list
+   use cg_list_bnd,     only: cg_list_bnd_t
+   use constants,       only: ndims, I_ONE
+   use dot,             only: dot_t
+   use patch_list,      only: patch_list_t
+   use sort_piece_list, only: grid_piece_list
 
    implicit none
 
@@ -55,7 +54,6 @@ module cg_list_balance
       type(patch_list_t)                :: plist             !< list of patches that exist on the current level
       type(dot_t)                       :: dot               !< depiction of topology
       logical                           :: recently_changed  !< .true. when anything was added to or deleted from this level
-      class(level_t), pointer           :: l                 !< single place to store off, n_d and id
       type(grid_piece_list)             :: gp                !< SFC-sortable structure for collecting cgs for rebalance
       integer(kind=4), allocatable, dimension(:) :: cnt_all  !< block count for all threads (used in rebalance, only on master)
    contains
@@ -221,8 +219,11 @@ contains
       use constants,       only: ndims, INVALID, I_ONE
       use MPIF,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_COMM_WORLD, MPI_Wait
       use MPIFUN,          only: MPI_Isend, MPI_Send, MPI_Recv
-      use mpisetup,        only: master, slave, FIRST, LAST, req, err_mpi, inflate_req
+      use mpisetup,        only: master, slave, FIRST, LAST, err_mpi
       use sort_piece_list, only: grid_piece_list
+#ifdef MPIF08
+      use MPIF,            only: MPI_Request
+#endif /* MPIF08 */
 
       implicit none
 
@@ -233,13 +234,15 @@ contains
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer :: i
       integer(kind=4) :: p, ss, rls
-      integer(kind=4), parameter :: nreq = 1
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls + 1
-
-      call inflate_req(nreq)
+#ifdef MPIF08
+      type(MPI_Request) :: req
+#else /* !MPIF08 */
+      integer(kind=4)   :: req
+#endif /* !MPIF08 */
 
       ! copy the patches data to a temporary array to be sent to the master
-      if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, MPI_COMM_WORLD, req(nreq), err_mpi)
+      if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, MPI_COMM_WORLD, req, err_mpi)
 
       allocate(gptemp(I_OFF:I_END, ls))
       call this%plist%p2a(gptemp)
@@ -267,7 +270,7 @@ contains
       else
 
          ! send patches to master
-         call MPI_Wait(req(nreq), MPI_STATUS_IGNORE, err_mpi)
+         call MPI_Wait(req, MPI_STATUS_IGNORE, err_mpi)
          if (ls > 0) call MPI_Send(gptemp, size(gptemp, kind=4), MPI_INTEGER8, FIRST, tag_gpt, MPI_COMM_WORLD, err_mpi)
          deallocate(gptemp)
 

@@ -26,12 +26,13 @@
 !
 #include "piernik.h"
 
-!> \brief MPI wrappers for MPI_Allreduce in place and most simplified.
+!> \brief MPI wrappers for MPI_Allreduce - in place and most simplified.
 
 module allreduce
 
+   use cnt_array,  only: arrsum
    use constants,  only: pSUM, pLAND
-   use dataio_pub, only: die  ! QA_WARN this is needed only when NO_F2018 is not set, which is determined at compile time, so Makefile should not depend on it.
+   use dataio_pub, only: die  ! QA_WARN this is needed for correct calculation of dependencies when NO_F2018 is not set. NO_F2018 is determined at compile time.
 #ifdef MPIF08
    use MPIF,       only: MPI_Op
 #endif /* MPIF08 */
@@ -39,7 +40,7 @@ module allreduce
    implicit none
 
    private
-   public :: piernik_MPI_Allreduce, init_allreduce
+   public :: piernik_MPI_Allreduce, init_allreduce, cleanup_allreduce
 
    integer(kind=4) :: err_mpi  !< error status
 
@@ -50,6 +51,7 @@ module allreduce
    integer(kind=4), &
 #endif /* !MPIF08 */
                     & dimension(pSUM:pLAND) :: mpiop
+   type(arrsum) :: size_allr
 
 #ifdef NO_F2018
    ! We keep that spaghetti to not break compatibility with systems where only
@@ -72,17 +74,41 @@ module allreduce
 
 contains
 
-!> \brief Initialize mpiop translation array as some MPI implementations create MPI_SUM, MPI_MIN, etc. as non-constants
+!>
+!! \brief Initialize mpiop translation array as some MPI implementations create MPI_SUM, MPI_MIN, etc. as non-constants.
+!! Initialize MPI_Allreduce stat counter
+!<
 
    subroutine init_allreduce
 
-      use MPIF, only: MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND
+      use mpi_wrappers, only: max_rank, T_LAST
+      use MPIF,         only: MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND
 
       implicit none
 
-      mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]  ! this must match the ordering in constants enum
+      ! this must match the ordering in constants enum
+      mpiop = [ MPI_SUM, MPI_MIN, MPI_MAX, MPI_LOR, MPI_LAND ]
+
+      call size_allr%init([max_rank + 1, T_LAST])
 
    end subroutine init_allreduce
+
+!> \brief Print log and clean up MPI_Allreduce stat counter
+
+   subroutine cleanup_allreduce
+
+      use constants,    only: V_DEBUG
+      use mpi_wrappers, only: MPI_wrapper_stats, row_descr, col_descr
+      use mpisetup,     only: master
+
+      implicit none
+
+      if (master .and. MPI_wrapper_stats) &
+           call size_allr%print("Allreduce total elements(calls). " // trim(col_descr) // " " // trim(row_descr), V_DEBUG)
+
+      call size_allr%cleanup
+
+   end subroutine cleanup_allreduce
 
 #ifndef NO_F2018
 !>
@@ -90,68 +116,25 @@ contains
 !!
 !! Unlimited polymorphism here still requires some spaghetti code but much less than in non-f08 way
 !!
-!! Requires Fortran 2018 for SELECT RANK and DIMENSION(..)
+!! Requires Fortran 2018 for DIMENSION(..)
 !<
 
    subroutine piernik_MPI_Allreduce(var, reduction)
 
-      use dataio_pub, only: die
-      use MPIF,       only: MPI_LOGICAL, MPI_INTEGER, MPI_INTEGER8, MPI_REAL, MPI_DOUBLE_PRECISION, &
-           &                MPI_IN_PLACE, MPI_COMM_WORLD
-      use MPIFUN,     only: MPI_Allreduce
-#ifdef MPIF08
-      use MPIF,       only: MPI_Datatype
-#endif /* MPIF08 */
+      use mpi_wrappers, only: MPI_wrapper_stats, what_type, mpi_type
+      use MPIF,         only: MPI_IN_PLACE, MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Allreduce
 
       implicit none
 
       class(*), dimension(..), target, intent(inout) :: var       !< variable that will be reduced
       integer(kind=4),                 intent(in)    :: reduction !< integer to mark a reduction type
 
-#ifdef MPIF08
-      type(MPI_Datatype) :: dtype
-#else /* !MPIF08 */
-      integer(kind=4) :: dtype
-#endif /* !MPIF08 */
+      integer :: it
 
-      class(*), pointer :: pvar
-      logical, target :: dummy
-
-      ! duplicated code: see bcast
-      select rank (var)
-         rank (0)
-            pvar => var
-         rank (1)
-            pvar => var(lbound(var, 1))
-         rank (2)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2))
-         rank (3)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
-         rank (4)  ! most likely never used
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
-         rank default
-            call die("[allreduce:piernik_MPI_Allreduce] non-implemented rank")
-            pvar => dummy  ! suppress compiler warning
-      end select
-      ! In Fortran 2023 it should be possible to reduce the above construct to just
-      !     pvar => var(@lbound(var))
-
-      select type (pvar)
-         type is (logical)
-            dtype = MPI_LOGICAL
-         type is (integer(kind=4))
-            dtype = MPI_INTEGER
-         type is (integer(kind=8))  ! most likely never used
-            dtype = MPI_INTEGER8
-         type is (real(kind=4))  ! most likely never used
-            dtype = MPI_REAL
-         type is (real(kind=8))
-            dtype = MPI_DOUBLE_PRECISION
-         class default
-            call die("[allreduce:piernik_MPI_Allreduce] non-implemented type")
-      end select
-
-      call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), dtype, mpiop(reduction), MPI_COMM_WORLD, err_mpi)
+      it = what_type(var)
+      if (MPI_wrapper_stats) call size_allr%add([rank(var)+1, it], size(var, kind=8))
+      call MPI_Allreduce(MPI_IN_PLACE, var, size(var, kind=4), mpi_type(it), mpiop(reduction), MPI_COMM_WORLD, err_mpi)
 
    end subroutine piernik_MPI_Allreduce
 

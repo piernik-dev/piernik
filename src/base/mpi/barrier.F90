@@ -26,22 +26,52 @@
 !
 #include "piernik.h"
 
-!> \brief MPI wrappers
+!> \brief MPI wrapper for MPI_Barrier
 
-module mpi_wrappers
+module barrier
+
+   use cnt_array, only: arrcnt
 
    implicit none
 
    private
-   public :: piernik_MPI_Barrier, extra_barriers
+   public :: piernik_MPI_Barrier, init_bar, cleanup_bar, extra_barriers
 
+   type(arrcnt) :: cnt_bar
    logical, save :: extra_barriers = .false.  !< when changed to .true. additional MPI_Barriers will be called.
-
-   integer(kind=4) :: err_mpi  !< error status
 
 contains
 
-!> \brief Wrapper for MPI_Barrier
+!> \brief Initialize MPI_Barrier stat counter
+
+   subroutine init_bar
+
+      implicit none
+
+      call cnt_bar%init
+
+   end subroutine init_bar
+
+!> \brief Print log and clean up MPI_Barrier stat counter
+
+   subroutine cleanup_bar
+
+      use constants,    only: V_DEBUG
+      use mpisetup,     only: master
+      use mpi_wrappers, only: MPI_wrapper_stats
+
+      implicit none
+
+      if (master .and. MPI_wrapper_stats) call cnt_bar%print("Barrier counter:", V_DEBUG)
+      call cnt_bar%cleanup
+
+   end subroutine cleanup_bar
+
+!>
+!! \brief Wrapper for MPI_Barrier
+!!
+!! This rourine can be calles only by all processes or deadlock will occur.
+!<
 
    subroutine piernik_MPI_Barrier
 
@@ -49,8 +79,13 @@ contains
 
       implicit none
 
-      call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
+      integer(kind=4) :: err_mpi
+
+      if (extra_barriers) then
+         call cnt_bar%incr
+         call MPI_Barrier(MPI_COMM_WORLD, err_mpi)
+      endif
 
    end subroutine piernik_MPI_Barrier
 
-end module mpi_wrappers
+end module barrier

@@ -30,12 +30,16 @@
 
 module bcast
 
+   use cnt_array,  only: arrsum
+   use dataio_pub, only: die  ! QA_WARN this is needed for correct calculation of dependencies when NO_F2018 is not set. NO_F2018 is determined at compile time.
+
    implicit none
 
    private
-   public :: piernik_MPI_Bcast
+   public :: piernik_MPI_Bcast, init_bcast, cleanup_bcast
 
    integer(kind=4) :: err_mpi  !< error status
+   type(arrsum) :: size_bcast
 
 #ifdef NO_F2018
    ! We keep that spaghetti to not break compatibility with systems where only
@@ -66,19 +70,54 @@ module bcast
 
 contains
 
+!> \brief Initialize MPI_Bcast stat counter
+
+   subroutine init_bcast
+
+      use mpi_wrappers, only: max_rank, T_LAST
+
+      implicit none
+
+      call size_bcast%init([max_rank + 1, T_LAST])
+
+   end subroutine init_bcast
+
+!> \brief Print log and clean up MPI_Bcast stat counter
+
+   subroutine cleanup_bcast
+
+      use constants,    only: V_DEBUG
+      use mpi_wrappers, only: MPI_wrapper_stats, row_descr, col_descr
+      use mpisetup,     only: master
+
+      implicit none
+
+      if (master .and. MPI_wrapper_stats) &
+           call size_bcast%print("Bcast total elements(calls). " // trim(col_descr) // " " // trim(row_descr), V_DEBUG)
+
+      call size_bcast%cleanup
+
+   end subroutine cleanup_bcast
+
 #ifndef NO_F2018
 
-!> \brief Polymorphic wrapper for MPI_Bcast
+!>
+!! \brief Polymorphic wrapper for MPI_Bcast
+!!
+!! Unlimited polymorphism here still requires some spaghetti code but much less than in non-f08 way
+!!
+!! Requires Fortran 2018 for DIMENSION(..)
+!<
 
    subroutine piernik_MPI_Bcast(var, clen)
 
-      use dataio_pub, only: die
-      use mpisetup,   only: FIRST
-      use MPIF,       only: MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER, MPI_INTEGER8, &
-           &                MPI_REAL, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,     only: MPI_Bcast
+      use dataio_pub,   only: die
+      use mpi_wrappers, only: MPI_wrapper_stats, first_element, what_type, mpi_type, T_STR
+      use mpisetup,     only: FIRST
+      use MPIF,         only: MPI_COMM_WORLD
+      use MPIFUN,       only: MPI_Bcast
 #ifdef MPIF08
-      use MPIF,       only: MPI_Datatype
+      use MPIF,         only: MPI_Datatype
 #endif /* MPIF08 */
 
       implicit none
@@ -86,57 +125,29 @@ contains
       class(*), dimension(..), target, intent(inout) :: var   !< variable that will be broadcasted
       integer(kind=4), optional,       intent(in)    :: clen  !< length of the string (only when type(var) is character)
 
-      class(*), pointer :: pvar
-      logical, target :: is_string
-      integer(kind=4) :: lenmul
 #ifdef MPIF08
       type(MPI_Datatype) :: dtype
 #else /* !MPIF08 */
       integer(kind=4) :: dtype
 #endif /* !MPIF08 */
+      class(*), pointer :: pvar
+      integer(kind=4) :: lenmul
+      integer :: it
 
-      ! duplicated code: see allreduce
-      select rank (var)
-         rank (0)
-            pvar => var
-         rank (1)
-            pvar => var(lbound(var, 1))
-         rank (2)
-            pvar => var(lbound(var, 1), lbound(var, 2))
-         rank (3)
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3))
-         rank (4)
-            pvar => var(lbound(var, 1), lbound(var, 2), lbound(var, 3), lbound(var, 4))
-         rank default
-            call die("[bcast:piernik_MPI_Bcast] non-implemented rank")
-            pvar => is_string  ! suppress compiler warning
-      end select
-      ! In Fortran 2023 it should be possible to reduce the above construct to just
-      !     pvar => var(@lbound(var))
+      pvar => first_element(var)
 
-      is_string = .false.
+      it = what_type(pvar)
+      dtype = mpi_type(it)
       lenmul = 1
       select type (pvar)
          type is (character(len=*))
-            dtype = MPI_CHARACTER
             if (.not. present(clen)) call die("[bcast:piernik_MPI_Bcast] clen is required for strings")
-            is_string = .true.
             lenmul = clen
-         type is (logical)
-            dtype = MPI_LOGICAL
-         type is (integer(kind=4))
-            dtype = MPI_INTEGER
-         type is (integer(kind=8))
-            dtype = MPI_INTEGER8
-         type is (real(kind=4))
-            dtype = MPI_REAL
-         type is (real(kind=8))
-            dtype = MPI_DOUBLE_PRECISION
-         class default
-            call die("[bcast:piernik_MPI_Bcast] non-implemented type")
       end select
 
-      if (present(clen) .and. .not. is_string) call die("[bcast:piernik_MPI_Bcast] clen makes no sense for non-strings")
+      if (present(clen) .and. (it /= T_STR)) call die("[bcast:piernik_MPI_Bcast] clen makes no sense for non-strings")
+
+      if (MPI_wrapper_stats) call size_bcast%add([rank(var)+1, it], lenmul*size(var, kind=8))
 
       call MPI_Bcast(var, lenmul*size(var, kind=4), dtype, FIRST, MPI_COMM_WORLD, err_mpi)
 
