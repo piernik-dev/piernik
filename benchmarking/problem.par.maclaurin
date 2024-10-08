@@ -24,6 +24,7 @@
  /
 
  $OUTPUT_CONTROL
+    verbosity = "verbose"
     problem_name ='maclaurin'
     run_id =  'ben'
     dt_hdf  = 0.0
@@ -57,7 +58,6 @@
  /
 
  $MULTIGRID_SOLVER
-    mg_stdout = .true.
  /
 
  $MULTIGRID_GRAVITY

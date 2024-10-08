@@ -45,8 +45,9 @@ module cg_list_bnd
 
 ! pulled by ANY
 
-   use cg_list_dataop, only: cg_list_dataop_t
-   use merge_segments, only: merge_segments_t
+   use cg_list_dataop,   only: cg_list_dataop_t
+   use level_essentials, only: level_t
+   use merge_segments,   only: merge_segments_t
 
    implicit none
 
@@ -62,6 +63,7 @@ module cg_list_bnd
 
    type, extends(cg_list_dataop_t), abstract :: cg_list_bnd_t
       type(merge_segments_t) :: ms                         !< merged segments
+      class(level_t), pointer :: l                         !< single place to store off, n_d and id
    contains
       procedure          :: level_3d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       procedure          :: level_4d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
@@ -166,7 +168,7 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
-      use constants,  only: xdim, zdim, cor_dim, PPP_AMR
+      use constants,  only: xdim, zdim, cor_dim, PPP_AMR, base_level_id
       use dataio_pub, only: die
       use domain,     only: dom
       use global,     only: prefer_merged_MPI
@@ -202,8 +204,11 @@ contains
       !
       ! OPT: at what size of cg%w array (number of components, size of block) one approach wins over another?
       ! it seems that at [5, 16, 16, 16] internal_boundaries_MPI_merged and internal_boundaries_MPI_1by1 have similar performance
+      ! On blocks as large as 32×32×32 cells, the 1-by-1 variant seems to be abit faster. On small blocks (like 8×8×8) it can be twice as slow as MPI_merged.
+      !
+      ! In some non-periodic setups internal_boundaries_MPI_1by1 can have tag collisions on refinements at the boundary, so MPI_merged is currently safer.
 
-      if (this%ms%valid .and. (prefer_merged_MPI .or. tgt3d)) then
+      if (this%ms%valid .and. (prefer_merged_MPI .or. tgt3d) .and. this%l%id >= base_level_id) then
          call ppp_main%start(ibl_label)
          call internal_boundaries_local(this, ind, tgt3d, dmask)
          call ppp_main%stop(ibl_label)
@@ -324,7 +329,7 @@ contains
 
    subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
 
-      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI
+      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI, base_level_id
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
@@ -353,6 +358,7 @@ contains
 #endif /* !MPIF08 */
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
+      if (this%l%id < base_level_id .and. .not. tgt3d) call die("[cg_list_bnd:internal_boundaries_MPI_merged] some 4D buffers aren't reliably initialized below base level")
 
       call inflate_req(nproc, .true.)
 
