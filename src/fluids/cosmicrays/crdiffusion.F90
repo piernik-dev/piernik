@@ -142,7 +142,7 @@ contains
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
-      use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR
+      use constants,          only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n, PPP_CR, base_level_id
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
@@ -182,8 +182,9 @@ contains
          ! slightly modified copy of cg_leaves::leaf_arr4d_boundaries
          curl => diffl
          do while (associated(curl))
-            call curl%level_4d_boundaries(wcri)
+            call curl%level_4d_boundaries(wcri) ! Do we need to call it below base level? Or on any level that does not have leaves?
             curl => curl%coarser
+            if (curl%l%id < base_level_id) nullify(curl)
          enddo
       endif
 
