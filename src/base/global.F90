@@ -253,7 +253,7 @@ contains
       do_external_corners =.false.
       solver_str = ""
 
-      prefer_merged_MPI = .false.  ! non-merged MPI in internal_boundaries are implemented without buffers, which often is faster
+      prefer_merged_MPI = .true.  ! Non-merged MPI in internal_boundaries are implemented without buffers, which can be faster, especially for bsize(:) larger than 3*16, but in some non-periodic setups internal_boundaries_MPI_1by1 has tag collisions, so merged_MPI is currently safer.
 
       if (master) then
 
