@@ -48,25 +48,26 @@ contains
 
    subroutine collect_costs
 
+      use barrier,            only: extra_barriers
       use cg_level_connected, only: cg_level_connected_t
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_balance,    only: I_N_B, I_OFF
       use constants,          only: LO, I_ONE, ndims, PPP_AMR
       use dataio_pub,         only: warn
+      use isend_irecv,        only: piernik_Isend
       use load_balance,       only: balance_cg, balance_host, balance_thread, cost_mask
-      use mpi_wrappers,       only: extra_barriers
-      use mpisetup,           only: err_mpi, req, inflate_req, master, FIRST, LAST
-      use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_STATUSES_IGNORE, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Gather, MPI_Recv, MPI_Isend, MPI_Waitall
+      use mpisetup,           only: err_mpi, master, FIRST, LAST
+      use MPIF,               only: MPI_INTEGER, MPI_INTEGER8, MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE, MPI_COMM_WORLD
+      use MPIFUN,             only: MPI_Gather, MPI_Recv
       use procnames,          only: pnames
       use ppp,                only: ppp_main
-      use ppp_mpi,            only: piernik_Waitall
+      use ppp_mpi,            only: req_ppp
 
       implicit none
 
       type(cg_level_connected_t), pointer :: curl
-
+      type(req_ppp) :: req
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       real, allocatable, dimension(:) :: costs
       type(cg_list_element), pointer :: cgl
@@ -84,8 +85,6 @@ contains
 
       curl => finest%level
       do while (associated(curl))
-
-         call inflate_req(tag_cost)
 
          ! invalid_speed = .false.
          curl%recently_changed = .false.
@@ -141,12 +140,14 @@ contains
             enddo
          else
             if (curl%cnt > 0) then
-               call MPI_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  MPI_COMM_WORLD, req(tag_gpt),  err_mpi)
-               call MPI_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, MPI_COMM_WORLD, req(tag_cost), err_mpi)
+               call req%init(tag_cost, owncomm = .false., label = "rebalance:costs")
+               call piernik_Isend(gptemp, size(gptemp, kind=4), MPI_INTEGER8,         FIRST, tag_gpt,  req)
+               call piernik_Isend(costs,  size(costs,  kind=4), MPI_DOUBLE_PRECISION, FIRST, tag_cost, req)
+
                if (extra_barriers) then
-                  call MPI_Waitall(tag_cost, req(:tag_cost), MPI_STATUSES_IGNORE, err_mpi)
+                  call req%waitall  ! waitall_on_some, without MPI_Barrier call, without PPP
                else
-                  call piernik_Waitall(tag_cost, "rebalance")
+                  call req%waitall("rebalance")  ! we can have PPP if there are no extra MPI_Barrier call
                endif
             endif
             deallocate(gptemp, costs)
@@ -412,20 +413,17 @@ contains
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ZERO, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR
+      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX, PPP_AMR
       use dataio_pub,         only: die
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
+      use isend_irecv,        only: piernik_Isend, piernik_Irecv
       use list_of_cg_lists,   only: all_lists
-      use MPIF,               only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,             only: MPI_Isend, MPI_Irecv, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,           only: master, proc, err_mpi, req, inflate_req, tag_ub
+      use MPIF,               only: MPI_DOUBLE_PRECISION
+      use mpisetup,           only: master, proc, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
-      use ppp_mpi,            only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,               only: MPI_Comm
-#endif /* MPIF08 */
+      use ppp_mpi,            only: req_ppp
 #if defined(GRAV) && defined(NBODY)
       use domain,             only: dom
       use particle_func,      only: particle_in_area
@@ -437,8 +435,9 @@ contains
 
       type(cg_level_connected_t), pointer :: curl
       type(cg_list_element), pointer :: cgl
+      type(req_ppp) :: req
       integer :: s, n_gid, totfld
-      integer(kind=4) :: i, p, nr
+      integer(kind=4) :: i, p
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer(kind=8), dimension(ndims, LO:HI) :: se
       logical :: found
@@ -463,11 +462,6 @@ contains
          enumerator :: I_NP                   ! number of particles to transfer
       end enum
       character(len=*), parameter :: ISR_label = "reshuffle_Isend+Irecv", cp_label = "reshuffle_copy", gp_label = "reshuffle_gptemp"
-#ifdef MPIF08
-      type(MPI_Comm)  :: shuff_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: shuff_comm
-#endif /* !MPIF08 */
 #if defined(GRAV) && defined(NBODY)
       logical :: in, phy, out, fin, indomain
       type(particle), pointer :: part
@@ -517,9 +511,8 @@ contains
       call ppp_main%stop(gp_label, PPP_AMR)
 
       ! Irecv & Isend
-      call MPI_Comm_dup(MPI_COMM_WORLD, shuff_comm, err_mpi)
       call ppp_main%start(ISR_label, PPP_AMR)
-      nr = I_ZERO
+      call req%init(owncomm = .true., label = "reshuffle")
       curl => finest%level
       do while (associated(curl))
 
@@ -580,15 +573,12 @@ contains
                      cgl => cgl%nxt
                   enddo
                   if (.not. found) call die("[rebalance:reshuffle] Grid id not found")
-                  nr = nr + I_ONE
-                  if (nr > size(req, dim=1)) call inflate_req
-                  call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i, shuff_comm, req(nr), err_mpi)
+                  ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+                  call piernik_Isend(cglepa(i)%tbuf(lbound(cglepa(i)%tbuf, 1):, lbound(cglepa(i)%tbuf, 2):, lbound(cglepa(i)%tbuf, 3):, lbound(cglepa(i)%tbuf, 4):), size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), i,  req)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Isend for particles
-                  nr = nr + I_ONE
-                  if (nr > size(req, dim=1)) call inflate_req
-                  call MPI_Isend(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, shuff_comm, req(nr), err_mpi)
+                  call piernik_Isend(cglepa(i)%pbuf(lbound(cglepa(i)%pbuf, 1):, lbound(cglepa(i)%pbuf, 2):), size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_D_P, i), kind=4), ip, req)
 #endif /* GRAV && NBODY */
 
                endif
@@ -607,16 +597,13 @@ contains
                      if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(curl%last%cg)
                   enddo
                   call all_cg%add(curl%last%cg)
-                  nr = nr + I_ONE
-                  if (nr > size(req, dim=1)) call inflate_req
-                  call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, shuff_comm, req(nr), err_mpi)
+                  ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+                  call piernik_Irecv(cglepa(i)%tbuf(lbound(cglepa(i)%tbuf, 1):, lbound(cglepa(i)%tbuf, 2):, lbound(cglepa(i)%tbuf, 3):, lbound(cglepa(i)%tbuf, 4):), size(cglepa(i)%tbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), i, req)
 
 #if defined(GRAV) && defined(NBODY)
                   ! Irecv for particles
-                  nr = nr + I_ONE
-                  if (nr > size(req, dim=1)) call inflate_req
                   allocate(cglepa(i)%pbuf(npf, gptemp(I_NP, i)))
-                  call MPI_Irecv(cglepa(i)%pbuf, size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, shuff_comm, req(nr), err_mpi)
+                  call piernik_Irecv(cglepa(i)%pbuf(lbound(cglepa(i)%pbuf, 1):, lbound(cglepa(i)%pbuf, 2):), size(cglepa(i)%pbuf, kind=4), MPI_DOUBLE_PRECISION, int(gptemp(I_C_P, i), kind=4), ip, req)
 #endif /* GRAV && NBODY */
 
                endif
@@ -628,8 +615,7 @@ contains
       enddo
       call ppp_main%stop(ISR_label, PPP_AMR)
 
-      call piernik_Waitall(nr, "reshuffle", PPP_AMR)
-      call MPI_Comm_free(shuff_comm, err_mpi)
+      call req%waitall("reshuffle", PPP_AMR)
 
       call ppp_main%start(cp_label, PPP_AMR)
       curl => finest%level

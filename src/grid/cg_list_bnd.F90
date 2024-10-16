@@ -332,14 +332,11 @@ contains
       use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, LO, HI, base_level_id
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,         only: FIRST, LAST, proc, err_mpi, req, req2, inflate_req, nproc
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
+      use MPIF,             only: MPI_DOUBLE_PRECISION
+      use mpisetup,         only: FIRST, LAST, proc
       use named_array_list, only: wna
-      use ppp_mpi,          only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,             only: MPI_Comm
-#endif /* MPIF08 */
+      use ppp_mpi,          only: req_ppp
 
       implicit none
 
@@ -350,134 +347,106 @@ contains
 
       integer :: i
       integer(kind=4) :: p
-      integer(kind=4) :: nr !< index of first free slot in req array
-#ifdef MPIF08
-      type(MPI_Comm)  :: ibmpi_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: ibmpi_comm
-#endif /* !MPIF08 */
+      type(req_ppp) :: req1, req2
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
       if (this%l%id < base_level_id .and. .not. tgt3d) call die("[cg_list_bnd:internal_boundaries_MPI_merged] some 4D buffers aren't reliably initialized below base level")
 
-      call inflate_req(nproc, .true.)
-
-      call MPI_Comm_dup(MPI_COMM_WORLD, ibmpi_comm, err_mpi)
-      nr = 0
+      ! for some reasons
+      call req1%init(owncomm = .false., label = "clb:ib.m1")
+      call req2%init(owncomm = .false., label = "clb:ib.m2")
       do p = FIRST, LAST
          if (p /= proc) then
-            call this%ms%sl(p, IN )%find_offsets(dmask)
+            call this%ms%sl(p, IN)%find_offsets(dmask)
             call this%ms%sl(p, OUT)%find_offsets(dmask)
-            if (this%ms%sl(p, IN)%total_size /= this%ms%sl(p, OUT)%total_size) &
+            associate (slin => this%ms%sl(p, IN), slout => this%ms%sl(p, OUT))
+            if (slin%total_size /= slout%total_size) &
                  call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%sl(p, :)%total_size /=")
 
-            if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something to communicate with process p
+            if (slin%total_size /= 0) then ! we have something to communicate with process p
                if (tgt3d) then
-                  allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size))
-                  allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
-                     if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
-                        this     %ms%sl(p, OUT)%buf( &
-                             this%ms%sl(p, OUT)%list(i)%offset: &
-                             this%ms%sl(p, OUT)%list(i)%off_ceil) = reshape( &
-                             this%ms%sl(p, OUT)%list(i)%cg%q(ind)%arr( &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, HI)), [ &
-                             this%ms%sl(p, OUT)%list(i)%off_ceil - &
-                             this%ms%sl(p, OUT)%list(i)%offset + I_ONE ] )
+                  allocate(slin%buf(slin%total_size))
+                  allocate(slout%buf(slout%total_size))
+                  do i = lbound(slout%list, dim=1), slout%cur_last
+                     if (dmask( slout%list(i)%dir)) then
+                        slout%buf(slout%list(i)%offset:slout%list(i)%off_ceil) = reshape( &
+                             slout%list(i)%cg%q(ind)%arr( &
+                             slout%list(i)%se(xdim, LO):slout%list(i)%se(xdim, HI), &
+                             slout%list(i)%se(ydim, LO):slout%list(i)%se(ydim, HI), &
+                             slout%list(i)%se(zdim, LO):slout%list(i)%se(zdim, HI)), &
+                             [ slout%list(i)%off_ceil - slout%list(i)%offset + I_ONE ] )
                      endif
                   enddo
                else
-                  allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size*wna%lst(ind)%dim4))
-                  allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size*wna%lst(ind)%dim4))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
-                     if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
-                        this     %ms%sl(p, OUT)%buf( &
-                            (this%ms%sl(p, OUT)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
-                             this%ms%sl(p, OUT)%list(i)%off_ceil        * wna%lst(ind)%dim4 ) = reshape( &
-                             this%ms%sl(p, OUT)%list(i)%cg%w(ind)%arr( &
-                             1:wna%lst(ind)%dim4, &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, OUT)%list(i)%se(zdim, HI)), [ &
-                            (this%ms%sl(p, OUT)%list(i)%off_ceil - &
-                             this%ms%sl(p, OUT)%list(i)%offset + I_ONE) * wna%lst(ind)%dim4 ] )
+                  allocate(slin%buf(slin%total_size*wna%lst(ind)%dim4))
+                  allocate(slout%buf(slout%total_size*wna%lst(ind)%dim4))
+                  do i = lbound(slout%list, dim=1), slout%cur_last
+                     if (dmask( slout%list(i)%dir)) then
+                        slout%buf( &
+                            (slout%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
+                             slout%list(i)%off_ceil        * wna%lst(ind)%dim4 ) = reshape( &
+                             slout%list(i)%cg%w(ind)%arr( 1:wna%lst(ind)%dim4, &
+                             slout%list(i)%se(xdim, LO):slout%list(i)%se(xdim, HI), &
+                             slout%list(i)%se(ydim, LO):slout%list(i)%se(ydim, HI), &
+                             slout%list(i)%se(zdim, LO):slout%list(i)%se(zdim, HI)), &
+                             [ (slout%list(i)%off_ceil - slout%list(i)%offset + I_ONE) * wna%lst(ind)%dim4 ] )
                      endif
                   enddo
                endif
-               if (nr+I_ONE >  ubound(req(:), dim=1)) call inflate_req
-               if (nr+I_ONE >  ubound(req2(:), dim=1)) call inflate_req(.true.)
-               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf, kind=4), MPI_DOUBLE_PRECISION, p, p,    ibmpi_comm, req( nr+I_ONE), err_mpi)
-               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, ibmpi_comm, req2(nr+I_ONE), err_mpi)
-               nr = nr + I_ONE
+               ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+               call piernik_Irecv(slin%buf( lbound(slin%buf,  1):), size(slin%buf,  kind=4), MPI_DOUBLE_PRECISION, p, p,    req1)
+               call piernik_Isend(slout%buf(lbound(slout%buf, 1):), size(slout%buf, kind=4), MPI_DOUBLE_PRECISION, p, proc, req2)
             endif
-
+            end associate
          endif
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_merged_R")
+      call req1%waitall("int_bnd_merged_R")
 
       do p = FIRST, LAST
          if (p /= proc) then
-            if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something received from process p
+            associate (slin => this%ms%sl(p, IN))
+            if (slin%total_size /= 0) then ! we have something received from process p
                if (tgt3d) then
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
-                     if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
-                        this     %ms%sl(p, IN)%list(i)%cg%q(ind)%arr( &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI)) = reshape ( &
-                             this%ms%sl(p, IN)%buf( &
-                             this%ms%sl(p, IN)%list(i)%offset: &
-                             this%ms%sl(p, IN)%list(i)%off_ceil), [ &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO) + I_ONE ] )
+                  do i = lbound(slin%list, dim=1), slin%cur_last
+                     associate (li => slin%list(i))
+                     if (dmask( li%dir)) then
+                        li%cg%q(ind)%arr( &
+                             li%se(xdim, LO):li%se(xdim, HI), &
+                             li%se(ydim, LO):li%se(ydim, HI), &
+                             li%se(zdim, LO):li%se(zdim, HI)) = reshape ( &
+                             slin%buf(li%offset:li%off_ceil), [ &
+                             li%se(xdim, HI) - li%se(xdim, LO) + I_ONE, &
+                             li%se(ydim, HI) - li%se(ydim, LO) + I_ONE, &
+                             li%se(zdim, HI) - li%se(zdim, LO) + I_ONE ] )
                      endif
+                     end associate
                   enddo
                else
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
-                     if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
-                        this     %ms%sl(p, IN)%list(i)%cg%w(ind)%arr( &
-                             1:wna%lst(ind)%dim4, &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI), &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO): &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI)) = reshape ( &
-                             this%ms%sl(p, IN)%buf( &
-                            (this%ms%sl(p, IN)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
-                             this%ms%sl(p, IN)%list(i)%off_ceil * wna%lst(ind)%dim4 ), [ &
+                  do i = lbound(slin%list, dim=1), slin%cur_last
+                     associate (li => slin%list(i))
+                     if (dmask( li%dir)) then
+                        li%cg%w(ind)%arr( 1:wna%lst(ind)%dim4, &
+                             li%se(xdim, LO):li%se(xdim, HI), &
+                             li%se(ydim, LO):li%se(ydim, HI), &
+                             li%se(zdim, LO):li%se(zdim, HI)) = reshape ( &
+                             slin%buf( &
+                            (li%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
+                             li%off_ceil        * wna%lst(ind)%dim4 ), [ &
                              int(wna%lst(ind)%dim4, kind=8), &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(xdim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(ydim, LO) + I_ONE, &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, HI) - &
-                             this%ms%sl(p, IN)%list(i)%se(zdim, LO) + I_ONE ] )
+                             li%se(xdim, HI) - li%se(xdim, LO) + I_ONE, &
+                             li%se(ydim, HI) - li%se(ydim, LO) + I_ONE, &
+                             li%se(zdim, HI) - li%se(zdim, LO) + I_ONE ] )
                      endif
+                     end associate
                   enddo
                endif
             endif
+            end associate
          endif
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_merged_S", use_req2 = .true.)
-      call MPI_Comm_free(ibmpi_comm, err_mpi)
+      call req2%waitall("int_bnd_merged_S")
 
       do p = FIRST, LAST
          if (p /= proc) then
@@ -500,19 +469,15 @@ contains
 
       use cg_cost_data,     only: I_OTHER
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR
+      use constants,        only: xdim, cor_dim, LO, HI, I_ONE, I_THREE, I_FOUR
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use grid_cont_bseg,   only: segment
-      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, MPI_ORDER_FORTRAN, &
-           &                      MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
-      use MPIFUN,           only: MPI_Irecv, MPI_Isend, MPI_Comm_dup, MPI_Comm_free
-      use mpisetup,         only: err_mpi, req, inflate_req
+      use isend_irecv,      only: piernik_Isend, piernik_Irecv
+      use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
+      use mpisetup,         only: err_mpi
       use named_array_list, only: wna
-      use ppp_mpi,          only: piernik_Waitall
-#ifdef MPIF08
-      use MPIF,             only: MPI_Comm
-#endif /* MPIF08 */
+      use ppp_mpi,          only: req_ppp
 
       implicit none
 
@@ -521,23 +486,16 @@ contains
       logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
-      integer                                      :: g, d
-      integer(kind=4)                              :: nr     !< index of first free slot in req array
-      type(grid_container),     pointer            :: cg
-      type(cg_list_element),    pointer            :: cgl
-      type(segment), pointer                       :: i_seg, o_seg !< shortcuts
-
-      integer(kind=4), parameter :: rank3 = I_THREE, rank4 = I_FOUR
+      integer                           :: g, d
+      type(grid_container), pointer     :: cg
+      type(cg_list_element), pointer    :: cgl
+      type(segment), pointer            :: i_seg, o_seg !< shortcuts
+      type(req_ppp)                     :: req
+      integer(kind=4), parameter        :: rank3 = I_THREE, rank4 = I_FOUR
       integer(kind=4), dimension(rank3) :: b3sz, b3su, b3st
       integer(kind=4), dimension(rank4) :: b4sz, b4su, b4st
-#ifdef MPIF08
-      type(MPI_Comm)  :: ib1by1_comm
-#else /* !MPIF08 */
-      integer(kind=4) :: ib1by1_comm
-#endif /* !MPIF08 */
 
-      call MPI_Comm_dup(MPI_COMM_WORLD, ib1by1_comm, err_mpi)
-      nr = 0
+      call req%init(owncomm = .true., label = "clb:ib.1by1")
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -560,26 +518,28 @@ contains
                        call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     if (nr+I_TWO > ubound(req(:), dim=1)) call inflate_req
-
                      i_seg => cg%i_bnd(d)%seg(g)
                      o_seg => cg%o_bnd(d)%seg(g)
 
                      !> \deprecated: A lot of semi-duplicated code below
                      ! array_of_starts has to be C-like, so b3st(:) = 0  points to lbound(cg%q(ind)%arr)
+                     !
+                     ! explicit lbound in piernik_I{send,recv} calls to prevent
+                     !    valgrind: Invalid read of size 8,  Address <blahblah> is 0 bytes after a block of size 272 alloc'd
+                     ! (at least with gfortran 12.3)
                      if (tgt3d) then
 
                         b3su = int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4)
                         b3st = int(i_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call MPI_Irecv(cg%q(ind)%arr(:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, ib1by1_comm, req(nr+I_ONE), err_mpi)
+                        call piernik_Irecv(cg%q(ind)%arr(lbound(cg%q(ind)%arr, 1):, lbound(cg%q(ind)%arr, 2):, lbound(cg%q(ind)%arr, 3):), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
 
                         b3su = int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4)
                         b3st = int(o_seg%se(:, LO), kind=4) - lbound(cg%q(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank3, b3sz, b3su, b3st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call MPI_Isend(cg%q(ind)%arr(:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, ib1by1_comm, req(nr+I_TWO), err_mpi)
+                        call piernik_Isend(cg%q(ind)%arr(lbound(cg%q(ind)%arr, 1):, lbound(cg%q(ind)%arr, 2):, lbound(cg%q(ind)%arr, 3):), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
 
                      else
 
@@ -587,16 +547,15 @@ contains
                         b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
-                        call MPI_Irecv(cg%w(ind)%arr(:,:,:,:), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, ib1by1_comm, req(nr+I_ONE), err_mpi)
+                        call piernik_Irecv(cg%w(ind)%arr(lbound(cg%w(ind)%arr, 1):, lbound(cg%w(ind)%arr, 2):, lbound(cg%w(ind)%arr, 3):, lbound(cg%w(ind)%arr, 4):), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
 
                         b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
                         b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
-                        call MPI_Isend(cg%w(ind)%arr(:,:,:,:), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, ib1by1_comm, req(nr+I_TWO), err_mpi)
+                        call piernik_Isend(cg%w(ind)%arr(lbound(cg%w(ind)%arr, 1):, lbound(cg%w(ind)%arr, 2):, lbound(cg%w(ind)%arr, 3):, lbound(cg%w(ind)%arr, 4):), I_ONE, o_seg%sub_type, o_seg%proc, o_seg%tag, req)
 
                      endif
-                     nr = nr + I_TWO
                   enddo
                else
                   if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%o_bnd without cg%i_bnd")
@@ -608,8 +567,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_Waitall(nr, "int_bnd_1by1")
-      call MPI_Comm_free(ib1by1_comm, err_mpi)
+      call req%waitall("int_bnd_1by1")
 
       cgl => this%first
       do while (associated(cgl))

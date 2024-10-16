@@ -53,7 +53,6 @@ contains
       use initfluids,            only: cleanup_fluids
       use interactions,          only: cleanup_interactions
       use procnames,             only: pnames
-      use sortable_list,         only: cleanup_sortable_list
       use tag_pool,              only: t_pool
       use timer,                 only: cleanup_timers
       use unified_ref_crit_list, only: urc_list
@@ -96,7 +95,6 @@ contains
 #ifdef MULTIGRID
       call cleanup_multigrid;      call nextdot
 #endif /* MULTIGRID */
-      call cleanup_sortable_list;  call nextdot
       call cleanup_fluids;         call nextdot
 #if defined(GRAV) && defined(NBODY)
       call cleanup_particles;      call nextdot
@@ -129,8 +127,8 @@ contains
 !<
    subroutine nextdot(print_t)
 
-      use mpisetup,  only: master
       use constants, only: stdout, tmr_fu
+      use mpisetup,  only: master
       use timer,     only: set_timer
 
       implicit none

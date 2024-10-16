@@ -33,7 +33,7 @@ module grid_cont_bseg
    use constants,    only: xdim, zdim, LO, HI
    use grid_cont_na, only: grid_container_na_t
 #ifdef MPIF08
-   use MPIF,         only: MPI_Request, MPI_Datatype
+   use MPIF,         only: MPI_Datatype
 #endif /* MPIF08 */
 
    implicit none
@@ -48,16 +48,20 @@ module grid_cont_bseg
       integer(kind=4) :: tag                               !< unique tag for data exchange
       real, allocatable, dimension(:,:,:)   :: buf         !< buffer for the 3D (scalar) data to be sent or received
       real, allocatable, dimension(:,:,:,:) :: buf4        !< buffer for the 4D (vector) data to be sent or received
+      integer :: ireq  !< request index (for MPI_Test in fc_fluxes)
 #ifdef MPIF08
-      type(MPI_Request), pointer :: req                    !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
       type(MPI_Datatype) :: sub_type                       !< MPI type related to this segment
 #else /* !MPIF08 */
-      integer(kind=4), pointer :: req                      !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
       integer(kind=4) :: sub_type                          !< MPI type related to this segment
 #endif /* !MPIF08 */
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2  !< auxiliary range, used in cg_level_connected:vertical_bf_prep
       class(grid_container_bseg_t), pointer :: local       !< set this pointer to non-null when the exchange is local
+   contains
+      procedure :: send_buf   !< Perform piernik_Isend, when buf, proc and tag are ready
+      procedure :: recv_buf   !< Perform piernik_Irecv, when buf, proc and tag are ready
+      procedure :: send_buf4  !< Perform piernik_Isend, when buf4, proc and tag are ready
+      procedure :: recv_buf4  !< Perform piernik_Irecv, when buf4, proc and tag are ready
    end type segment
 
    !< \brief target list container for prolongations, restrictions and boundary exchanges
@@ -78,6 +82,79 @@ module grid_cont_bseg
    end type grid_container_bseg_t
 
 contains
+
+!> \brief Perform piernik_Isend, when buf, proc and tag are ready
+
+   subroutine send_buf(this, req)
+
+      use isend_irecv,  only: piernik_Isend
+      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use req_array,    only: req_arr
+
+      implicit none
+
+      class(segment), intent(inout) :: this  !< object invoking type-bound procedure
+      class(req_arr), intent(inout) :: req   !< array for requests
+
+      ! explicit buf(lbound(buf, ...), ...) needed to prevent valgrind complains on "Invalid read of size 8", at least with gfortran 12.3
+      call piernik_Isend(this%buf(lbound(this%buf, 1):, lbound(this%buf, 2):, lbound(this%buf, 3):), size(this%buf, kind=4), MPI_DOUBLE_PRECISION, this%proc, this%tag, req)
+      this%ireq = req%n
+
+   end subroutine send_buf
+
+!< \brief Perform piernik_Irecv, when buf, proc and tag are ready
+
+   subroutine recv_buf(this, req)
+
+      use isend_irecv,  only: piernik_Irecv
+      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use req_array,    only: req_arr
+
+      implicit none
+
+      class(segment), intent(inout) :: this  !< object invoking type-bound procedure
+      class(req_arr), intent(inout) :: req   !< array for requests
+
+      call piernik_Irecv(this%buf(lbound(this%buf, 1):, lbound(this%buf, 2):, lbound(this%buf, 3):), size(this%buf, kind=4), MPI_DOUBLE_PRECISION, this%proc, this%tag, req)
+      this%ireq = req%n
+
+   end subroutine recv_buf
+
+!> \brief Perform piernik_Isend, when buf4, proc and tag are ready
+
+   subroutine send_buf4(this, req)
+
+      use isend_irecv,  only: piernik_Isend
+      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use req_array,    only: req_arr
+
+      implicit none
+
+      class(segment), intent(inout) :: this  !< object invoking type-bound procedure
+      class(req_arr), intent(inout) :: req   !< array for requests
+
+      call piernik_Isend(this%buf4(lbound(this%buf4, 1):, lbound(this%buf4, 2):, lbound(this%buf4, 3):, lbound(this%buf4, 4):), size(this%buf4, kind=4), MPI_DOUBLE_PRECISION, this%proc, this%tag, req)
+      this%ireq = req%n
+
+   end subroutine send_buf4
+
+!< \brief Perform piernik_Irecv, when buf4, proc and tag are ready
+
+   subroutine recv_buf4(this, req)
+
+      use isend_irecv,  only: piernik_Irecv
+      use MPIF,         only: MPI_DOUBLE_PRECISION
+      use req_array,    only: req_arr
+
+      implicit none
+
+      class(segment), intent(inout) :: this  !< object invoking type-bound procedure
+      class(req_arr), intent(inout) :: req   !< array for requests
+
+      call piernik_Irecv(this%buf4(lbound(this%buf4, 1):, lbound(this%buf4, 2):, lbound(this%buf4, 3):, lbound(this%buf4, 4):), size(this%buf4, kind=4), MPI_DOUBLE_PRECISION, this%proc, this%tag, req)
+      this%ireq = req%n
+
+   end subroutine recv_buf4
 
 !> \brief Add a new segment, reallocate if necessary
 

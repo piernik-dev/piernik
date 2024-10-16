@@ -33,8 +33,9 @@
 !<
 module global
 
+   use barrier,      only: extra_barriers
    use constants,    only: cbuff_len, xdim, zdim
-   use mpi_wrappers, only: extra_barriers
+   use mpi_wrappers, only: MPI_wrapper_stats
 
    implicit none
 
@@ -114,9 +115,9 @@ module global
         &                     max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
 
-   logical                       :: prefer_merged_MPI !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
+   logical :: prefer_merged_MPI  !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
 
-   namelist /PARALLEL_SETUP/ extra_barriers, prefer_merged_MPI
+   namelist /PARALLEL_SETUP/ extra_barriers, prefer_merged_MPI, MPI_wrapper_stats
 
 contains
 
@@ -168,8 +169,9 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>prefer_merged_MPI </td><td>.true.  </td><td>logical </td><td>\copydoc global::prefer_merged_MPI </td></tr>
-!!   <tr><td>extra_barriers    </td><td>.false. </td><td>logical </td><td>\copydoc mpi_wrapper::extra_barriers </td></tr>
+!!   <tr><td>prefer_merged_MPI </td><td>.true.  </td><td>logical </td><td>\copydoc global::prefer_merged_MPI      </td></tr>
+!!   <tr><td>extra_barriers    </td><td>.false. </td><td>logical </td><td>\copydoc mpi_wrapper::extra_barriers    </td></tr>
+!!   <tr><td>MPI_wrapper_stats </td><td>.false. </td><td>logical </td><td>\copydoc mpi_wrapper::MPI_wrapper_stats </td></tr>
 !! </table>
 !! \n \n
 
@@ -254,6 +256,7 @@ contains
       solver_str = ""
 
       prefer_merged_MPI = .true.  ! Non-merged MPI in internal_boundaries are implemented without buffers, which can be faster, especially for bsize(:) larger than 3*16, but in some non-periodic setups internal_boundaries_MPI_1by1 has tag collisions, so merged_MPI is currently safer.
+      MPI_wrapper_stats = .false.
 
       if (master) then
 
@@ -348,6 +351,7 @@ contains
          lbuff(13)  = disallow_CRnegatives
          lbuff(14)  = prefer_merged_MPI
          lbuff(15)  = extra_barriers
+         lbuff(16)  = MPI_wrapper_stats
 
       endif
 
@@ -371,6 +375,7 @@ contains
          disallow_CRnegatives  = lbuff(13)
          prefer_merged_MPI     = lbuff(14)
          extra_barriers        = lbuff(15)
+         MPI_wrapper_stats     = lbuff(16)
 
          smalld                = rbuff( 1)
          smallc                = rbuff( 2)

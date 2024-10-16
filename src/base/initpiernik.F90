@@ -44,7 +44,6 @@ contains
    subroutine init_piernik
 
       use all_boundaries,        only: all_bnd, all_bnd_vital_q
-      use allreduce,             only: init_allreduce
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, &
@@ -80,6 +79,7 @@ contains
       use unified_ref_crit_list, only: urc_list
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
+      use wrapper_stats,         only: init_wstats
 #ifdef RESISTIVE
       use resistivity,           only: init_resistivity
 #endif /* RESISTIVE */
@@ -138,7 +138,7 @@ contains
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
       write(tmp_log_file,'(2a)') trim(log_wr),'tmp.log'
 
-      call init_allreduce
+      call init_wstats
       call init_mpi                          ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       code_progress = PIERNIK_INIT_MPI       ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
 

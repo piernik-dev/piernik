@@ -45,10 +45,10 @@ contains
 
    subroutine write_restart_hdf5(sequential)
 
+      use barrier,         only: piernik_MPI_Barrier
       use common_hdf5,     only: dump_announcement, dump_announce_time, set_common_attributes
       use constants,       only: cwdlen, PPP_IO, RES
       use dataio_pub,      only: use_v2_io, nres, last_res_time
-      use mpi_wrappers,    only: piernik_MPI_Barrier
       use ppp,             only: ppp_main
       use restart_hdf5_v1, only: write_restart_hdf5_v1
       use restart_hdf5_v2, only: write_restart_hdf5_v2

@@ -242,7 +242,7 @@ contains
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, oneeig, eight, wcr_n, GEO_XYZ, PPP_CR, half, I_ONE, base_level_id
       use dataio_pub,       only: die
       use domain,           only: dom
-      use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
+      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -250,7 +250,7 @@ contains
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: piernik_Waitall
+      use ppp_mpi,          only: req_ppp
 #ifdef MAGNETIC
       use constants,        only: four
       use global,           only: cc_mag
@@ -273,13 +273,12 @@ contains
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
       character(len=*), dimension(ndims), parameter :: crd_label = [ "cr_diff_X", "cr_diff_Y", "cr_diff_Z" ]
-      integer(kind=4) :: nr, nr_recv
-      logical :: all_received
+      type(req_ppp) :: req
       integer(kind=4) :: ord_save, max_lev
       real, parameter :: flux_factor = half
 
       if (.not. has_cr) return
-      if (.not.dom%has_dir(crdim)) return
+      if (.not. dom%has_dir(crdim)) return
 
       call ppp_main%start(crd_label(crdim), PPP_CR)
 
@@ -298,8 +297,7 @@ contains
       call all_fluid_boundaries  ! overkill?
       wna%lst(wna%fi)%ord_prolong = ord_save
 
-      nr_recv = compute_nr_recv(crdim, max_lev - I_ONE)
-      nr = nr_recv  ! at this point we may have some requests posted by compute_nr_recv()
+      call initiate_flx_recv(req, crdim, max_lev - I_ONE)
 
       cgl => leaves%up_to_level(max_lev)%p
       do while (associated(cgl))
@@ -390,27 +388,23 @@ contains
             enddo
          enddo
 
-         call send_cg_coarsebnd(crdim, cg, nr)
+         call send_cg_coarsebnd(req, crdim, cg)
 
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
-
-      call piernik_Waitall(nr, "cr_diff")
 
       nullify(cgl)
       if (max_lev - I_ONE >= base_level_id) cgl => leaves%up_to_level(max_lev - I_ONE)%p
       do while (associated(cgl))
          cg => cgl%cg
          call cg%costs%start
-
-         call recv_cg_finebnd(crdim, cg, all_received)
-         if (.not. all_received) call die("[crdiffusion:cr_diff] incomplete fluxes")
+         call recv_cg_finebnd(req, crdim, cg)
          call cg%costs%stop(I_DIFFUSE)
          cgl => cgl%nxt
       enddo
 
-      call finalize_fcflx
+      call req%waitall("cr_diff")
 
       call all_wcr_boundaries(crdim)
 

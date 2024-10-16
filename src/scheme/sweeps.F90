@@ -120,15 +120,15 @@ contains
       use constants,        only: ydim, ndims, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID, &
            &                      RTVD_SPLIT, RIEMANN_SPLIT, PPP_CG
       use dataio_pub,       only: die
-      use fc_fluxes,        only: compute_nr_recv, recv_cg_finebnd, send_cg_coarsebnd, finalize_fcflx
+      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
       use global,           only: integration_order, use_fargo, which_solver
       use grid_cont,        only: grid_container
       use MPIF,             only: MPI_STATUS_IGNORE
       use MPIFUN,           only: MPI_Waitany
-      use mpisetup,         only: err_mpi, req
+      use mpisetup,         only: err_mpi
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: piernik_Waitall
+      use ppp_mpi,          only: req_ppp
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
@@ -155,14 +155,15 @@ contains
       integer(kind=4),           intent(in) :: cdim
       integer(kind=4), optional, intent(in) :: fargo_vel
 
-      integer                        :: istep
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-      type(cg_list_dataop_t), pointer :: sl
-      logical                        :: all_processed, all_received
-      integer                        :: blocks_done
-      integer(kind=4)                :: g, nr, nr_recv
-      integer                        :: uhi, bhi, psii, psihi
+      integer                          :: istep
+      type(cg_list_element), pointer   :: cgl
+      type(grid_container),  pointer   :: cg
+      type(cg_list_dataop_t), pointer  :: sl
+      type(req_ppp)                    :: req
+      logical                          :: all_processed, all_received
+      integer                          :: blocks_done
+      integer(kind=4)                  :: n_recv, g
+      integer                          :: uhi, bhi, psii, psihi
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
       character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
@@ -215,8 +216,8 @@ contains
       ! This is the loop over Runge-Kutta stages
       do istep = first_stage(integration_order), last_stage(integration_order)
 
-         nr_recv = compute_nr_recv(cdim)
-         nr = nr_recv  ! at this point we may have some requests posted by compute_nr_recv()
+         call initiate_flx_recv(req, cdim)
+         n_recv = req%n
          all_processed = .false.
 
          do while (.not. all_processed)
@@ -231,7 +232,7 @@ contains
                call cg%costs%start
 
                if (.not. cg%processed) then
-                  call recv_cg_finebnd(cdim, cg, all_received)
+                  call recv_cg_finebnd(req, cdim, cg, all_received)
 
                   if (all_received) then
                      call ppp_main%start(cg_label, PPP_CG)
@@ -247,7 +248,7 @@ contains
                      call ppp_main%stop(cg_label, PPP_CG)
 
                      call cg%costs%start
-                     call send_cg_coarsebnd(cdim, cg, nr)
+                     call send_cg_coarsebnd(req, cdim, cg)
                      blocks_done = blocks_done + 1
                   else
                      all_processed = .false.
@@ -260,13 +261,12 @@ contains
             call ppp_main%stop(solve_cgs_label)
 
             if (.not. all_processed .and. blocks_done == 0) then
-               if (nr_recv > 0) call MPI_Waitany(nr_recv, req(:nr_recv), g, MPI_STATUS_IGNORE, err_mpi)
+               if (n_recv > 0) call MPI_Waitany(n_recv, req%r(:n_recv), g, MPI_STATUS_IGNORE, err_mpi)
                ! g is the number of completed operations
             endif
          enddo
 
-         call piernik_Waitall(nr, "sweeps")
-         call finalize_fcflx
+         call req%waitall("sweeps")
 
          call update_boundaries(cdim, istep)
       enddo
