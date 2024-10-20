@@ -58,6 +58,7 @@ module req_array
       procedure :: cleanup          !< free the resources
       procedure :: store_tag        !< store tags for inspection upon Waitall
       procedure :: waitall_on_some  !< wait for completion of the requests on selected procs
+      procedure :: waitall_wrapper  !< code common for waitall_on_some and req_ppp::waitall_ppp
       procedure :: setsize_req      !< set the storage for this%r
       procedure :: doublesize_req   !< double the storage size for this%r
       generic, public :: init => doublesize_req, setsize_req
@@ -163,25 +164,37 @@ contains
 
    subroutine waitall_on_some(this)
 
+      implicit none
+
+      class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
+
+      call this%waitall_wrapper(C_REQS)
+      call this%cleanup
+
+   end subroutine waitall_on_some
+
+!> \brief Code common for waitall_on_some and req_ppp::waitall_ppp
+
+   subroutine waitall_wrapper(this, ind)
+
       use constants, only: LONG
       use MPIF,      only: MPI_STATUSES_IGNORE
       use MPIFUN,    only: MPI_Waitall
 
       implicit none
 
-      class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
+      class(req_arr),  intent(inout) :: this  !< an object invoking the type-bound procedure
+      integer(kind=4), intent(in)    :: ind   !< the index for call counter
 
       if (this%n > 0) then
 
-         call req_wall%add(int([C_REQS]), int(this%n, kind=LONG))
+         call req_wall%add(int([ind]), int(this%n, kind=LONG))
          call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
          this%n = 0
 
       endif
 
-      call this%cleanup
-
-   end subroutine waitall_on_some
+   end subroutine waitall_wrapper
 
 !> \brief Initialize by setting the size of this%r(:) array for non-blocking communication on request.
 
