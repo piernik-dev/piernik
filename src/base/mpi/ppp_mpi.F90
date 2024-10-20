@@ -76,7 +76,7 @@ contains
          if (present(x_mask)) mask = mask + x_mask
          call ppp_main%start(mpiw // ppp_label, mask)
 
-         call this%waitall_wrapper(C_REQA)
+         call this%waitall_wrapper(C_REQA, ppp_label)
 
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif

@@ -31,9 +31,10 @@
 module req_array
 
    use cnt_array,  only: arrsum
+   use log_bins,   only: lbins
    use tag_arrays, only: tag_arrs
 #ifdef MPIF08
-   use MPIF, only: MPI_Request, MPI_Comm
+   use MPIF,       only: MPI_Request, MPI_Comm
 #endif /* MPIF08 */
 
    implicit none
@@ -65,6 +66,11 @@ module req_array
       generic, public :: waitall => waitall_on_some
    end type req_arr
 
+   ! logarithmic bins for collecting Waitall execution time:
+   real, parameter :: min_bin = 1e-8  ! first bin will contain everything below this value
+   real, parameter :: binwidth = 10.  ! each bin from 2 to (nbins - 1) has this width
+   type(lbins) :: tbins_wall  ! bins for counting execution time of MPI_Waitall
+
    type(arrsum) :: req_wall  ! counter for ppp_mpi
    enum, bind(C)
       enumerator :: C_REQA = 1, C_REQS  ! for both req% waitall methods
@@ -78,9 +84,21 @@ contains
 
    subroutine init_wall
 
+      use global, only: waitall_timeout
+
       implicit none
 
+      real, parameter :: def_max_bin = 100.  ! in seconds, this is a lot of time to complete waitalls
+
+      integer :: nbins
+      real :: mx_b
+
       call req_wall%init(int([C_REQS]))
+
+      ! assume sane values of min_bin, def_max_bin, binwidth and waitall_timeout
+      mx_b = merge(waitall_timeout, def_max_bin, waitall_timeout > min_bin)
+      nbins = int((log(mx_b / min_bin) + 0.1)/ log(binwidth)) + 3  ! with some safety factor
+      call tbins_wall%init(min_bin, binwidth, nbins)
 
    end subroutine init_wall
 
@@ -94,10 +112,13 @@ contains
 
       implicit none
 
-      if (master .and. MPI_wrapper_stats) &
-           call req_wall%print("Waitall requests(calls). Columns: req_all%, req_some%.", V_DEBUG)
+      if (master .and. MPI_wrapper_stats) then
+         call req_wall%print("Waitall requests(calls). Columns: req_all%, req_some%.", V_DEBUG)
+         call tbins_wall%print("Waitall execution times (bin boundaries in seconds)", V_DEBUG)
+      endif
 
       call req_wall%cleanup
+      call tbins_wall%cleanup
 
    end subroutine cleanup_wall
 
@@ -168,31 +189,43 @@ contains
 
       class(req_arr), intent(inout) :: this  !< an object invoking the type-bound procedure
 
-      call this%waitall_wrapper(C_REQS)
+      call this%waitall_wrapper(C_REQS, "???")
       call this%cleanup
 
    end subroutine waitall_on_some
 
 !> \brief Code common for waitall_on_some and req_ppp::waitall_ppp
 
-   subroutine waitall_wrapper(this, ind)
+   subroutine waitall_wrapper(this, ind, label)
 
       use constants, only: LONG
       use global,    only: waitall_timeout
-      use MPIF,      only: MPI_STATUSES_IGNORE
+      use MPIF,      only: MPI_STATUSES_IGNORE, MPI_Wtime
       use MPIFUN,    only: MPI_Waitall
 
       implicit none
 
-      class(req_arr),  intent(inout) :: this  !< an object invoking the type-bound procedure
-      integer(kind=4), intent(in)    :: ind   !< the index for call counter
+      class(req_arr),   intent(inout) :: this  !< an object invoking the type-bound procedure
+      integer(kind=4),  intent(in)    :: ind   !< the index for call counter
+      character(len=*), intent(in)    :: label  !< identifier
+
+      logical, save :: firstcall = .true.
+      real :: t0, dtw
+
+      if (firstcall) then
+         call init_wall
+         firstcall = .false.
+      endif
 
       if (this%n > 0) then
 
          call req_wall%add(int([ind]), int(this%n, kind=LONG))
          if (waitall_timeout > 0.) then
          endif
+         t0 = MPI_Wtime()
          call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
+         dtw = MPI_Wtime() - t0
+         call tbins_wall%put(dtw)
          this%n = 0
 
       endif

@@ -51,6 +51,7 @@ module cnt_array
       procedure :: add      !< add some value to the selected counter
       procedure :: print    !< print the collected values
       procedure, private :: numdigits !< find minimum required field width
+      procedure :: get_v1   !< get vector of counters
    end type arrcnt
 
    type, extends(arrcnt) :: arrsum  ! array of sumators + array of counters
@@ -332,5 +333,28 @@ contains
       endif
 
    end function numdigits
+
+!>
+!! \brief get vector of counters
+!!
+!! An ad-hoc implementation for log_bins. ToDo: generalize it.
+!<
+
+   function get_v1(this)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(arrcnt), intent(in) :: this   !< an object invoking the type-bound procedure
+
+      integer(LONG), dimension(size(this%c1)) :: get_v1
+
+      if (.not. allocated(this%c1)) call die("[cnt_array:get_v1] not allocated")
+
+      get_v1 = this%c1
+
+   end function get_v1
+
 
 end module cnt_array

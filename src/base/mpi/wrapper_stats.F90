@@ -45,14 +45,14 @@ contains
       use barrier,      only: init_bar
       use bcast,        only: init_bcast
       use isend_irecv,  only: init_sr
-      use req_array,    only: init_wall
+!      use req_array,    only: init_wall
 
       implicit none
 
       call init_allreduce
       call init_bcast
       call init_sr
-      call init_wall
+      ! call init_wall  ! will be auto-initialized when necessary
       call init_bar
 
    end subroutine init_wstats
@@ -65,7 +65,7 @@ contains
       use barrier,      only: cleanup_bar
       use bcast,        only: cleanup_bcast
       use constants,    only: stdout, V_DEBUG
-      use dataio_pub,   only: piernik_verbosity
+      use dataio_pub,   only: piernik_verbosity, printinfo
       use isend_irecv,  only: cleanup_sr
       use mpisetup,     only: master
       use req_array,    only: cleanup_wall
@@ -75,6 +75,7 @@ contains
       ! Be nice to the stream of finalization dots on stdout
       if (master .and. (piernik_verbosity <= V_DEBUG)) write(stdout,'()')
 
+      if (master) call printinfo("Collected conters (for master only):", V_DEBUG)
       call cleanup_allreduce
       call cleanup_bcast
       call cleanup_sr
