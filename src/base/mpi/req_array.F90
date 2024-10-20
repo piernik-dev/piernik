@@ -178,6 +178,7 @@ contains
    subroutine waitall_wrapper(this, ind)
 
       use constants, only: LONG
+      use global,    only: waitall_timeout
       use MPIF,      only: MPI_STATUSES_IGNORE
       use MPIFUN,    only: MPI_Waitall
 
@@ -189,6 +190,8 @@ contains
       if (this%n > 0) then
 
          call req_wall%add(int([ind]), int(this%n, kind=LONG))
+         if (waitall_timeout > 0.) then
+         endif
          call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
          this%n = 0
 
