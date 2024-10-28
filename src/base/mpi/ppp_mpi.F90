@@ -57,13 +57,10 @@ contains
 
    subroutine waitall_ppp(this, ppp_label, x_mask)
 
-      use barrier,      only: piernik_MPI_Barrier
-      use constants,    only: PPP_MPI, LONG
-      use mpisetup,     only: err_mpi
-      use MPIF,         only: MPI_STATUSES_IGNORE
-      use MPIFUN,       only: MPI_Waitall
-      use ppp,          only: ppp_main
-      use req_array,    only: req_wall, C_REQA
+      use barrier,   only: piernik_MPI_Barrier
+      use constants, only: PPP_MPI
+      use ppp,       only: ppp_main
+      use req_array, only: C_REQA
 
       implicit none
 
@@ -79,10 +76,7 @@ contains
          if (present(x_mask)) mask = mask + x_mask
          call ppp_main%start(mpiw // ppp_label, mask)
 
-         call req_wall%add(int([C_REQA]), int(this%n, kind=LONG))
-
-         call MPI_Waitall(this%n, this%r(:this%n), MPI_STATUSES_IGNORE, err_mpi)
-         this%n = 0
+         call this%waitall_wrapper(C_REQA, ppp_label)
 
          call ppp_main%stop(mpiw // ppp_label, mask)
       endif
