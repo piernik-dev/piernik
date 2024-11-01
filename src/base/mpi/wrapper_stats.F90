@@ -75,7 +75,7 @@ contains
       ! Be nice to the stream of finalization dots on stdout
       if (master .and. (piernik_verbosity <= V_DEBUG)) write(stdout,'()')
 
-      if (master) call printinfo("Collected conters (for master only):", V_DEBUG)
+      if (master) call printinfo("Collected counters (for master only):", V_DEBUG)
       call cleanup_allreduce
       call cleanup_bcast
       call cleanup_sr
