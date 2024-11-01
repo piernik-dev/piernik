@@ -129,7 +129,7 @@ dep:
 	if [ -e $$OTMPDIR ] ; then \
 		$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
 		mv $$OTMPDIR"/"$$GRAPH . ;\
-		rm -r $$OTMPDIR "runs/"$${PROBLEM}"_"$$TMPDIR ;\
+		rm -r $$OTMPDIR "runs/"$$( basename $${PROBLEM} )"_"$$TMPDIR ;\
 	fi ;\
 	which display > /dev/null 2> /dev/null && [ -e $$GRAPH ] && display $$GRAPH ;\
 	if [ -e $$GRAPH ] ; then \
