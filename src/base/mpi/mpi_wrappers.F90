@@ -54,6 +54,9 @@ module mpi_wrappers
 contains
 
 #ifndef NO_F2018
+#if defined(__INTEL_COMPILER)
+#  warning If Intel oneAPI cannot compile this module, try to add -dNO_F2018 to the setup call
+#endif /* __INTEL_COMPILER */
 !>
 !! \brief Return a pointer to the first element of the array
 !!
