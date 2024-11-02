@@ -404,9 +404,9 @@ contains
       use constants,     only: half
       implicit none
 
-      real, dimension(:), pointer, intent(in)  :: eta1d, b1d
-      real, dimension(:), pointer, intent(out) :: wcu1d
-      real, intent(in)                         :: idi,dt
+      real, dimension(:), pointer, intent(in)    :: eta1d, b1d
+      real, dimension(:), pointer, intent(inout) :: wcu1d
+      real,                        intent(in)    :: idi,dt
 
       real, dimension(size(b1d))               :: w, wp, wm, b1
       integer                                  :: n
