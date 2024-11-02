@@ -171,14 +171,14 @@ contains
 
       implicit none
 
-      real, dimension(:,:), pointer,           intent(out) :: f             !< density, momentum and energy fluxes
-      real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
-      real, dimension(:,:), pointer,           intent(out) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
-      real, dimension(:,:), pointer,           intent(in)  :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
-      real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
-      real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
-      real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
-      real,                                    intent(in)  :: gamma         !< gamma of current gas type
+      real, dimension(:,:),           intent(out) :: f             !< density, momentum and energy fluxes
+      real, dimension(:,:),           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
+      real, dimension(:,:),           intent(out) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
+      real, dimension(:,:),           intent(in)  :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
+      real, dimension(:), pointer,    intent(in)  :: cs2           !< square of local isothermal sound speed
+      real, dimension(:,:), optional, intent(out) :: p_ct_flx      !< CR and tracers flux
+      real, dimension(:,:), optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
+      real,                           intent(in)  :: gamma         !< gamma of current gas type
 
       ! Local variables
 
@@ -626,12 +626,12 @@ contains
 
       implicit none
 
-      real, dimension(:,:), pointer,           intent(out) :: f             !< density, momentum and energy fluxes
-      real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
-      real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
-      real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
-      real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
-      real,                                    intent(in)  :: gamma         !< gamma of current gas type
+      real, dimension(:,:),           intent(out) :: f             !< density, momentum and energy fluxes
+      real, dimension(:,:),           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
+      real, dimension(:), pointer,    intent(in)  :: cs2           !< square of local isothermal sound speed
+      real, dimension(:,:), optional, intent(out) :: p_ct_flx      !< CR and tracers flux
+      real, dimension(:,:), optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
+      real,                           intent(in)  :: gamma         !< gamma of current gas type
 
       ! Local variables
 
