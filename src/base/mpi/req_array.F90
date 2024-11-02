@@ -223,6 +223,9 @@ contains
       use global,     only: waitall_timeout
       use MPIF,       only: MPI_STATUSES_IGNORE, MPI_STATUS_IGNORE, MPI_INTEGER_KIND, MPI_UNDEFINED, MPI_Wtime
       use MPIFUN,     only: MPI_Waitall, MPI_Testsome, MPI_Test
+#if defined(__INTEL_COMPILER)
+      use ifport,     only: sleep
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
