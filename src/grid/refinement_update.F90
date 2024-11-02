@@ -138,7 +138,7 @@ contains
          use constants,          only: I_ZERO, I_ONE, LO, HI, xdim, ydim, zdim
          use isend_irecv,        only: piernik_Isend, piernik_Irecv
          use MPIF,               only: MPI_INTEGER
-         use ppp_mpi,            only: req_ppp
+         use pppmpi,             only: req_ppp
          use refinement,         only: nbody_ref
 #endif /* GRAV && NBODY */
 
@@ -323,7 +323,7 @@ contains
       use MPIF,               only: MPI_INTEGER, MPI_STATUS_IGNORE, MPI_COMM_WORLD
       use MPIFUN,             only: MPI_Alltoall, MPI_Isend, MPI_Recv
       use mpisetup,           only: FIRST, LAST, err_mpi, proc
-      use ppp_mpi,            only: req_ppp
+      use pppmpi,             only: req_ppp
 
       implicit none
 
@@ -842,7 +842,7 @@ contains
          use particle_types, only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
          use particle_utils, only: is_part_in_cg
          use ppp,            only: ppp_main
-         use ppp_mpi,        only: req_ppp
+         use pppmpi,         only: req_ppp
 
          implicit none
 

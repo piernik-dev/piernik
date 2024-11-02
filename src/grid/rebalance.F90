@@ -62,7 +62,7 @@ contains
       use MPIFUN,             only: MPI_Gather, MPI_Recv
       use procnames,          only: pnames
       use ppp,                only: ppp_main
-      use ppp_mpi,            only: req_ppp
+      use pppmpi,             only: req_ppp
 
       implicit none
 
@@ -423,7 +423,7 @@ contains
       use mpisetup,           only: master, proc, tag_ub
       use named_array_list,   only: qna, wna
       use ppp,                only: ppp_main
-      use ppp_mpi,            only: req_ppp
+      use pppmpi,             only: req_ppp
 #if defined(GRAV) && defined(NBODY)
       use domain,             only: dom
       use particle_func,      only: particle_in_area

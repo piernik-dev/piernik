@@ -250,7 +250,7 @@ contains
       use named_array,      only: p4
       use named_array_list, only: wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
 #ifdef MAGNETIC
       use constants,        only: four
       use global,           only: cc_mag

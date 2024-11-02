@@ -71,7 +71,7 @@ module req_array
    real, parameter :: binwidth = 10.  ! each bin from 2 to (nbins - 1) has this width
    type(lbins) :: tbins_wall  ! bins for counting execution time of MPI_Waitall
 
-   type(arrsum) :: req_wall  ! counter for ppp_mpi
+   type(arrsum) :: req_wall  ! counter for pppmpi
    enum, bind(C)
       enumerator :: C_REQA = 1, C_REQS  ! for both req% waitall methods
    end enum
@@ -193,7 +193,7 @@ contains
 !>
 !! \brief Simple wrapper for MPI_Waitall
 !!
-!! For PPP-instrumented variant see req_ppp::waitall_ppp (in ppp_mpi module)
+!! For PPP-instrumented variant see req_ppp::waitall_ppp (in pppmpi module)
 !<
 
    subroutine waitall_on_some(this)

@@ -275,7 +275,7 @@ contains
       use isend_irecv, only: piernik_Isend, piernik_Irecv
       use MPIF,        only: MPI_INTEGER
       use mpisetup,    only: proc, LAST, slave
-      use ppp_mpi,     only: req_ppp
+      use pppmpi,      only: req_ppp
 
       implicit none
 
