@@ -114,7 +114,7 @@ contains
       use dataio_pub, only: die
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
-      use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test
+      use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test, MPI_Wait
       use mpisetup,   only: err_mpi
       use ppp,        only: ppp_main
       use pppmpi,     only: req_ppp
