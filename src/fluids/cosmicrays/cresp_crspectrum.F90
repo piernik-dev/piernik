@@ -1805,7 +1805,7 @@ contains
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
+      use initcrspectrum,  only: q_big, p_fix, NR_refine_pf
 
       implicit none
 
