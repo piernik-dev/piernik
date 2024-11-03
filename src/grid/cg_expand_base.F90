@@ -55,8 +55,8 @@ contains
       use allreduce,         only: piernik_MPI_Allreduce
       use cg_level_coarsest, only: coarsest
       use cg_level_finest,   only: finest
-      use constants,         only: xdim, zdim, LO, HI, pLOR
-      use dataio_pub,        only: msg, warn
+      use constants,         only: xdim, zdim, LO, HI, pLOR, V_ESSENTIAL
+      use dataio_pub,        only: msg, printinfo
       use domain,            only: dom
       use mpisetup,          only: master
 #ifdef MULTIGRID
@@ -87,7 +87,7 @@ contains
       if (changed) then
          if (master) then
             write(msg, '(a,3i8,a,i3)')"[cg_expand_base:expand_base] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
-            call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
+            call printinfo(msg, V_ESSENTIAL) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
          endif
          call coarsest%delete_coarser_than_base
 #ifdef MULTIGRID
