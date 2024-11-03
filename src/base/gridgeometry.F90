@@ -304,12 +304,12 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                       intent(in)  :: i1, i2
-      real, dimension(:, :),         intent(in)  :: u                  !< vector of conservative variables
-      real, dimension(:, :),         intent(in)  :: bb                 !< local copy of magnetic field
-      type(grid_container), pointer, intent(in)  :: cg                 !< current grid piece
-      real, dimension(:, :),         intent(out) :: usrc               !< u array update component for sources
+      integer(kind=4),               intent(in)    :: sweep   !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)    :: i1, i2
+      real, dimension(:, :),         intent(in)    :: u       !< vector of conservative variables
+      real, dimension(:, :),         intent(in)    :: bb      !< local copy of magnetic field
+      type(grid_container), pointer, intent(in)    :: cg      !< current grid piece
+      real, dimension(:, :),         intent(inout) :: usrc    !< u array update component for sources
 
       usrc = 0.0
       usrc(:, iarr_all_mx) = geometry_source_terms(u, bb, sweep, i1, i2, cg)
