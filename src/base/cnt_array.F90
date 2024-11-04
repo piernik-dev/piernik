@@ -44,6 +44,7 @@ module cnt_array
       integer(LONG), dimension(:),     allocatable, private :: c1  ! vector of counters
       integer(LONG), dimension(:,:),   allocatable, private :: c2  ! array (matrix) of counters
       integer(LONG), dimension(:,:,:), allocatable, private :: c3  ! rank-3 array of counters
+      logical, private :: used  ! will remain .false. in there were no calls to incr or add
    contains
       procedure :: init     !< allocate the array of counters
       procedure :: cleanup  !< deallocate everything
@@ -73,6 +74,8 @@ contains
 
       if (allocated(this%c0) .or. allocated(this%c1) .or. allocated(this%c2) .or. allocated(this%c3)) &
            call die("[cnt_array:init] already initialized")
+
+      this%used = .false.
 
       if (present(sizes)) then
          select case (size(sizes))
@@ -170,6 +173,8 @@ contains
          this%c0 = this%c0 + val
       endif
 
+      this%used = .true.
+
       select type (this)
          type is (arrsum)
             call this%cnt%incr(ind)
@@ -192,6 +197,11 @@ contains
 
       integer :: i, j
       character(len=fmt_len) :: fmt  ! for formats like '(a,5(' ',i3,'(',i3,')'))'
+
+      if (.not. this%used) then
+         call printinfo(trim(title) // " (no counts)", v)
+         return
+      endif
 
       call printinfo(trim(title), v)
 
