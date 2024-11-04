@@ -543,6 +543,7 @@ contains
 
       tstep_attempt = I_ZERO
       dt_cur_shrink = one
+      dt = 0.
 
       if (waitall_timeout > 0. .and. master) then
          write(msg, '(a,g0.2,a)')"[global:init_global] Timeout for MPI_Waitall is ", waitall_timeout, " s."
