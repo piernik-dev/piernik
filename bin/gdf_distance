@@ -124,9 +124,9 @@ def compare_domains(h5f1, h5f2):
             print("Domains don't overlap.")
             return 1., [0., 0., 0.], [0., 0., 0.]
 
-    vol_1 = np.product(np.subtract(dr1, dl1))
-    vol_2 = np.product(np.subtract(dr2, dl2))
-    vol_o = np.product(np.subtract(dro, dlo))
+    vol_1 = np.prod(np.subtract(dr1, dl1))
+    vol_2 = np.prod(np.subtract(dr2, dl2))
+    vol_o = np.prod(np.subtract(dro, dlo))
     if (vol_1 == 0. and vol_2 == 0.):
         print("Both domains have no volume!")
         exit(11)
@@ -202,7 +202,7 @@ def compare_dlists(h5f1, h5f2):
                     if f == v[:-2] + i + v[-1]:
                         vv.append(f)
         elif v[-2:] == '01':
-            digit2 = re.compile(v[:-2].replace("+", "\+") + "[0-9][0-9]").search
+            digit2 = re.compile(v[:-2].replace("+", "\\+") + "[0-9][0-9]").search
             for f in fc:
                 if bool(digit2(f)):
                     vv.append(f)
@@ -271,7 +271,7 @@ def collect_dataset(h5f, dset_name, level):
     dset = np.zeros((len(dset_name), nd[0], nd[1], nd[2]))
 
     levelmet = False
-    for ig in range(int(h5f['data'].attrs['cg_count'])):
+    for ig in range(int(h5f['data'].attrs['cg_count'][0])):
         h5g = h5f['data']['grid_' + str(ig).zfill(10)]
         if h5g.attrs['level'] == level:
             levelmet = True
