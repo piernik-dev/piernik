@@ -180,7 +180,7 @@ contains
          call printinfo("", V_LOG)
          call printinfo("PROCESSES:", V_LOG)
          do iproc = FIRST, LAST
-            write(msg,"(a,i4,a,i6,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
+            write(msg,"(a,i4,a,i8,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
             call printinfo(msg, V_LOG)
          enddo
          call printinfo("", V_INFO, .true.)
