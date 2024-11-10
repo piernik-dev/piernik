@@ -124,7 +124,7 @@ contains
          enddo
       else
          allocate(this)
-         this = init(rf, iv)
+         this = init(rf, iv, INVALID)
       endif
 
    end function decode_urcv
@@ -198,7 +198,7 @@ contains
 
    function init(rf, iv, ic) result(this)
 
-      use constants,        only: V_VERBOSE
+      use constants,        only: V_VERBOSE, INVALID
       use dataio_pub,       only: printinfo, msg, die, warn
       use func,             only: operator(.notequals.)
       use mpisetup,         only: master
@@ -207,9 +207,9 @@ contains
 
       implicit none
 
-      type(ref_auto_param),      intent(in) :: rf  !< the data read from problem.par
-      integer(kind=4),           intent(in) :: iv  !< index in qna or wna
-      integer(kind=4), optional, intent(in) :: ic  !< sub index in wna
+      type(ref_auto_param), intent(in) :: rf  !< the data read from problem.par
+      integer(kind=4),      intent(in) :: iv  !< index in qna or wna
+      integer(kind=4),      intent(in) :: ic  !< sub index in wna or INVALID if qna
 
       type(urc_var) :: this  !< an object to be constructed
 
@@ -217,13 +217,13 @@ contains
          write(msg, '(5a,g13.5)')"[URC var]   Initializing refinement on variable '", trim(rf%rvar), "', method: '", trim(rf%rname), "', threshold = ", rf%ref_thr
          if (rf%aux .notequals. 0.) write(msg(len_trim(msg)+1:), '(a,g13.5)') ", with parameter = ", rf%aux
          if (rf%plotfield)  write(msg(len_trim(msg)+1:), '(a)') ", with plotfield"
-         if (present(ic)) then
+         if (ic /= INVALID) then
             write(msg(len_trim(msg)+1:), '(a, i3,a,i3,a)') ", wna index: ", iv,"(", ic, ")"
          else
             write(msg(len_trim(msg)+1:), '(a, i3)') ", qna index: ", iv
          endif
          call printinfo(msg, V_VERBOSE)
-         if (present(ic)) then
+         if (ic /= INVALID) then
             if (.not. wna%lst(iv)%vital) call warn("[URC_var:init] 4D field '" // trim(wna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
          else
             if (.not. qna%lst(iv)%vital) call warn("[URC_var:init] 3D field '" // trim(qna%lst(iv)%name) // "' is not vital. Please make sure that the guardcells are properly updater for refinement update.")
@@ -236,7 +236,7 @@ contains
 
       ! own components
       this%iv = iv
-      if (present(ic)) this%ic = ic
+      if (ic /= INVALID) this%ic = ic
       this%rvar  = rf%rvar
       this%rname = rf%rname
       this%aux   = rf%aux
