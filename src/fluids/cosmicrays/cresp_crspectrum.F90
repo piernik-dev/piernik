@@ -781,9 +781,9 @@ contains
 
       implicit none
 
-      real,            intent(in)  :: n_bin, e_bin
-      integer(kind=4), intent(in)  :: i_bin
-      logical,         intent(out) :: cfl_cresp_violated
+      real,            intent(in)    :: n_bin, e_bin
+      integer(kind=4), intent(in)    :: i_bin
+      logical,         intent(inout) :: cfl_cresp_violated
 
       if (e_bin < zero .or. n_bin < zero) then
 #ifdef CRESP_VERBOSED
