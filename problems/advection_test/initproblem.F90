@@ -568,10 +568,10 @@ contains
          enumerator :: N_D, N_2
       end enum
       enum, bind(C)
-         enumerator :: GAS, DST
+         enumerator :: GAS, DST_
       end enum
-      real, dimension(N_D:N_2, GAS:DST) :: norm
-      real, dimension(GAS:DST)          :: neg_err, pos_err
+      real, dimension(N_D:N_2, GAS:DST_) :: norm
+      real, dimension(GAS:DST_)          :: neg_err, pos_err
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real, dimension(:,:,:), pointer   :: inid
@@ -602,16 +602,16 @@ contains
 
          if (associated(flind%dst)) then
             cg%wa(RNG) = inid(RNG) - cg%u(flind%dst%idn, RNG)
-            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
-            norm(N_2, DST) = norm(N_2, DST) + sum(inid( RNG)**2, mask=cg%leafmap)
-            neg_err(DST) = min(neg_err(DST), minval(cg%wa(RNG), mask=cg%leafmap))
-            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(RNG), mask=cg%leafmap))
+            norm(N_D, DST_) = norm(N_D, DST_) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+            norm(N_2, DST_) = norm(N_2, DST_) + sum(inid( RNG)**2, mask=cg%leafmap)
+            neg_err(DST_) = min(neg_err(DST_), minval(cg%wa(RNG), mask=cg%leafmap))
+            pos_err(DST_) = max(pos_err(DST_), maxval(cg%wa(RNG), mask=cg%leafmap))
          endif
 
          cgl => cgl%nxt
       enddo
 
-      do i = GAS, DST
+      do i = GAS, DST_
          do j = N_D, N_2
             call piernik_MPI_Allreduce(norm(j, i), pSUM)
          enddo
@@ -620,12 +620,12 @@ contains
       enddo
 
       if (master) then
-         do i = GAS, DST
-            if (i == DST .and. .not. usedust) exit
+         do i = GAS, DST_
+            if (i == DST_ .and. .not. usedust) exit
             select case (i)
                case (GAS)
                   descr = "GAS"
-               case (DST)
+               case (DST_)
                   descr = "DST"
             end select
             if (norm(N_2, i) .notequals. 0.) then
