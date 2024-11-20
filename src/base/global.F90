@@ -157,7 +157,7 @@ contains
 !!   <tr><td>glm_alpha            </td><td>0.1      </td><td>real value                           </td><td>\copydoc global::glm_alpha            </td></tr>
 !!   <tr><td>use_eglm             </td><td>false    </td><td>logical value                        </td><td>\copydoc global::use_eglm             </td></tr>
 !!   <tr><td>print_divB           </td><td>100      </td><td>integer value                        </td><td>\copydoc global::print_divB           </td></tr>
-!!   <tr><td>ch_grid              </td><td>false    </td><td>logical value                        </td><td>\copydoc global::ch_grid              </td></tr>
+!!   <tr><td>ch_grid              </td><td>true     </td><td>logical value                        </td><td>\copydoc global::ch_grid              </td></tr>
 !!   <tr><td>w_epsilon            </td><td>1e-10    </td><td>real                                 </td><td>\copydoc global::w_epsilon            </td></tr>
 !!   <tr><td>psi_bnd_str          </td><td>"default"</td><td>string                               </td><td>\copydoc global::psi_bnd_str          </td></tr>
 !!   <tr><td>ord_mag_prolong      </td><td>2        </td><td>integer                              </td><td>\copydoc global::ord_mag_prolong      </td></tr>
@@ -247,7 +247,7 @@ contains
       skip_sweep  = .false.
       use_eglm    = .false.
       cfl_glm     = cfl
-      ch_grid     = .false.
+      ch_grid     = .true.
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
       integration_order  = 2
@@ -473,7 +473,6 @@ contains
       select case (divB_0_method)
          case (DIVB_HDC)
             cc_mag = .true.
-            if (ch_grid .and. master) call warn("[global] ch_grid = .true. is risky")
          case (DIVB_CT)
             cc_mag = .false.
          case default
@@ -543,6 +542,7 @@ contains
 
       tstep_attempt = I_ZERO
       dt_cur_shrink = one
+      dt = 0.
 
       if (waitall_timeout > 0. .and. master) then
          write(msg, '(a,g0.2,a)')"[global:init_global] Timeout for MPI_Waitall is ", waitall_timeout, " s."

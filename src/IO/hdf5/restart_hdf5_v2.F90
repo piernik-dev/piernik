@@ -628,7 +628,7 @@ contains
       call ppp_main%start(rdr_label, PPP_IO)
       if (master) call warn("[restart_hdf5_v2:read_restart_hdf5_v2] Experimental implementation")
 
-      filename = output_fname(RD, '.res', nres, bcast=.true.)
+      filename = output_fname(RD, '.res', nres, b_cast=.true.)
       if (master) then
          write(msg, '(2a)') 'Reading restart file v2: ', trim(filename)
          call printio(msg)

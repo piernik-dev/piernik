@@ -518,7 +518,7 @@ contains
 
       nu = flind%all
 
-      filename = output_fname(RD, '.res', nres, bcast=.true.)
+      filename = output_fname(RD, '.res', nres, b_cast=.true.)
 
       if (master) then
          write(msg, '(2a)') 'Reading restart file v1: ', trim(filename)

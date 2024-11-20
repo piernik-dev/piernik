@@ -223,9 +223,9 @@ contains
 
    subroutine prepare_substep(dt_simulation, dt_process_short, dt_substep, n_substeps)
 
-      use initcrspectrum, only: n_substeps_max
 #ifdef CRESP_VERBOSED
       use dataio_pub,     only: msg, warn
+      use initcrspectrum, only: n_substeps_max
       use mpisetup,       only: master
 #endif /* CRESP_VERBOSED */
 

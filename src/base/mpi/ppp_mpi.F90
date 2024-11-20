@@ -29,7 +29,7 @@
 
 !> \brief Module for PPP-guarded MPI waitall call
 
-module ppp_mpi
+module pppmpi
 
    use req_array, only: req_arr
 
@@ -87,4 +87,4 @@ contains
 
    end subroutine waitall_ppp
 
-end module ppp_mpi
+end module pppmpi

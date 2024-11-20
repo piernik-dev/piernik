@@ -50,6 +50,34 @@ module isend_irecv
    end enum
    integer, parameter :: max_op = I_R  ! separate counters for send and recaive operations
 
+#ifdef NO_F2018
+   ! We keep that spaghetti to not break compatibility with systems where only
+   ! the old mpi interface or compilers are available.
+   interface piernik_Isend
+      module procedure MPI_Isend_single_int4
+      module procedure MPI_Isend_single_int8
+      module procedure MPI_Isend_vec_int4
+      module procedure MPI_Isend_vec_string
+      module procedure MPI_Isend_vec_real8
+      module procedure MPI_Isend_arr2d_int4
+      module procedure MPI_Isend_arr2d_int8
+      module procedure MPI_Isend_arr2d_real8
+      module procedure MPI_Isend_arr3d_real8
+      module procedure MPI_Isend_arr4d_real8
+   end interface piernik_Isend
+
+   interface piernik_Irecv
+      module procedure MPI_Irecv_single_int4
+      module procedure MPI_Irecv_single_int8
+      module procedure MPI_Irecv_vec_int4
+      module procedure MPI_Irecv_vec_real8
+      module procedure MPI_Irecv_arr2d_int4
+      module procedure MPI_Irecv_arr2d_real8
+      module procedure MPI_Irecv_arr3d_real8
+      module procedure MPI_Irecv_arr4d_real8
+   end interface piernik_Irecv
+#endif /* NO_F2018 */
+
 contains
 
 !> \brief Initialize MPI_Isend + MPI_Irecv stat counters
@@ -81,6 +109,7 @@ contains
 
    end subroutine cleanup_sr
 
+#ifndef NO_F2018
 !>
 !! \brief Polymorphic wrapper for MPI_Isend
 !!
@@ -94,9 +123,7 @@ contains
 #ifdef MPIF08
       use MPIF,         only: MPI_Datatype, MPI_Request
 #endif /* MPIF08 */
-#ifndef NO_F2018
       use mpi_wrappers, only: MPI_wrapper_stats, what_type
-#endif /* !NO_F2018 */
 
       implicit none
 
@@ -117,10 +144,8 @@ contains
       integer(kind=4),   pointer :: r
 #endif /* !MPIF08 */
 
-#ifndef NO_F2018
       if (MPI_wrapper_stats) &
            call size_sr%add([int(I_S), rank(buf)+1, what_type(buf)], size(buf, kind=8))
-#endif /* !NO_F2018 */
 
       ! No idea why MPI_Irecv here doesn't work correctly when req%nxt() is passed directly.
       r => req%nxt()
@@ -142,9 +167,7 @@ contains
 #ifdef MPIF08
       use MPIF,         only: MPI_Datatype, MPI_Request
 #endif /* MPIF08 */
-#ifndef NO_F2018
       use mpi_wrappers, only: MPI_wrapper_stats, what_type
-#endif /* !NO_F2018 */
 
       implicit none
 
@@ -165,10 +188,8 @@ contains
       integer(kind=4),   pointer :: r
 #endif /* !MPIF08 */
 
-#ifndef NO_F2018
       if (MPI_wrapper_stats) &
            call size_sr%add([int(I_R), rank(buf)+1, what_type(buf)], size(buf, kind=8))
-#endif /* !NO_F2018 */
 
       ! No idea why MPI_Irecv here doesn't work correctly when req%nxt() is passed directly.
       r => req%nxt()
@@ -176,5 +197,605 @@ contains
       call req%store_tag(tag, source, recv = .true.)
 
    end subroutine piernik_Irecv
+
+#else /* !NO_F2018 */
+
+   subroutine MPI_Isend_single_int4(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=4), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf, count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_single_int4
+
+   subroutine MPI_Isend_single_int8(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=8), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf, count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_single_int8
+
+   subroutine MPI_Isend_vec_int4(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_vec_int4
+
+   subroutine MPI_Isend_vec_string(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      character(len=*), dimension(:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_vec_string
+
+   subroutine MPI_Isend_vec_real8(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_vec_real8
+
+   subroutine MPI_Isend_arr2d_int4(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=4), dimension(:,:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:,:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_arr2d_int4
+
+   subroutine MPI_Isend_arr2d_int8(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=8), dimension(:,:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:,:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_arr2d_int8
+
+   subroutine MPI_Isend_arr2d_real8(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:,:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:,:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_arr2d_real8
+
+   subroutine MPI_Isend_arr3d_real8(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:,:,:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:,:,:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_arr3d_real8
+
+   subroutine MPI_Isend_arr4d_real8(buf, count, datatype, dest, tag, req)
+
+      use MPIFUN,       only: MPI_Isend
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:,:,:,:), intent(inout) :: buf       !< buffer that will be sent
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: dest      !< data target
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Isend(buf(:,:,:,:), count, datatype, dest, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, dest, recv = .false.)
+
+   end subroutine MPI_Isend_arr4d_real8
+
+!
+
+   subroutine MPI_Irecv_single_int4(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=4), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf, count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_single_int4
+
+   subroutine MPI_Irecv_single_int8(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=8), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf, count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_single_int8
+
+   subroutine MPI_Irecv_vec_int4(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf(:), count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_vec_int4
+
+   subroutine MPI_Irecv_vec_real8(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf(:), count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_vec_real8
+
+   subroutine MPI_Irecv_arr2d_int4(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      integer(kind=4), dimension(:,:), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf(:,:), count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_arr2d_int4
+
+   subroutine MPI_Irecv_arr2d_real8(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:,:), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf(:,:), count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_arr2d_real8
+
+   subroutine MPI_Irecv_arr3d_real8(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:,:,:), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf(:,:,:), count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_arr3d_real8
+
+   subroutine MPI_Irecv_arr4d_real8(buf, count, datatype, source, tag, req)
+
+      use MPIFUN,       only: MPI_Irecv
+      use req_array,    only: req_arr
+#ifdef MPIF08
+      use MPIF,         only: MPI_Datatype, MPI_Request
+#endif /* MPIF08 */
+
+      implicit none
+
+      real(kind=8), dimension(:,:,:,:), intent(inout) :: buf       !< buffer that will be received
+      integer(kind=4),                 intent(in)    :: count     !< number of elements
+      integer(kind=4),                 intent(in)    :: source    !< data origin
+      integer(kind=4),                 intent(in)    :: tag       !< the tag
+#ifdef MPIF08
+      type(MPI_Datatype),              intent(in)    :: datatype  !< MPI data type
+#else /* !MPIF08 */
+      integer(kind=4),                 intent(in)    :: datatype
+#endif /* !MPIF08 */
+      class(req_arr),                  intent(inout) :: req       !< array for requests
+
+#ifdef MPIF08
+      type(MPI_Request), pointer :: r
+#else /* !MPIF08 */
+      integer(kind=4),   pointer :: r
+#endif /* !MPIF08 */
+
+      r => req%nxt()
+      call MPI_Irecv(buf(:,:,:,:), count, datatype, source, tag, req%comm, r, err_mpi)
+      call req%store_tag(tag, source, recv = .true.)
+
+   end subroutine MPI_Irecv_arr4d_real8
+
+#endif /* !NO_F2018 */
 
 end module isend_irecv

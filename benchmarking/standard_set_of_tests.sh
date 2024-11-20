@@ -30,9 +30,13 @@ done
 
 echo "starting from $NN"
 
+OPT=""
+which mpif90 | grep -q intel && OPT="-c benchmarking_ifx"
+
+
 for i in $( seq $N $(( $N + 2 )) ) ; do
-  ./benchmarking/piernik_bench.sh | tee $1/$( printf "%03d" $i )
+  ./benchmarking/piernik_bench.sh ${OPT} | tee $1/$( printf "%03d" $i )
 done
 for b in 1.5 2 ; do
-  BIG=$b ./benchmarking/piernik_bench.sh | tee $1/$( printf "%03d" $N )_big$b
+  BIG=$b ./benchmarking/piernik_bench.sh ${OPT} | tee $1/$( printf "%03d" $N )_big$b
 done

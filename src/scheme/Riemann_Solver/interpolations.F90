@@ -75,11 +75,12 @@ contains
 
       implicit none
 
-      real, dimension(:,:),   intent(in)    :: u , b_cc
+      real, dimension(:,:),           intent(in) :: u
+      real, dimension(:,:), optional, intent(in) :: b_cc
 
-      real, dimension(size(u, 1), size(u, 2))  :: q
-      integer  :: p
-      class(component_fluid), pointer       :: fl
+      real, dimension(size(u, 1), size(u, 2)) :: q
+      integer                                 :: p
+      class(component_fluid), pointer         :: fl
 
       do p = 1, flind%fluids
          fl => flind%all_fluids(p)%fl

@@ -592,8 +592,8 @@ contains
 
    subroutine  modify_side(this, d, lh, n)
 
-      use constants,  only: LO, HI, xdim, ydim, zdim, ndims, I_ONE
-      use dataio_pub, only: warn, die, msg
+      use constants,  only: LO, HI, xdim, ydim, zdim, ndims, I_ONE, V_ESSENTIAL
+      use dataio_pub, only: warn, die, msg, printinfo
       use mpisetup,   only: master
 
       implicit none
@@ -638,7 +638,7 @@ contains
       end select
       n_d(d) = n_d(d) + n
       write(msg(len_trim(msg)+1:),'(a,3i6,a)')". New n_d = [",n_d,"]"
-      if (master) call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
+      if (master) call printinfo(msg, V_ESSENTIAL) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
 
       if (lh==LO) offset(d) = offset(d) - n
 

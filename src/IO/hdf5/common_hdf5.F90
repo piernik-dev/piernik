@@ -1267,7 +1267,7 @@ contains
       endif
    end function set_h5_properties
 
-   function output_fname(wr_rd, ext, no, allproc, bcast, prefix) result(filename)
+   function output_fname(wr_rd, ext, no, allproc, b_cast, prefix) result(filename)
 
       use bcast,      only: piernik_MPI_Bcast
       use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, domlen, fnamelen
@@ -1279,7 +1279,7 @@ contains
       integer(kind=4),       intent(in)           :: wr_rd, no
       character(len=I_FOUR), intent(in)           :: ext
       logical,               intent(in), optional :: allproc
-      logical,               intent(in), optional :: bcast
+      logical,               intent(in), optional :: b_cast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
       character(len=domlen)                       :: fullext
@@ -1331,8 +1331,8 @@ contains
          end select
       endif
 
-      if (present(bcast)) then
-         if (bcast) call piernik_MPI_Bcast(filename, cwdlen)
+      if (present(b_cast)) then
+         if (b_cast) call piernik_MPI_Bcast(filename, cwdlen)
       endif
 
    end function output_fname
@@ -1362,7 +1362,7 @@ contains
       nio = nio + I_ONE
 ! restart
       exec_mh5f = (multiple_h5files .and. dumptype /= RES)
-      fname = output_fname(WR, extname(dumptype), nio, allproc=exec_mh5f, bcast=(.not.exec_mh5f))
+      fname = output_fname(WR, extname(dumptype), nio, allproc=exec_mh5f, b_cast=(.not.exec_mh5f))
 
       if (.not. master) return
 

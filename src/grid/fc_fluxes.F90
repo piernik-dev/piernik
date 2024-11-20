@@ -64,7 +64,7 @@ contains
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: LO, HI, base_level_id
-      use ppp_mpi,      only: req_ppp
+      use pppmpi,       only: req_ppp
 
       implicit none
 
@@ -114,10 +114,10 @@ contains
       use dataio_pub, only: die
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
-      use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test
+      use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test, MPI_Wait
       use mpisetup,   only: err_mpi
       use ppp,        only: ppp_main
-      use ppp_mpi,    only: req_ppp
+      use pppmpi,     only: req_ppp
 
       implicit none
 
@@ -180,7 +180,7 @@ contains
       use grid_cont,    only: grid_container
       use grid_helpers, only: f2c_o
       use ppp,          only: ppp_main
-      use ppp_mpi,      only: req_ppp
+      use pppmpi,       only: req_ppp
 
       implicit none
 

@@ -336,7 +336,7 @@ contains
       use MPIF,             only: MPI_DOUBLE_PRECISION
       use mpisetup,         only: FIRST, LAST, proc
       use named_array_list, only: wna
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
 
       implicit none
 
@@ -477,7 +477,7 @@ contains
       use MPIF,             only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_Type_create_subarray, MPI_Type_commit, MPI_Type_free
       use mpisetup,         only: err_mpi
       use named_array_list, only: wna
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
 
       implicit none
 

@@ -943,7 +943,7 @@ contains
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
 
       implicit none
 
@@ -1175,7 +1175,7 @@ contains
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
 
       implicit none
 
@@ -1503,7 +1503,7 @@ contains
       use mpisetup,         only: master
       use named_array,      only: p3, p4
       use named_array_list, only: qna, wna
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
 
       implicit none
 

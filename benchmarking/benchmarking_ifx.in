@@ -2,15 +2,18 @@
 #
 # Make definitions for HDF5 parallel fortran wrapper (using Intel's ifx).
 #
+# It requires HDF5 package to be installed in $HDF5_DIR with full support
+# for parallel Fortran 90.
+#
 
 PROG      = piernik
 
 HDF5_DIR = ${HOME}/intel/HDF5
-
-F90       = mpif90 -fc=ifx
+### INTEL
+F90       = mpif90 -fc=ifx -DNO_F2018
 F90FLAGS  = -g -traceback -r8 -heap-arrays -I$(HDF5_DIR)/include
 F90FLAGS += -assume realloc_lhs
 LDFLAGS   = -L$(HDF5_DIR)/lib
 
-F90FLAGS += -xHost -Ofast -no-ipo -funroll-loops -fma -finline-functions -fp-model=fast
+F90FLAGS += -xHost -O3 -no-ipo -funroll-loops -fma -finline-functions
 LDFLAGS += -no-ipo

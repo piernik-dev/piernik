@@ -67,10 +67,10 @@ contains
 
       implicit none
 
-      real, dimension(:,:), target,  intent(in)  :: ql, qr          ! left and right fluid states
-      real, dimension(:,:), target,  intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
-      real, dimension(:),   pointer, intent(in)  :: cs2             !< square of local isothermal sound speed
-      real, dimension(:,:), target,  intent(out) :: flx, mag_cc     ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target,  intent(in)    :: ql, qr          !< left and right fluid states
+      real, dimension(:,:), target,  intent(in)    :: b_cc_l, b_cc_r  !< left and right magnetic field states (relevant only for IONIZED fluid)
+      real, dimension(:),   pointer, intent(in)    :: cs2             !< square of local isothermal sound speed
+      real, dimension(:,:), target,  intent(inout) :: flx, mag_cc     !< output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
@@ -121,9 +121,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:), target,  intent(in)  :: ql, qr  ! left and right fluid states
-      real, dimension(:),   pointer, intent(in)  :: cs2     !< square of local isothermal sound speed
-      real, dimension(:,:), target,  intent(out) :: flx     ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target,  intent(in)    :: ql, qr  !< left and right fluid states
+      real, dimension(:),   pointer, intent(in)    :: cs2     !< square of local isothermal sound speed
+      real, dimension(:,:), target,  intent(inout) :: flx     !< output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
@@ -166,43 +166,43 @@ contains
       use dataio_pub, only: die
       use global,     only: divB_0_method
       use hdc,        only: chspeed
+#ifndef ISO
+      use constants,  only: four
+#endif /* !ISO */
 
       ! arguments
 
       implicit none
 
-      real, dimension(:,:), pointer,           intent(out) :: f             !< density, momentum and energy fluxes
-      real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
-      real, dimension(:,:), pointer,           intent(out) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
-      real, dimension(:,:), pointer,           intent(in)  :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
-      real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
-      real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
-      real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
-      real,                                    intent(in)  :: gamma         !< gamma of current gas type
+      real, dimension(:,:),           intent(inout) :: f             !< density, momentum and energy fluxes
+      real, dimension(:,:),           intent(in)    :: ul, ur        !< left and right states of density, velocity and energy
+      real, dimension(:,:),           intent(inout) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
+      real, dimension(:,:),           intent(in)    :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
+      real, dimension(:), pointer,    intent(in)    :: cs2           !< square of local isothermal sound speed
+      real, dimension(:,:), optional, intent(inout) :: p_ct_flx      !< CR and tracers flux
+      real, dimension(:,:), optional, intent(in)    :: p_ctl, p_ctr  !< left and right states of CR and tracers
+      real,                           intent(in)    :: gamma         !< gamma of current gas type
 
       ! Local variables
 
-      integer                                      :: i
-#ifndef ISO
-      real, parameter                              :: four = 4.0
-#endif /* !ISO */
-      real                                         :: sm, sl, sr
-      real                                         :: alfven_l, alfven_r, c_fastm, gampr_l, gampr_r
-      real                                         :: slsm, srsm, slvxl, srvxr, srmsl, dn_l, dn_r
-      real                                         :: b_lr, b_lrgam, magprl, magprr, prt_star, b_sig, enl, enr
-      real                                         :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
-      real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
-      real                                         :: prl, prr
+      integer :: i
+      real    :: sm, sl, sr
+      real    :: alfven_l, alfven_r, c_fastm, gampr_l, gampr_r
+      real    :: slsm, srsm, slvxl, srvxr, srmsl, dn_l, dn_r
+      real    :: b_lr, b_lrgam, magprl, magprr, prt_star, b_sig, enl, enr
+      real    :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
+      real    :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
+      real    :: prl, prr
 
       ! Local arrays
 
-      real, dimension(size(f, 2))                  :: fl, fr
-      real, dimension(size(f, 2))                  :: u_starl, u_starr, u_2starl, u_2starr
-      real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
-      real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
-      real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
-      logical                                      :: has_energy
-      real                                         :: ue
+      real, dimension(size(f, 2)) :: fl, fr
+      real, dimension(size(f, 2)) :: u_starl, u_starr, u_2starl, u_2starr
+      real, dimension(xdim:zdim)  :: v_2star, v_starl, v_starr
+      real, dimension(xdim:zdim)  :: b_cclf, b_ccrf
+      real, dimension(xdim:zdim)  :: b_starl, b_starr, b_2star
+      logical                     :: has_energy
+      real                        :: ue
 
       ! SOLVER
 
@@ -626,29 +626,29 @@ contains
 
       implicit none
 
-      real, dimension(:,:), pointer,           intent(out) :: f             !< density, momentum and energy fluxes
-      real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
-      real, dimension(:),   pointer,           intent(in)  :: cs2           !< square of local isothermal sound speed
-      real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
-      real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
-      real,                                    intent(in)  :: gamma         !< gamma of current gas type
+      real, dimension(:,:),           intent(inout) :: f             !< density, momentum and energy fluxes
+      real, dimension(:,:),           intent(in)    :: ul, ur        !< left and right states of density, velocity and energy
+      real, dimension(:), pointer,    intent(in)    :: cs2           !< square of local isothermal sound speed
+      real, dimension(:,:), optional, intent(inout) :: p_ct_flx      !< CR and tracers flux
+      real, dimension(:,:), optional, intent(in)    :: p_ctl, p_ctr  !< left and right states of CR and tracers
+      real,                           intent(in)    :: gamma         !< gamma of current gas type
 
       ! Local variables
 
-      integer                                      :: i
-      real                                         :: sm, sl, sr
-      real                                         :: c_fastm, gampr_l, gampr_r
-      real                                         :: slsm, srsm, slvxl, srvxr, dn_l, dn_r
-      real                                         :: prt_star, enl, enr
-      real                                         :: prl, prr
+      integer :: i
+      real    :: sm, sl, sr
+      real    :: c_fastm, gampr_l, gampr_r
+      real    :: slsm, srsm, slvxl, srvxr, dn_l, dn_r
+      real    :: prt_star, enl, enr
+      real    :: prl, prr
 
       ! Local arrays
 
-      real, dimension(size(f, 2))                  :: fl, fr
-      real, dimension(size(f, 2))                  :: u_starl, u_starr
-      real, dimension(xdim:zdim)                   :: v_starl, v_starr
-      logical                                      :: has_energy
-      real                                         :: ue
+      real, dimension(size(f, 2)) :: fl, fr
+      real, dimension(size(f, 2)) :: u_starl, u_starr
+      real, dimension(xdim:zdim)  :: v_starl, v_starr
+      logical                     :: has_energy
+      real                        :: ue
 
       ! SOLVER
 

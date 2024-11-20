@@ -781,9 +781,9 @@ contains
 
       implicit none
 
-      real,            intent(in)  :: n_bin, e_bin
-      integer(kind=4), intent(in)  :: i_bin
-      logical,         intent(out) :: cfl_cresp_violated
+      real,            intent(in)    :: n_bin, e_bin
+      integer(kind=4), intent(in)    :: i_bin
+      logical,         intent(inout) :: cfl_cresp_violated
 
       if (e_bin < zero .or. n_bin < zero) then
 #ifdef CRESP_VERBOSED
@@ -1805,7 +1805,7 @@ contains
       use cresp_helpers,   only: bound_name
       use dataio_pub,      only: msg, printinfo
 #endif /* CRESP_VERBOSED */
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf
+      use initcrspectrum,  only: q_big, p_fix, NR_refine_pf
 
       implicit none
 

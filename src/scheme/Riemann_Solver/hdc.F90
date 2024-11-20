@@ -106,10 +106,10 @@ contains
       if (divB_0_method /= DIVB_HDC) return
       if (which_solver /= RIEMANN_SPLIT) call die("[hdc:update_chspeed] Only Riemann solver has DIVB_HDC implemented")
 
-      chspeed = huge(1.)
       if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
       if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
-      chspeed = small
+
+      chspeed = merge(huge(1.), small, ch_grid)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -119,7 +119,7 @@ contains
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
             if (dom%eff_dim > 0) &
-                 chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
+                 chspeed = min(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
          else
             ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke

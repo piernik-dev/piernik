@@ -1,0 +1,29 @@
+# This is an Intel oneAPI configuration.
+#
+# It requires HDF5 package to be installed in $HDF5_DIR with full support
+# for parallel Fortran 90.
+#
+# Due to non-impressive performance of ifx-generated code it is intended
+# mostly for developing / debugging / compatibility checks.
+
+PROG      = piernik
+
+HDF5_DIR = /opt/intel/hdf5
+### INTEL
+F90       = mpif90 -fc=ifx -DNO_F2018
+F90FLAGS  = -g -traceback -r8 -heap-arrays -I$(HDF5_DIR)/include
+F90FLAGS += -assume realloc_lhs
+F90FLAGS += -traceback -warn all
+LDFLAGS   = -L$(HDF5_DIR)/lib
+
+ifeq ($(PIERNIK_DEBUG), 1)
+   F90FLAGS += -fpe0 -check all -fp-stack-check
+else
+   F90FLAGS += -xHost -O3 -no-ipo -funroll-loops -fma -finline-functions
+   F90FLAGS += -debug all -fstack-security-check
+   F90FLAGS += -Wuninitialized -Wreorder -Wunused-function -Wunused-variable -Wwrite-strings
+#   F90FLAGS += -qopt-report
+   F90FLAGS += -ftrapuv
+#   F90FLAGS += -check all
+   LDFLAGS += -no-ipo
+endif

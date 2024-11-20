@@ -128,7 +128,7 @@ contains
       use mpisetup,         only: err_mpi
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
-      use ppp_mpi,          only: req_ppp
+      use pppmpi,           only: req_ppp
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources

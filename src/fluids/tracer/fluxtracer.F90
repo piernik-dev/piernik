@@ -64,9 +64,9 @@ contains
 
       implicit none
 
-      real, dimension(:), intent(out), pointer  :: fluxt  !< flux for tracer
-      real, dimension(:), intent(in),  pointer  :: uut    !< part of u for tracer
-      real, dimension(:), intent(in),  pointer  :: vx     !< velocity field of fluid for current sweep
+      real, dimension(:), intent(inout), pointer :: fluxt  !< flux for tracer
+      real, dimension(:), intent(in),    pointer :: uut    !< part of u for tracer
+      real, dimension(:), intent(in),    pointer :: vx     !< velocity field of fluid for current sweep
 
       integer :: n, nm
 
