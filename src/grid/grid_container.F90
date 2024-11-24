@@ -65,6 +65,7 @@ module grid_cont
       ! Particles
 #if defined(GRAV) && defined(NBODY)
       type(particle_set) :: pset                        !< set of particles that belong to this grid part
+      real, dimension(:,:), allocatable :: psave        !< for timestep retry
       real, dimension(ndims, LO:HI) :: bnd_in, bnd_out  !< coordinates for qualifying particles in is_part_in_cg
       integer, dimension(LO:HI, LO:HI, LO:HI) :: chld_pcnt  !< particle counters in children
 #endif /* GRAV && NBODY */
