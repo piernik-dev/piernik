@@ -95,9 +95,6 @@ contains
          call warn("[timestep:init_time_step] cfl_manager was not associated.")
          return
       endif
-#ifdef NBODY
-      if (repetitive_steps) call die("[timestep:init_time_step] step repeating (clfcontrol == 'redo' or 'flex') unsupported by NBODY (not implemented yet).")
-#endif /* NBODY */
 #if !(defined(__INTEL_COMPILER) || defined(_CRAYFTN))
       !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call cfl_manager

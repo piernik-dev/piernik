@@ -98,6 +98,12 @@ contains
       use ppp,              only: ppp_main
       use repeatstep,       only: repeat_step
       use user_hooks,       only: user_reaction_to_redo_step
+#if defined(GRAV) && defined(NBODY)
+      use domain,           only: dom
+      use particle_func,    only: particle_in_area
+      use particle_types,   only: particle, P_ID, P_MASS, P_POS_X, P_POS_Z, P_VEL_X, P_VEL_Z, P_ACC_X, P_ACC_Z, P_ENER, P_TFORM, P_TDYN, npf
+      use particle_utils,   only: is_part_in_cg
+#endif /* GRAV && NBODY */
 #ifdef RANDOMIZE
       use randomization,    only: randoms_redostep
 #endif /* RANDOMIZE */
@@ -109,6 +115,11 @@ contains
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
       character(len=*), parameter :: rs_label = "repeat_step_"
+#if defined(GRAV) && defined(NBODY)
+      logical :: in, phy, out, fin, indomain
+      integer :: p
+      type(particle), pointer :: part
+#endif /* GRAV && NBODY */
 
       if (.not. repetitive_steps) return
 
@@ -204,6 +215,39 @@ contains
                enddo
             end associate
          enddo
+#if defined(GRAV) && defined(NBODY)
+         if (repeat_step()) then
+            if (.not. allocated(cgl%cg%psave)) call die("timestep_retry:repeat_fluidstep] .not. allocated(cgl%cg%psave)")
+            call cgl%cg%pset%cleanup
+            do p = lbound(cgl%cg%psave, 2, kind=4), ubound(cgl%cg%psave, 2, kind=4)
+               indomain = particle_in_area(cgl%cg%psave(P_POS_X:P_POS_Z, p), dom%edge)
+               call is_part_in_cg(cgl%cg, cgl%cg%psave(P_POS_X:P_POS_Z, p), indomain, in, phy, out, fin)
+               call cgl%cg%pset%add(nint(cgl%cg%psave(P_ID, p), kind=4), cgl%cg%psave(P_MASS, p), &
+                    cgl%cg%psave(P_POS_X:P_POS_Z, p), cgl%cg%psave(P_VEL_X:P_VEL_Z, p), &
+                    cgl%cg%psave(P_ACC_X:P_ACC_Z, p), cgl%cg%psave(P_ENER, p), &
+                    in, phy, out, fin, &
+                    cgl%cg%psave(P_TFORM, p), cgl%cg%psave(P_TDYN, p))
+            enddo
+         else
+            if (allocated(cgl%cg%psave)) deallocate(cgl%cg%psave)
+            allocate(cgl%cg%psave(npf, cgl%cg%count_all_particles()))
+            part => cgl%cg%pset%first
+            p = 1
+            do while (associated(part))
+               cgl%cg%psave(P_ID, p)            = part%pdata%pid
+               cgl%cg%psave(P_MASS, p)          = part%pdata%mass
+               cgl%cg%psave(P_POS_X:P_POS_Z, p) = part%pdata%pos
+               cgl%cg%psave(P_VEL_X:P_VEL_Z, p) = part%pdata%vel
+               cgl%cg%psave(P_ACC_X:P_ACC_Z, p) = part%pdata%acc
+               cgl%cg%psave(P_ENER, p)          = part%pdata%energy
+               cgl%cg%psave(P_TFORM, p)         = part%pdata%tform
+               cgl%cg%psave(P_TDYN, p)          = part%pdata%tdyn
+
+               p = p + I_ONE
+               part => part%nxt
+            enddo
+         endif
+#endif /* GRAV && NBODY */
 
          call cgl%cg%costs%stop(I_OTHER)
          cgl => cgl%nxt
