@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LC_ALL=C
+
 # Usage check
 if [ $# -lt 1 ]; then
     echo "Usage: $0 results_directory"

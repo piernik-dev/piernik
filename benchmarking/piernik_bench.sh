@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LC_ALL=C
+
 # The defaults
 DO_MAKE=1  # measure the compilation time scaling
 COMPILER_CONFIG="benchmarking"  # for the setup script it means "./compilers/../benchmarking/${COMPILER_CONFIG}.in"
