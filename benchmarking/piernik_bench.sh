@@ -150,16 +150,16 @@ run_piernik() {
         case $problem in
             sedov)
                 local xmul=1
-                run_strong_weak_scaling $scaling $threads $nx $mpirun_cmd $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f ", t/n)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f ", t/n)}'
                 ;;
             crtest)
                 local xmul=512
-                run_strong_weak_scaling $scaling $threads $nx $mpirun_cmd $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
                 ;;
             maclaurin)
                 local xmul=2
-                run_strong_weak_scaling $scaling $threads $nx $mpirun_cmd $max_mem $xmul | grep "cycles" | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf("%7.3f %7.3f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
                 ;;
         esac
@@ -214,7 +214,7 @@ run_benchmark() {
                 echo -n $threads
             fi
 
-            run_piernik $problem $scaling $threads $mpirun_cmd $max_mem
+            run_piernik $problem $scaling $threads "$mpirun_cmd" $max_mem
             [ $scaling != flood ] && echo
             echo
         done
