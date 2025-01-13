@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This is a simple gdb wrapper for Piernik.  It is intended for catching
+# This is a simple gdb wrapper for Piernik.  It is intended for catching the
 # exact place of a deadlock in a massively parallel run.  You may run it as
 # you normally run Piernik, e.g.:
 #
@@ -8,15 +8,11 @@
 #
 # from the runs/problem directory where the "./piernik" executable is
 # placed.  Each started gdb-wrapped piernik process leaves a text file named
-# according to the template: bt_<hostname>_<pid>.  Then you have to wait
-# till you notice that the parallel run is deadlocked, i.e.  the log files
-# aren't progressing for more that few typical walltime intervals for steps.
-#
-# Once you realize that the deadlock occurred hou have to kill all piernik
-# processes that belong to your job without killing their gdb.  You can use
-# accompanying script bin/gdb_killall to kill all piernik processes on all
-# hosts pointed by the bt_*_* files.  This requires that all the bt_*_*
-# files are stored in local run directory and you can execute ssh commant to
+# according to the template: bt_<hostname>_<pid>. Once you notice that the
+# parallel run is deadlocked, (i.e. the log files aren't progressing), you
+# can use the accompanying script bin/gdb_killall to kill all piernik processes
+# on all hosts pointed by the bt_*_* files.  This requires that all the bt_*_*
+# files are stored in local run directory and you can execute ssh command to
 # the remote hosts.  This is also potentially dangerous as the
 # bin/gdb_killall script attempts to kill ALL piernik processes, regardless
 # of their PID.
