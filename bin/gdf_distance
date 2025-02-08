@@ -199,7 +199,8 @@ def compare_dlists(h5f1: h5.File, h5f2: h5.File) -> Tuple[float, List[List[str]]
         logging.info("Possible vectors:")
         for v in vec:
             logging.info(f"    {sorted(v)}")
-        logging.info(f"Remaining fields:\n    {list(set(fc) ^ set(b))}")
+        logging.info(f"Remaining fields:")
+        logging.info(f"    {list(set(fc) ^ set(b))}")
 
     if auto_vectors:
         for v in list(set(fc) ^ set(b)):
@@ -288,6 +289,9 @@ def get_particles(h5f: h5.File) -> Dict[str, np.ndarray]:
                     plist[v] = np.append(plist[v], h5gps[v])
     if nf != n:
         logging.warning(f"Read {nf} particles from '{h5f.filename}', {n} expected.")
+    else:
+        logging.info(f"Read {nf} particles from '{h5f.filename}'.")
+
     for v in plist:
         if len(plist[v]) != n:
             logging.warning(f"Incomplete list for particle quantity '{v}' in '{h5f.filename}': read {len(plist[v])} out of {n}.")
@@ -306,13 +310,20 @@ def get_particles(h5f: h5.File) -> Dict[str, np.ndarray]:
 
 def convert_particles(p: Dict[str, np.ndarray]) -> Dict[int, Dict[str, float]]:
     pp = {}
+    dupl = []
+    maxdupl = 8
+    ndupl = 0
     for i in range(len(p["id"])):
         particle_id = int(p["id"][i])
         if particle_id in pp:
-            logging.warning(f"Duplicated id {particle_id}")
+            if len(dupl) < maxdupl:
+                dupl.append(particle_id)
+            ndupl += 1
         pp[particle_id] = {}
         for k in pkeys_flat:
             pp[particle_id][k] = p[k][i]
+    if ndupl > 0:
+        logging.warning(f"{ndupl} duplicated id found [ {str(dupl)[1:-1]} {('...' if ndupl > maxdupl else '')} ]")
     return pp
 
 
