@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LC_ALL=C
+
 # The defaults
 DO_MAKE=1  # measure the compilation time scaling
 COMPILER_CONFIG="benchmarking"  # for the setup script it means "./compilers/../benchmarking/${COMPILER_CONFIG}.in"
@@ -14,21 +16,219 @@ usage() {
     exit 1
 }
 
-j=1
-skip=0
-for i in "$@" ; do
-    j=$(( $j + 1 ))
-    [ $skip == 0 ] && case $i in
-	"-f" | "--fast") DO_MAKE=0 ;;  # are we allowed to skip making and want to just run existing piernik
-	"-h" | "--help") usage ;;
-	"-c" | "--config") COMPILER_CONFIG=${*:$j:1} ; skip=1 ;;
-	*) N_PROC_LIST="${N_PROC_LIST} $i"
-    esac || skip=0
-done
+parse_arguments() {
+    while (( "$#" )); do
+        case "$1" in
+            -f|--fast)
+                DO_MAKE=0
+                shift
+                ;;
+            -h|--help)
+                usage
+                ;;
+            -c|--config)
+                if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
+                    COMPILER_CONFIG="$2"
+                    shift 2
+                else
+                    echo "Error: Argument for $1 is missing" >&2
+                    exit 1
+                fi
+                ;;
+            -*|--*=)
+                echo "Error: Unsupported flag $1" >&2
+                exit 1
+                ;;
+            *)
+                N_PROC_LIST="${N_PROC_LIST} $1"
+                shift
+                ;;
+        esac
+    done
+}
+
+check_dependencies() {
+    command -v make > /dev/null 2>&1 || { echo >&2 "make is required but it's not installed. Aborting."; exit 1; }
+    command -v mpirun > /dev/null 2>&1 || { echo >&2 "mpirun is required but it's not installed. Aborting."; exit 1; }
+}
+
+print_system_info() {
+    MEMG=$( LC_ALL=C free -m | awk '/Mem/ {print $2/1024.}' )
+    echo "## "$( grep 'model name' /proc/cpuinfo | uniq )
+    echo "## Memory : $MEMG GB"
+}
+
+prepare_directories() {
+    touch Makefile  # run correctly also when the clock is messed up
+    for problem in "${PROBLEM_LIST[@]}"; do
+        rm -rf runs/${problem}_B_${problem}
+    done
+    rm -rf obj_B_*
+}
+
+awkfor() {
+    awk '{printf("%19s %7s %7s %7s %8s\n", $1, $2, $3, $4, $5)}'
+}
+
+make_objects() {
+    local obj_list=$1
+    make $obj_list CL=1 > /dev/null
+    ( time make -j $obj_list > /dev/null ) 2>&1 | awkfor
+}
+
+setup_flood_scaling() {
+    local threads=$1
+    for j in $( seq $threads ); do
+        [ -e $j ] && rm -rf $j
+        mkdir $j
+        cp piernik problem.par $j
+    done
+}
+
+run_strong_weak_scaling() {
+    local scaling=$1
+    local threads=$2
+    local nx=$3
+    local mpirun_cmd=$4
+    local max_mem=$5
+    local xmul=$6
+
+    case $scaling in
+        weak)
+            $mpirun_cmd -np $threads ./piernik -n '&BASE_DOMAIN n_d = '$(( $threads * $nx ))', 2*'$nx' xmin = -'$(( $threads * $xmul ))' xmax = '$(( $threads * $xmul ))' / &MEMORY max_mem = '$max_mem'/' 2> /dev/null
+            ;;
+        strong)
+            $mpirun_cmd -np $threads ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' / &MEMORY max_mem = '$max_mem'/' 2> /dev/null
+            ;;
+    esac
+}
+
+run_piernik() {
+    local problem=$1
+    local scaling=$2
+    local threads=$3
+    local mpirun_cmd=$4
+    local max_mem=$5
+
+    case $problem in
+        sedov)
+            local basesize=64 ;;
+        crtest)
+            local basesize=32 ;;
+        maclaurin)
+            if [ $scaling == strong ] ; then
+                local basesize=128
+            else
+                local basesize=64
+            fi ;;
+    esac
+    local nx=$( echo $basesize $SCALE | awk '{print int($1*$2)}' )
+
+    if [ $scaling == flood ]; then
+        for j in $( seq $threads ); do
+            ( cd $j && ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' / &MEMORY max_mem = '$max_mem'/' > _stdout_ 2> /dev/null ) &
+        done
+        wait
+        sleep 1
+        for j in $( seq $threads ); do
+            case $problem in
+                sedov)
+                    ( grep "dWallClock" $j/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$threads');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f\n", t/n)}'
+                    ;;
+                crtest)
+                    grep "C01cycles" $j/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$threads', $5, $8)}'
+                    awk '/Spent/ { printf("%s\n", $5) }' $j/*log
+                    ;;
+                maclaurin)
+                    grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$threads');} {printf("%7.3f %7.3f ", $5, $8)}'
+                    grep -q cycles $j/_stdout_ || echo ""
+                    awk '/Spent/ { printf("%s\n", $5) }' $j/*log
+                    ;;
+            esac
+        done
+    else
+        case $problem in
+            sedov)
+                local xmul=1
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f ", t/n)}'
+                ;;
+            crtest)
+                local xmul=512
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+                awk '/Spent/ { printf("%s ", $5) }' *log
+                ;;
+            maclaurin)
+                local xmul=2
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+                awk '/Spent/ { printf("%s ", $5) }' *log
+                ;;
+        esac
+    fi
+}
+
+format_output() {
+    awk '{
+        if ($0 ~ "##") {
+            print "## ", $0
+        } else {
+            if (substr($1, 0, 1) == "#") split($0, form)
+            if (NF > 0) {
+                for (i = 1; i <= NF; i++) printf("%-*s ", length(form[i]), $i)
+                print ""
+                fflush()
+            }
+        }
+    }'
+}
+
+run_benchmark() {
+    local problem=$1
+    local scaling=$2
+    local rundir="runs/${problem}_B_${problem}"
+    local config_file="$(dirname $0)/problem.par.${problem}"
+
+    echo "## "$(date)
+    echo "Benchmarking ${problem}, ${scaling} scaling"
+
+    (
+        cp $config_file $rundir/problem.par
+        cd $rundir || exit
+
+        case $problem in
+            sedov)     echo "#Threads dWallClock1 dWallClock2 dWallClock3 dWallClock4 dWallClock5 dWallClock_Average";;
+            crtest)    echo "#Threads MG_prepare MG_cycle Total_MG";;
+            maclaurin) echo "#Threads MG_prepare MG_i-cycle MG_multipole MG_o-cycle Total_MG";;
+        esac
+
+        for threads in $N_PROC_LIST; do
+            local mpirun_cmd="mpirun"
+            mpirun -np $threads echo > /dev/null 2>&1 || mpirun_cmd="mpirun --use-hwthread-cpus"
+	    # OpenMPI refuses to run more jobs than CPU cores but with --use-hwthread-cpus its performance is poor on 2 and more threads
+            local max_mem=$( echo $MEMM $threads | awk '{print int(0.90*$1*1024/$2)}' )
+
+            rm *log 2> /dev/null
+
+            if [ $scaling == flood ]; then
+                setup_flood_scaling $threads  # refresh the subdirectories for flood scaling runs
+            else
+                echo -n $threads
+            fi
+
+            run_piernik $problem $scaling $threads "$mpirun_cmd" $max_mem
+            [ $scaling != flood ] && echo
+            echo
+        done
+    ) | format_output
+    echo
+}
+
+# Main script execution
+parse_arguments "$@"
+check_dependencies
+print_system_info
 
 SCALE=${BIG:=1}
 
-MEMG=$( LC_ALL=C free -m | awk '/Mem/ {print $2/1024.}' )
 MEMM=$( LC_ALL=C free -m | awk '/Mem/ {print $2}' )
 # alternatively (should give value closer to the amount of physical RAM installed):
 #MEMG=0
@@ -37,214 +237,71 @@ MEMM=$( LC_ALL=C free -m | awk '/Mem/ {print $2}' )
 #done
 #MEMG=$( echo $MEMG | awk '{print $1 / 1024.^3 }' )
 
-echo "## "$( cat /proc/cpuinfo  | grep "model name" | uniq )
-echo "## Memory : $MEMG GB"
-
 [ "$SCALE" != "1" ] && echo "# test domains are scaled by factor of $SCALE"
 
+PROBLEM_LIST=("maclaurin" "advection_test" "crtest" "jeans" "tearing" "sedov" "otvortex" "2body")
+B_PROBLEM_LIST=("sedov" "crtest" "maclaurin")
+
 # create list of thread count to be tested
-if [ ${#N_PROC_LIST} == 0 ] ; then
+if [ -z "$N_PROC_LIST" ]; then
     N=$( awk 'BEGIN {c=0} /processor/ {if ($NF > c) c=$NF} END {print c+1}' /proc/cpuinfo )
     N_PROC_LIST=$( seq $N )
 else
     N_PROC_LIST=$( echo $N_PROC_LIST | awk '{for (i=1; i<=NF; i++) printf("%d\n",1*$i); print ""}' | sort -n | uniq )
 fi
 
-for i in $N_PROC_LIST ; do
-    if [ $i -le 0 ] ; then
-	echo "N_PROC_LIST: ${N_PROC_LIST}"
-	usage
+for i in $N_PROC_LIST; do
+    if [ $i -le 0 ]; then
+        echo "N_PROC_LIST: ${N_PROC_LIST}"
+        usage
     fi
 done
 
 TIMEFORMAT='real/user/sys/CPU%%: %1R %1U %1S %P%%'
-MAKE=make
 
-B_PROBLEM_LIST="sedov crtest maclaurin"
 if [ $DO_MAKE == 0 ] ; then
-    for p in $B_PROBLEM_LIST ; do
-	[ -x runs/${p}_B_${p}/piernik ] || DO_MAKE=1
+    for p in "${B_PROBLEM_LIST[@]}"; do
+        [ -x runs/${p}_B_${p}/piernik ] || DO_MAKE=1
     done
 fi
 
-awkfor() {
-    awk '{printf("%19s %7s %7s %7s %8s\n", $1, $2, $3, $4, $5)}'
-}
-
-# some cleanup
-PROBLEM_LIST="maclaurin advection_test crtest jeans tearing sedov otvortex 2body"
-
-if [ $DO_MAKE == 1 ] ; then
-    touch Makefile
-    # run correctly also when the clock is messed up
-    rm -rf obj_B_*
-    for i in $PROBLEM_LIST; do
-	rm -rf runs/${i}_B_${i}
-    done
+if [ $DO_MAKE == 1 ]; then
+    prepare_directories
 
     {
-	# create object and run directories
-	echo -n "Preparing objects                "
-	SETUP_PARAMS="-c ../benchmarking/${COMPILER_CONFIG} -n --linkexe -d BENCHMARKING_HACK "
-	( time for i in $PROBLEM_LIST; do
-	./setup $i $SETUP_PARAMS -o "B_"$i > /dev/null
-	done ) 2>&1 | awkfor
+        echo -n "Preparing objects                "
+        SETUP_PARAMS="-c ../benchmarking/${COMPILER_CONFIG} -n --linkexe -d BENCHMARKING_HACK"
+        ( time for problem in "${PROBLEM_LIST[@]}"; do
+            ./setup $problem $SETUP_PARAMS -o "B_$problem" > /dev/null
+        done ) 2>&1 | awkfor
 
-	get_n_problems() {
-	    echo $1 $PROBLEM_LIST | awk '{for (i=0; i<$1; i++) printf("obj_B_%s ",$(2+i)); print ""}'
-	}
+        get_n_problems() {
+            echo $1 "${PROBLEM_LIST[@]}" | awk '{for (i=0; i<$1; i++) printf("obj_B_%s ",$(2+i)); print ""}'
+        }
 
-	#
-	# Benchmarking: make objects
-	#
+        echo -n "Single-thread make object        "
+        ( time make $( get_n_problems 1 ) > /dev/null ) 2>&1 | awkfor
 
-	OBJ_LIST=$( get_n_problems 1 )
+        echo -n "Multi-thread make object         "
+        make_objects "$(get_n_problems 1)"
 
-	echo -n "Single-thread make object        "
-	( time $MAKE $OBJ_LIST > /dev/null ) 2>&1 | awkfor
-	$MAKE $OBJ_LIST CL=1 > /dev/null
+        echo -n "Multi-thread make two objects    "
+        make_objects "$(get_n_problems 2)"
 
-	echo -n "Multi-thread make object         "
-	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
-	$MAKE $OBJ_LIST CL=1 > /dev/null
+        echo -n "Multi-thread make four objects   "
+        make_objects "$(get_n_problems 4)"
 
-	OBJ_LIST=$( get_n_problems 2 )
-
-	echo -n "Multi-thread make two objects    "
-	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
-	$MAKE $OBJ_LIST CL=1 > /dev/null
-
-	OBJ_LIST=$( get_n_problems 4 )
-
-	echo -n "Multi-thread make four objects   "
-	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
-	$MAKE $OBJ_LIST CL=1 > /dev/null
-
-	OBJ_LIST=$( get_n_problems 8 )
-
-	echo -n "Multi-thread make eight objects  "
-	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
+        echo -n "Multi-thread make eight objects  "
+        make_objects "$(get_n_problems 8)"
     }
+
     echo
 else
     echo "## compilation skipped"
 fi
 
-#
-# Benchmarking: Piernik
-#
-
-for p in $B_PROBLEM_LIST ; do
-    for t in flood strong weak ; do
-	echo "## "$( date )
-	echo "Benchmarking $p, $t scaling"
-	(
-	    RUNDIR=runs/${p}_B_${p}
-	    cp  $( dirname $0 )"/problem.par."${p} ${RUNDIR}/problem.par
-	    cd $RUNDIR
-	    case $p in
-		sedov)     echo "#Threads dWallClock1 dWallClock2 dWallClock3 dWallClock4 dWallClock5 dWallClock_Average";;
-		crtest)    echo "#Threads MG_prepare MG_cycle Total_MG";;
-		maclaurin) echo "#Threads MG_prepare MG_i-cycle MG_multipole MG_o-cycle Total_MG";;
-	    esac
-	    for i in $N_PROC_LIST ; do
-                MPIRUN="mpirun"
-                mpirun -np $i echo > /dev/null 2>&1 || MPIRUN="mpirun --use-hwthread-cpus"
-                # OpenMPI refuses to run more jobs than CPU cores but with --use-hwthread-cpus its performance is poor on 2 threads
-                max_mem=$( echo $MEMM $i | awk '{print int(0.90*$1*1024/$2)}' )
-                rm *log 2> /dev/null
-		if [ $t == flood ] ; then  # refresh the subdirectories for flood scaling runs
-		    for j in $( seq $i ) ; do
-			[ -e $j ] && rm -rf $j
-			mkdir $j
-			cp piernik problem.par $j
-		    done
-		fi
-		case $p in
-		    sedov)
-			NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-			if [ $t == flood ] ; then
-			    for j in $( seq $i ) ; do
-				cd $j
-				rm *log 2> /dev/null
-				./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' > _stdout_ 2> /dev/null &
-				cd - > /dev/null
-			    done
-			    wait
-			    sleep 1
-			    for j in $( seq $i ) ; do
-				( grep "dWallClock" $j/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$i');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f\n", t/n)}'
-			    done
-			else
-			    echo -n $i
-			    case $t in
-				weak)
-				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
-				strong)
-				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
-			    esac | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f ", t/n)}'
-			fi
-			echo ;;
-		    crtest)
-			NX=$( echo 32 $SCALE | awk '{print int($1*$2)}')
-			if [ $t == flood ] ; then
-			    for j in $( seq $i ) ; do
-				cd $j
-				rm *log 2> /dev/null
-				./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' > _stdout_ 2> /dev/null &
-				cd - > /dev/null
-			    done
-			    wait
-			    sleep 1
-			    for j in $( seq $i ) ; do
-				grep "C01cycles" $j/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$i', $5, $8)}'
-				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
-			    done
-			else
-			    echo -n $i
-			    case $t in
-				weak)
-				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
-				strong)
-				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
-			    esac | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
-			    awk '/Spent/ { printf("%s ",$5) }' *log
-			fi
-			echo ;;
-		    maclaurin)
-			SKIP=0
-			if [ $t == flood ] ; then
-			    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-			    for j in $( seq $i ) ; do
-				{
-				    cd $j
-				    rm *log 2> /dev/null
-				    ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MEMORY max_mem = '$max_mem'/' > _stdout_ ;
-			        } 2> /dev/null &
-			    done
-			    wait
-			    sleep 1
-			    [ $SKIP == 0 ] && for j in $( seq $i ) ; do
-				grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
-				grep -q cycles $j/_stdout_ || echo ""
-				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
-			    done
-			else
-			    echo -n $i
-			    case $t in
-				weak)
-				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-			            $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MEMORY max_mem = '$max_mem'/' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}' ;;
-				strong)
-				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
-				    $MPIRUN -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MEMORY max_mem = '$max_mem'/' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}' ;;
-			    esac
-			    [ $SKIP == 0 ] && awk '/Spent/ { printf("%s ", $5) }' *log
-			fi
-			echo ;;
-	        esac
-	    done
-	) | awk '{ if ($0 ~ "##") {print "## ", $0} else { if (substr($1,0,1) == "#") split($0,form); if (NF>0) {for (i=1;i<=NF;i++) printf("%-*s ",length(form[i]),$i); print ""; fflush()} } }'
-	echo
+for problem in "${B_PROBLEM_LIST[@]}"; do
+    for scaling in flood strong weak; do
+        run_benchmark $problem $scaling
     done
 done
