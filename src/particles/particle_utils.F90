@@ -39,7 +39,7 @@ module particle_utils
 
    private
    public :: add_part_in_proper_cg, is_part_in_cg, part_refresh_ghosts, part_leave_cg, detach_particle, &
-        &    count_all_particles, global_count_all_particles, global_balance_particles
+        &    count_all_particles, global_count_all_particles, global_balance_particles, part_refresh_flags
 
 contains
 
@@ -251,6 +251,39 @@ contains
       if (.false. .and. proc == sum(se)) return
 
    end function attribute_to_proc
+
+!>
+!! \brief Refresh particle flags
+!! \details This may be necessary after refinement update or when the domain is expanded.
+!<
+
+   subroutine part_refresh_flags
+
+      use cg_cost_data,   only: I_PARTICLE
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use domain,         only: dom
+      use particle_func,  only: particle_in_area
+      use particle_types, only: particle
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(particle), pointer :: pset
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%costs%start
+         pset => cgl%cg%pset%first
+         do while (associated(pset))
+            call is_part_in_cg(cgl%cg, pset%pdata%pos, particle_in_area(pset%pdata%pos, dom%edge), pset%pdata%in, pset%pdata%phy, pset%pdata%out, pset%pdata%fin)
+            pset => pset%nxt
+         enddo
+         call cgl%cg%costs%stop(I_PARTICLE)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine part_refresh_flags
 
 !> Remove ghosts and reassign all physical particles. Useful for sanitizing after a change of refinement.
 
