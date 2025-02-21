@@ -503,7 +503,7 @@ contains
       use gravity,               only: update_gp
 #endif /* GRAV */
 #if defined(GRAV) && defined(NBODY)
-      use particle_utils,        only: part_refresh_ghosts
+      use particle_utils,        only: part_refresh_ghosts, part_refresh_flags
 #endif /* GRAV && NBODY */
 
       implicit none
@@ -693,6 +693,7 @@ contains
 
 #if defined(GRAV) && defined(NBODY)
       ! Prolong particles, refresh the ghosts
+      call part_refresh_flags
       call part_refresh_ghosts
 #endif /* GRAV && NBODY */
 #ifdef GRAV
