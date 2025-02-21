@@ -244,6 +244,8 @@ contains
 !> \todo Implement Richardson extrapolation method, as described in M. Berger papers
 
       select case (trim(this%rname))
+         case ("threshold")
+            this%refine => refine_on_threshold
          case ("grad")
             this%refine => refine_on_gradient
          case ("relgrad")
@@ -281,6 +283,51 @@ contains
       call this%refine(cg, p3d)
 
    end subroutine mark_var
+
+!>
+!! \brief Refinement based on threshold.
+!! If the value of the field is above the threshold, and the level is below aux value then the cell is marked for refinement.
+!! If aux is not set, then the threshold is used for all levels.
+!<
+
+   subroutine refine_on_threshold(this, cg, p3d)
+
+      use constants, only: INVALID, PPP_AMR, PPP_CG
+      use grid_cont, only: grid_container
+      use ppp,       only: ppp_main
+
+      implicit none
+
+      class(urc_var),                  intent(in)    :: this !< this contains refinement parameters
+      type(grid_container), pointer,   intent(inout) :: cg   !< current grid piece
+      real, dimension(:,:,:), pointer, intent(in)    :: p3d  !< pointer to array to be examined for (de)refinement needs
+
+      integer(kind=4) :: i, j, k
+      real :: r
+      character(len=*), parameter :: L_label = "threshold_mark"
+
+      if (this%aux > 0.) then
+         if (cg%l%id >= this%aux) then
+            if (this%iplot /= INVALID) cg%q(this%iplot)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            return
+         endif
+      endif
+
+      call ppp_main%start(L_label, PPP_AMR + PPP_CG)
+
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               r = p3d(i, j, k)
+               if (this%iplot /= INVALID) cg%q(this%iplot)%arr(i, j, k) = r
+               if (r >= this%ref_thr) call cg%flag%set(i, j, k)
+            enddo
+         enddo
+      enddo
+
+      call ppp_main%stop(L_label, PPP_AMR + PPP_CG)
+
+   end subroutine refine_on_threshold
 
 !>
 !! \brief R. Loechner criterion
@@ -609,7 +656,7 @@ contains
       end function rel_grad2
 
       !>
-      !! \brief Return 'relative gradient' defined as |a-b|/(|a| + |b|)
+      !! \brief Return 'relative gradient' defined as |a - b| / (|a| + |b|)
       !!
       !! \details This routine should return value between 0 and 1.
       !! rel_grad_1pair == 0 when a == b, also when a == b == 0
@@ -636,11 +683,11 @@ contains
       !>
       !! \brief square of an 'addition' of two numbers from [0, 1] range.
       !!
-      !! \details Let us define a+b so it obeys the following rules:
+      !! \details Let us define a (+) b so it obeys the following rules:
       !! a (+) b = b (+) a
       !! a (+) 0 = a
       !! a (+) 1 = 1
-      !! if a << 1 and b << 1, a (+) b \simeq sqrt(a**2+ b**2)
+      !! if a << 1 and b << 1, a (+) b \simeq sqrt(a**2 + b**2)
       !!
       !! One of possible formulas is:
       !! a (+) b = sqrt(a**2 - a**2 * b**2 + b**2)
