@@ -44,10 +44,11 @@ RED = "\033[31;1m"
 RESET = "\033[0m"
 PASSED = $(GREEN)passed$(RESET)
 FAILED = $(RED)failed$(RESET)
+ARTIFACTS = "./jenkins/workspace/artifacts"
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold compiled_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
 
 all: $(ALLOBJ)
 
@@ -133,26 +134,29 @@ ifndef P
 P = "testing_and_debuging/chimaera"
 endif
 dep:
-	TMPDIR=$$(mktemp XXXXXX) ;\
-	rm $$TMPDIR ;\
-	OTMPDIR="obj_"$$TMPDIR ;\
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	PROBLEM=$P ;\
 	GRAPH="dep.png" ;\
-	rm $$GRAPH 2> /dev/null ;\
-	./setup $$PROBLEM -n -o $$TMPDIR | grep -v "skipped" ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
+	[ -e $(ARTIFACTS)"/$$GRAPH" ] && rm $(ARTIFACTS)"/$$GRAPH" || true ;\
+	./setup $$PROBLEM -n -o $${OTMPDIR//obj_/} > setup.stdout ;\
 	if [ -e $$OTMPDIR ] ; then \
+		mv setup.stdout $$OTMPDIR ;\
 		$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
-		mv $$OTMPDIR"/"$$GRAPH . ;\
-		rm -r $$OTMPDIR "runs/"$$( basename $${PROBLEM} )"_"$$TMPDIR ;\
+		mv $$OTMPDIR"/"$$GRAPH $(ARTIFACTS)/ &&\
+			rm -r $$OTMPDIR "runs/"$$( basename $${PROBLEM} )"_"$${OTMPDIR//obj_/} ;\
 	fi ;\
-	which display > /dev/null 2> /dev/null && [ -e $$GRAPH ] && display $$GRAPH ;\
-	if [ -e $$GRAPH ] ; then \
-		$(ECHO) "Dependency graph for the "$$PROBLEM" problem stored in "$$GRAPH ;\
+	if [ -e $(ARTIFACTS)"/$$GRAPH" ] ; then \
+		$(ECHO) -e "Dependency graph for the "$$PROBLEM" problem stored in $(ARTIFACTS)/"$$GRAPH" . Test "$(PASSED) ;\
 	else \
-		$(ECHO) "Cannot create dependency graph" ;\
+		[ -e $$OTMPDIR/setup.stdout ] && ( cat $$OTMPDIR/setup.stdout ; rm -r $$OTMPDIR ) ;\
+		$(ECHO) -e "Dependency graph creation "$(FAILED) && exit 1 ;\
 	fi
 
-compiled_tests:
+view_dep: dep
+	which display > /dev/null 2> /dev/null && [ -e $(ARTIFACTS)"/dep.png" ] && display $(ARTIFACTS)"/dep.png" || true
+
+artifact_tests: dep
 
 gold_CRESP:
 	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > ./jenkins/workspace/CRESP.gold_stdout 2> ./jenkins/workspace/CRESP.gold_stderr && \
@@ -188,5 +192,7 @@ gold_streaming_instability:
 allgold: gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
 
 CI: QA
-	$(MAKE) -k compiled_tests
+	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
+	$(MAKE) -k artifact_tests
 	$(MAKE) -k allgold
