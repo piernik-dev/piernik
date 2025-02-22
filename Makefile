@@ -47,7 +47,7 @@ FAILED = $(RED)failed$(RESET)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold compiled_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
 
 all: $(ALLOBJ)
 
@@ -154,6 +154,39 @@ dep:
 
 compiled_tests:
 
+gold_CRESP:
+	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > ./jenkins/workspace/CRESP.gold_stdout 2> ./jenkins/workspace/CRESP.gold_stderr && \
+		echo -e "CRESP test "$(PASSED) || \
+		( echo -e "CRESP test "$(FAILED)" (more details in ./jenkins/workspace/CRESP.gold_std*)" && exit 1 )
+	# Fails on Fedora 41
+
+gold_mcrtest:
+	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new.config > ./jenkins/workspace/mcrtest.gold_stdout 2> ./jenkins/workspace/mcrtest.gold_stderr && \
+		echo -e "mcrtest "$(PASSED) || \
+		( echo -e "mcrtest "$(FAILED)" (more details in ./jenkins/workspace/mcrtest.gold_std*)" && exit 1 )
+
+gold_mcrwind:
+	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind.config > ./jenkins/workspace/mcrwind.gold_stdout 2> ./jenkins/workspace/mcrwind.gold_stderr && \
+		echo -e "mcrwind "$(PASSED) || \
+		( echo -e "mcrwind "$(FAILED)" (more details in ./jenkins/workspace/mcrwind.gold_std*)" && exit 1 )
+
+gold_MHDsedovAMR:
+	./jenkins/gold_test.sh ./jenkins/gold_configs/MHDsedovAMR.config > ./jenkins/workspace/MHDsedovAMR.gold_stdout 2> ./jenkins/workspace/MHDsedovAMR.gold_stderr && \
+		echo -e "MHDsedovAMR test "$(PASSED) || \
+		( echo -e "MHDsedovAMR test "$(FAILED)" (more details in ./jenkins/workspace/MHDsedovAMR.gold_std*)" && exit 1 )
+
+gold_resist:
+	./jenkins/gold_test.sh ./jenkins/gold_configs/resist.config > ./jenkins/workspace/resist.gold_stdout 2> ./jenkins/workspace/resist.gold_stderr && \
+		echo -e "Resistivity test "$(PASSED) || \
+		( echo -e "Resistivity test "$(FAILED)" (more details in ./jenkins/workspace/resist.gold_std*)" && exit 1 )
+
+gold_streaming_instability:
+	./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability.config > ./jenkins/workspace/streaming_instability.gold_stdout 2> ./jenkins/workspace/streaming_instability.gold_stderr && \
+		echo -e "Streaming instability test "$(PASSED) || \
+		( echo -e "Streaming instability test "$(FAILED)" (more details in ./jenkins/workspace/streaming_instability.gold_std*)" && exit 1 )
+
+allgold: gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+
 CI: QA
 	$(MAKE) -k compiled_tests
-	# make -k gold
+	$(MAKE) -k allgold

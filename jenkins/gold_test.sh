@@ -39,6 +39,8 @@ RIEM_LOG=${OUT_DIR}riem_log
 RIEM_CSV=${OUT_DIR}riem.csv
 GOLD_SHA_FILE=${OUT_DIR}__sha__
 
+echo -e "\033[34;1mRunning gold test for $PROBLEM_NAME in $OUT_DIR, defined in $1\033[0m"
+
 # Determine whether gold version has to be recreated
 # Check the content of the $GOLD_SHA_FILE and existence of the output file to be compared to
 if [ ! -e $GOLD_SHA_FILE ] ; then
