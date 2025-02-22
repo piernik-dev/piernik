@@ -48,7 +48,7 @@ ARTIFACTS = "./jenkins/workspace/artifacts"
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3
 
 all: $(ALLOBJ)
 
@@ -97,7 +97,7 @@ qa:
 	( echo -e "QA checks "$(FAILED) && exit 1 )
 
 QA:
-	make -k  chk_err_msg chk_lic_hdr pycodestyle qa
+	make -k chk_err_msg chk_lic_hdr pycodestyle qa
 
 pep8: pycodestyle
 
@@ -105,18 +105,18 @@ pycodestyle:
 	TSTNAME="Pycodestyle check "; \
 	REMARK=" (--ignore=E501,E722,W504,W605)"; \
 	pycodestyle `git ls-files | grep '\.py$$'` bin/gdf_distance bin/ask_jenkins --ignore=E501,E722,W504,W605 && \
-	echo -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
-	( echo -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
+		echo -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
+		( echo -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
 chk_err_msg:
 	./bin/checkmessages.sh && \
-	echo -e "Message checks "$(PASSED) || \
-	( echo -e "Message checks "$(FAILED)": incorrect file references found" && exit 1 )
+		echo -e "Message checks "$(PASSED) || \
+		( echo -e "Message checks "$(FAILED)": incorrect file references found" && exit 1 )
 
 chk_lic_hdr:
 	./bin/check_license_headers.sh && \
-	echo -e "License header checks "$(PASSED) || \
-	( echo -e "License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
+		echo -e "License header checks "$(PASSED) || \
+		( echo -e "License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
 
 gold:
 	./jenkins/gold_test_list.sh
@@ -156,7 +156,13 @@ dep:
 view_dep: dep
 	which display > /dev/null 2> /dev/null && [ -e $(ARTIFACTS)"/dep.png" ] && display $(ARTIFACTS)"/dep.png" || true
 
-artifact_tests: dep
+py3:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	python3 ./python/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
+		( rm -r $${OTMPDIR} runs/maclaurin_$${OTMPDIR//obj_/} ; echo -e "Python 3 test "$(PASSED) ) || \
+		( rm -r $${OTMPDIR} ; echo -e "Python 3 test "$(FAILED) && exit 1 )
+
+artifact_tests: dep py3
 
 gold_CRESP:
 	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > ./jenkins/workspace/CRESP.gold_stdout 2> ./jenkins/workspace/CRESP.gold_stderr && \
