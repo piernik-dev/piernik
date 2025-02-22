@@ -1,6 +1,3 @@
-git log -3
-. /etc/profile.d/modules.sh
-module load mpi
 echo "" > 3body.csv
 
 [ ! -e problems/2body/3body ] && exit 0
@@ -36,4 +33,3 @@ rm *.res
 
 wait # restart
 [ $( grep "^Total difference between" ${RES}/compare.log | awk '{print $NF}' ) == 0 ] || exit 1
-

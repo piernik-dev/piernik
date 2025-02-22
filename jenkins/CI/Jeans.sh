@@ -1,6 +1,3 @@
-git log -3
-. /etc/profile.d/modules.sh
-module load mpi
 if [ -e runs/jeans ] ; then find runs/jeans/ -name "*.png" -exec \rm {} \; ; fi
 CONF=lothlorien
 [ -e compilers/jenkins.in ] && CONF=jenkins
@@ -21,4 +18,3 @@ rm *.res
 
 ../../bin/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log
 [ $( grep "^Total difference between" ./compare.log | awk '{print $NF}' ) == 0 ] || exit 1
-

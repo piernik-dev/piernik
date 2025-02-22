@@ -1,6 +1,3 @@
-git log -3
-. /etc/profile.d/modules.sh
-module load mpi
 CONF=lothlorien
 [ -e compilers/jenkins.in ] && CONF=jenkins
 
@@ -10,4 +7,3 @@ CONF=lothlorien
 python setup maclaurin -c $CONF
 python make_test.py --test=maclaurin
 echo "L2 error norm,min. error,max. error" > norm.csv
-
