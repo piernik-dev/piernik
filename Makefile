@@ -28,6 +28,7 @@
 #   'make gold'            # run the gold tests from ./jenkins directory
 #   'make gold-serial'     # run the gold tests from ./jenkins directory in serial mode
 #   'make gold-clean'      # remove files after gold test
+#   'make CI'              # run all checks locally (replaces Jenkins to some extent)
 #
 # Resetup will also call make for the object directories, unless you've
 # specified --nocompile either in your .setuprc* files or it was stored in
@@ -38,10 +39,15 @@
 MAKEFLAGS += -s
 
 ALLOBJ = $(wildcard obj*)
+GREEN = "\033[32;1m"
+RED = "\033[31;1m"
+RESET = "\033[0m"
+PASSED = $(GREEN)passed$(RESET)
+FAILED = $(RED)failed$(RESET)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI
 
 all: $(ALLOBJ)
 
@@ -85,7 +91,9 @@ allsetup:
 	wait )
 
 qa:
-	./bin/qa.py $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" )
+	./bin/qa.py -q $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" ) && \
+	echo -e "QA checks "$(PASSED) || \
+	( echo -e "QA checks "$(FAILED) && exit 1 )
 
 QA:
 	make -k  chk_err_msg chk_lic_hdr pycodestyle qa
@@ -93,15 +101,21 @@ QA:
 pep8: pycodestyle
 
 pycodestyle:
-	echo 'Pycodestyle check (--ignore=E501,E722,W504,W605)'
-	pycodestyle `git ls-files | grep '\.py$$'` bin/gdf_distance bin/ask_jenkins --ignore=E501,E722,W504,W605
+	TSTNAME="Pycodestyle check "; \
+	REMARK=" (--ignore=E501,E722,W504,W605)"; \
+	pycodestyle `git ls-files | grep '\.py$$'` bin/gdf_distance bin/ask_jenkins --ignore=E501,E722,W504,W605 && \
+	echo -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
+	( echo -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
 chk_err_msg:
-	echo Check filenames in error messages
-	./bin/checkmessages.sh
+	./bin/checkmessages.sh && \
+	echo -e "Message checks "$(PASSED) || \
+	( echo -e "Message checks "$(FAILED)": incorrect file references found" && exit 1 )
 
 chk_lic_hdr:
-	./bin/check_license_headers.sh
+	./bin/check_license_headers.sh && \
+	echo -e "License header checks "$(PASSED) || \
+	( echo -e "License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
 
 gold:
 	./jenkins/gold_test_list.sh
@@ -137,3 +151,9 @@ dep:
 	else \
 		$(ECHO) "Cannot create dependency graph" ;\
 	fi
+
+compiled_tests:
+
+CI: QA
+	$(MAKE) -k compiled_tests
+	# make -k gold
