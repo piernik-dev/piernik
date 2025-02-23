@@ -75,7 +75,12 @@ define cleanup_tmpdir
 endef
 
 # Define phony targets
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64 IOv2 resetup clean allsetup ctags Jeans
+.PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy  \
+    gold gold-serial gold-clean \
+	CI QA artifact_tests allgold \
+	qa pep8 pycodestyle chk_err_msg chk_lic_hdr \
+	dep view_dep py3 noHDF5 I64 IOv2 Jeans Maclaurin \
+	gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
 
 # Default target to build all object directories
 all: $(ALLOBJ)
@@ -129,17 +134,15 @@ allsetup:
 	done; \
 	wait )
 
+# Target to generate Doxygen documentation
+doxy:
+	doxygen piernik.doxy
+
 # Target to run qa.py checks
 qa:
 	./bin/qa.py -q $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" ) && \
 	echo -e "  qa.py checks "$(PASSED) || \
 	( $(ECHO) -e "  qa.py checks "$(FAILED) && exit 1 )
-
-# Target to run all QA checks
-QA:
-	$(ECHO) -e $(BLUE)"Starting QA checks ..."$(RESET)
-	$(MAKE) -k chk_err_msg chk_lic_hdr pycodestyle qa
-	$(ECHO) -e $(BLUE)"QA checks "$(PASSED)"."
 
 # Targets to run pycodestyle checks
 pep8: pycodestyle
@@ -163,21 +166,11 @@ chk_lic_hdr:
 		$(ECHO) -e "  License header checks "$(PASSED) || \
 		( $(ECHO) -e "  License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
 
-# Target to run all gold tests (old version)
-gold:
-	./jenkins/gold_test_list.sh
-
-# Target to run gold tests in serial mode
-gold-serial:
-	SERIAL=1 ./jenkins/gold_test_list.sh
-
-# Target to clean gold test files and CI artifacts
-gold-clean:
-	$(RM) -rf $(GOLDSPACE)/* $(ARTIFACTS)
-
-# Target to generate Doxygen documentation
-doxy:
-	doxygen piernik.doxy
+# Target to run all QA checks
+QA:
+	$(ECHO) -e $(BLUE)"Starting QA checks ..."$(RESET)
+	$(MAKE) -k chk_err_msg chk_lic_hdr pycodestyle qa
+	$(ECHO) -e $(BLUE)"QA checks "$(PASSED)"."
 
 # Target to create dependency graph
 ifndef P
@@ -249,32 +242,62 @@ IOv2:
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(FAILED) && exit 1 )
 
-# Target to run Jeans instability test with restart reproducibility (in a bit different way than it is done in IOv2)
+# Target to run Jeans instability test with accuracy check and restart reproducibility (restart done in a bit different way than it is done in IOv2)
 Jeans:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/jeans_$${OTMPDIR//obj_/} ;\
 	$(SETUP) jeans -o $${OTMPDIR//obj_/} -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Jeans.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
-			gnuplot jeans.gnuplot 2>&1 ;\
+			gnuplot jeans.gnuplot 2>&1 || exit 1 ;\
 			$(RM) *.res ;\
-			./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
-			./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
-			./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs2"/' ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs2"/' ;\
 			../../bin/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		( cp $${RUNDIR}/jeans.{png,csv} $(ARTIFACTS); $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED) ) || \
+		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.4f, period error = %.4f", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
+		cp $${RUNDIR}/jeans.{png,csv} $(ARTIFACTS) &&\
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED)". $${NORM}, ${ARTIFACTS}/jeans.png created." ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(FAILED) && exit 1 )
+
+# Target to run Maclaurin test with accuracy check
+Maclaurin:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ;\
+	$(SETUP) maclaurin -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Maclaurin.setup.stdout && \
+		( cd $${RUNDIR} ;\
+			$(MPIEXEC) -n 1 ./piernik ;\
+			$(PYTHON) ../../python/maclaurin.py ./maclaurin_sph_0000.h5 || exit 1 ;\
+			$(ECHO) "L2 error norm,min. error,max. error" > maclaurin.csv ;\
+			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\),.*= *\([^ ]*\) *\(.*\)$$/\1 , \2 , \3/' >> maclaurin.csv ;\
+		) >> $(ARTIFACTS)/Maclaurin.setup.stdout && \
+		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.5f", $$1) }' $${RUNDIR}/maclaurin.csv ) ;\
+		cp $${RUNDIR}/maclaurin.{png,csv} $(ARTIFACTS) &&\
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)". $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(FAILED) && exit 1 )
 
 # Target to run all CI artifact tests
 artifact_tests:
 	$(ECHO) -e $(BLUE)"Starting artifact tests ..."$(RESET)
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
-	$(MAKE) -k dep py3 noHDF5 I64 IOv2 Jeans || \
+	$(MAKE) -k dep py3 noHDF5 I64 IOv2 Jeans Maclaurin || \
 		( $(ECHO) -e $(RED)"Some artifact tests failed."$(RESET)" Details can be found in "$(ARTIFACTS)" directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
+
+# Target to run all gold tests (old version)
+gold:
+	./jenkins/gold_test_list.sh
+
+# Target to run gold tests in serial mode
+gold-serial:
+	SERIAL=1 ./jenkins/gold_test_list.sh
+
+# Target to clean gold test files and CI artifacts
+gold-clean:
+	$(RM) -rf $(GOLDSPACE)/* $(ARTIFACTS)
 
 # Function to run a single gold test
 define run_gold_test
