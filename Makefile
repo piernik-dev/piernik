@@ -38,6 +38,7 @@
 
 MAKEFLAGS += -s
 
+# Define variables for colors and paths
 ALLOBJ = $(wildcard obj*)
 GREEN = "\033[32;1m"
 RED = "\033[31;1m"
@@ -51,10 +52,17 @@ GOLDSPACE = "./jenkins/workspace"
 ECHO ?= /bin/echo
 RM ?= /bin/rm
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64 IOv2
+SETUP = ./setup
+CONFIG_DIR = ./jenkins/gold_configs
+GOLD_TEST_SCRIPT = ./jenkins/gold_test.sh
 
+# Define phony targets
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64 IOv2 resetup clean allsetup ctags
+
+# Default target to build all object directories
 all: $(ALLOBJ)
 
+# Target to build a specific object directory
 *:
 ifeq ("$(RS)","1")
 	@if [ -e $@/.setup.call ] ; then \
@@ -70,40 +78,52 @@ else
 endif
 endif
 
+# Target to recreate ctags
 ctags:
 	ctags -R {src,problems} --fortran-kinds=+iL
 
+# Target to resetup all object directories
 resetup:
 	@RS=1 $(MAKE) -k all
 
+# Target to clean all object directories
 clean:
 	@CL=1 $(MAKE) -k all
 
+# Function to setup a problem (used in allsetup target)
+define setup_problem
+	pnm=$$( echo $(1) | sed 's-^problems/--' ); \
+	onm=$${pnm//\//___}; \
+	$(SETUP) $$pnm -o "A_"$$onm --nocompile && \
+	for f in .setup.call Makefile env.dat version.F90 ; do \
+		of="obj_A_"$$onm"/"$$f; \
+		[ -f $$of ] && sed -i 's/ --nocompile//' $$of; \
+	done
+endef
+
+# Target to setup all problems (compile them e.g. with "make obj_A_* -j")
 allsetup:
 	( for i in $$( find problems/* -type d ) ; do \
 		if [ ! -e $$i/.skipauto ] ; then \
-			pnm=$$( echo $$i | sed 's-^problems/--' ); \
-			onm=$${pnm//\//___}; \
-			./setup $$pnm -o "A_"$$onm --nocompile && \
-				for f in .setup.call Makefile env.dat version.F90 ; do \
-					of="obj_A_"$$onm"/"$$f; \
-					[ -f $$of ] && sed -i 's/ --nocompile//' $$of; \
-				done & \
+			$(call setup_problem,$$i) & \
 			sleep .1; \
 		fi; \
 	done; \
 	wait )
 
+# Target to run qa.py checks
 qa:
 	./bin/qa.py -q $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" ) && \
 	echo -e "  qa.py checks "$(PASSED) || \
 	( $(ECHO) -e "  qa.py checks "$(FAILED) && exit 1 )
 
+# Target to run all QA checks
 QA:
 	$(ECHO) -e $(BLUE)"Starting QA checks ..."$(RESET)
 	$(MAKE) -k chk_err_msg chk_lic_hdr pycodestyle qa
 	$(ECHO) -e $(BLUE)"QA checks "$(PASSED)"."
 
+# Targets to run pycodestyle checks
 pep8: pycodestyle
 
 pycodestyle:
@@ -113,28 +133,35 @@ pycodestyle:
 		$(ECHO) -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
 		( $(ECHO) -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
+# Target to check error messages in the Fortran source files
 chk_err_msg:
 	./bin/checkmessages.sh && \
 		$(ECHO) -e "  Message checks "$(PASSED) || \
 		( $(ECHO) -e "  Message checks "$(FAILED)": incorrect file references found" && exit 1 )
 
+# Target to check consistency of license headers
 chk_lic_hdr:
 	./bin/check_license_headers.sh && \
 		$(ECHO) -e "  License header checks "$(PASSED) || \
 		( $(ECHO) -e "  License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
 
+# Target to run all gold tests (old version)
 gold:
 	./jenkins/gold_test_list.sh
 
+# Target to run gold tests in serial mode
 gold-serial:
 	SERIAL=1 ./jenkins/gold_test_list.sh
 
+# Target to clean gold test files and CI artifacts
 gold-clean:
 	$(RM) -rf $(GOLDSPACE)/* $(ARTIFACTS)
 
+# Target to generate Doxygen documentation
 doxy:
 	doxygen piernik.doxy
 
+# Target to create dependency graph
 ifndef P
 P = "testing_and_debuging/chimaera"
 endif
@@ -158,27 +185,32 @@ dep:
 		$(ECHO) -e "  Dependency graph creation "$(FAILED) && exit 1 ;\
 	fi
 
+# Target to view dependency graph
 view_dep: dep
 	which display > /dev/null 2> /dev/null && [ -e $(ARTIFACTS)"/dep.png" ] && display $(ARTIFACTS)"/dep.png" || true
 
+# Target to check for Python 3 compatibility of the environment
 py3:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	python3 ./python/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
 		( rm -r $${OTMPDIR} runs/maclaurin_$${OTMPDIR//obj_/} ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  Python 3 test "$(FAILED) && exit 1 )
 
+# Target to check compilation without HDF5 library
 noHDF5:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	./setup crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
 		( rm -r $${OTMPDIR} runs/crtest_$${OTMPDIR//obj_/} ; $(ECHO) -e "  No HDF5 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  No HDF5 test "$(FAILED) && exit 1 )
 
+# Target to test compilation with 64-bit integers
 I64:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	./setup $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
 		( rm -r $${OTMPDIR} runs/chimaera_$${OTMPDIR//obj_/} ; $(ECHO) -e "  I64 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  I64 test "$(FAILED) && exit 1 )
 
+# Target to run IO version 2 restart compatision test
 IOv2:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=runs/advection_test_$${OTMPDIR//obj_/} ;\
@@ -199,6 +231,7 @@ IOv2:
 		( rm -r $${OTMPDIR} $${RUNDIR} ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  IO v2 test "$(FAILED) && exit 1 )
 
+# Target to run all CI artifact tests
 artifact_tests:
 	$(ECHO) -e $(BLUE)"Starting artifact tests ..."$(RESET)
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
@@ -206,12 +239,14 @@ artifact_tests:
 	$(MAKE) -k dep py3 noHDF5 I64 IOv2
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
+# Function to run a single gold test
 define run_gold_test
-	./jenkins/gold_test.sh ./jenkins/gold_configs/$(1).config > $(GOLDSPACE)/$(1).gold_stdout 2> $(GOLDSPACE)/$(1).gold_stderr && \
+	$(GOLD_TEST_SCRIPT) $(CONFIG_DIR)/$(1).config > $(GOLDSPACE)/$(1).gold_stdout 2> $(GOLDSPACE)/$(1).gold_stderr && \
 		$(ECHO) -e "  $(1) test "$(PASSED) || \
 		( $(ECHO) -e "  $(1) test "$(FAILED)" (more details in $(GOLDSPACE)/$(1).gold_std*)" && exit 1 )
 endef
 
+# Targets to run specific gold tests
 gold_CRESP:
 	$(call run_gold_test,mcrtest_CRESP)
 
@@ -230,6 +265,7 @@ gold_resist:
 gold_streaming_instability:
 	$(call run_gold_test,streaming_instability)
 
+# Target to run all gold tests
 allgold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
 	$(MAKE) -k gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
