@@ -68,4 +68,4 @@ for ig in range(h5f['grid_dimensions'].shape[0]):
         pr_err(.4)
 
 print("Period error,momentum error,angular momentum error")
-print("%g,%g,%g" % ((0. if dt == 0. else abs(dt / h5f.attrs["time"][0])), norm(m) / norm(m1), norm(L) / norm(L1)))
+print("%g , %g , %g" % ((0. if dt == 0. else abs(dt / h5f.attrs["time"][0])), norm(m) / norm(m1), norm(L) / norm(L1)))

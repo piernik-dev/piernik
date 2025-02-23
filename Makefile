@@ -79,7 +79,7 @@ endef
     gold gold-serial gold-clean \
 	CI QA artifact_tests allgold \
 	qa pep8 pycodestyle chk_err_msg chk_lic_hdr \
-	dep view_dep py3 noHDF5 I64 IOv2 Jeans Maclaurin \
+	dep view_dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body \
 	gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
 
 # Default target to build all object directories
@@ -278,12 +278,33 @@ Maclaurin:
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)". $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(FAILED) && exit 1 )
 
+# Target to run 3-body test with accuracy and restart checks (here restart also checks particles)
+3body:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/3body_$${OTMPDIR//obj_/} ;\
+	$(SETUP) 2body/3body -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/3body.setup.stdout && \
+		( cd $${RUNDIR} ;\
+			$(MPIEXEC) -n 1 ./piernik ;\
+			../../problems/2body/3body/particle_error.py leapfrog_tst_0001.h5 | tee 3body.csv ;\
+			$(RM) *.res ;\
+			$(ECHO) "Performing restart tests" ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs2"/' ;\
+			../../bin/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
+		) >> $(ARTIFACTS)/3body.setup.stdout && \
+		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
+		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
+		cp $${RUNDIR}/3body.csv $(ARTIFACTS) &&\
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)". $${NORM}" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
+
 # Target to run all CI artifact tests
 artifact_tests:
 	$(ECHO) -e $(BLUE)"Starting artifact tests ..."$(RESET)
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
-	$(MAKE) -k dep py3 noHDF5 I64 IOv2 Jeans Maclaurin || \
+	$(MAKE) -k dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body || \
 		( $(ECHO) -e $(RED)"Some artifact tests failed."$(RESET)" Details can be found in "$(ARTIFACTS)" directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
