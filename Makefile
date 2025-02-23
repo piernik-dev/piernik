@@ -80,7 +80,7 @@ endef
 	CI QA artifact_tests allgold \
 	qa pep8 pycodestyle chk_err_msg chk_lic_hdr \
 	dep view_dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body \
-	gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+	gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
 
 # Default target to build all object directories
 all: $(ALLOBJ)
@@ -346,10 +346,22 @@ gold_resist:
 gold_streaming_instability:
 	$(call run_gold_test,streaming_instability)
 
+# Target to run custom gold test, e.g. before making it official. Multiple tests will be executed serially here, so don't stack too many of them.
+custom_gold:
+	for i in jenkins/gold_configs/*.config ; do \
+		T=$$( basename $$i ) ; \
+		case $$T in \
+			(mcrtest_CRESP.config|mcrtest_new.config|mcrwind.config|MHDsedovAMR.config|resist.config|streaming_instability.config) ;; \
+			(*) $(call run_gold_test,$${T//.config/}) ;; \
+		esac \
+	done
+
+
+
 # Target to run all gold tests
 allgold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
-	$(MAKE) -k gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability || \
+	$(MAKE) -k gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold || \
 		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."
 
