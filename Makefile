@@ -48,7 +48,7 @@ ARTIFACTS = "./jenkins/workspace/artifacts"
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64 IOv2
 
 all: $(ALLOBJ)
 
@@ -174,13 +174,33 @@ I64:
 		( rm -r $${OTMPDIR} runs/chimaera_$${OTMPDIR//obj_/} ; echo -e "I64 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; echo -e "I64 test "$(FAILED) && exit 1 )
 
-artifact_tests: dep py3 noHDF5 I64
+IOv2:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=runs/advection_test_$${OTMPDIR//obj_/} ;\
+	./setup advection_test -p problem.par.restart_test_v2 -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/IOv2.setup.stdout && \
+		( cd $${RUNDIR} ;\
+			echo -e "run_id = ts1\n  Start:   t = 0.0, nproc = 1" ;\
+			mpiexec -n 1 ./piernik > ts1.out ;\
+			echo -e "  Restart: t = 1.0, nproc = 1" ;\
+			mpiexec -n 1 ./piernik -n '&END_CONTROL tend = 2.0 /' >> ts1.out ;\
+			echo -e "  Finish:  t = 2.0\n\nrun_id = ts2\n  Start:   t = 0.0, nproc = 5" ;\
+			mpiexec -n 5 ./piernik -n '&OUTPUT_CONTROL run_id = "ts2" /' > ts2.out ;\
+			echo -e "  Restart: t = 1.0, nproc = 3" ;\
+			mpiexec -n 3 ./piernik -n '&END_CONTROL tend = 2.0 /' -n '&OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out ;\
+			echo -e "  Finish:  t = 2.0" ;\
+		) >> $(ARTIFACTS)/IOv2.setup.stdout && \
+		./bin/gdf_distance $${RUNDIR}/moving_pulse_ts{1,2}_0002.h5 | tee $${RUNDIR}/compare.log >> $(ARTIFACTS)/IOv2.setup.stdout && \
+		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
+		( rm -r $${OTMPDIR} $${RUNDIR} ; echo -e "IO v2 test "$(PASSED) ) || \
+		( rm -r $${OTMPDIR} ; echo -e "IO v2 test "$(FAILED) && exit 1 )
+
+artifact_tests: dep py3 noHDF5 I64 IOv2
 
 gold_CRESP:
 	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > ./jenkins/workspace/CRESP.gold_stdout 2> ./jenkins/workspace/CRESP.gold_stderr && \
 		echo -e "CRESP test "$(PASSED) || \
 		( echo -e "CRESP test "$(FAILED)" (more details in ./jenkins/workspace/CRESP.gold_std*)" && exit 1 )
-	# Fails on Fedora 41
+# Fails on Fedora 41
 
 gold_mcrtest:
 	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new.config > ./jenkins/workspace/mcrtest.gold_stdout 2> ./jenkins/workspace/mcrtest.gold_stderr && \
