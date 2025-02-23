@@ -467,6 +467,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
+#ifdef HDF5
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
       use dataio_pub,       only: die
@@ -496,6 +497,7 @@ contains
       end select
 
    end subroutine crtest_analytic_ecr1
+#endif /* HDF5 */
 
 !> \brief Find how close is the clump to the external edges and call expansion routine if necessary
 

@@ -48,7 +48,7 @@ ARTIFACTS = "./jenkins/workspace/artifacts"
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5
 
 all: $(ALLOBJ)
 
@@ -162,7 +162,13 @@ py3:
 		( rm -r $${OTMPDIR} runs/maclaurin_$${OTMPDIR//obj_/} ; echo -e "Python 3 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; echo -e "Python 3 test "$(FAILED) && exit 1 )
 
-artifact_tests: dep py3
+noHDF5:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	./setup crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
+		( rm -r $${OTMPDIR} runs/crtest_$${OTMPDIR//obj_/} ; echo -e "No HDF5 test "$(PASSED) ) || \
+		( rm -r $${OTMPDIR} ; echo -e "No HDF5 test "$(FAILED) && exit 1 )
+
+artifact_tests: dep py3 noHDF5
 
 gold_CRESP:
 	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > ./jenkins/workspace/CRESP.gold_stdout 2> ./jenkins/workspace/CRESP.gold_stderr && \
