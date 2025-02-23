@@ -48,7 +48,7 @@ ARTIFACTS = "./jenkins/workspace/artifacts"
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5
+.PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64
 
 all: $(ALLOBJ)
 
@@ -168,7 +168,13 @@ noHDF5:
 		( rm -r $${OTMPDIR} runs/crtest_$${OTMPDIR//obj_/} ; echo -e "No HDF5 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; echo -e "No HDF5 test "$(FAILED) && exit 1 )
 
-artifact_tests: dep py3 noHDF5
+I64:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	./setup $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
+		( rm -r $${OTMPDIR} runs/chimaera_$${OTMPDIR//obj_/} ; echo -e "I64 test "$(PASSED) ) || \
+		( rm -r $${OTMPDIR} ; echo -e "I64 test "$(FAILED) && exit 1 )
+
+artifact_tests: dep py3 noHDF5 I64
 
 gold_CRESP:
 	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > ./jenkins/workspace/CRESP.gold_stdout 2> ./jenkins/workspace/CRESP.gold_stderr && \
@@ -203,6 +209,9 @@ gold_streaming_instability:
 
 allgold: gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
 
+# This set of tests is meant to be run locally, when Jenkins server is not available or one wants to test things before pushing to the repository.
+# It is not meant to replace Jenkins, but to provide a way to run all tests locally.
+# New Jenkins configuration should use them instead of custom scripts.
 CI: QA
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
