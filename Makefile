@@ -75,7 +75,7 @@ define cleanup_tmpdir
 endef
 
 # Define phony targets
-.PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy  \
+.PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
     gold gold-serial gold-clean \
 	CI QA artifact_tests allgold \
 	qa pep8 pycodestyle chk_err_msg chk_lic_hdr \
@@ -166,10 +166,24 @@ chk_lic_hdr:
 		$(ECHO) -e "  License header checks "$(PASSED) || \
 		( $(ECHO) -e "  License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
 
+# Sets of tests
+ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body
+GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
+
+# Help target
+help:
+	@$(ECHO) "Testing targets:"
+	@$(ECHO) "  QA             - Run QA checks"
+	@$(ECHO) "  artifact_tests - Run all artifact tests"
+	@$(ECHO) "  allgold        - Run all gold tests"
+	@$(ECHO) "  CI             - Run all CI checks (QA + artifacts + gold)"
+	@$(ECHO) "  help           - Show this help"
+
 # Target to run all QA checks
 QA:
 	$(ECHO) -e $(BLUE)"Starting QA checks ..."$(RESET)
-	$(MAKE) -k chk_err_msg chk_lic_hdr pycodestyle qa
+	$(MAKE) -k $(QA_TESTS)
 	$(ECHO) -e $(BLUE)"QA checks "$(PASSED)"."
 
 # Target to create dependency graph
@@ -304,7 +318,7 @@ artifact_tests:
 	$(ECHO) -e $(BLUE)"Starting artifact tests ..."$(RESET)
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
-	$(MAKE) -k dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body || \
+	$(MAKE) -k $(ARTIFACT_TESTS) || \
 		( $(ECHO) -e $(RED)"Some artifact tests failed."$(RESET)" Details can be found in "$(ARTIFACTS)" directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
@@ -356,12 +370,10 @@ custom_gold:
 		esac \
 	done
 
-
-
 # Target to run all gold tests
 allgold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
-	$(MAKE) -k gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold || \
+	$(MAKE) -k $(GOLD_TESTS) custom_gold || \
 		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."
 
