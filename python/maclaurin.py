@@ -47,9 +47,9 @@ def Maclaurin_test(file):
 
     fpiG = h5f.attrs['fpiG']
     a = h5f.attrs['a1']
-    x0 = h5f.attrs['x0']
-    y0 = h5f.attrs['y0']
-    z0 = h5f.attrs['z0']
+    x0 = h5f.attrs['x0'][0]
+    y0 = h5f.attrs['y0'][0]
+    z0 = h5f.attrs['z0'][0]
 
     n = 0
     for dname in h5f['data'].keys():
@@ -75,7 +75,7 @@ def Maclaurin_test(file):
             return
 
         off = h5f['data'][dname].attrs['off']
-        lev = h5f['data'][dname].attrs['level']
+        lev = h5f['data'][dname].attrs['level'][0]
 
         sc_fac = 2. ** (lev_max - lev)
         for i in range(0, int(h5f['data'][dname].attrs['n_b'][0])):
