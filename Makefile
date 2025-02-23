@@ -40,21 +40,38 @@ MAKEFLAGS += -s
 
 # Define variables for colors and paths
 ALLOBJ = $(wildcard obj*)
+
+# Terminal colors and formatting
 GREEN = "\033[32;1m"
 RED = "\033[31;1m"
 BLUE = "\033[34;1m"
 RESET = "\033[0m"
 PASSED = $(GREEN)passed$(RESET)
 FAILED = $(RED)failed$(RESET)
-ARTIFACTS = "./jenkins/artifacts"
-GOLDSPACE = "./jenkins/workspace"
 
+# Directory structure
+PROBLEMS_DIR = problems
+RUNS_DIR = runs
+SRC_DIR = src
+JENKINS_DIR = ./jenkins
+ARTIFACTS = "$(JENKINS_DIR)/artifacts"
+GOLDSPACE = "$(JENKINS_DIR)/workspace"
+CONFIG_DIR = $(JENKINS_DIR)/gold_configs
+
+# System commands
 ECHO ?= /bin/echo
 RM ?= /bin/rm
+MPIEXEC ?= mpiexec
+DISPLAY ?= display
 
+# Test environment
 SETUP = ./setup
-CONFIG_DIR = ./jenkins/gold_configs
-GOLD_TEST_SCRIPT = ./jenkins/gold_test.sh
+GOLD_TEST_SCRIPT = $(JENKINS_DIR)/gold_test.sh
+
+# Common command sequences
+define cleanup_tmpdir
+	rm -r $${OTMPDIR} $${RUNDIR}
+endef
 
 # Define phony targets
 .PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64 IOv2 resetup clean allsetup ctags
@@ -187,7 +204,7 @@ dep:
 
 # Target to view dependency graph
 view_dep: dep
-	which display > /dev/null 2> /dev/null && [ -e $(ARTIFACTS)"/dep.png" ] && display $(ARTIFACTS)"/dep.png" || true
+	which $(DISPLAY) > /dev/null 2> /dev/null && [ -e $(ARTIFACTS)"/dep.png" ] && $(DISPLAY) $(ARTIFACTS)"/dep.png" || true
 
 # Target to check for Python 3 compatibility of the environment
 py3:
@@ -200,43 +217,44 @@ py3:
 noHDF5:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	./setup crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
-		( rm -r $${OTMPDIR} runs/crtest_$${OTMPDIR//obj_/} ; $(ECHO) -e "  No HDF5 test "$(PASSED) ) || \
-		( rm -r $${OTMPDIR} ; $(ECHO) -e "  No HDF5 test "$(FAILED) && exit 1 )
+		( rm -r $${OTMPDIR} runs/crtest_$${OTMPDIR//obj_/} ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
+		( rm -r $${OTMPDIR} ; $(ECHO) -e "  NoHDF5 test "$(FAILED) && exit 1 )
 
 # Target to test compilation with 64-bit integers
 I64:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	./setup $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
-		( rm -r $${OTMPDIR} runs/chimaera_$${OTMPDIR//obj_/} ; $(ECHO) -e "  I64 test "$(PASSED) ) || \
-		( rm -r $${OTMPDIR} ; $(ECHO) -e "  I64 test "$(FAILED) && exit 1 )
+		( rm -r $${OTMPDIR} runs/chimaera_$${OTMPDIR//obj_/} ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
+		( rm -r $${OTMPDIR} ; $(ECHO) -e "  64-bit integer test "$(FAILED) && exit 1 )
 
 # Target to run IO version 2 restart compatision test
 IOv2:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
-	RUNDIR=runs/advection_test_$${OTMPDIR//obj_/} ;\
-	./setup advection_test -p problem.par.restart_test_v2 -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/IOv2.setup.stdout && \
+	RUNDIR=$(RUNS_DIR)/advection_test_$${OTMPDIR//obj_/} ;\
+	$(SETUP) advection_test -p problem.par.restart_test_v2 -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/IOv2.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(ECHO) -e "run_id = ts1\n  Start:   t = 0.0, nproc = 1" ;\
-			mpiexec -n 1 ./piernik > ts1.out ;\
+			$(MPIEXEC) -n 1 ./piernik > ts1.out ;\
 			$(ECHO) -e "  Restart: t = 1.0, nproc = 1" ;\
-			mpiexec -n 1 ./piernik -n '&END_CONTROL tend = 2.0 /' >> ts1.out ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL tend = 2.0 /' >> ts1.out ;\
 			$(ECHO) -e "  Finish:  t = 2.0\n\nrun_id = ts2\n  Start:   t = 0.0, nproc = 5" ;\
-			mpiexec -n 5 ./piernik -n '&OUTPUT_CONTROL run_id = "ts2" /' > ts2.out ;\
+			$(MPIEXEC) -n 5 ./piernik -n '&OUTPUT_CONTROL run_id = "ts2" /' > ts2.out ;\
 			$(ECHO) -e "  Restart: t = 1.0, nproc = 3" ;\
-			mpiexec -n 3 ./piernik -n '&END_CONTROL tend = 2.0 /' -n '&OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out ;\
+			$(MPIEXEC) -n 3 ./piernik -n '&END_CONTROL tend = 2.0 /' -n '&OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out ;\
 			$(ECHO) -e "  Finish:  t = 2.0" ;\
 		) >> $(ARTIFACTS)/IOv2.setup.stdout && \
 		./bin/gdf_distance $${RUNDIR}/moving_pulse_ts{1,2}_0002.h5 | tee $${RUNDIR}/compare.log >> $(ARTIFACTS)/IOv2.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		( rm -r $${OTMPDIR} $${RUNDIR} ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
-		( rm -r $${OTMPDIR} ; $(ECHO) -e "  IO v2 test "$(FAILED) && exit 1 )
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(FAILED) && exit 1 )
 
 # Target to run all CI artifact tests
 artifact_tests:
 	$(ECHO) -e $(BLUE)"Starting artifact tests ..."$(RESET)
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
-	$(MAKE) -k dep py3 noHDF5 I64 IOv2
+	$(MAKE) -k dep py3 noHDF5 I64 IOv2 || \
+		( $(ECHO) -e $(RED)"Some artifact tests failed."$(RESET)" Details can be found in "$(ARTIFACTS)" directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
 # Function to run a single gold test
@@ -268,7 +286,8 @@ gold_streaming_instability:
 # Target to run all gold tests
 allgold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
-	$(MAKE) -k gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+	$(MAKE) -k gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability || \
+		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."
 
 # This set of tests is meant to be run locally, when Jenkins server is not available or one wants to test things before pushing to the repository.
