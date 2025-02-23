@@ -10,5 +10,6 @@ html/
 dep.png
 *.ignore
 jenkins/workspace/
+jenkins/artifacts/
 doc/latex/
 results/

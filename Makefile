@@ -49,6 +49,7 @@ ARTIFACTS = "./jenkins/artifacts"
 GOLDSPACE = "./jenkins/workspace"
 
 ECHO ?= /bin/echo
+RM ?= /bin/rm
 
 .PHONY: $(ALLOBJ) check dep qa pep8 pycodestyle doxy chk_err_msg gold gold-serial gold-clean CI allgold artifact_tests gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability view_dep py3 noHDF5 I64 IOv2
 
@@ -129,7 +130,7 @@ gold-serial:
 	SERIAL=1 ./jenkins/gold_test_list.sh
 
 gold-clean:
-	\rm -rf $(GOLDSPACE)/* $(ARTIFACTS)
+	$(RM) -rf $(GOLDSPACE)/* $(ARTIFACTS)
 
 doxy:
 	doxygen piernik.doxy
@@ -205,36 +206,29 @@ artifact_tests:
 	$(MAKE) -k dep py3 noHDF5 I64 IOv2
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
+define run_gold_test
+	./jenkins/gold_test.sh ./jenkins/gold_configs/$(1).config > $(GOLDSPACE)/$(1).gold_stdout 2> $(GOLDSPACE)/$(1).gold_stderr && \
+		$(ECHO) -e "  $(1) test "$(PASSED) || \
+		( $(ECHO) -e "  $(1) test "$(FAILED)" (more details in $(GOLDSPACE)/$(1).gold_std*)" && exit 1 )
+endef
+
 gold_CRESP:
-	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_CRESP.config > $(GOLDSPACE)/CRESP.gold_stdout 2> $(GOLDSPACE)/CRESP.gold_stderr && \
-		$(ECHO) -e "  CRESP test "$(PASSED) || \
-		( $(ECHO) -e "  CRESP test "$(FAILED)" (more details in $(GOLDSPACE)/CRESP.gold_std*)" && exit 1 )
-# Fails on Fedora 41
+	$(call run_gold_test,mcrtest_CRESP)
 
 gold_mcrtest:
-	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new.config > $(GOLDSPACE)/mcrtest.gold_stdout 2> $(GOLDSPACE)/mcrtest.gold_stderr && \
-		$(ECHO) -e "  mcrtest "$(PASSED) || \
-		( $(ECHO) -e "  mcrtest "$(FAILED)" (more details in $(GOLDSPACE)/mcrtest.gold_std*)" && exit 1 )
+	$(call run_gold_test,mcrtest_new)
 
 gold_mcrwind:
-	./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind.config > $(GOLDSPACE)/mcrwind.gold_stdout 2> $(GOLDSPACE)/mcrwind.gold_stderr && \
-		$(ECHO) -e "  mcrwind "$(PASSED) || \
-		( $(ECHO) -e "  mcrwind "$(FAILED)" (more details in $(GOLDSPACE)/mcrwind.gold_std*)" && exit 1 )
+	$(call run_gold_test,mcrwind)
 
 gold_MHDsedovAMR:
-	./jenkins/gold_test.sh ./jenkins/gold_configs/MHDsedovAMR.config > $(GOLDSPACE)/MHDsedovAMR.gold_stdout 2> $(GOLDSPACE)/MHDsedovAMR.gold_stderr && \
-		$(ECHO) -e "  MHDsedovAMR test "$(PASSED) || \
-		( $(ECHO) -e "  MHDsedovAMR test "$(FAILED)" (more details in $(GOLDSPACE)/MHDsedovAMR.gold_std*)" && exit 1 )
+	$(call run_gold_test,MHDsedovAMR)
 
 gold_resist:
-	./jenkins/gold_test.sh ./jenkins/gold_configs/resist.config > $(GOLDSPACE)/resist.gold_stdout 2> $(GOLDSPACE)/resist.gold_stderr && \
-		$(ECHO) -e "  Resistivity test "$(PASSED) || \
-		( $(ECHO) -e "  Resistivity test "$(FAILED)" (more details in $(GOLDSPACE)/resist.gold_std*)" && exit 1 )
+	$(call run_gold_test,resist)
 
 gold_streaming_instability:
-	./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability.config > $(GOLDSPACE)/streaming_instability.gold_stdout 2> $(GOLDSPACE)/streaming_instability.gold_stderr && \
-		$(ECHO) -e "  Streaming instability test "$(PASSED) || \
-		( $(ECHO) -e "  Streaming instability test "$(FAILED)" (more details in $(GOLDSPACE)/streaming_instability.gold_std*)" && exit 1 )
+	$(call run_gold_test,streaming_instability)
 
 allgold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
