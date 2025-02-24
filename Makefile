@@ -53,6 +53,8 @@ FAILED = $(RED)failed$(RESET)
 PROBLEMS_DIR = problems
 RUNS_DIR = runs
 SRC_DIR = src
+BIN_DIR = bin
+PYTHON_DIR = python
 JENKINS_DIR = ./jenkins
 ARTIFACTS = "$(JENKINS_DIR)/artifacts"
 GOLDSPACE = "$(JENKINS_DIR)/workspace"
@@ -103,7 +105,7 @@ endif
 
 # Target to recreate ctags
 ctags:
-	ctags -R {src,problems} --fortran-kinds=+iL
+	ctags -R {$(SRC_DIR),$(PROBLEMS_DIR)} --fortran-kinds=+iL
 
 # Target to resetup all object directories
 resetup:
@@ -115,7 +117,7 @@ clean:
 
 # Function to setup a problem (used in allsetup target)
 define setup_problem
-	pnm=$$( echo $(1) | sed 's-^problems/--' ); \
+	pnm=$$( echo $(1) | sed 's-^$(PROBLEMS_DIR)/--' ); \
 	onm=$${pnm//\//___}; \
 	$(SETUP) $$pnm -o "A_"$$onm --nocompile && \
 	for f in .setup.call Makefile env.dat version.F90 ; do \
@@ -126,7 +128,7 @@ endef
 
 # Target to setup all problems (compile them e.g. with "make obj_A_* -j")
 allsetup:
-	( for i in $$( find problems/* -type d ) ; do \
+	( for i in $$( find $(PROBLEMS_DIR)/* -type d ) ; do \
 		if [ ! -e $$i/.skipauto ] ; then \
 			$(call setup_problem,$$i) & \
 			sleep .1; \
@@ -140,7 +142,7 @@ doxy:
 
 # Target to run qa.py checks
 qa:
-	./bin/qa.py -q $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" ) && \
+	$(BIN_DIR)/qa.py -q $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" ) && \
 	echo -e "  qa.py checks "$(PASSED) || \
 	( $(ECHO) -e "  qa.py checks "$(FAILED) && exit 1 )
 
@@ -150,19 +152,19 @@ pep8: pycodestyle
 pycodestyle:
 	TSTNAME="  Pycodestyle check "; \
 	REMARK=" (with --ignore=E501,E722,W504,W605)"; \
-	pycodestyle `git ls-files | grep '\.py$$'` bin/gdf_distance bin/ask_jenkins --ignore=E501,E722,W504,W605 && \
+	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance $(BIN_DIR)/ask_jenkins --ignore=E501,E722,W504,W605 && \
 		$(ECHO) -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
 		( $(ECHO) -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
 # Target to check error messages in the Fortran source files
 chk_err_msg:
-	./bin/checkmessages.sh && \
+	$(BIN_DIR)/checkmessages.sh && \
 		$(ECHO) -e "  Message checks "$(PASSED) || \
 		( $(ECHO) -e "  Message checks "$(FAILED)": incorrect file references found" && exit 1 )
 
 # Target to check consistency of license headers
 chk_lic_hdr:
-	./bin/check_license_headers.sh && \
+	$(BIN_DIR)/check_license_headers.sh && \
 		$(ECHO) -e "  License header checks "$(PASSED) || \
 		( $(ECHO) -e "  License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
 
@@ -196,7 +198,7 @@ dep:
 	GRAPH="dep.png" ;\
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	[ -e $(ARTIFACTS)"/$$GRAPH" ] && rm $(ARTIFACTS)"/$$GRAPH" || true ;\
-	./setup $$PROBLEM -n -o $${OTMPDIR//obj_/} > setup.stdout ;\
+	$(SETUP) $$PROBLEM -n -o $${OTMPDIR//obj_/} > setup.stdout ;\
 	if [ -e $$OTMPDIR ] ; then \
 		mv setup.stdout $$OTMPDIR ;\
 		$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
@@ -217,22 +219,22 @@ view_dep: dep
 # Target to check for Python 3 compatibility of the environment
 py3:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
-	python3 ./python/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
-		( rm -r $${OTMPDIR} runs/maclaurin_$${OTMPDIR//obj_/} ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
+	python3 $(PYTHON_DIR)/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
+		( rm -r $${OTMPDIR} $(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  Python 3 test "$(FAILED) && exit 1 )
 
 # Target to check compilation without HDF5 library
 noHDF5:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
-	./setup crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
-		( rm -r $${OTMPDIR} runs/crtest_$${OTMPDIR//obj_/} ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
+	$(SETUP) crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
+		( rm -r $${OTMPDIR} $(RUNS_DIR)/crtest_$${OTMPDIR//obj_/} ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  NoHDF5 test "$(FAILED) && exit 1 )
 
 # Target to test compilation with 64-bit integers
 I64:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
-	./setup $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
-		( rm -r $${OTMPDIR} runs/chimaera_$${OTMPDIR//obj_/} ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
+	$(SETUP) $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
+		( rm -r $${OTMPDIR} $(RUNS_DIR)/chimaera_$${OTMPDIR//obj_/} ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
 		( rm -r $${OTMPDIR} ; $(ECHO) -e "  64-bit integer test "$(FAILED) && exit 1 )
 
 # Target to run IO version 2 restart compatision test
@@ -250,7 +252,7 @@ IOv2:
 			$(ECHO) -e "  Restart: t = 1.0, nproc = 3" ;\
 			$(MPIEXEC) -n 3 ./piernik -n '&END_CONTROL tend = 2.0 /' -n '&OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out ;\
 			$(ECHO) -e "  Finish:  t = 2.0" ;\
-			../../bin/gdf_distance moving_pulse_ts{1,2}_0002.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance moving_pulse_ts{1,2}_0002.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/IOv2.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
@@ -268,7 +270,7 @@ Jeans:
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs2"/' ;\
-			../../bin/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.4f, period error = %.4f", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
@@ -283,7 +285,7 @@ Maclaurin:
 	$(SETUP) maclaurin -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Maclaurin.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
-			$(PYTHON) ../../python/maclaurin.py ./maclaurin_sph_0000.h5 || exit 1 ;\
+			$(PYTHON) ../../$(PYTHON_DIR)/maclaurin.py ./maclaurin_sph_0000.h5 || exit 1 ;\
 			$(ECHO) "L2 error norm,min. error,max. error" > maclaurin.csv ;\
 			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\),.*= *\([^ ]*\) *\(.*\)$$/\1 , \2 , \3/' >> maclaurin.csv ;\
 		) >> $(ARTIFACTS)/Maclaurin.setup.stdout && \
@@ -299,13 +301,13 @@ Maclaurin:
 	$(SETUP) 2body/3body -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/3body.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
-			../../problems/2body/3body/particle_error.py leapfrog_tst_0001.h5 | tee 3body.csv ;\
+			../../$(PROBLEMS_DIR)/2body/3body/particle_error.py leapfrog_tst_0001.h5 | tee 3body.csv ;\
 			$(RM) *.res ;\
 			$(ECHO) "Performing restart tests" ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs2"/' ;\
-			../../bin/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
