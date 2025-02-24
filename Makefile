@@ -81,8 +81,8 @@ endef
 
 # Define phony targets
 .PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
-    gold gold-serial gold-clean \
-	CI QA artifact_tests allgold \
+    oldgold gold-serial gold-clean \
+	CI QA artifacts gold \
 	qa pep8 pycodestyle chk_err_msg chk_lic_hdr \
 	dep view_dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body \
 	gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
@@ -173,17 +173,17 @@ chk_lic_hdr:
 
 # Sets of tests
 ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body
-GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability
+GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
 QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
 
 # Help target
 help:
 	@$(ECHO) "Testing targets:"
-	@$(ECHO) "  QA             - Run QA checks"
-	@$(ECHO) "  artifact_tests - Run all artifact tests"
-	@$(ECHO) "  allgold        - Run all gold tests"
-	@$(ECHO) "  CI             - Run all CI checks (QA + artifacts + gold)"
-	@$(ECHO) "  help           - Show this help"
+	@$(ECHO) "  QA        - Run all QA checks       ($(QA_TESTS))"
+	@$(ECHO) "  artifacts - Run all artifact tests  ($(ARTIFACT_TESTS))"
+	@$(ECHO) "  gold      - Run all gold tests      ($(GOLD_TESTS))"
+	@$(ECHO) "  CI        - Run all CI checks       (QA artifacts gold)"
+	@$(ECHO) "  help      - Show this help"
 
 # Target to run all QA checks
 QA:
@@ -319,7 +319,7 @@ Maclaurin:
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
 
 # Target to run all CI artifact tests
-artifact_tests:
+artifacts:
 	$(ECHO) -e $(BLUE)"Starting artifact tests ..."$(RESET)
 	[ -e $(ARTIFACTS) ] && rm -rf $(ARTIFACTS) || true
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS)
@@ -328,7 +328,7 @@ artifact_tests:
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
 # Target to run all gold tests (old version)
-gold:
+oldgold:
 	./jenkins/gold_test_list.sh
 
 # Target to run gold tests in serial mode
@@ -376,9 +376,9 @@ custom_gold:
 	done
 
 # Target to run all gold tests
-allgold:
+gold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
-	$(MAKE) -k $(GOLD_TESTS) custom_gold || \
+	$(MAKE) -k $(GOLD_TESTS) || \
 		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."
 
@@ -386,5 +386,5 @@ allgold:
 # It is not meant to replace Jenkins, but to provide a way to run all tests locally.
 # New Jenkins configuration should use them instead of custom scripts.
 CI: QA
-	$(MAKE) -k artifact_tests
-	$(MAKE) -k allgold
+	$(MAKE) -k artifacts
+	$(MAKE) -k gold
