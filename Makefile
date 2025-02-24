@@ -74,6 +74,12 @@ export LC_ALL = C
 SETUP = ./setup
 GOLD_TEST_SCRIPT = $(JENKINS_DIR)/gold_test.sh
 
+
+# Sets of tests
+QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
+ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body
+GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
+
 # Common command sequences
 define cleanup_tmpdir
 	rm -r $${OTMPDIR} $${RUNDIR}
@@ -81,11 +87,8 @@ endef
 
 # Define phony targets
 .PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
-    oldgold gold-serial gold-clean \
-	CI QA artifacts gold \
-	qa pep8 pycodestyle chk_err_msg chk_lic_hdr \
-	dep view_dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body \
-	gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
+	oldgold gold-serial gold-clean pep8 view_dep \
+	CI QA artifacts gold $(QA_TESTS) $(ARTIFACT_TESTS) $(GOLD_TESTS)
 
 # Default target to build all object directories
 all: $(ALLOBJ)
@@ -170,11 +173,6 @@ chk_lic_hdr:
 	$(BIN_DIR)/check_license_headers.sh && \
 		$(ECHO) -e "  License header checks "$(PASSED) || \
 		( $(ECHO) -e "  License header checks "$(FAILED)": exceptional license headers found" && exit 1 )
-
-# Sets of tests
-ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body
-GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
-QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
 
 # Help target
 help:
