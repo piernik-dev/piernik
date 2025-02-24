@@ -198,6 +198,7 @@ endif
 dep:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	PROBLEM=$P ;\
+	RUNDIR="runs/"$$( basename $${PROBLEM} )"_"$${OTMPDIR//obj_/} ;\
 	GRAPH="dep.png" ;\
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	[ -e $(ARTIFACTS)"/$$GRAPH" ] && rm $(ARTIFACTS)"/$$GRAPH" || true ;\
@@ -205,8 +206,7 @@ dep:
 	if [ -e $$OTMPDIR ] ; then \
 		mv setup.stdout $$OTMPDIR ;\
 		$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
-		mv $$OTMPDIR"/"$$GRAPH $(ARTIFACTS)/ &&\
-			rm -r $$OTMPDIR "runs/"$$( basename $${PROBLEM} )"_"$${OTMPDIR//obj_/} ;\
+		mv $$OTMPDIR"/"$$GRAPH $(ARTIFACTS)/ && $(cleanup_tmpdir) ;\
 	fi ;\
 	if [ -e $(ARTIFACTS)"/$$GRAPH" ] ; then \
 		$(ECHO) -e "  Dependency test "$(PASSED)". The graph for the $$PROBLEM problem was stored as $(ARTIFACTS)/$$GRAPH" ;\
@@ -222,23 +222,26 @@ view_dep: dep
 # Target to check for Python 3 compatibility of the environment
 py3:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ;\
 	python3 $(PYTHON_DIR)/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
-		( rm -r $${OTMPDIR} $(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
-		( rm -r $${OTMPDIR} ; $(ECHO) -e "  Python 3 test "$(FAILED) && exit 1 )
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Python 3 test "$(FAILED) && exit 1 )
 
 # Target to check compilation without HDF5 library
 noHDF5:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/crtest_$${OTMPDIR//obj_/} ;\
 	$(SETUP) crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
-		( rm -r $${OTMPDIR} $(RUNS_DIR)/crtest_$${OTMPDIR//obj_/} ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
-		( rm -r $${OTMPDIR} ; $(ECHO) -e "  NoHDF5 test "$(FAILED) && exit 1 )
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  NoHDF5 test "$(FAILED) && exit 1 )
 
 # Target to test compilation with 64-bit integers
 I64:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/chimaera_$${OTMPDIR//obj_/} ;\
 	$(SETUP) $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
-		( rm -r $${OTMPDIR} $(RUNS_DIR)/chimaera_$${OTMPDIR//obj_/} ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
-		( rm -r $${OTMPDIR} ; $(ECHO) -e "  64-bit integer test "$(FAILED) && exit 1 )
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  64-bit integer test "$(FAILED) && exit 1 )
 
 # Target to run IO version 2 restart compatision test
 IOv2:
