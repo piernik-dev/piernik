@@ -66,6 +66,9 @@ RM ?= /bin/rm
 MPIEXEC ?= mpiexec
 DISPLAY ?= display
 PYTHON ?= python3
+SHELL := /bin/bash
+
+export LC_ALL = C
 
 # Test environment
 SETUP = ./setup
