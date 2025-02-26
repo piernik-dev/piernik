@@ -5,9 +5,7 @@ import hashlib
 import subprocess as sp
 import numpy as np
 
-debug = False
-
-typ1 = np.dtype([('name', 'a50'), ('beg', 'i'), ('end', 'i'), ('type', 'a4')])
+typ1 = np.dtype([('name', 'S50'), ('beg', 'i'), ('end', 'i'), ('type', 'S4')])
 
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
 # if function it can have a type next goes subroutine or function or type
@@ -125,7 +123,7 @@ def give_err(s):
 
 
 def parse_f90file(lines, fname, store):
-    if (debug):
+    if (options.debug):
         print("[parse_f90file] fname = ", fname)
     subs_array = np.zeros((0,), dtype=typ1)
 
@@ -144,7 +142,7 @@ def parse_f90file(lines, fname, store):
     for f in subs_names:
         cur_sub = list(filter(re.compile(f).search, subs))
         if (len(cur_sub) > 2):
-            if (debug):
+            if (options.debug):
                 print("[parse_f90file] f, cur_sub = ", f, cur_sub)
             for index in range(0, len(cur_sub)):
                 if just_end.match(cur_sub[index]):
@@ -157,7 +155,7 @@ def parse_f90file(lines, fname, store):
             lines, cur_sub[index]), subs_types.pop())
         subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
 
-    if (debug):
+    if (options.debug):
         print("[parse_f90file] subs = ", subs)
         print("[parse_f90file] subs_names = ", subs_names)
 
@@ -180,7 +178,8 @@ def parse_f90file(lines, fname, store):
 
 
 def qa_checks(files, options):
-    print(b.OKBLUE + '"I am the purifier, the light that clears all shadows."' + ' - seal of cleansing inscription' + b.ENDC)
+    if not options.quiet:
+        print(b.OKBLUE + '"I am the purifier, the light that clears all shadows."' + ' - seal of cleansing inscription' + b.ENDC)
     runpath = sys.argv[0].split("qa.py")[0]
     files = remove_binaries(files)
     # ToDo: check files other than F90
@@ -226,17 +225,17 @@ def qa_checks(files, options):
         interfaces = [line_num(
             pfile, i) for i in filter(test_for_interfaces.search, pfile)]
         while len(interfaces) > 0:
-            if (debug):
+            if (options.debug):
                 print("Removed interface")
             pfile = np.delete(pfile, np.s_[interfaces[0]:interfaces[1] + 1], 0)
             interfaces = [line_num(
                 pfile, i) for i in filter(test_for_interfaces.search, pfile)]
 
         for obj in parse_f90file(pfile, f, warns):
-            if (debug):
+            if (options.debug):
                 print('[qa_checks] obj =', obj)
             part = pfile[obj['beg']:obj['end']]
-            #         if (debug):
+            #         if (options.debug):
             #            for f in part: print f
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
@@ -267,10 +266,14 @@ def qa_checks(files, options):
         for error in errors:
             print(error)
     else:
-        print(b.OKGREEN + "Yay! No errors!!! " + b.ENDC)
+        if not options.quiet:
+            print(b.OKGREEN + "Yay! No errors!!! " + b.ENDC)
 
     if (len(errors) == 0 and len(warns) == 0):
-        print(b.OKGREEN + "No warnings detected. " + b.ENDC + "If everyone were like you, I'd be out of business!")
+        if not options.quiet:
+            print(b.OKGREEN + "No warnings detected. " + b.ENDC + "If everyone were like you, I'd be out of business!")
+    else:
+        exit(1)
 
 
 def qa_have_priv_pub(lines, name, warns, fname):
@@ -396,9 +399,11 @@ if __name__ == "__main__":
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="debug", default=False,
                       help="make lots of noise [default]")
+    parser.add_option("-q", "--quiet",
+                      action="store_true", dest="quiet", default=False,
+                      help="be very quiet")
     (options, args) = parser.parse_args()
 
-    debug = options.debug
     if len(args) < 1:
         parser.error("incorrect number of arguments")
     qa_checks(args, options)

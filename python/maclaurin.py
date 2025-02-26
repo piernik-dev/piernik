@@ -17,7 +17,8 @@ def Maclaurin_test(file):
     except ImportError:
         missing.append("NumPy")
     try:
-        import matplotlib
+        import matplotlib.pyplot as plt
+        from matplotlib.ticker import NullFormatter
     except ImportError:
         missing.append("matplotlib")
 
@@ -25,9 +26,7 @@ def Maclaurin_test(file):
         print("You must install the package(s) ", missing)
         return
 
-    matplotlib.use('cairo')      # choose output format
-    import pylab as P
-    from matplotlib.ticker import NullFormatter
+    # matplotlib.use('cairo')      # choose output format
     # This may sometimes help with font issues
     # from matplotlib import rc
     # rc('text',usetex=True)
@@ -38,7 +37,7 @@ def Maclaurin_test(file):
 
     try:
         h5f = h5.File(file, "r")
-    except:
+    except IOError:
         print("Cannot open '" + file + "' as HDF5")
         return
 
@@ -48,14 +47,14 @@ def Maclaurin_test(file):
 
     fpiG = h5f.attrs['fpiG']
     a = h5f.attrs['a1']
-    x0 = h5f.attrs['x0']
-    y0 = h5f.attrs['y0']
-    z0 = h5f.attrs['z0']
+    x0 = h5f.attrs['x0'][0]
+    y0 = h5f.attrs['y0'][0]
+    z0 = h5f.attrs['z0'][0]
 
     n = 0
     for dname in h5f['data'].keys():
         lev_max = max(0, h5f['data'][dname].attrs['level'])
-        n += int(np.product(h5f['data'][dname].attrs['n_b']))
+        n += int(np.prod(h5f['data'][dname].attrs['n_b']))
 
     nz, ny, nx = h5f['domains/base'].attrs['n_d'] * 2**lev_max
     dx, dy, dz = (xmax - xmin) / nx, (ymax - ymin) / ny, (zmax - zmin) / nz
@@ -71,21 +70,22 @@ def Maclaurin_test(file):
         try:
             soln = h5f['data'][dname]['gpot'][:, :, :]
             phi0_3D = h5f['data'][dname]['apot'][:, :, :]
-        except:
+        except KeyError:
             print("Cannot find apot or gpot arrays")
             return
 
         off = h5f['data'][dname].attrs['off']
-        lev = h5f['data'][dname].attrs['level']
+        lev = h5f['data'][dname].attrs['level'][0]
 
+        sc_fac = 2. ** (lev_max - lev)
         for i in range(0, int(h5f['data'][dname].attrs['n_b'][0])):
-            x2 = (xmin + (off[0] + i + 0.5) * 2**(lev_max - lev) * dx - x0)**2
+            x2 = (xmin + (off[0] + i + 0.5) * sc_fac * dx - x0)**2
 
             for j in range(0, int(h5f['data'][dname].attrs['n_b'][1])):
-                y2 = (ymin + (off[1] + j + 0.5) * 2 ** (lev_max - lev) * dy - y0)**2
+                y2 = (ymin + (off[1] + j + 0.5) * sc_fac * dy - y0)**2
 
                 for k in range(0, int(h5f['data'][dname].attrs['n_b'][2])):
-                    z2 = (zmin + (off[2] + k + 0.5) * 2 ** (lev_max - lev) * dz - z0)**2
+                    z2 = (zmin + (off[2] + k + 0.5) * sc_fac * dz - z0)**2
 
                     r[ind] = np.sqrt(x2 + y2 + z2)
                     phi[ind] = soln[k, j, i]
@@ -114,14 +114,14 @@ def Maclaurin_test(file):
     rect_hi = [left, 0.3, width, 0.65]
     rect_lo = [left, 0.05, width, 0.2]
 
-    P.figure(1, figsize=(8, 8))
+    fig = plt.figure(1, figsize=(8, 8))
 
-    axhi = P.axes(rect_hi)
-    axlo = P.axes(rect_lo)
+    axhi = fig.add_axes(rect_hi)
+    axlo = fig.add_axes(rect_lo)
 
     GM = fpiG / 3.
 
-    axhi.set_title("Maclaurin spheroid $e=0,\; a_1=1,\;\\varrho_0=1$")
+    axhi.set_title("Maclaurin spheroid $e=0, a_1=1, \\varrho_0=1$")
     axhi.plot(new_r[1:-1], mean[1:-1] / GM,
               'g.', new_r[1:-1], phi_0[1:-1] / GM, 'b')
     axhi.xaxis.set_major_formatter(NullFormatter())
@@ -141,9 +141,8 @@ def Maclaurin_test(file):
     axlo.set_xlabel('Radius')
     axlo.set_ylabel('($\\varphi_0 - \\varphi$) / GM')
 
-    # P.show()
-    P.draw()
-    P.savefig('maclaurin.png', facecolor='white')
+    plt.savefig('maclaurin.png', facecolor='white')
+    plt.close(fig)
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ define ECHO_CC
 endef
 endif
 
-CPPFLAGS := $(CPPFLAGS) $(shell $(F90) -c $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_allgatherv_bug.F90 && $(F90) $(LDFLAGS) -o mpi_allgatherv_bug mpi_allgatherv_bug.o $(LIBS) && ./mpi_allgatherv_bug || echo -DFORBID_F08)
+CPPFLAGS := $(CPPFLAGS) $(shell $(F90) -c $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_allgatherv_bug.F90 && $(F90) $(LDFLAGS) -o mpi_allgatherv_bug mpi_allgatherv_bug.o $(LIBS) && mpirun -np 1 ./mpi_allgatherv_bug || echo -DFORBID_F08)
 CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi_f08.F90 2> /dev/null && echo -DMPIF08 || echo -DNO_MPIF08_AVAILABLE)
 CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/mpi.F90 2> /dev/null || echo -DNO_ALL_MPI_FUNCTIONS_AVAILABLE)
 CPPFLAGS := $(CPPFLAGS) $(shell $(F90) $(CPPFLAGS) $(F90FLAGS) ../compilers/tests/F2018.F90 2> /dev/null || echo -DNO_F2018)
