@@ -2,6 +2,7 @@
 import argparse
 import h5py as h5
 import numpy as np
+import math
 import sys
 import logging
 from typing import Dict, List, Tuple
@@ -90,9 +91,13 @@ def compare_domains(h5f1: h5.File, h5f2: h5.File) -> Tuple[float, np.ndarray, np
 
     try:
         dl1, dr1 = h5f1[sp_key].attrs[dle_key], h5f1[sp_key].attrs[dre_key]
+    except KeyError as e:
+        logging.error(f"KeyError: {e} (`{h5f1.filename}`:{sp_key}:{dle_key},{dre_key}).")
+        exit(10)
+    try:
         dl2, dr2 = h5f2[sp_key].attrs[dle_key], h5f2[sp_key].attrs[dre_key]
     except KeyError as e:
-        logging.error(f"KeyError: {e}")
+        logging.error(f"KeyError: {e} (`{h5f2.filename}`:{sp_key}:{dle_key},{dre_key}).")
         exit(10)
 
     # find overlapped area
@@ -118,9 +123,14 @@ def compare_resolution(h5f1: h5.File, h5f2: h5.File) -> float:
     dim_key = "domain_dimensions"
 
     try:
-        res1, res2 = h5f1[sp_key].attrs[dim_key], h5f2[sp_key].attrs[dim_key]
+        res1 = h5f1[sp_key].attrs[dim_key]
     except KeyError as e:
-        logging.error(f"KeyError: {e}")
+        logging.error(f"KeyError: {e} (`{h5f1.filename}`:{sp_key}:{dim_key}).")
+        exit(30)
+    try:
+        res2 = h5f2[sp_key].attrs[dim_key]
+    except KeyError as e:
+        logging.error(f"KeyError: {e} (`{h5f2.filename}`:{sp_key}:{dim_key}).")
         exit(30)
 
     r_norm = 0.
@@ -567,7 +577,12 @@ if __name__ == "__main__":
             print("Files:")
             for i in (1, 2, 3):
                 print("  %d - %s" % (i, sys.argv[i]))
-            print("\n%-*s: %-14s %-14s %-14s" % (longestkey + len("Difference of ") + 1, "distance type (all levels)", " 1-2", " 1-3", " 2-3"))
+            print("Triangle construction:")
+            print("  1: at (0, 0)")
+            print("  2: at ('1-2', 0)")
+            print("  3: at ('x', 'y')")
+            print("\n%-*s: %-14s %-14s %-14s %-14s %-14s" % (longestkey + len("Difference of ") + 1, "distance type (all levels)", " 1-2", " 1-3", " 2-3", " x", " y"))
+            # Of course it is possible to construct tetrahedrons for 4-way comparision
             c_red = '\033[91m'
             c_green = '\033[92m'
             c_reset = '\033[0m'
@@ -594,6 +609,13 @@ if __name__ == "__main__":
                             comment += " Value %g out of [0,1] range!" % nn[i]
                     except (KeyError):
                         line += c_gray + (" %14s" % "N/A") + c_reset
+                if curnorm[0] == 0.:
+                    x = curnorm[1]
+                    y = 0.
+                else:
+                    x = (curnorm[1]**2 - curnorm[0]**2 - curnorm[2]**2) / (2. * curnorm[0])
+                    y = math.sqrt(curnorm[2]**2 - x**2)
+                line += " %s%-14g %-14g" % (c_gray, x, y) + c_reset
                 print(line + comment)
         else:
             print("Cannot compare files `%s', `%s' and `%s'" %
