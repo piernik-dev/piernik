@@ -130,7 +130,7 @@ contains
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use memory_usage,     only: check_mem_usage
-      use named_array_list, only: qna, wna, na_var
+      use named_array_list, only: qna, wna, na_var, na_var_4d
 
       implicit none
 
@@ -187,7 +187,7 @@ contains
       endif
 
       if (present(dim4)) then
-         call wna%add2lst(na_var(name, vit, rm, op, d4, mg))
+         call wna%add2lst(na_var_4d(name, vit, rm, op, d4, mg))
       else
          call qna%add2lst(na_var(name, vit, rm, op, d4, mg))
       endif

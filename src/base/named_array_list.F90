@@ -45,10 +45,10 @@ module named_array_list
    implicit none
 
    private
-   public :: na_var, na_var_list, na_var_list_q, na_var_list_w, qna, wna
+   public :: na_var_4d, na_var, na_var_list, na_var_list_q, na_var_list_w, qna, wna
 
    !> \brief Common properties of 3D and 4D named arrays
-   type :: na_var
+   type, abstract :: na_var_base
       character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
       logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
       integer(kind=4)                            :: restart_mode  !< AT_BACKUP, AT_IGNORE: do not write to restart
@@ -57,31 +57,48 @@ module named_array_list
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
       integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
+   end type na_var_base
+
+   type, extends(na_var_base) :: na_var
+   private
+      type(na_var), allocatable, dimension(:) :: tmp  !< temporary array for list extension
+   contains
+      procedure :: copy_var
+      generic :: assignment(=) => copy_var
    end type na_var
+
+   type, extends(na_var_base) :: na_var_4d
+   private
+      type(na_var_4d), allocatable, dimension(:) :: tmp  !< temporary array for list extension
+   contains
+      procedure :: copy_var_4d
+      generic :: assignment(=) => copy_var_4d
+   end type na_var_4d
 
    !> \brief the generic list of named arrays with supporting routines
    type, abstract :: na_var_list
-      type(na_var), dimension(:), allocatable :: lst
+      class(na_var_base), allocatable, dimension(:) :: lst
    contains
       procedure, private ::  find_ind                            !< Get the index of a named array of given name. Don't die when can't find requested field.
       procedure :: ind                                           !< Get the index of a named array of given name.
       procedure :: exists                                        !< Check if a named array of given name is already registered
       procedure :: print_vars                                    !< Write a summary on registered fields. Can be useful for debugging
-      procedure :: add2lst                                       !< Add a named array properties to the list
       procedure :: get_reslst                                    !< List of fields that are stored in the restart file
    end type na_var_list
-
-   ! types with indices of the most commonly used arrays stored in cg%w and cg%q
 
    !> \brief the most commonly used 3D named array is wa, thus we add a shortcut here
    type, extends(na_var_list) :: na_var_list_q
       integer(kind=4) :: wai = INVALID                           !< auxiliary array : cg%q(qna%wai)
+   contains
+      procedure :: add2lst => add2lst_q                          !< Add a 3D array to the list
    end type na_var_list_q
 
    !> \brief the most commonly used 4D named arrays are u and b, thus we add shortcuts here
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi = INVALID                            !< fluid           : cg%w(wna%fi)
       integer(kind=4) :: bi = INVALID                            !< magnetic field  : cg%w(wna%bi)
+   contains
+      procedure :: add2lst => add2lst_w                          !< Add a 4D array to the list
    end type na_var_list_w
 
    type(na_var_list_q), target :: qna !< list of registered 3D named arrays
@@ -164,43 +181,84 @@ contains
 
 !> \brief Add a named array properties to the list
 
-   subroutine add2lst(this, element)
-
-      use constants,  only: fluid_n, mag_n, wa_n
+   subroutine add2lst_q(this, element)
+      use constants,  only: wa_n
       use dataio_pub, only: die, msg
 
       implicit none
 
-      class(na_var_list), intent(inout) :: this
-      type(na_var),       intent(in)    :: element
-
-      type(na_var), dimension(:), allocatable :: tmp
+      class(na_var_list_q), intent(inout) :: this
+      type(na_var),         intent(in)    :: element
 
       if (this%exists(element%name)) then
-         write(msg, '(3a)')"[named_array_list:add2lst] An array '",trim(element%name),"' was already registered in this list."
+         write(msg, '(3a)')"[named_array_list:add2lst_q] An array '",trim(element%name),"' was already registered in this list."
          call die(msg)
       endif
 
-      if (len_trim(element%name) < 1) call die("[named_array_list:add2lst] empty names not allowed")
+      if (len_trim(element%name) < 1) call die("[named_array_list:add2lst_q] empty names not allowed")
 
       if (.not. allocated(this%lst)) then
-         allocate(this%lst(1))
+         allocate(na_var :: this%lst(1))
+         select type (lst => this%lst)
+            type is (na_var)
+               lst = element
+         end select
       else
-         allocate(tmp(lbound(this%lst(:),dim=1):ubound(this%lst(:), dim=1) + 1))
-         tmp(:ubound(this%lst(:), dim=1)) = this%lst(:)
-         call move_alloc(from=tmp, to=this%lst)
+         block
+            type(na_var), allocatable :: tmp(:)
+            allocate(tmp(ubound(this%lst(:), dim=1) + 1))
+            select type (lst => this%lst)
+               type is (na_var)
+                  tmp(1:ubound(this%lst(:), dim=1)) = lst
+                  tmp(ubound(this%lst(:), dim=1) + 1) = element
+            end select
+            call move_alloc(from=tmp, to=this%lst)
+         end block
       endif
-      this%lst(ubound(this%lst(:), dim=1)) = element
 
-      select type(this)
-         type is (na_var_list_w)
-            if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1, kind=4)
-            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
-         type is (na_var_list_q)
-            if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1, kind=4)
-      end select
+      if (element%name == wa_n) this%wai = ubound(this%lst(:), dim=1, kind=4)
 
-   end subroutine add2lst
+   end subroutine add2lst_q
+
+   subroutine add2lst_w(this, element)
+      use constants,  only: fluid_n, mag_n
+      use dataio_pub, only: die, msg
+
+      implicit none
+
+      class(na_var_list_w), intent(inout) :: this
+      type(na_var_4d),      intent(in)    :: element  !< entry to be added
+
+      if (this%exists(element%name)) then
+         write(msg, '(3a)')"[named_array_list:add2lst_w] An array '",trim(element%name),"' was already registered in this list."
+         call die(msg)
+      endif
+
+      if (len_trim(element%name) < 1) call die("[named_array_list:add2lst_w] empty names not allowed")
+
+      if (.not. allocated(this%lst)) then
+         allocate(na_var_4d :: this%lst(1))
+         select type (lst => this%lst)
+            type is (na_var_4d)
+               lst = element
+         end select
+      else
+         block
+            type(na_var_4d), allocatable :: tmp(:)
+            allocate(tmp(ubound(this%lst(:), dim=1) + 1))
+            select type (lst => this%lst)
+               type is (na_var_4d)
+                  tmp(1:ubound(this%lst(:), dim=1))   = lst
+                  tmp(ubound(this%lst(:), dim=1) + 1) = element
+            end select
+            call move_alloc(from=tmp, to=this%lst)
+         end block
+      endif
+
+      if (element%name == fluid_n) this%fi = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == mag_n)   this%bi = ubound(this%lst(:), dim=1, kind=4)
+
+   end subroutine add2lst_w
 
 !> \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
 
@@ -257,17 +315,49 @@ contains
       endif
 
       do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-         if (this%lst(i)%dim4 == INVALID) then
-            write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong
-         else
-            write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i5)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                    ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
-                 &                                    ", components=", this%lst(i)%dim4
-         endif
+         select type (lst => this%lst)
+            type is (na_var)
+               write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                    &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong
+            type is (na_var_4d)
+               write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i5)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                    &                                    ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
+                    &                                    ", components=", this%lst(i)%dim4
+         end select
          call printinfo(msg, v)
       enddo
 
    end subroutine print_vars
+
+   subroutine copy_var(this, other)
+
+      implicit none
+
+      class(na_var), intent(out) :: this   !< object to be copied to
+      type(na_var),  intent(in)  :: other  !< object to be copied from
+
+      this%name = other%name
+      this%vital = other%vital
+      this%restart_mode = other%restart_mode
+      this%ord_prolong = other%ord_prolong
+      this%dim4 = other%dim4
+      this%multigrid = other%multigrid
+
+   end subroutine copy_var
+
+   subroutine copy_var_4d(this, other)
+
+      implicit none
+
+      class(na_var_4d), intent(out) :: this   !< object to be copied to
+      type(na_var_4d),  intent(in)  :: other  !< object to be copied from
+
+      this%name = other%name
+      this%vital = other%vital
+      this%restart_mode = other%restart_mode
+      this%ord_prolong = other%ord_prolong
+      this%dim4 = other%dim4
+      this%multigrid = other%multigrid
+   end subroutine copy_var_4d
 
 end module named_array_list
