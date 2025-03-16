@@ -288,7 +288,6 @@ contains
 
       integer :: i, j
       character(len=dsetnamelen) :: rname
-      integer(kind=4), dimension(:), allocatable, target :: pos_copy
 
       if (.not. associated(na_lists(1)%p)) na_lists(1)%p => qna
       if (.not. associated(na_lists(2)%p)) na_lists(2)%p => wna
@@ -304,14 +303,11 @@ contains
                         write(msg,'(3a)')"[timestep_retry:restart_arrays] creating backup field '", rname, "'"
                         call printinfo(msg, V_VERBOSE)
                      endif
-                     allocate(pos_copy(size(na%lst(i)%position)))
-                     pos_copy = na%lst(i)%position
                      if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
+                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
                      else
-                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
+                        call all_cg%reg_var(rname,                      multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
                      endif
-                     deallocate(pos_copy)
                   endif
                endif
             enddo

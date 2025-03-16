@@ -34,7 +34,7 @@
 !!
 !! \todo Add array of names attributed to 4D array components and make it available for data dumps
 !! \todo Split this type into generic part, 3D part and 4D part.
-!!       Name and position of the 3D named arrays should be scalar, for 4D arrays should be 1D vectors,
+!!       Name of the 3D named arrays should be scalar, for 4D arrays should be 1D vectors,
 !!       dim4 should occur only in 4D type
 !<
 
@@ -54,9 +54,7 @@ module named_array_list
       integer(kind=4)                            :: restart_mode  !< AT_BACKUP, AT_IGNORE: do not write to restart
                                                                   !< AT_NO_B write without ext. boundaries
                                                                   !< AT_OUT_B write with ext. boundaries
-                                                                  !< \todo position /= VAR_CENTER should automatically force AT_OUT_B if AT_IGNORE was not chosen
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
       integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var
@@ -177,7 +175,6 @@ contains
       type(na_var),       intent(in)    :: element
 
       type(na_var), dimension(:), allocatable :: tmp
-      integer :: i
 
       if (this%exists(element%name)) then
          write(msg, '(3a)')"[named_array_list:add2lst] An array '",trim(element%name),"' was already registered in this list."
@@ -191,10 +188,6 @@ contains
       else
          allocate(tmp(lbound(this%lst(:),dim=1):ubound(this%lst(:), dim=1) + 1))
          tmp(:ubound(this%lst(:), dim=1)) = this%lst(:)
-         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
-         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-            if (allocated(this%lst(i)%position)) deallocate(this%lst(i)%position)
-         enddo
          call move_alloc(from=tmp, to=this%lst)
       endif
       this%lst(ubound(this%lst(:), dim=1)) = element
@@ -265,22 +258,12 @@ contains
 
       do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
          if (this%lst(i)%dim4 == INVALID) then
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", position=", this%lst(i)%position(:)
+            write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                 &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong
          else
-            write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i3,a)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+            write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i5)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
                  &                                    ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
-                 &                                    ", components=", this%lst(i)%dim4, ", position="
-            if (any(this%lst(i)%position /= 0)) then
-               ! theoretically we can print even about (len(msg) - len_trim(msg))/2 ~= 452 entries for position
-               if (size(this%lst(i)%position) <= 400) then  ! hardcoded integer here and in the formats below
-                  write(msg(len_trim(msg)+1:), '(400i2)') this%lst(i)%position(:)
-               else
-                  write(msg(len_trim(msg)+1:), '(400i2,a)') this%lst(i)%position(:400), " ... ??? ..."
-               endif
-            else
-               write(msg(len_trim(msg)+1:), '(a,i4,a)') "[ ", size(this%lst(i)%position), " * 0 ]"
-            endif
+                 &                                    ", components=", this%lst(i)%dim4
          endif
          call printinfo(msg, v)
       enddo

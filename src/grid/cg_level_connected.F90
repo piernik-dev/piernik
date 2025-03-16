@@ -478,7 +478,7 @@ contains
       logical :: found_flux
       integer, parameter :: initial_size = 16 ! for seglist
       real, parameter :: grow_ratio = 2.      ! for seglist
-      integer(kind=4) :: isl                          ! current position in seglist
+      integer(kind=4) :: isl                  ! current position in seglist
 
       if (.not. this%need_vb_update) return
 
@@ -906,7 +906,7 @@ contains
                      call this%finer%wq_copy(i, iw, qna%wai)
                      if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%mul_by_r(qna%wai)
                   endif
-                  call this%prolong_1var(qna%wai, wna%lst(i)%position(iw), bnd_type = bnd_type)
+                  call this%prolong_1var(qna%wai, bnd_type = bnd_type)
                   if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%div_by_r(qna%wai) ! angular momentum conservation
                   call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
                enddo
@@ -932,15 +932,14 @@ contains
 !! \todo implement local copies without MPI
 !<
 
-   subroutine prolong_1var(this, iv, pos, bnd_type, dim4)
+   subroutine prolong_1var(this, iv, bnd_type, dim4)
 
       use cg_cost_data,     only: I_REFINE
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_ZERO, VAR_CENTER, ndims, PPP_AMR  !, dirtyH1
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, ndims, PPP_AMR  !, dirtyH1
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c, c2f
-      use mpisetup,         only: master
       use named_array_list, only: qna, wna
       use ppp,              only: ppp_main
       use pppmpi,           only: req_ppp
@@ -949,7 +948,6 @@ contains
 
       class(cg_level_connected_t), target, intent(inout) :: this     !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv       !< variable to be prolonged
-      integer(kind=4), optional,           intent(in)    :: pos      !< position of the variable within cell
       integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
       logical, optional,                   intent(in)    :: dim4     !< operate on wna instead
 
@@ -962,8 +960,6 @@ contains
       type(grid_container),     pointer            :: cg        !< current grid container
       real, dimension(:,:,:),   pointer            :: p3d
       real, dimension(:,:,:,:), pointer            :: p4d
-      logical, save                                :: warned = .false.
-      integer                                      :: position
       integer(kind=8), dimension(ndims, LO:HI)     :: box_8     !< temporary storage
       character(len=*), parameter                  :: pq1_label = "prolong_1v"
       logical                                      :: d4
@@ -972,17 +968,6 @@ contains
       if (present(dim4)) d4 = dim4
 
       call ppp_main%start(pq1_label, PPP_AMR)
-
-      if (d4) then
-         position = wna%lst(iv)%position(I_ONE)
-      else
-         position = qna%lst(iv)%position(I_ONE)
-      endif
-      if (present(pos)) position = pos
-      if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:prolong_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
-         warned = .true.
-      endif
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
@@ -1492,24 +1477,22 @@ contains
 !! \todo implement local copies without MPI anyway
 !<
 
-   subroutine restrict_1var(this, iv, pos, dim4)
+   subroutine restrict_1var(this, iv, dim4)
 
       use cg_cost_data,     only: I_REFINE
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, refinement_factor, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use mpisetup,         only: master
       use named_array,      only: p3, p4
-      use named_array_list, only: qna, wna
+      use named_array_list, only: wna
       use pppmpi,           only: req_ppp
 
       implicit none
 
       class(cg_level_connected_t), target, intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv    !< variable to be restricted
-      integer(kind=4), optional,           intent(in)    :: pos   !< position of the variable within cell
       logical, optional,                   intent(in)    :: dim4  !< operate on wna instead
 
       type(cg_level_connected_t), pointer          :: coarse
@@ -1521,21 +1504,10 @@ contains
       real                                         :: norm
       type(cg_list_element), pointer               :: cgl
       type(grid_container),  pointer               :: cg                    !< current grid container
-      logical, save                                :: warned = .false.
-      integer                                      :: position
       logical                                      :: d4
 
       d4 = .false.
       if (present(dim4)) d4 = dim4
-
-      position = qna%lst(iv)%position(I_ONE)
-      if (present(pos)) position = pos
-      if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:restrict_1var] Only cell-centered interpolation scheme is implemented. Expect inaccurate results for variables that are placed on faces or corners")
-         warned = .true.
-      endif
-
-      ! ToDo warn about positions when d4
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
@@ -1778,7 +1750,7 @@ contains
             call this%coarser%wq_copy(i, iw, qna%wai)
 
             if (any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai) ! angular momentum conservation
-            call this%restrict_1var(qna%wai, wna%lst(i)%position(iw))
+            call this%restrict_1var(qna%wai)
 
             if (any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
             call this%coarser%qw_copy(qna%wai, i, iw)

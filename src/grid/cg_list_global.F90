@@ -187,9 +187,9 @@ contains
       endif
 
       if (present(dim4)) then
-         call wna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call wna%add2lst(na_var(name, vit, rm, op, d4, mg))
       else
-         call qna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call qna%add2lst(na_var(name, vit, rm, op, d4, mg))
       endif
 
       select case (op)
