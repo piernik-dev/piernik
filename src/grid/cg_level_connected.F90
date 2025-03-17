@@ -899,7 +899,7 @@ contains
             if (dom%geometry_type == GEO_RPZ .and. i == wna%fi) then  ! take the slow way
                qna%lst(qna%wai)%ord_prolong = 0 !> \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
                if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
-               do iw = 1, wna%lst(i)%dim4
+               do iw = 1, wna%get_dim4(i)
                   call this%wq_copy(i, iw, qna%wai)
                   if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
                   if (.true.) then  !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
@@ -990,7 +990,7 @@ contains
          endif
       endif
       if (d4) then
-         do iw = 1, wna%lst(iv)%dim4
+         do iw = 1, wna%get_dim4(iv)
             call this%check_dirty(iv, "prolong-", subfield=iw)
          enddo
       else
@@ -1008,7 +1008,7 @@ contains
          if (allocated(cg%pi_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                if (d4) then
-                  allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+                  allocate(seg(g)%buf4(wna%get_dim4(iv), size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                   call seg(g)%recv_buf4(req)
                else
                   call seg(g)%recv_buf(req)
@@ -1032,7 +1032,7 @@ contains
 
             cse = seg(g)%se
             if (d4) then
-               allocate(seg(g)%buf4(wna%lst(iv)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+               allocate(seg(g)%buf4(wna%get_dim4(iv), size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                p4d => cg%w(iv)%span(cse)
                seg(g)%buf4(:, :, :, :) = p4d
                call seg(g)%send_buf4(req)
@@ -1064,7 +1064,7 @@ contains
 
             if (d4) then
                qna%lst(qna%wai)%ord_prolong = 0  !> QUIRKY \todo implement high order conservative prolongation and use wna%lst(i)%ord_prolong here
-               do iw = 1, wna%lst(iv)%dim4
+               do iw = 1, wna%get_dim4(iv)
                   do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
 
                      associate (csep => cg%pi_tgt%seg(g)%se)
@@ -1100,7 +1100,7 @@ contains
       call ppp_main%stop(pq1_label, PPP_AMR)
 
       if (d4) then
-         do iw = 1, wna%lst(iv)%dim4
+         do iw = 1, wna%get_dim4(iv)
             call fine%check_dirty(iv, "prolong_w+", subfield=iw)
          enddo
       else
@@ -1219,7 +1219,7 @@ contains
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                if (present(arr4d)) then
                   if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pib buf4")
-                  allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+                  allocate(seg(g)%buf4(wna%get_dim4(ind), size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                   call seg(g)%recv_buf4(req)
                else
                   call seg(g)%recv_buf(req)
@@ -1247,7 +1247,7 @@ contains
 
                if (present(arr4d)) then
                   if (allocated(seg(g)%buf4)) call die("[cg_level_connected:prolong_bnd_from_coarser] allocated pob buf4")
-                  allocate(seg(g)%buf4(wna%lst(ind)%dim4, size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
+                  allocate(seg(g)%buf4(wna%get_dim4(ind), size(seg(g)%buf, dim=1), size(seg(g)%buf, dim=2), size(seg(g)%buf, dim=3)))
                   seg(g)%buf4(:, :, :, :) = cgl%cg%w(ind)%arr(:, cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
                   call seg(g)%send_buf4(req)
                else
@@ -1297,7 +1297,7 @@ contains
 
                   if (present(arr4d)) then
                      qna%lst(qna%wai)%ord_prolong = wna%lst(ind)%ord_prolong  ! QUIRKY
-                     do iw = 1, wna%lst(ind)%dim4
+                     do iw = 1, wna%get_dim4(ind)
                         cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf4(iw, :, :, :)
                         call cg%prolong(qna%wai, seg(g)%se, p_xyz=.true.)  ! prolong rank-4 to auxiliary array cg%prolong_xyz.
                         ! qna%wai is required only for indirect determination of prolongation order (TOO QUIRKY)
@@ -1530,7 +1530,7 @@ contains
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                associate (seg => cg%ri_tgt%seg(g))
                   if (d4) then
-                     allocate(seg%buf4(wna%lst(iv)%dim4, size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
+                     allocate(seg%buf4(wna%get_dim4(iv), size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
                      call seg%recv_buf4(req)
                   else
                      call seg%recv_buf(req)
@@ -1554,7 +1554,7 @@ contains
 
             associate (seg => cg%ro_tgt%seg(g))
                if (d4) then
-                  allocate(seg%buf4(wna%lst(iv)%dim4, size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
+                  allocate(seg%buf4(wna%get_dim4(iv), size(seg%buf, dim=1), size(seg%buf, dim=2), size(seg%buf, dim=3)))
                   seg%buf4(:, :, :, :) = 0.
                else
                   seg%buf(:, :, :) = 0.
@@ -1658,7 +1658,7 @@ contains
 
             ! disables check_dirty
             if (d4) then
-               do g = 1, wna%lst(iv)%dim4
+               do g = 1, wna%get_dim4(iv)
                   where (.not. cg%leafmap(:,:,:)) cg%w(iv)%arr(g, RNG) = 0.
                enddo
             else
@@ -1743,7 +1743,7 @@ contains
             call warn("[cg_level_connected:restrict_w_1var] Using the slow w-q-w copy algorithm")
             warned = .true.
          endif
-         do iw = 1, wna%lst(i)%dim4
+         do iw = 1, wna%get_dim4(i)
             call this%wq_copy(i, iw, qna%wai)
             if (any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
             ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below

@@ -34,8 +34,7 @@
 !!
 !! \todo Add array of names attributed to 4D array components and make it available for data dumps
 !! \todo Split this type into generic part, 3D part and 4D part.
-!!       Name of the 3D named arrays should be scalar, for 4D arrays should be 1D vectors,
-!!       dim4 should occur only in 4D type
+!!       Name of the 3D named arrays should be scalar, for 4D arrays should be 1D vectors.
 !<
 
 module named_array_list
@@ -55,7 +54,6 @@ module named_array_list
                                                                   !< AT_NO_B write without ext. boundaries
                                                                   !< AT_OUT_B write with ext. boundaries
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var_base
 
@@ -68,8 +66,8 @@ module named_array_list
    end type na_var
 
    type, extends(na_var_base) :: na_var_4d
-   private
-      type(na_var_4d), allocatable, dimension(:) :: tmp  !< temporary array for list extension
+      integer(kind=4)                                     :: dim4  !< should be >0 for 4D arrays
+      type(na_var_4d), allocatable, dimension(:), private :: tmp   !< temporary array for list extension
    contains
       procedure :: copy_var_4d
       generic :: assignment(=) => copy_var_4d
@@ -99,6 +97,7 @@ module named_array_list
       integer(kind=4) :: bi = INVALID                            !< magnetic field  : cg%w(wna%bi)
    contains
       procedure :: add2lst => add2lst_w                          !< Add a 4D array to the list
+      procedure :: get_dim4                                      !< Get dim4 value for given array index
    end type na_var_list_w
 
    type(na_var_list_q), target :: qna !< list of registered 3D named arrays
@@ -265,18 +264,18 @@ contains
    subroutine get_reslst(this, lst)
 
       use constants, only: AT_IGNORE
-      use func,      only: append_int_to_array
+      use func,      only: append_int4_to_array
 
       implicit none
 
-      class(na_var_list),                 intent(in)  :: this
-      integer, dimension(:), allocatable, intent(out) :: lst
+      class(na_var_list),                         intent(in)  :: this
+      integer(kind=4), dimension(:), allocatable, intent(out) :: lst
 
-      integer :: i
+      integer(kind=4) :: i
 
       allocate(lst(0))  ! we rely on its existence
-      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-         if (this%lst(i)%restart_mode > AT_IGNORE) call append_int_to_array(lst, i)
+      do i = lbound(this%lst(:), dim=1, kind=4), ubound(this%lst(:), dim=1, kind=4)
+         if (this%lst(i)%restart_mode > AT_IGNORE) call append_int4_to_array(lst, i)
       enddo
 
    end subroutine get_reslst
@@ -285,8 +284,8 @@ contains
 
    subroutine print_vars(this, verbosity)
 
-      use constants,  only: INVALID, V_LOG
-      use dataio_pub, only: printinfo, warn, msg
+      use constants,  only: V_LOG
+      use dataio_pub, only: printinfo, msg, die
       use mpisetup,   only: slave
 
       implicit none
@@ -294,7 +293,7 @@ contains
       class(na_var_list),        intent(in) :: this
       integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
 
-      integer :: i, d3
+      integer :: i
       integer(kind=4) :: v
 
       v = V_LOG
@@ -302,17 +301,15 @@ contains
 
       if (slave) return
 
-      d3 = count(this%lst(:)%dim4 == INVALID)
-
-      if (d3 /= 0) then
-         write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-         call printinfo(msg, v)
-      endif
-      if (count(this%lst(:)%dim4 /= INVALID) /= 0) then
-         write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-         call printinfo(msg, v)
-         if (d3 /=0) call warn("[named_array_list:print_vars] Both rank-3 and rank-4 named arrays are present in the same list!")
-      endif
+      select type (this)
+         type is (na_var_list_q)
+            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
+         type is (na_var_list_w)
+            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
+         class default
+            call die("[named_array_list:print_vars] Unknown type of named array list")
+      end select
+      call printinfo(msg, v)
 
       do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
          select type (lst => this%lst)
@@ -322,7 +319,7 @@ contains
             type is (na_var_4d)
                write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i5)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
                     &                                    ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
-                    &                                    ", components=", this%lst(i)%dim4
+                    &                                    ", components=", lst(i)%dim4
          end select
          call printinfo(msg, v)
       enddo
@@ -340,7 +337,6 @@ contains
       this%vital = other%vital
       this%restart_mode = other%restart_mode
       this%ord_prolong = other%ord_prolong
-      this%dim4 = other%dim4
       this%multigrid = other%multigrid
 
    end subroutine copy_var
@@ -358,6 +354,27 @@ contains
       this%ord_prolong = other%ord_prolong
       this%dim4 = other%dim4
       this%multigrid = other%multigrid
+
    end subroutine copy_var_4d
+
+   pure function get_dim4(this, iv) result(d4)
+
+      use constants,  only: INVALID
+
+      implicit none
+
+      class(na_var_list_w), intent(in) :: this
+      integer(kind=4),      intent(in) :: iv
+
+      integer(kind=4) :: d4
+
+      select type (lst => this%lst)
+         type is (na_var_4d)
+            d4 = lst(iv)%dim4
+         class default
+            d4 = INVALID
+      end select
+
+   end function get_dim4
 
 end module named_array_list

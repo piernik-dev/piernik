@@ -187,9 +187,9 @@ contains
       endif
 
       if (present(dim4)) then
-         call wna%add2lst(na_var_4d(name, vit, rm, op, d4, mg))
+         call wna%add2lst(na_var_4d(name, vit, rm, op, mg, dim4=d4))
       else
-         call qna%add2lst(na_var(name, vit, rm, op, d4, mg))
+         call qna%add2lst(na_var(name, vit, rm, op, mg))
       endif
 
       select case (op)
@@ -279,7 +279,7 @@ contains
 
    subroutine check_na(this)
 
-      use constants,        only: INVALID, base_level_id
+      use constants,        only: base_level_id
       use dataio_pub,       only: msg, die
       use cg_list,          only: cg_list_element
       use named_array_list, only: qna, wna
@@ -288,7 +288,7 @@ contains
 
       class(cg_list_global_t), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer                             :: i
+      integer(kind=4)                     :: i
       type(cg_list_element), pointer      :: cgl
       logical                             :: bad
 
@@ -303,11 +303,7 @@ contains
                   write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(qna) /= size(cgl%cg%q)",size(qna%lst(:))," /= ",size(cgl%cg%q)
                   call die(msg)
                else
-                  do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-                     if (qna%lst(i)%dim4 /= INVALID) then
-                        write(msg,'(3a,i10)')"[cg_list_global:check_na] qna%lst(",i,"_, named '",qna%lst(i)%name,"' has dim4 set to ",qna%lst(i)%dim4
-                        call die(msg)
-                     endif
+                  do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
                      if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%l%id < base_level_id .and. .not. qna%lst(i)%multigrid) then
                         write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",qna%lst(i)%name,"' allocated on coarse level"
                         call die(msg)
@@ -323,12 +319,12 @@ contains
                   write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(wna) /= size(cgl%cg%w)",size(wna%lst(:))," /= ",size(cgl%cg%w)
                   call die(msg)
                else
-                  do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+                  do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
                      bad = .false.
-                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%l%id >= base_level_id
-                     if (wna%lst(i)%dim4 <= 0 .or. bad) then
+                     if (associated(cgl%cg%w(i)%arr)) bad = wna%get_dim4(i) /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%l%id >= base_level_id
+                     if (wna%get_dim4(i) <= 0 .or. bad) then
                         write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] wna%lst(",i,"_ named '",wna%lst(i)%name,"' has inconsistent dim4: ",&
-                             &         wna%lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
+                             &         wna%get_dim4(i)," /= ",size(cgl%cg%w(i)%arr, dim=1)
                         call die(msg)
                      endif
                      if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%l%id < base_level_id) then
