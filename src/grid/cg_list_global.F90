@@ -258,10 +258,12 @@ contains
       call this%reg_var(wa_n, multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
+      call set_fluid_names
 
 #ifdef MAGNETIC
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+      call set_magnetic_names
 
       if (cc_mag) then
          call this%reg_var(psi_n,  vital = .true., ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! an array for div B cleaning
@@ -272,6 +274,63 @@ contains
 #ifdef ISO
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 #endif /* ISO */
+
+   contains
+
+      subroutine set_fluid_names
+
+         use fluidindex,       only: flind
+         use fluids_pub,       only: has_dst, has_ion, has_neu
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               if (has_ion) then
+                  call lst(wna%fi)%set_compname(flind%ion%idn, "deni")
+                  call lst(wna%fi)%set_compname(flind%ion%imx, "momxi")
+                  call lst(wna%fi)%set_compname(flind%ion%imy, "momyi")
+                  call lst(wna%fi)%set_compname(flind%ion%imz, "momzi")
+                  if (flind%ion%has_energy) call lst(wna%fi)%set_compname(flind%ion%ien, "enei")
+               endif
+
+               if (has_neu) then
+                  call lst(wna%fi)%set_compname(flind%neu%idn, "denn")
+                  call lst(wna%fi)%set_compname(flind%neu%imx, "momxn")
+                  call lst(wna%fi)%set_compname(flind%neu%imy, "momyn")
+                  call lst(wna%fi)%set_compname(flind%neu%imz, "momzn")
+                  if (flind%neu%has_energy) call lst(wna%fi)%set_compname(flind%neu%ien, "enen")
+               endif
+
+               if (has_dst) then
+                  call lst(wna%fi)%set_compname(flind%dst%idn, "dend")
+                  call lst(wna%fi)%set_compname(flind%dst%imx, "momxd")
+                  call lst(wna%fi)%set_compname(flind%dst%imy, "momyd")
+                  call lst(wna%fi)%set_compname(flind%dst%imz, "momzd")
+               endif
+         end select
+
+      end subroutine set_fluid_names
+
+#ifdef MAGNETIC
+      subroutine set_magnetic_names
+
+         use constants,        only: xdim, ydim, zdim
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+
+               call lst(wna%bi)%set_compname(xdim, "magx")
+               call lst(wna%bi)%set_compname(ydim, "magy")
+               call lst(wna%bi)%set_compname(zdim, "magz")
+         end select
+
+      end subroutine set_magnetic_names
+#endif /* MAGNETIC */
 
    end subroutine register_fluids
 

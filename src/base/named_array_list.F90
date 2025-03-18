@@ -31,10 +31,6 @@
 !!
 !! \details The qna(:) and wna(:) lists contain only descriptions of registers named arrays.
 !! Named arrays themselves are defined in "named_array" module.
-!!
-!! \todo Add array of names attributed to 4D array components and make it available for data dumps
-!! \todo Split this type into generic part, 3D part and 4D part.
-!!       Name of the 3D named arrays should be scalar, for 4D arrays should be 1D vectors.
 !<
 
 module named_array_list
@@ -66,9 +62,12 @@ module named_array_list
    end type na_var
 
    type, extends(na_var_base) :: na_var_4d
-      integer(kind=4)                                     :: dim4  !< should be >0 for 4D arrays
-      type(na_var_4d), allocatable, dimension(:), private :: tmp   !< temporary array for list extension
+      integer(kind=4)                                       :: dim4      !< should be >0 for 4D arrays
+      character(len=dsetnamelen), allocatable, dimension(:) :: compname  !< names of components of 4D array
+      type(na_var_4d),   private, allocatable, dimension(:) :: tmp       !< temporary array for list extension
    contains
+      procedure :: get_compname                                  !< Get name of the 4D array component
+      procedure :: set_compname                                  !< Set names of the 4D array components
       procedure :: copy_var_4d
       generic :: assignment(=) => copy_var_4d
    end type na_var_4d
@@ -133,6 +132,11 @@ contains
                rind = i
             endif
          enddo
+      endif
+
+      if (len_trim(name) > dsetnamelen) then
+         write(msg, '(3a)') "[named_array_list:find_ind] name too long: '", trim(name),"'"
+         call die(msg)
       endif
 
    end function find_ind
@@ -254,8 +258,17 @@ contains
          end block
       endif
 
+      select type (lst => this%lst)
+         type is (na_var_4d)
+            if (allocated(lst(ubound(lst(:), dim=1))%compname)) deallocate(lst(ubound(lst(:), dim=1))%compname)
+      end select
       if (element%name == fluid_n) this%fi = ubound(this%lst(:), dim=1, kind=4)
       if (element%name == mag_n)   this%bi = ubound(this%lst(:), dim=1, kind=4)
+
+      if (element%dim4 <= 0) then
+         write(msg,'(3a,i0)')"[named_array_list:add2lst_w] Invalid dim4 for array '", trim(element%name), "': ", element%dim4
+         call die(msg)
+      endif
 
    end subroutine add2lst_w
 
@@ -293,7 +306,8 @@ contains
       class(na_var_list),        intent(in) :: this
       integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
 
-      integer :: i
+      integer :: i, j
+      integer, parameter :: comp_name_line_len = 120
       integer(kind=4) :: v
 
       v = V_LOG
@@ -322,6 +336,21 @@ contains
                     &                                    ", components=", lst(i)%dim4
          end select
          call printinfo(msg, v)
+
+         select type (lst => this%lst)
+            type is (na_var_4d)
+               if (allocated(lst(i)%compname)) then
+                  msg = "  component names:"
+                  do j = lbound(lst(i)%compname(:), dim=1), ubound(lst(i)%compname(:), dim=1)
+                     if (len_trim(msg) + len_trim(lst(i)%compname(j)) + 3 > comp_name_line_len) then
+                        call printinfo(msg, v)
+                        msg = " "
+                     endif
+                     write(msg,'(2a)') trim(msg), " '" // trim(lst(i)%get_compname(j)) // "'"
+                  enddo
+                  if (len_trim(msg) > 0) call printinfo(msg, v)
+               endif
+         end select
       enddo
 
    end subroutine print_vars
@@ -343,10 +372,14 @@ contains
 
    subroutine copy_var_4d(this, other)
 
+      use dataio_pub, only: die
+
       implicit none
 
       class(na_var_4d), intent(out) :: this   !< object to be copied to
       type(na_var_4d),  intent(in)  :: other  !< object to be copied from
+
+      integer :: i
 
       this%name = other%name
       this%vital = other%vital
@@ -355,11 +388,26 @@ contains
       this%dim4 = other%dim4
       this%multigrid = other%multigrid
 
+      if (allocated(this%compname)) deallocate(this%compname)
+
+      if (allocated(other%compname)) then
+         allocate(character(len=dsetnamelen) :: this%compname(other%dim4))
+         this%compname = other%compname
+      else
+         allocate(character(len=dsetnamelen) :: this%compname(other%dim4))
+         do i = lbound(this%compname(:), dim=1), ubound(this%compname(:), dim=1)
+            this%compname(i) = ""
+         enddo
+      endif
+
+      if (other%dim4 <= 0) call die("[named_array_list:copy_var_4d] Invalid dim4")
+
    end subroutine copy_var_4d
 
-   pure function get_dim4(this, iv) result(d4)
+   impure function get_dim4(this, iv) result(d4)
 
       use constants,  only: INVALID
+      use dataio_pub, only: die
 
       implicit none
 
@@ -367,6 +415,9 @@ contains
       integer(kind=4),      intent(in) :: iv
 
       integer(kind=4) :: d4
+
+      if (iv < lbound(this%lst(:), dim=1) .or. iv > ubound(this%lst(:), dim=1)) &
+         call die("[named_array_list:get_dim4] Invalid index")
 
       select type (lst => this%lst)
          type is (na_var_4d)
@@ -376,5 +427,62 @@ contains
       end select
 
    end function get_dim4
+
+   impure function get_compname(this, iw) result(name)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(na_var_4d), intent(in) :: this
+      integer,          intent(in) :: iw
+
+      character(len=dsetnamelen) :: name, fmt
+      integer :: num_digits
+
+      if (iw < 1 .or. iw > this%dim4) &
+         call die("[named_array_list:get_compname] Invalid component index")
+
+      write(fmt, '(i2)') this%dim4
+      num_digits = len_trim(adjustl(fmt))
+      write(fmt, '("(a,i",i1,".",i1,")")') num_digits, num_digits
+
+      if (allocated(this%compname)) then
+         if (len_trim(this%compname(iw)) > 0) then
+            name = this%compname(iw)
+         else
+            write(name, fmt) trim(this%name) // "_", iw
+         endif
+      else
+         write(name, fmt) trim(this%name) // "_", iw
+      endif
+
+   end function get_compname
+
+   subroutine set_compname(this, iw, compname)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(na_var_4d), intent(inout) :: this
+      integer(kind=4),  intent(in)    :: iw
+      character(len=*), intent(in)    :: compname
+
+      integer :: i
+
+      if (iw < 1 .or. iw > this%dim4) &
+         call die("[named_array_list:set_compname] Invalid component index")
+
+      if (.not. allocated(this%compname)) then
+         allocate(character(len=dsetnamelen) :: this%compname(this%dim4))
+         do i = lbound(this%compname(:), dim=1), ubound(this%compname(:), dim=1)
+            this%compname(i) = ""
+         enddo
+      endif
+
+      this%compname(iw) = compname
+
+   end subroutine set_compname
 
 end module named_array_list

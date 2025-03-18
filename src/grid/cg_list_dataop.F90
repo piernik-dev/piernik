@@ -812,7 +812,8 @@ contains
 
       if (present(subfield)) then
          if (iv < lbound(wna%lst, dim=1) .or. iv > ubound(wna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid w-variable index.")
-         if (subfield < 1 .or. subfield > wna%get_dim4(iv)) call die("[cg_list_dataop:check_dirty] Invalid w-variable component.")
+         if (subfield < 1) call die("[cg_list_dataop:check_dirty] w-variable component < 1.")
+         if (subfield > wna%get_dim4(iv)) call die("[cg_list_dataop:check_dirty] w-variable component too big.")
       else
          if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid q-variable index.")
       endif
