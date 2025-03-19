@@ -9,7 +9,7 @@ LDFLAGS   = -Wl,--as-needed -Wl,-O1
 
 F90FLAGS += -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -fmodule-private
-F90FLAGS += -fbacktrace -ggdb -frecursive
+F90FLAGS += -fbacktrace -ggdb -fno-recursive
 F90FLAGS += -fcheck=all,no-array-temps -pedantic 
 
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow

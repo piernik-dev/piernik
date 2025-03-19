@@ -13,7 +13,7 @@ F90      = h5pfc
 F90 += -I/usr/lib64/gfortran/modules/$(subst _,,$(MPI_SUFFIX))
 
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
-F90FLAGS += -O3 -funroll-loops -fno-stack-arrays -frecursive
+F90FLAGS += -O3 -funroll-loops -fno-stack-arrays -fno-recursive
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -fmodule-private
 F90FLAGS += -fbacktrace -ggdb
 F90FLAGS += -fcheck=all,no-array-temps
