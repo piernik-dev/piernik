@@ -443,7 +443,7 @@ contains
       if (iw < 1 .or. iw > this%dim4) &
          call die("[named_array_list:get_compname] Invalid component index")
 
-      write(fmt, '(i2)') this%dim4
+      write(fmt, '(i9)') this%dim4
       num_digits = len_trim(adjustl(fmt))
       write(fmt, '("(a,i",i1,".",i1,")")') num_digits, num_digits
 
