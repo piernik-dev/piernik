@@ -25,13 +25,18 @@ endif
 # safe optimization choice
 F90FLAGS += -O2 -fno-stack-arrays
 
+# Ensure correct convergence in CRESP initialization with gfortran 14.x
+# Apparently, -fcheck=recursion is enough to prevent bad behavior if one does not add -frecursive.
+# So -fno-recursive strongly suggests what is potentially problematic.
+F90FLAGS += -fno-recursive -fcheck=recursion
+
 # Fixes for known problematic gfortran flags that are implied by optimization
 F90FLAGS += -fno-inline-small-functions -fno-tree-pre -fno-expensive-optimizations -fno-ipa-cp-clone
 
 GFORTRAN := $(shell gfortran -dumpversion | cut -f1 -d.)
 ifeq ($(shell expr $(GFORTRAN) \>= 10), 1)
   # Ugly hack for old MPI interface
-  F90FLAGS += -fallow-argument-mismatch -frecursive
+  F90FLAGS += -fallow-argument-mismatch
 else ifeq ($(PIERNIK_DEBUG), 1)
   F90FLAGS += -pedantic-errors
 endif

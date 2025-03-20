@@ -30,7 +30,7 @@ You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
 
 * Old approach to the Fortran MPI interface is now strongly disfavoured and Piernik does not compile by default. Use `-fallow-argument-mismatch` to turn MPI-related errors into warnings.
 * The wrapper `h5pfc` from OpenMPI requires to set `-I/usr/lib64/gfortran/modules/openmpi/`.
-* A compiler option `-frecursive` is suggested to be safer than the default in few places by the MPI wrappers.
+* A compiler option `-frecursive` is suggested by some compilers to be safer than the default in few places by the MPI wrappers but it breaks the convergence in CRESP iitialization (gfortran 14.x).
 * MPICH seems to have random bugs that manifest e.g by crashing at `MPI_Waitall` in `cg_list_bnd::internal_boundaries_MPI_1by1`.
 * MPICH uses `-Werror=format-security` compiler flag which is no longer valid for `gfortran`. Use
 

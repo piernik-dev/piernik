@@ -20,7 +20,9 @@ F90FLAGS += -fcheck=all
 
 # Since gfortran >= 10.0 -frecursive was adviced by the compiler.
 # ToDo: Find out why.
-F90FLAGS += -frecursive
+# -frecursive is known to break convergence in CRESP initialisation (gfortran > 14.x)
+# -fcheck=all provides -fcheck=recursion, also required for succesfull iteration in CRESP 
+F90FLAGS += -fno-recursive
 
 # for gfortran >= 10.0 the use mpi_f08 interface is strongly encouraged
 F90FLAGS += -pedantic
