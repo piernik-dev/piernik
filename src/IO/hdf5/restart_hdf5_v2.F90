@@ -146,7 +146,7 @@ contains
       integer(kind=8),               intent(in) :: n_part
       integer(HID_T),                intent(in) :: st_g_id
 
-      integer :: i
+      integer(kind=4) :: i
       integer(HSIZE_T), dimension(:), allocatable :: d_size
       character(len=*), parameter :: wrce_label = "IO_write_empty_dset"
 
@@ -155,7 +155,7 @@ contains
 
       allocate(d_size(size(cg_n_b)))
       if (allocated(qna%lst)) then
-         do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+         do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
             if (qna%lst(i)%restart_mode == AT_OUT_B) then
                d_size = int(cg_n_o, kind=HSIZE_T)
             else
@@ -169,11 +169,11 @@ contains
 
       allocate(d_size(size(cg_n_b)+I_ONE))
       if (allocated(wna%lst)) then
-         do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+         do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
             if (wna%lst(i)%restart_mode == AT_OUT_B) then
-               d_size = int([ wna%lst(i)%dim4, cg_n_o ], kind=HSIZE_T)
+               d_size = int([ wna%get_dim4(i), cg_n_o ], kind=HSIZE_T)
             else
-               d_size = int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T)
+               d_size = int([ wna%get_dim4(i), cg_n_b ], kind=HSIZE_T)
             endif
             if (wna%lst(i)%restart_mode > AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, d_size, Z_avail, O_RES)
@@ -190,7 +190,7 @@ contains
       call ppp_main%stop(wrce_label, PPP_IO + PPP_CG)
 
       return
-      if (.false.) i = int(n_part) + int(st_g_id)
+      if (.false.) i = int(n_part, kind=4) + int(st_g_id, kind=4)
 
    end subroutine create_empty_cg_datasets_in_restart
 
@@ -233,7 +233,7 @@ contains
       integer(kind=4)                                       :: ncg, n, i, ntags
       type(grid_container),  pointer                        :: cg
       type(cg_list_element), pointer                        :: cgl
-      integer, allocatable, dimension(:)                    :: qr_lst, wr_lst
+      integer(kind=4), allocatable, dimension(:)            :: qr_lst, wr_lst
       type(cg_output)                                       :: cg_desc
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
       real, target, dimension(0,0,0)                        :: null_r3d
@@ -300,10 +300,10 @@ contains
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                         pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
-                        dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
+                        dims(:) = [ wna%get_dim4(wr_lst(i)), cg%n_b ]
                      else
                         n_b = pick_size(ncg, wna%lst(wr_lst(i))%restart_mode)
-                        allocate(pa4d(wna%lst(wr_lst(i))%dim4, n_b(xdim), n_b(ydim), n_b(zdim)))
+                        allocate(pa4d(wna%get_dim4(wr_lst(i)), n_b(xdim), n_b(ydim), n_b(zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:), kind=4), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
                            ncg + cg_desc%tot_cg_n*(size(qr_lst, kind=4)+i), MPI_COMM_WORLD, MPI_STATUS_IGNORE, err_mpi)
                         dims(:) = shape(pa4d)
@@ -368,7 +368,7 @@ contains
                   do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
                      ic = ic + 1
                      pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
-                     dims(:) = [ wna%lst(wr_lst(i))%dim4, pick_dims(cg, wna%lst(wr_lst(i))%restart_mode) ]
+                     dims(:) = [ wna%get_dim4(wr_lst(i)), pick_dims(cg, wna%lst(wr_lst(i))%restart_mode) ]
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -995,7 +995,7 @@ contains
       integer(kind=8), dimension(xdim:zdim)        :: own_off_nb, restart_off_nb, o_size_nb   !
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_ob, restart_box_ob              ! variants for AT_OUT_B
       integer(kind=8), dimension(xdim:zdim)        :: own_off_ob, restart_off_ob, o_size_ob   ! as opposed to AT_NO_B
-      integer, dimension(:), allocatable           :: qr_lst, wr_lst
+      integer(kind=4), dimension(:), allocatable   :: qr_lst, wr_lst
       integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
@@ -1070,7 +1070,7 @@ contains
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
          do i = lbound(wr_lst, dim=1, kind=4), ubound(wr_lst, dim=1, kind=4)
             call pick_off_and_size(wna%lst(wr_lst(i))%restart_mode, o_size, restart_off, own_off)
-            dims(:) = [ int(wna%lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
+            dims(:) = [ int(wna%get_dim4(wr_lst(i)), kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
             call h5dopen_f(cg_g_id, wna%lst(wr_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = [ 0_HSIZE_T, restart_off(:) ]

@@ -378,18 +378,18 @@ contains
                      endif
                   enddo
                else
-                  allocate(slin%buf(slin%total_size*wna%lst(ind)%dim4))
-                  allocate(slout%buf(slout%total_size*wna%lst(ind)%dim4))
+                  allocate(slin%buf(slin%total_size*wna%get_dim4(ind)))
+                  allocate(slout%buf(slout%total_size*wna%get_dim4(ind)))
                   do i = lbound(slout%list, dim=1), slout%cur_last
                      if (dmask( slout%list(i)%dir)) then
                         slout%buf( &
-                            (slout%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
-                             slout%list(i)%off_ceil        * wna%lst(ind)%dim4 ) = reshape( &
-                             slout%list(i)%cg%w(ind)%arr( 1:wna%lst(ind)%dim4, &
+                            (slout%list(i)%offset - I_ONE) * wna%get_dim4(ind) + I_ONE : &
+                             slout%list(i)%off_ceil        * wna%get_dim4(ind) ) = reshape( &
+                             slout%list(i)%cg%w(ind)%arr(  1:wna%get_dim4(ind), &
                              slout%list(i)%se(xdim, LO):slout%list(i)%se(xdim, HI), &
                              slout%list(i)%se(ydim, LO):slout%list(i)%se(ydim, HI), &
                              slout%list(i)%se(zdim, LO):slout%list(i)%se(zdim, HI)), &
-                             [ (slout%list(i)%off_ceil - slout%list(i)%offset + I_ONE) * wna%lst(ind)%dim4 ] )
+                             [ (slout%list(i)%off_ceil - slout%list(i)%offset + I_ONE) * wna%get_dim4(ind) ] )
                      endif
                   enddo
                endif
@@ -426,14 +426,14 @@ contains
                   do i = lbound(slin%list, dim=1), slin%cur_last
                      associate (li => slin%list(i))
                      if (dmask( li%dir)) then
-                        li%cg%w(ind)%arr( 1:wna%lst(ind)%dim4, &
+                        li%cg%w(ind)%arr( 1:wna%get_dim4(ind), &
                              li%se(xdim, LO):li%se(xdim, HI), &
                              li%se(ydim, LO):li%se(ydim, HI), &
                              li%se(zdim, LO):li%se(zdim, HI)) = reshape ( &
                              slin%buf( &
-                            (li%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
-                             li%off_ceil        * wna%lst(ind)%dim4 ), [ &
-                             int(wna%lst(ind)%dim4, kind=8), &
+                            (li%offset - I_ONE) * wna%get_dim4(ind) + I_ONE : &
+                             li%off_ceil        * wna%get_dim4(ind) ), [ &
+                             int(wna%get_dim4(ind), kind=8), &
                              li%se(xdim, HI) - li%se(xdim, LO) + I_ONE, &
                              li%se(ydim, HI) - li%se(ydim, LO) + I_ONE, &
                              li%se(zdim, HI) - li%se(zdim, LO) + I_ONE ] )
@@ -543,13 +543,13 @@ contains
 
                      else
 
-                        b4su = [ int(wna%lst(ind)%dim4, kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
+                        b4su = [ int(wna%get_dim4(ind), kind=4), int(i_seg%se(:, HI) - i_seg%se(:, LO) + I_ONE, kind=4) ]
                         b4st = [ I_ONE, int(i_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, i_seg%sub_type, err_mpi)
                         call MPI_Type_commit(i_seg%sub_type, err_mpi)
                         call piernik_Irecv(cg%w(ind)%arr(lbound(cg%w(ind)%arr, 1):, lbound(cg%w(ind)%arr, 2):, lbound(cg%w(ind)%arr, 3):, lbound(cg%w(ind)%arr, 4):), I_ONE, i_seg%sub_type, i_seg%proc, i_seg%tag, req)
 
-                        b4su = [ int(wna%lst(ind)%dim4, kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
+                        b4su = [ int(wna%get_dim4(ind), kind=4), int(o_seg%se(:, HI) - o_seg%se(:, LO) + I_ONE, kind=4) ]
                         b4st = [ I_ONE, int(o_seg%se(:, LO), kind=4) ] - lbound(cg%w(ind)%arr, kind=4)
                         call MPI_Type_create_subarray(rank4, b4sz, b4su, b4st, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, o_seg%sub_type, err_mpi)
                         call MPI_Type_commit(o_seg%sub_type, err_mpi)
