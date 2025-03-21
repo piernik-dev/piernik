@@ -131,20 +131,7 @@ run_piernik() {
         wait
         sleep 1
         for j in $( seq $threads ); do
-            case $problem in
-                sedov)
-                    ( grep "dWallClock" $j/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$threads');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f\n", t/n)}'
-                    ;;
-                crtest)
-                    grep "C01cycles" $j/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$threads', $5, $8)}'
-                    awk '/Spent/ { printf("%s\n", $5) }' $j/*log
-                    ;;
-                maclaurin)
-                    grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$threads');} {printf("%7.3f %7.3f ", $5, $8)}'
-                    grep -q cycles $j/_stdout_ || echo ""
-                    awk '/Spent/ { printf("%s\n", $5) }' $j/*log
-                    ;;
-            esac
+            process_output $problem $threads $j
         done
     else
         case $problem in
@@ -194,11 +181,7 @@ run_benchmark() {
         cp $config_file $rundir/problem.par
         cd $rundir || exit
 
-        case $problem in
-            sedov)     echo "#Threads dWallClock1 dWallClock2 dWallClock3 dWallClock4 dWallClock5 dWallClock_Average";;
-            crtest)    echo "#Threads MG_prepare MG_cycle Total_MG";;
-            maclaurin) echo "#Threads MG_prepare MG_i-cycle MG_multipole MG_o-cycle Total_MG";;
-        esac
+        print_header $problem
 
         for threads in $N_PROC_LIST; do
             local mpirun_cmd="mpirun"
@@ -222,6 +205,106 @@ run_benchmark() {
     echo
 }
 
+print_header() {
+    local problem=$1
+    case $problem in
+        sedov)     echo "#Threads dWallClock1 dWallClock2 dWallClock3 dWallClock4 dWallClock5 dWallClock_Average";;
+        crtest)    echo "#Threads MG_prepare MG_cycle Total_MG";;
+        maclaurin) echo "#Threads MG_prepare MG_i-cycle MG_multipole MG_o-cycle Total_MG";;
+    esac
+}
+
+process_output() {
+    local problem=$1
+    local core=$2
+    local dir=${3:-.}
+    case $problem in
+        sedov)
+            ( grep "dWallClock" $dir/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$core');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f\n", t/n)}'
+            ;;
+        crtest)
+            grep "C01cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$core', $5, $8)}'
+            awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
+            ;;
+        maclaurin)
+            grep cycles $dir/_stdout_ | awk 'BEGIN {printf("%d", '$core');} {printf("%7.3f %7.3f ", $5, $8)}'
+            grep -q cycles $dir/_stdout_ || echo ""
+            awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
+            ;;
+    esac
+}
+
+run_on_cores() {
+    local problem=$1
+    local nx=$2
+    local cores=$3
+    local sequential=${4:-0}
+    local header=$5
+
+    setup_flood_scaling "$N_CPU"
+
+    echo "## "$(date)
+    echo $header
+    ( print_header $problem
+    for j in $cores; do
+        if [ $sequential -eq 1 ]; then
+            ( cd $j && taskset -c $(( $j - 1 )) ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' /' > _stdout_ 2> /dev/null
+              process_output $problem $j )
+        else
+            ( cd $j && taskset -c $(( $j - 1 )) ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' /' > _stdout_ 2> /dev/null ) &
+        fi
+    done
+    [ $sequential -eq 0 ] && wait && sleep 1
+    [ $sequential -eq 0 ] && for j in $cores; do
+        process_output $problem $j $j
+    done ) | format_output
+    echo
+}
+
+profile_cores() {
+    local problem=$1
+    local rundir="runs/${problem}_B_${problem}"
+    local config_file="$(dirname $0)/problem.par.${problem}"
+
+    case $problem in
+        sedov)     local basesize=64 ;;
+        crtest)    local basesize=32 ;;
+        maclaurin) local basesize=64 ;;
+    esac
+
+    local nx=$( echo $basesize $SCALE | awk '{print int($1*$2)}' )
+
+    (
+        cp $config_file $rundir/problem.par
+        cd $rundir || exit
+
+        # Run on each core sequentially
+        run_on_cores $problem $nx "$( seq $N_CPU )" 1 "## Core profiling on ${problem} problem, single core on cores 1 to $N_CPU"
+
+        # Run on physical cores in parallel
+        # Trick: +1 to "processor" number to be consistent with the 1-based numbering elsewhere
+        PHYS_CORES=$(awk '
+            function min(a,b) { return (a<b)?a:b; }
+            # Process lines containing "processor" or "core id"
+            /^processor|^core id/ {
+                if ($1 ~ /processor/) p=$NF;
+                if ($1 ~ /core/) {
+                    if ($NF in cores) cores[$NF] = min(p, cores[$NF]);
+                    else cores[$NF] = p;
+                }
+            }
+            # Print the physical cores
+            END {
+                for (cpu in cores) printf "%d ", cores[cpu] + 1;
+            }
+        ' /proc/cpuinfo | sed 's/ $/\n/')
+        run_on_cores $problem $nx "$PHYS_CORES" 0 "## Core profiling on ${problem} problem, all physical cores ($PHYS_CORES)"
+
+        # Run on all threads in parallel
+        run_on_cores $problem $nx "$( seq $N_CPU )" 0 "## Core profiling on ${problem} problem, all threads (1 to $N_CPU)"
+    )
+}
+
 # Main script execution
 parse_arguments "$@"
 check_dependencies
@@ -243,9 +326,9 @@ PROBLEM_LIST=("maclaurin" "advection_test" "crtest" "jeans" "tearing" "sedov" "o
 B_PROBLEM_LIST=("sedov" "crtest" "maclaurin")
 
 # create list of thread count to be tested
+N_CPU=$( awk 'BEGIN {c=0} /processor/ {if ($NF > c) c=$NF} END {print c+1}' /proc/cpuinfo )
 if [ -z "$N_PROC_LIST" ]; then
-    N=$( awk 'BEGIN {c=0} /processor/ {if ($NF > c) c=$NF} END {print c+1}' /proc/cpuinfo )
-    N_PROC_LIST=$( seq $N )
+    N_PROC_LIST=$( seq $N_CPU )
 else
     N_PROC_LIST=$( echo $N_PROC_LIST | awk '{for (i=1; i<=NF; i++) printf("%d\n",1*$i); print ""}' | sort -n | uniq )
 fi
@@ -267,7 +350,6 @@ fi
 
 if [ $DO_MAKE == 1 ]; then
     prepare_directories
-
     {
         echo -n "Preparing objects                "
         SETUP_PARAMS="-c ../benchmarking/${COMPILER_CONFIG} -n --linkexe -d BENCHMARKING_HACK"
@@ -294,11 +376,15 @@ if [ $DO_MAKE == 1 ]; then
         echo -n "Multi-thread make eight objects  "
         make_objects "$(get_n_problems 8)"
     }
-
-    echo
 else
     echo "## compilation skipped"
 fi
+echo
+
+# for problem in "${B_PROBLEM_LIST[@]}"; do
+for problem in crtest ; do
+    profile_cores $problem
+done
 
 for problem in "${B_PROBLEM_LIST[@]}"; do
     for scaling in flood strong weak; do
