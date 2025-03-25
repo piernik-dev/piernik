@@ -51,6 +51,8 @@ module named_array_list
                                                                   !< AT_OUT_B write with ext. boundaries
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
+   contains
+      procedure :: copy_base
    end type na_var_base
 
    type, extends(na_var_base) :: na_var
@@ -355,6 +357,21 @@ contains
 
    end subroutine print_vars
 
+   subroutine copy_base(this, other)
+
+      implicit none
+
+      class(na_var_base), intent(out) :: this   !< object to be copied to
+      class(na_var_base), intent(in)  :: other  !< object to be copied from
+
+      this%name = other%name
+      this%vital = other%vital
+      this%restart_mode = other%restart_mode
+      this%ord_prolong = other%ord_prolong
+      this%multigrid = other%multigrid
+
+   end subroutine copy_base
+
    subroutine copy_var(this, other)
 
       implicit none
@@ -362,11 +379,7 @@ contains
       class(na_var), intent(out) :: this   !< object to be copied to
       type(na_var),  intent(in)  :: other  !< object to be copied from
 
-      this%name = other%name
-      this%vital = other%vital
-      this%restart_mode = other%restart_mode
-      this%ord_prolong = other%ord_prolong
-      this%multigrid = other%multigrid
+      call this%copy_base(other)
 
    end subroutine copy_var
 
@@ -381,12 +394,8 @@ contains
 
       integer :: i
 
-      this%name = other%name
-      this%vital = other%vital
-      this%restart_mode = other%restart_mode
-      this%ord_prolong = other%ord_prolong
+      call this%copy_base(other)
       this%dim4 = other%dim4
-      this%multigrid = other%multigrid
 
       if (allocated(this%compname)) deallocate(this%compname)
 
