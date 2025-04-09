@@ -288,7 +288,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: nstep
-      character(len=*), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.2,' s ',a)"
+      character(len=*), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.4,' s ',a)"
       logical, save :: first_run = .true.
 
 
