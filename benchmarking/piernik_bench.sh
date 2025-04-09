@@ -285,12 +285,14 @@ profile_cores() {
         # Trick: +1 to "processor" number to be consistent with the 1-based numbering elsewhere
         PHYS_CORES=$(awk '
             function min(a,b) { return (a<b)?a:b; }
-            # Process lines containing "processor" or "core id"
-            /^processor|^core id/ {
+            # Process lines containing "processor", "core id", or "physical id"
+            /^processor|^core id|^physical id/ {
                 if ($1 ~ /processor/) p=$NF;
+                if ($1 ~ /physical/) phys=$NF;
                 if ($1 ~ /core/) {
-                    if ($NF in cores) cores[$NF] = min(p, cores[$NF]);
-                    else cores[$NF] = p;
+                    core_id = phys "-" $NF;  # Combine physical id and core id
+                    if (core_id in cores) cores[core_id] = min(p, cores[core_id]);
+                    else cores[core_id] = p;
                 }
             }
             # Print the physical cores
