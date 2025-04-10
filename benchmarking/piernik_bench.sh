@@ -137,16 +137,16 @@ run_piernik() {
         case $problem in
             sedov)
                 local xmul=1
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f ", t/n)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.4f ", $12); t+=$12; n++;}} END {printf("%7.5f ", t/n)}'
                 ;;
             crtest)
                 local xmul=512
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%7.4f %7.4f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
                 ;;
             maclaurin)
                 local xmul=2
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf("%7.4f %7.4f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
                 ;;
         esac
@@ -220,14 +220,14 @@ process_output() {
     local dir=${3:-.}
     case $problem in
         sedov)
-            ( grep "dWallClock" $dir/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$core');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f\n", t/n)}'
+            ( grep "dWallClock" $dir/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$core');} {if ($3 != 0) {printf("%7.4f ", $12); t+=$12; n++;}} END {printf("%7.5f\n", t/n)}'
             ;;
         crtest)
-            grep "C01cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$core', $5, $8)}'
+            grep "C01cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %7.4f %7.4f ", '$core', $5, $8)}'
             awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
             ;;
         maclaurin)
-            grep cycles $dir/_stdout_ | awk 'BEGIN {printf("%d", '$core');} {printf("%7.3f %7.3f ", $5, $8)}'
+            grep cycles $dir/_stdout_ | awk 'BEGIN {printf("%d", '$core');} {printf("%7.4f %7.4f ", $5, $8)}'
             grep -q cycles $dir/_stdout_ || echo ""
             awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
             ;;
@@ -249,7 +249,8 @@ run_on_cores() {
     for j in $cores; do
         if [ $sequential -eq 1 ]; then
             ( cd $j && taskset -c $(( $j - 1 )) ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' /' > _stdout_ 2> /dev/null
-              process_output $problem $j )
+              process_output $problem $j
+              sleep 1 )
         else
             ( cd $j && taskset -c $(( $j - 1 )) ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' /' > _stdout_ 2> /dev/null ) &
         fi
