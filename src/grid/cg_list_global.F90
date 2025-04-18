@@ -259,6 +259,12 @@ contains
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
       call set_fluid_names
+#ifdef COSM_RAYS
+      call set_cr_names
+#endif /* COSM_RAYS */
+#ifdef CRESP
+      call set_cresp_names
+#endif /* CRESP */
 
 #ifdef MAGNETIC
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
@@ -312,6 +318,71 @@ contains
          end select
 
       end subroutine set_fluid_names
+
+#ifdef COSM_RAYS
+      subroutine set_cr_names
+
+         use constants,        only: dsetnamelen, I_ONE
+         use cr_data,          only: cr_names, cr_spectral
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         integer(kind=4) :: i, k
+         character(len=dsetnamelen) :: var
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               k = flind%crn%beg
+               do i = I_ONE, size(cr_names, kind=4)
+                  if (.not. cr_spectral(i)) then
+                     if (len_trim(cr_names(i)) > 0) then
+                        write(var, '(2a)') "cr_", trim(cr_names(i))
+                     else
+                        write(var, '(a,i2.2)') "cr", i
+                     endif
+                     call lst(wna%fi)%set_compname(k, var)
+                     k = k + I_ONE
+                  endif
+               enddo
+            class default
+               call die("[cg_list_global:set_cr_names] Unknown list type")
+         end select
+
+      end subroutine set_cr_names
+
+#endif /* COSM_RAYS */
+
+#ifdef CRESP
+      subroutine set_cresp_names
+
+         use constants,        only: dsetnamelen
+         ! use cr_data,          only: cr_names
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         integer(kind=4) :: i
+         character(len=dsetnamelen) :: var
+
+         ! The "e-" part of the name is used for the CR energy density should be cr_names(1) currently
+         ! After merge of Antoine's branch the Isotope names should go there
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               do i = flind%cre%nbeg, flind%cre%nend
+                  write(var, '(a,i2.2)') "cr_e-n", i - flind%cre%nbeg + 1
+                  call lst(wna%fi)%set_compname(i, var)
+               enddo
+               do i = flind%cre%ebeg, flind%cre%eend
+                  write(var, '(a,i2.2)') "cr_e-e", i - flind%cre%ebeg + 1
+                  call lst(wna%fi)%set_compname(i, var)
+               enddo
+            class default
+               call die("[cg_list_global:set_cresp_names] Unknown list type")
+         end select
+
+      end subroutine set_cresp_names
+#endif /* CRESP */
 
 #ifdef MAGNETIC
       subroutine set_magnetic_names

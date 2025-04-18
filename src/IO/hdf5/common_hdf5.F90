@@ -111,7 +111,6 @@ contains
       use mpisetup,       only: master
 #ifdef COSM_RAYS
       use cr_data,        only: cr_names, cr_spectral
-      use dataio_pub,     only: msg
 #endif /* COSM_RAYS */
 #ifdef CRESP
       use initcosmicrays, only: ncrb
@@ -223,10 +222,8 @@ contains
                enddo
                do k = lbound(vars, 1), ubound(vars, 1)
                   if (vars(k) .eq. 'cree') exit
-                  if (k .eq. ubound(vars, 1)) then
-                     write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
-                     call warn(msg)
-                  endif
+                  if (k .eq. ubound(vars, 1)) &
+                     call warn("[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both.")
                enddo
             case ('cree') !< CRESP energy density fields
                do k = 1, ncrb
@@ -235,10 +232,8 @@ contains
                enddo
                do k = lbound(vars, 1), ubound(vars, 1)
                   if (vars(k) .eq. 'cren') exit
-                  if (k .eq. ubound(vars, 1)) then
-                     write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
-                     call warn(msg)
-                  endif
+                  if (k .eq. ubound(vars, 1)) &
+                     call warn("[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both.")
                enddo
             case ('cref') !< CRESP distribution function
                do k = 1, ncrb+1

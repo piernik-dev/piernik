@@ -490,6 +490,10 @@ contains
          enddo
       endif
 
+      do i = lbound(this%compname(:), dim=1), ubound(this%compname(:), dim=1)
+         if (trim(compname) == this%compname(i)) &
+            call die("[named_array_list:set_compname] component name collision '" // trim(compname) // "'")
+      enddo
       this%compname(iw) = compname
 
    end subroutine set_compname
