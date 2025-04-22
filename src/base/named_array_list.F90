@@ -68,8 +68,8 @@ module named_array_list
       character(len=dsetnamelen), allocatable, dimension(:) :: compname  !< names of components of 4D array
       type(na_var_4d),   private, allocatable, dimension(:) :: tmp       !< temporary array for list extension
    contains
-      procedure :: get_compname                                  !< Get name of the 4D array component
-      procedure :: set_compname                                  !< Set names of the 4D array components
+      procedure, private :: get_compname                                 !< Get name of the 4D array component
+      procedure :: set_compname                                          !< Set names of the 4D array components
       procedure :: copy_var_4d
       generic :: assignment(=) => copy_var_4d
    end type na_var_4d
@@ -99,6 +99,7 @@ module named_array_list
    contains
       procedure :: add2lst => add2lst_w                          !< Add a 4D array to the list
       procedure :: get_dim4                                      !< Get dim4 value for given array index
+      procedure :: get_component_name                            !< Get component name for given array and component indices
    end type na_var_list_w
 
    type(na_var_list_q), target :: qna !< list of registered 3D named arrays
@@ -308,7 +309,7 @@ contains
       class(na_var_list),        intent(in) :: this
       integer(kind=4), optional, intent(in) :: verbosity  !< verbosity level
 
-      integer :: i, j
+      integer(kind=4) :: i, j
       integer, parameter :: comp_name_line_len = 120
       integer(kind=4) :: v
 
@@ -327,7 +328,7 @@ contains
       end select
       call printinfo(msg, v)
 
-      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
+      do i = lbound(this%lst(:), dim=1, kind=4), ubound(this%lst(:), dim=1, kind=4)
          select type (lst => this%lst)
             type is (na_var)
                write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
@@ -343,7 +344,7 @@ contains
             type is (na_var_4d)
                if (allocated(lst(i)%compname)) then
                   msg = "  component names:"
-                  do j = lbound(lst(i)%compname(:), dim=1), ubound(lst(i)%compname(:), dim=1)
+                  do j = lbound(lst(i)%compname(:), dim=1, kind=4), ubound(lst(i)%compname(:), dim=1, kind=4)
                      if (len_trim(msg) + len_trim(lst(i)%compname(j)) + 3 > comp_name_line_len) then
                         call printinfo(msg, v)
                         msg = " "
@@ -444,7 +445,7 @@ contains
       implicit none
 
       class(na_var_4d), intent(in) :: this
-      integer,          intent(in) :: iw
+      integer(kind=4),  intent(in) :: iw
 
       character(len=dsetnamelen) :: name, fmt
       integer :: num_digits
@@ -497,5 +498,28 @@ contains
       this%compname(iw) = compname
 
    end subroutine set_compname
+
+   function get_component_name(this, ind, c) result(name)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(na_var_list_w),     intent(in) :: this  !< object invoking type-bound procedure
+      integer(kind=4),          intent(in) :: ind   !< array index
+      integer(kind=4),          intent(in) :: c     !< component index
+
+      character(len=dsetnamelen)          :: name   !< component name
+
+      if (.not. allocated(this%lst)) call die("[named_array_list:get_component_name] List not allocated")
+
+      select type (lst => this%lst(ind))
+         type is (na_var_4d)
+            name = lst%get_compname(c)
+         class default
+            call die("[named_array_list:get_component_name] Invalid array type")
+      end select
+
+   end function get_component_name
 
 end module named_array_list

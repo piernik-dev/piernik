@@ -321,9 +321,11 @@ contains
       use dataio_pub,        only: msg, printinfo, warn
       use fluidindex,        only: flind
       use func,              only: operator(.notequals.)
+      use initcosmicrays,    only: iarr_crs
       use mpisetup,          only: master
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: ts, tot_ts
+      use named_array_list,  only: wna
       use timer,             only: set_timer
 
       implicit none
@@ -340,7 +342,7 @@ contains
          call init_source(cr_id)
          if (vstat%norm_rhs .notequals. zero) then
             if (norm_was_zero(cr_id) .and. master) then
-               write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #", cr_id, " is now available in measurable quantities."
+               write(msg,'(a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid '" // trim(wna%get_component_name(wna%fi, iarr_crs(cr_id))) // "' is now available in measurable quantities."
                call printinfo(msg)
             endif
             norm_was_zero(cr_id) = .false.
@@ -351,7 +353,7 @@ contains
             ! enddo
          else
             if (.not. norm_was_zero(cr_id) .and. master) then
-               write(msg,'(a,i2.2,a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid #", cr_id, " == 0., skipping."
+               write(msg,'(a)')"[multigrid_diffusion:multigrid_solve_diff] Source norm of CR-fluid '" // trim(wna%get_component_name(wna%fi, iarr_crs(cr_id))) // "' == 0., skipping."
                call warn(msg)
             endif
             norm_was_zero(cr_id) = .true.
@@ -545,7 +547,7 @@ contains
          endif
       endif
 
-      write(vstat%cprefix,'("C",i2.2)') cr_id
+      vstat%cprefix = trim(wna%get_component_name(wna%fi, iarr_crs(cr_id))) // "-"
       write(dirty_label, '("md_",i2.2,"_dump")')  cr_id
 
 #ifdef DEBUG
