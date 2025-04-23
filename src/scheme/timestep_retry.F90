@@ -279,24 +279,23 @@ contains
    subroutine restart_arrays
 
       use cg_list_global,   only: all_cg
-      use constants,        only: AT_BACKUP, AT_IGNORE, dsetnamelen, INVALID, V_VERBOSE
-      use dataio_pub,       only: printinfo, msg
+      use constants,        only: AT_BACKUP, AT_IGNORE, dsetnamelen, V_VERBOSE
+      use dataio_pub,       only: printinfo, msg, die
       use mpisetup,         only: master
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
 
       implicit none
 
-      integer :: i, j
+      integer(kind=4) :: i, j
       character(len=dsetnamelen) :: rname
-      integer(kind=4), dimension(:), allocatable, target :: pos_copy
 
       if (.not. associated(na_lists(1)%p)) na_lists(1)%p => qna
       if (.not. associated(na_lists(2)%p)) na_lists(2)%p => wna
 
-      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+      do j = lbound(na_lists, dim=1, kind=4), ubound(na_lists, dim=1, kind=4)
          associate (na => na_lists(j)%p)
 
-            do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
+            do i = lbound(na%lst(:), dim=1, kind=4), ubound(na%lst(:), dim=1, kind=4)
                if (na%lst(i)%restart_mode > AT_IGNORE) then
                   rname = get_rname(na%lst(i)%name)
                   if (.not. na%exists(rname)) then
@@ -304,14 +303,14 @@ contains
                         write(msg,'(3a)')"[timestep_retry:restart_arrays] creating backup field '", rname, "'"
                         call printinfo(msg, V_VERBOSE)
                      endif
-                     allocate(pos_copy(size(na%lst(i)%position)))
-                     pos_copy = na%lst(i)%position
-                     if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
-                     else
-                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
-                     endif
-                     deallocate(pos_copy)
+                     select type(na)
+                        type is (na_var_list_w)
+                           call all_cg%reg_var(rname, dim4=na%get_dim4(i), multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
+                        type is (na_var_list_q)
+                           call all_cg%reg_var(rname,                      multigrid=na%lst(i)%multigrid, restart_mode = AT_BACKUP)
+                        class default
+                           call die("[timestep_retry:restart_arrays] unknown named array list type")
+                     end select
                   endif
                endif
             enddo

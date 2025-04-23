@@ -232,7 +232,7 @@ contains
          area_type = qna%lst(ind)%restart_mode
       else
          if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5_v1:write_arr_to_restart] Invalid 4D array")
-         dim1 = wna%lst(ind)%dim4
+         dim1 = wna%get_dim4(ind)
          rank = rank4
          dname = wna%lst(ind)%name
          area_type = wna%lst(ind)%restart_mode
@@ -341,7 +341,7 @@ contains
       implicit none
 
       integer(HID_T),             intent(in) :: file_id            !< File identifier
-      integer,                    intent(in) :: ind                !< index of cg%q(:) or cg%w(:) arrays
+      integer(kind=4),            intent(in) :: ind                !< index of cg%q(:) or cg%w(:) arrays
       logical,                    intent(in) :: tgt3d              !< .true. for 3D arrays, .false. otherwise
       integer(kind=4),  optional, intent(in) :: alt_area_type
       character(len=*), optional, intent(in) :: alt_name           !< used only in galdisk* setups
@@ -373,7 +373,7 @@ contains
          area_type = qna%lst(ind)%restart_mode
       else
          if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5_v1:read_arr_from_restart] Invalid 4D array")
-         dim1 = wna%lst(ind)%dim4
+         dim1 = wna%get_dim4(ind)
          rank = rank4
          cgname = wna%lst(ind)%name
          area_type = wna%lst(ind)%restart_mode
@@ -498,7 +498,7 @@ contains
       implicit none
 
       integer                                  :: nu
-      integer                                  :: i
+      integer(kind=4)                          :: i
       character(len=cwdlen)                    :: filename      !< File name
 
       integer(HID_T)                           :: file_id       !< File identifier

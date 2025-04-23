@@ -130,7 +130,7 @@ contains
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use memory_usage,     only: check_mem_usage
-      use named_array_list, only: qna, wna, na_var
+      use named_array_list, only: qna, wna, na_var, na_var_4d
 
       implicit none
 
@@ -187,9 +187,9 @@ contains
       endif
 
       if (present(dim4)) then
-         call wna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call wna%add2lst(na_var_4d(name, vit, rm, op, mg, dim4=d4))
       else
-         call qna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call qna%add2lst(na_var(name, vit, rm, op, mg))
       endif
 
       select case (op)
@@ -258,10 +258,18 @@ contains
       call this%reg_var(wa_n, multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
+      call set_fluid_names
+#ifdef COSM_RAYS
+      call set_cr_names
+#endif /* COSM_RAYS */
+#ifdef CRESP
+      call set_cresp_names
+#endif /* CRESP */
 
 #ifdef MAGNETIC
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+      call set_magnetic_names
 
       if (cc_mag) then
          call this%reg_var(psi_n,  vital = .true., ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! an array for div B cleaning
@@ -273,13 +281,135 @@ contains
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 #endif /* ISO */
 
+   contains
+
+      subroutine set_fluid_names
+
+         use fluidindex,       only: flind
+         use fluids_pub,       only: has_dst, has_ion, has_neu
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               if (has_ion) then
+                  call lst(wna%fi)%set_compname(flind%ion%idn, "deni")
+                  call lst(wna%fi)%set_compname(flind%ion%imx, "momxi")
+                  call lst(wna%fi)%set_compname(flind%ion%imy, "momyi")
+                  call lst(wna%fi)%set_compname(flind%ion%imz, "momzi")
+                  if (flind%ion%has_energy) call lst(wna%fi)%set_compname(flind%ion%ien, "enei")
+               endif
+
+               if (has_neu) then
+                  call lst(wna%fi)%set_compname(flind%neu%idn, "denn")
+                  call lst(wna%fi)%set_compname(flind%neu%imx, "momxn")
+                  call lst(wna%fi)%set_compname(flind%neu%imy, "momyn")
+                  call lst(wna%fi)%set_compname(flind%neu%imz, "momzn")
+                  if (flind%neu%has_energy) call lst(wna%fi)%set_compname(flind%neu%ien, "enen")
+               endif
+
+               if (has_dst) then
+                  call lst(wna%fi)%set_compname(flind%dst%idn, "dend")
+                  call lst(wna%fi)%set_compname(flind%dst%imx, "momxd")
+                  call lst(wna%fi)%set_compname(flind%dst%imy, "momyd")
+                  call lst(wna%fi)%set_compname(flind%dst%imz, "momzd")
+               endif
+         end select
+
+      end subroutine set_fluid_names
+
+#ifdef COSM_RAYS
+      subroutine set_cr_names
+
+         use constants,        only: dsetnamelen, I_ONE
+         use cr_data,          only: cr_names, cr_spectral
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         integer(kind=4) :: i, k
+         character(len=dsetnamelen) :: var
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               k = flind%crn%beg
+               do i = I_ONE, size(cr_names, kind=4)
+                  if (.not. cr_spectral(i)) then
+                     if (len_trim(cr_names(i)) > 0) then
+                        write(var, '(2a)') "cr_", trim(cr_names(i))
+                     else
+                        write(var, '(a,i2.2)') "cr", i
+                     endif
+                     call lst(wna%fi)%set_compname(k, var)
+                     k = k + I_ONE
+                  endif
+               enddo
+            class default
+               call die("[cg_list_global:set_cr_names] Unknown list type")
+         end select
+
+      end subroutine set_cr_names
+
+#endif /* COSM_RAYS */
+
+#ifdef CRESP
+      subroutine set_cresp_names
+
+         use constants,        only: dsetnamelen
+         ! use cr_data,          only: cr_names
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         integer(kind=4) :: i
+         character(len=dsetnamelen) :: var
+
+         ! The "e-" part of the name is used for the CR energy density should be cr_names(1) currently
+         ! After merge of Antoine's branch the Isotope names should go there
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               do i = flind%cre%nbeg, flind%cre%nend
+                  write(var, '(a,i2.2)') "cr_e-n", i - flind%cre%nbeg + 1
+                  call lst(wna%fi)%set_compname(i, var)
+               enddo
+               do i = flind%cre%ebeg, flind%cre%eend
+                  write(var, '(a,i2.2)') "cr_e-e", i - flind%cre%ebeg + 1
+                  call lst(wna%fi)%set_compname(i, var)
+               enddo
+            class default
+               call die("[cg_list_global:set_cresp_names] Unknown list type")
+         end select
+
+      end subroutine set_cresp_names
+#endif /* CRESP */
+
+#ifdef MAGNETIC
+      subroutine set_magnetic_names
+
+         use constants,        only: xdim, ydim, zdim
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+
+               call lst(wna%bi)%set_compname(xdim, "magx")
+               call lst(wna%bi)%set_compname(ydim, "magy")
+               call lst(wna%bi)%set_compname(zdim, "magz")
+         end select
+
+      end subroutine set_magnetic_names
+#endif /* MAGNETIC */
+
    end subroutine register_fluids
 
 !> \brief Check if all named arrays are consistently registered
 
    subroutine check_na(this)
 
-      use constants,        only: INVALID, base_level_id
+      use constants,        only: base_level_id
       use dataio_pub,       only: msg, die
       use cg_list,          only: cg_list_element
       use named_array_list, only: qna, wna
@@ -288,7 +418,7 @@ contains
 
       class(cg_list_global_t), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer                             :: i
+      integer(kind=4)                     :: i
       type(cg_list_element), pointer      :: cgl
       logical                             :: bad
 
@@ -303,11 +433,7 @@ contains
                   write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(qna) /= size(cgl%cg%q)",size(qna%lst(:))," /= ",size(cgl%cg%q)
                   call die(msg)
                else
-                  do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-                     if (qna%lst(i)%dim4 /= INVALID) then
-                        write(msg,'(3a,i10)')"[cg_list_global:check_na] qna%lst(",i,"_, named '",qna%lst(i)%name,"' has dim4 set to ",qna%lst(i)%dim4
-                        call die(msg)
-                     endif
+                  do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
                      if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%l%id < base_level_id .and. .not. qna%lst(i)%multigrid) then
                         write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",qna%lst(i)%name,"' allocated on coarse level"
                         call die(msg)
@@ -323,12 +449,12 @@ contains
                   write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(wna) /= size(cgl%cg%w)",size(wna%lst(:))," /= ",size(cgl%cg%w)
                   call die(msg)
                else
-                  do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+                  do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
                      bad = .false.
-                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%l%id >= base_level_id
-                     if (wna%lst(i)%dim4 <= 0 .or. bad) then
+                     if (associated(cgl%cg%w(i)%arr)) bad = wna%get_dim4(i) /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%l%id >= base_level_id
+                     if (wna%get_dim4(i) <= 0 .or. bad) then
                         write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] wna%lst(",i,"_ named '",wna%lst(i)%name,"' has inconsistent dim4: ",&
-                             &         wna%lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
+                             &         wna%get_dim4(i)," /= ",size(cgl%cg%w(i)%arr, dim=1)
                         call die(msg)
                      endif
                      if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%l%id < base_level_id) then

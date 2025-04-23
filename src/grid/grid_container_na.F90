@@ -133,9 +133,10 @@ contains
 
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-            call this%add_na_4d(wna%lst(i)%dim4)
+            call this%add_na_4d(wna%get_dim4(int(i, kind=4)))
          enddo
       endif
+
       call check_mem_usage
 
       ! shortcuts

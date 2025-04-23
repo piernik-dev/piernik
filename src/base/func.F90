@@ -39,7 +39,7 @@ module func
 
    private
    public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, &
-      & append_int_to_array, operator(.equals.), operator(.notequals.)
+      & append_int_to_array, append_int4_to_array, operator(.equals.), operator(.notequals.)
 
    interface operator (.equals.)
       module procedure float_equals
@@ -198,6 +198,28 @@ contains
       arr(ubound(arr(:))) = i
 
    end subroutine append_int_to_array
+
+!> \brief Expand given integer(kind=4) array by one and store the value i in the last cell
+
+   subroutine append_int4_to_array(arr, i)
+
+      implicit none
+
+      integer(kind=4), dimension(:), allocatable, intent(inout) :: arr
+      integer(kind=4),                            intent(in)    :: i
+
+      integer(kind=4), allocatable, dimension(:) :: tmp
+
+      if (allocated(arr)) then
+         allocate(tmp(lbound(arr(:), dim=1):ubound(arr(:), dim=1) + 1))
+         tmp(:ubound(arr(:), dim=1)) = arr(:)
+         call move_alloc(from=tmp, to=arr)
+      else
+         allocate(arr(1))
+      endif
+      arr(ubound(arr(:))) = i
+
+   end subroutine append_int4_to_array
 
 !>
 !! \brief An operator for avoiding direct comparision with floats (like 0.), because gfortran is complaining about that.

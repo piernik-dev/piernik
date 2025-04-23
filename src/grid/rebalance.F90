@@ -474,7 +474,7 @@ contains
       cgl => base%level%first
       if (associated(cgl)) then
          do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-            if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) totfld = totfld + wna%lst(p)%dim4
+            if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) totfld = totfld + wna%get_dim4(p)
          enddo
          do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
             if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) totfld = totfld + 1
@@ -536,8 +536,8 @@ contains
                         s = lbound(cglepa(i)%tbuf, dim=1)
                         do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
                            if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
-                              cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, :, :, :)
-                              s = s + wna%lst(p)%dim4
+                              cglepa(i)%tbuf(s:s+wna%get_dim4(p)-1, :, :, :) = cgl%cg%w(p)%arr(:, :, :, :)
+                              s = s + wna%get_dim4(p)
                            endif
                         enddo
                         do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
@@ -639,8 +639,8 @@ contains
                   s = lbound(cglepa(i)%tbuf, dim=1)
                   do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
                      if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
-                        cgl%cg%w(p)%arr(:, :, :, :) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
-                        s = s + wna%lst(p)%dim4
+                        cgl%cg%w(p)%arr(:, :, :, :) = cglepa(i)%tbuf(s:s+wna%get_dim4(p)-1, :, :, :)
+                        s = s + wna%get_dim4(p)
                      endif
                   enddo
                   do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
