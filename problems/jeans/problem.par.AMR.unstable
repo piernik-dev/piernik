@@ -78,7 +78,7 @@
     ix     = 2
     iy     = 0
     iz     = 0
-    mode   = 0
+    mode   = 2
  /
 
  $MULTIGRID_SOLVER
