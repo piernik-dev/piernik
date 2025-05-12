@@ -219,7 +219,7 @@ contains
             call internal_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
             ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
 
-            call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)
+            call care_for_positives(size(u, 1, kind=4), u1, b1, cg, ddim, i1, i2)
 
             call cg%save_outfluxes(ddim, i1, i2, eflx)
             pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
