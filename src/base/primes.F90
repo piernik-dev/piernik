@@ -106,8 +106,12 @@ contains
       character(len=fmt_len) :: fmt
 
       if (master) then
-         write(fmt, '(a,i0,a)')'(a,i0,a,i0,a,', ubound(this%tab, 1), '(" ",i0))'
-         write(msg, fmt) "There are ", size(this%tab), " prime numbers smaller than ", this%max," :", this%tab
+         if (ubound(this%tab, 1) <= 0) then
+            write(msg, '(a,i0)') "There are 0 prime numbers equal to or smaller than ", this%max
+         else
+            write(fmt, '(a,i0,a)')'(a,i0,a,i0,a,', ubound(this%tab, 1), '(" ",i0))'
+            write(msg, fmt) "There are ", size(this%tab), " prime numbers equal to or smaller than ", this%max," :", this%tab
+         endif
          call printinfo(msg, V_DEBUG)
       endif
 
