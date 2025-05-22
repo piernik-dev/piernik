@@ -103,14 +103,18 @@ contains
 
       class(primes_t), intent(inout) :: this !< object invoking type-bound procedure
 
+      integer, parameter :: head_primenum = 10, tail_primenum = 5
       character(len=fmt_len) :: fmt
 
       if (master) then
          if (ubound(this%tab, 1) <= 0) then
             write(msg, '(a,i0)') "There are 0 prime numbers equal to or smaller than ", this%max
-         else
+         else if (ubound(this%tab, 1) <= head_primenum + tail_primenum) then
             write(fmt, '(a,i0,a)')'(a,i0,a,i0,a,', ubound(this%tab, 1), '(" ",i0))'
             write(msg, fmt) "There are ", size(this%tab), " prime numbers equal to or smaller than ", this%max," :", this%tab
+         else
+            write(fmt, '(a,2(i0,a))')'(a,i0,a,i0,a,', head_primenum, '(" ",i0),a,', tail_primenum, '(" ",i0))'
+            write(msg, fmt) "There are ", size(this%tab), " prime numbers equal to or smaller than ", this%max," :", this%tab(1:head_primenum), " .. ", this%tab(ubound(this%tab, 1)-tail_primenum+1:ubound(this%tab, 1))
          endif
          call printinfo(msg, V_DEBUG)
       endif
