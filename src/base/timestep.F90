@@ -139,7 +139,7 @@ contains
       use piernikdebug,       only: has_const_dt, constant_dt
 #endif /* DEBUG */
 #ifdef NBODY
-      use particle_timestep,    only: timestep_nbody
+      use particle_timestep,  only: timestep_nbody
 #endif /* NBODY */
 
       implicit none
@@ -152,7 +152,7 @@ contains
       type(grid_container),  pointer   :: cg
       real                             :: c_, dt_
       integer                          :: ifl
-      character(len=*), parameter :: ts_label = "timestep"
+      character(len=*), parameter      :: ts_label = "timestep"
 
       call ppp_main%start(ts_label)
 
@@ -265,10 +265,6 @@ contains
       if (.not. repetitive_steps) return
 
       unwanted_negatives = .false.
-      c_all_bck = c_all
-      call time_step(checkdt, flind, .false.)
-      c_all = c_all_bck
-
       call piernik_MPI_Allreduce(dn_negative, pLOR)
       call piernik_MPI_Allreduce(ei_negative, pLOR)
 #ifdef CRESP
@@ -296,6 +292,10 @@ contains
          if (disallow_negatives) unwanted_negatives = .true.
          ei_negative  = .false.
       endif
+
+      c_all_bck = c_all
+      call time_step(checkdt, flind, .false.)
+      c_all = c_all_bck
 
       call set_repeat_step(unwanted_negatives)
       call sync_repeat_step
