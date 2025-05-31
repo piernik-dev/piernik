@@ -343,7 +343,7 @@ gold-clean:
 # Function to run a single gold test
 define run_gold_test
 	$(GOLD_TEST_SCRIPT) $(CONFIG_DIR)/$(1).config > $(GOLDSPACE)/$(1).gold_stdout 2> $(GOLDSPACE)/$(1).gold_stderr && \
-		$(ECHO) -e "  $(1) test "$(PASSED) || \
+		( grep Warning $(GOLDSPACE)/$(1).gold_stderr; $(ECHO) -e "  $(1) test "$(PASSED) ) || \
 		( $(ECHO) -e "  $(1) test "$(FAILED)" (more details in $(GOLDSPACE)/$(1).gold_std*)" && exit 1 )
 endef
 

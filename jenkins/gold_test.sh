@@ -88,7 +88,7 @@ if [ ! -e ${RUN_GOLD_DIR}${OUTPUT} ] ; then
 
     # Compile the gold version of Piernik
     sed -i 's/-fcheck=all/& -fcheck=no-array-temps/' ${GOLD_DIR}$OBJ"/Makefile"
-    make -j -C ${GOLD_DIR}$OBJ > ${GOLD_DIR}make.stdout 2>&1
+    make -j -C ${GOLD_DIR}$OBJ > ${GOLD_DIR}make.stdout
 
     # Run the gold version of Piernik problem
     (
@@ -115,7 +115,7 @@ cp -a runs/$(basename ${PROBLEM_NAME})_${FLAT_PROBLEM_NAME}/* $RUN_TEST_DIR
 
 # Compile current versions of piernik
 sed -i 's/-fcheck=all/& -fcheck=no-array-temps/' ${TEST_DIR}$OBJ"/Makefile"
-make -j -C ${TEST_DIR}$OBJ > ${TEST_DIR}/make.stdout 2>&1
+make -j -C ${TEST_DIR}$OBJ > ${TEST_DIR}/make.stdout
 
 # Detect whether we have genuine riemann setup (which is unlikely to run in RTVD)
 grep -qi '^ *solver_str *= *"riemann"' ${RUN_GOLD_DIR}/problem.par && RIEMANN=1 || RIEMANN=0
