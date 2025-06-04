@@ -109,12 +109,12 @@ contains
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repetitive_steps
+      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep
       use grid_cont,          only: grid_container
       use mpisetup,           only: master
       use ppp,                only: ppp_main
       use sources,            only: timestep_sources
-      use timestep_pub,       only: c_all, c_all_old
+      use timestep_pub,       only: c_all
 #ifdef COSM_RAYS
       use timestepcosmicrays, only: timestep_crs
 #endif /* COSM_RAYS */
