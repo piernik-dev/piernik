@@ -14,11 +14,12 @@ If the above complains that `E: Unable to locate package mpich` then do:
 
 and try again to install the pacages mentioned above. You may use `libhdf5-openmpi-dev` and `openmpi-bin` if you prefer OpenMPI over MPICH.
 
-## Fedora 32 and newer
+## Fedora 32 .. 42 and possibly newer
 
 For Fedora try:
 
-    sudo dnf install make hdf5-openmpi-devel fftw-devel python environment-modules python3-pycodestyle python2-numpy python3-h5py python3-requests
+    sudo dnf install git make hdf5-openmpi-devel fftw-devel environment-modules graphviz gnuplot-wx \
+    python python3-pycodestyle python3-numpy python3-h5py python3-requests python3-matplotlib
 
 You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
 
