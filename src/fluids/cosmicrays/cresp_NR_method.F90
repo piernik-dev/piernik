@@ -991,6 +991,7 @@ contains
       real,    intent(inout) :: x
       logical, intent(out)   :: exit_code
 
+      exit_code = .false.
       if (abs(x) >= q_big) then
          x = sign(one, x) * q_big
          exit_code = .true.
