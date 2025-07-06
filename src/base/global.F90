@@ -198,7 +198,7 @@ contains
 
       ! Begin processing of namelist parameters
 
-      which_solver = RTVD_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
+      which_solver = RIEMANN_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
       divB_0       = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
 
       ! For RIEMANN_SPLIT 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
