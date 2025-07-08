@@ -53,65 +53,12 @@ module sweeps
    public :: sweep
 
 contains
-
-!>
-!! \brief Call all boundaries, try to avoid unnecessary parts.
-!!
-!! For some reasons dir=cdim affect mcrwind tests if sweeps_mgu
-!! \todo Find out why. Is it related to position of magnetic field components?
-!!
-!! \todo Once it gets simplified enough merge it back to sweep.
-!<
-
-   subroutine update_boundaries(cdim, istep)
-
-      use all_boundaries, only: all_fluid_boundaries
-!      use cg_leaves,      only: leaves
-      use constants,      only: first_stage, DIVB_HDC
-      use domain,         only: dom
-      use global,         only: sweeps_mgu, integration_order, divB_0_method
-#ifdef MAGNETIC
-      use all_boundaries, only: all_mag_boundaries
-#endif /* MAGNETIC */
-
-      implicit none
-
-      integer(kind=4), intent(in) :: cdim
-      integer,         intent(in) :: istep
-
-      if (dom%has_dir(cdim)) then
-         if (sweeps_mgu) then
-            if (istep == first_stage(integration_order)) then
-               call all_fluid_boundaries(nocorners = .true., dir = cdim)
-            else
-               call all_fluid_boundaries(nocorners = .true.)
-            endif
-         else
-            ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
-            ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
-
-            ! if (istep == first_stage(integration_order)) then
-            !    call all_fluid_boundaries(nocorners = .true.)
-            ! else
-               call all_fluid_boundaries !(nocorners = .true., dir = cdim)
-            ! endif
-         endif
-      endif
-
-      if (divB_0_method == DIVB_HDC) then
-#ifdef MAGNETIC
-         call all_mag_boundaries ! ToDo: take care of psi boundaries
-#endif /* MAGNETIC */
-      endif
-
-   end subroutine update_boundaries
-
 !>
 !! \brief Perform 1D-solves on all blocks and send fine->coarse fluxes.
 !! Update boundaries. Perform Runge-Kutta substeps.
 !<
 
-   subroutine sweep(cdim, fargo_vel)
+   subroutine sweep(fargo_vel)
 
       use cg_cost_data,     only: I_MHD, I_REFINE
       use cg_leaves,        only: leaves
@@ -132,7 +79,7 @@ contains
       use solvecg_rtvd,     only: solve_cg_rtvd
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
-
+      use update_boundary,  only: update_boundaries
       implicit none
 
       interface
