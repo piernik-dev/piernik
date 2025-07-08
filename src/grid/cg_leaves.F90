@@ -363,8 +363,9 @@ contains
       implicit none
 
       class(cg_leaves_t),         intent(in) :: this  !< object invoking type-bound procedure
-      integer(kind=4),optional    intent(in) :: dir
+      integer(kind=4),optional,   intent(in) :: dir
       logical, optional,          intent(in) :: covered_too
+      integer                         :: pr_cg_i
 
       type(cg_list_dataop_t), pointer :: sorted_leaves
       type(cg_list_element),  pointer :: cgl

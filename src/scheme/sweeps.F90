@@ -53,6 +53,50 @@ module sweeps
    public :: sweep
 
 contains
+
+!   subroutine update_boundaries(cdim, istep)
+!
+!      use all_boundaries, only: all_fluid_boundaries
+!      use cg_leaves,      only: leaves
+!      use constants,      only: first_stage, DIVB_HDC
+!      use domain,         only: dom
+!      use global,         only: sweeps_mgu, integration_order, divB_0_method
+!#ifdef MAGNETIC
+!      use all_boundaries, only: all_mag_boundaries
+!#endif /* MAGNETIC */
+!
+!      implicit none
+!
+!      integer(kind=4), intent(in) :: cdim
+!      integer,         intent(in) :: istep
+!
+!      if (dom%has_dir(cdim)) then
+!         if (sweeps_mgu) then
+!            if (istep == first_stage(integration_order)) then
+!               call all_fluid_boundaries(nocorners = .true., dir = cdim)
+!            else
+!               call all_fluid_boundaries(nocorners = .true.)
+!            endif
+!         else
+            ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
+            ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
+
+            ! if (istep == first_stage(integration_order)) then
+            !    call all_fluid_boundaries(nocorners = .true.)
+            ! else
+!               call all_fluid_boundaries !(nocorners = .true., dir = cdim)
+            ! endif
+!         endif
+!      endif
+
+!      if (divB_0_method == DIVB_HDC) then
+!#ifdef MAGNETIC
+!         call all_mag_boundaries ! ToDo: take care of psi boundaries
+!#endif /* MAGNETIC */
+!      endif
+
+!   end subroutine update_boundaries
+
 !>
 !! \brief Perform 1D-solves on all blocks and send fine->coarse fluxes.
 !! Update boundaries. Perform Runge-Kutta substeps.
@@ -68,7 +112,7 @@ contains
            &                      RTVD_SPLIT, RIEMANN_SPLIT, PPP_CG
       use dataio_pub,       only: die
       use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
-      use global,           only: integration_order, use_fargo, which_solver
+      use global,           only: use_fargo, which_solver
       use grid_cont,        only: grid_container
       use MPIF,             only: MPI_STATUS_IGNORE
       use MPIFUN,           only: MPI_Waitany
@@ -80,29 +124,30 @@ contains
       use solvecg_riemann,  only: solve_cg_riemann
       use sources,          only: prepare_sources
       use update_boundary,  only: update_boundaries
+
       implicit none
 
       interface
 
-         subroutine solve_cg_sub(cg, ddim, istep, fargo_vel)
+         subroutine solve_cg_sub(cg, fargo_vel)
 
             use grid_cont, only: grid_container
 
             implicit none
 
             type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: ddim
-            integer,                       intent(in) :: istep     ! stage in the time integration scheme
+            !integer(kind=4),               intent(in) :: ddim
+            !integer,                       intent(in) :: istep     ! stage in the time integration scheme
             integer(kind=4), optional,     intent(in) :: fargo_vel
 
          end subroutine solve_cg_sub
 
       end interface
 
-      integer(kind=4),           intent(in) :: cdim
+!      integer(kind=4),           intent(in) :: cdim
       integer(kind=4), optional, intent(in) :: fargo_vel
 
-      integer                          :: istep
+      !integer                          :: istep
       type(cg_list_element), pointer   :: cgl
       type(grid_container),  pointer   :: cg
       type(cg_list_dataop_t), pointer  :: sl
@@ -110,12 +155,12 @@ contains
       logical                          :: all_processed, all_received
       integer                          :: blocks_done
       integer(kind=4)                  :: n_recv, g
-      integer                          :: uhi, bhi, psii, psihi
+      !integer                          :: uhi, bhi, psii, psihi
       procedure(solve_cg_sub), pointer :: solve_cg => null()
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
       character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
 
-      call ppp_main%start(sweep_label(cdim))
+      !call ppp_main%start(sweep_label(cdim))
 
       select case (which_solver)
          case (RTVD_SPLIT)
@@ -126,24 +171,25 @@ contains
             call die("[sweeps:sweep] unsupported solver")
       end select
 
-      if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
-           call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
+      !if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
+      !     call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
 
       if (integration_order < lbound(first_stage, 1) .or. integration_order > ubound(first_stage, 1)) &
            call die("[sweeps:sweep] unknown integration_order")
 
+      ! > Lines from here upto lin 192 can be safely removed . Must be a stray line of code       
       ! Despite of its name, cg%w(uhi) here contains unaltered fluid state right at
       ! the beginning of the timestep, not at half-step.
       ! For RK2, when istep==2, cg%u temporarily contains the state at half timestep.
-      uhi = wna%ind(uh_n)
-      bhi = INVALID
-      if (wna%exists(magh_n)) bhi = wna%ind(magh_n)
-      psii = INVALID
-      psihi = INVALID
-      if (qna%exists(psi_n)) then
-         psii = qna%ind(psi_n)
-         psihi = qna%ind(psih_n)
-      endif
+      !uhi = wna%ind(uh_n)
+      !bhi = INVALID
+      !if (wna%exists(magh_n)) bhi = wna%ind(magh_n)
+      !psii = INVALID
+      !psihi = INVALID
+      !if (qna%exists(psi_n)) then
+      !   psii = qna%ind(psi_n)
+      !   psihi = qna%ind(psih_n)
+      !endif
 
       sl => leaves%prioritized_cg(cdim, covered_too = .true.)
       ! We can't just skip the covered cg because it affects divvel (or
