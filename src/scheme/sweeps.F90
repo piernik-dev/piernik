@@ -160,7 +160,7 @@ contains
       character(len=*), dimension(ndims), parameter :: sweep_label = [ "sweep_x", "sweep_y", "sweep_z" ]
       character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
 
-      !call ppp_main%start(sweep_label(cdim))
+      call ppp_main%start()
 
       select case (which_solver)
          case (RTVD_SPLIT)
@@ -267,7 +267,7 @@ contains
       call sl%delete
       deallocate(sl)
 
-      call ppp_main%stop(sweep_label(cdim))
+      call ppp_main%stop()
 
    end subroutine sweep
 
