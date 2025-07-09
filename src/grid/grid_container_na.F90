@@ -66,6 +66,9 @@ module grid_cont_na
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components
       real, dimension(:,:,:,:), pointer :: b     => null()  !< Main array of magnetic field's components
+      real, dimension(:,:,:,:), pointer :: f     => null()  !< Main array of X-faced flux field components
+      real, dimension(:,:,:,:), pointer :: g     => null()  !< Main array of Y-faced flux field components
+      real, dimension(:,:,:,:), pointer :: h     => null()  !< Main array of Z-faced flux field components
 
    contains
 
@@ -140,8 +143,12 @@ contains
       call check_mem_usage
 
       ! shortcuts
-      if (wna%fi > INVALID)  this%u  => this%w(wna%fi)%arr
-      if (wna%bi > INVALID)  this%b  => this%w(wna%bi)%arr
+      if (wna%fi   > INVALID)  this%u  => this%w(wna%fi)%arr
+      if (wna%bi   > INVALID)  this%b  => this%w(wna%bi)%arr
+      if (wna%xflx > INVALID)  this%f  => this%w(wna%xflx)%arr
+      if (wna%yflx > INVALID)  this%g  => this%w(wna%yflx)%arr
+      if (wna%zflx > INVALID)  this%h  => this%w(wna%zflx)%arr
+
       if (qna%wai > INVALID) this%wa => this%q(qna%wai)%arr
 
 #ifdef ISO
@@ -230,4 +237,17 @@ contains
 
    end subroutine set_constant_b_field
 
+   subroutine set_initial_flux(this)
+
+      implicit none
+
+      class(grid_container_na_t), intent(inout) :: this !< object invoking type-bound procedure
+      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
+
+      if (associated(this%xflx) .and. associated(this%yflx) .and. associated(this%zflx)) then
+            this%xlfx(:,:,:,:) = 0.0
+            this%ylfx(:,:,:,:) = 0.0
+            this%zlfx(:,:,:,:) = 0.0
+      end if
+   end subroutine set_constant_b_field
 end module grid_cont_na

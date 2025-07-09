@@ -239,6 +239,10 @@ module constants
    ! fluids
    character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main fluid array
    character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
+   character(len=dsetnamelen), parameter :: xflx_n   = "xflx"   !< main X face-flux array
+   character(len=dsetnamelen), parameter :: yflx_n   = "yflx"   !< main Y face-flux array
+   character(len=dsetnamelen), parameter :: zflx_n   = "zflx"   !< main Z face-flux array
+
    ! magnetic field
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main magnetic field array
    character(len=dsetnamelen), parameter :: magh_n  = "magh"    !< auxiliary array for half-step values
