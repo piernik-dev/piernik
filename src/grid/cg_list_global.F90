@@ -635,5 +635,5 @@ contains
                   call lst(wna%zflx)%set_compname(flind%dst%imz, "zfmomzd")
                endif
          end select
-      end subroutine set_fluid_names
+      end subroutine set_fluxnames
 end module cg_list_global

@@ -242,12 +242,11 @@ contains
       implicit none
 
       class(grid_container_na_t), intent(inout) :: this !< object invoking type-bound procedure
-      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
 
-      if (associated(this%xflx) .and. associated(this%yflx) .and. associated(this%zflx)) then
-            this%xlfx(:,:,:,:) = 0.0
-            this%ylfx(:,:,:,:) = 0.0
-            this%zlfx(:,:,:,:) = 0.0
+      if (associated(this%f) .and. associated(this%g) .and. associated(this%h)) then
+            this%f(:,:,:,:) = 0.0
+            this%g(:,:,:,:) = 0.0
+            this%h(:,:,:,:) = 0.0
       end if
-   end subroutine set_constant_b_field
+   end subroutine set_initial_flux
 end module grid_cont_na
