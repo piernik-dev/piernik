@@ -1997,7 +1997,7 @@ contains
             call cmnlog_s(fmt_loc,   'max(|b|)    ', id, b_max)
 #endif /* CRESP */
             call cmnlog_s(fmt_loc,   'max(|divb|) ', id, divb_max)
-            if (divB_0_method /= DIVB_HDC .or. which_solver /= RIEMANN_SPLIT) id = "N/A"
+            if (divB_0_method /= DIVB_HDC .or. which_solver /= RIEMANN_SPLIT .or. which_solver /= UNSPLIT ) id = "N/A"
             call cmnlog_s(fmt_loc, 'max(|c_h|)  ', id, ch_max)
 #endif /* MAGNETIC */
             if (has_neu) call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)

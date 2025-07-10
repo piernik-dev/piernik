@@ -82,11 +82,12 @@ contains
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
       integer :: nmag, i
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg_riemann:solve_cg_riemann] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg_unsplit:solve_cg_unsplit] Non-cartesian geometry is not implemented yet in this Unsplit solver.")
 
       call prepare_sources(cg)
 
       if (wna%exists(mag_n)) then
+         call die("[solve_cg_unsplit:solve_cg_unsplit] Magnetic field is still unsafe for the flux named arrays")
          nmag = 0
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
@@ -94,12 +95,164 @@ contains
          if (nmag > 1) call die("[solve_cg_riemann:solve_cg_riemann] At most one magnetized fluid is implemented")
          !call solve_cg_ub(cg, ddim, istep)
       else
-         !call solve_cg_u(cg, ddim, istep)
+         call solve_cg_u(cg,istep)
       endif
 
       cg%processed = .true.
 
    end subroutine solve_cg_unsplit
 
+   subroutine solve_cg_u(cg,istep)
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna, qna
+      use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, cs_i2_n, first_stage, last_stage, xdim, ydim, zdim
+      use global,           only: dt, integration_order
+      use domain,           only: dom
+      use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
+      use fluxtypes,        only: ext_fluxes
 
+      implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+      integer,                       intent(in) :: istep    
+
+      integer                                    :: i1, i2, ddim
+      integer(kind=4)                            :: uhi, nx, ny, nz
+      real, dimension(:,:),allocatable           :: u
+      real, dimension(:,:), pointer              :: pu, pflux
+      real, dimension(:),   pointer              :: cs2
+      real, dimension(:,:),allocatable           :: flux
+      type(ext_fluxes)                           :: eflx
+      integer                                    :: i_cs_iso2
+
+      uhi = wna%ind(uh_n)
+      if (qna%exists(cs_i2_n)) then
+         i_cs_iso2 = qna%ind(cs_i2_n)
+      else
+         i_cs_iso2 = -1
+      endif
+      cs2 => null()
+
+      nx =  cg%n_(xdim)
+      ny =  cg%n_(ydim)
+      nz =  cg%n_(zdim)
+
+      do ddim=xdim,zdim
+         if (.not. dom%has_dir(ddim)) cycle
+         do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
+            do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
+
+               if (.not. allocated(u)) then
+                  allocate(u(cg%n_(ddim), size(cg%u,1)))
+               else
+                  deallocate(u)
+                  allocate(u(cg%n_(ddim), size(cg%u,1)))
+               endif
+
+               call flux_choice_helper(cg, pflux, ddim, i1, i2)
+               
+               pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
+
+               u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
+               
+               if (.not. allocated(flux)) then
+                  allocate(flux(size(u, 1)-1,size(u, 2)))
+               else
+                  deallocate(flux)
+                  allocate(flux(size(u, 1)-1,size(u, 2)))
+               endif
+               
+               if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
+
+               call cg%set_fluxpointers(ddim, i1, i2, eflx)
+
+               call solve_u(u,cs2,eflx,flux)
+
+               pflux(:,:) = transpose(flux)
+            
+            end do
+         end do
+      end do
+      
+      if (istep==first_stage(integration_order)) then
+         cg%w(uhi)%arr(:,2:nx-1,2:ny-1,2:nz-1) = cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) - &
+         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,1:nx-2,1:ny-2,1:nz-2) - cg%f(:,2:nx-1,2:ny-1,2:nz-1) )  - &
+         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,1:nx-2,1:ny-2,1:nz-2) - cg%g(:,2:nx-1,2:ny-1,2:nz-1) )  - &
+         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,1:nx-2,1:ny-2,1:nz-2) - cg%h(:,2:nx-1,2:ny-1,2:nz-1) )  
+      else if (istep==last_stage(integration_order)) then
+         cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) = cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) - &
+         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,1:nx-2,1:ny-2,1:nz-2) - cg%f(:,2:nx-1,2:ny-1,2:nz-1) )  - &
+         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,1:nx-2,1:ny-2,1:nz-2) - cg%g(:,2:nx-1,2:ny-1,2:nz-1) )  - &
+         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,1:nx-2,1:ny-2,1:nz-2) - cg%h(:,2:nx-1,2:ny-1,2:nz-1) )
+      end if 
+      !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
+      deallocate(u,flux)
+      nullify(cs2)
+
+   end subroutine solve_cg_u
+
+   subroutine solve_u(ui, cs2, eflx, flx)
+
+      use fluxtypes,      only: ext_fluxes
+      use hlld,           only: riemann_wrap_u
+      use interpolations, only: interpol
+      use dataio_pub,     only: die
+
+      implicit none
+
+      !real, dimension(:,:),        intent(in)    :: u0     !< cell-centered initial fluid states
+      real, dimension(:,:),        intent(inout) :: ui       !< cell-centered intermediate fluid states
+      real, dimension(:), pointer, intent(in)    :: cs2     !< square of local isothermal sound speed
+      !real,                        intent(in)    :: dtodx   !< timestep advance: RK-factor * timestep / cell length
+      type(ext_fluxes),            intent(inout) :: eflx    !< external fluxes
+      real, dimension(:,:),        intent(inout) :: flx     !< Output flux of a 1D chain of a domain at a fixed ortho location of that dimension
+
+      ! left and right states at interfaces 1 .. n-1
+      real, dimension(size(ui, 1)-1, size(ui, 2)), target :: ql, qr
+      integer, parameter :: in = 1  ! index for cells
+
+      ! fluxes through interfaces 1 .. n-1
+      !real, dimension(size(u0, 1)-1, size(u0, 2)), target :: flx
+
+      ! updates required for higher order of integration will likely have shorter length
+      if (size(flx,dim=1) /= size(ui, 1)-1 .or. size(flx,dim=2) /= size(ui, 2)  ) then
+         call die("[solvecg_unsplit:solve_u] flux array dimension does not match the expected dimensions")
+      endif
+
+
+      call interpol(ui, ql, qr)
+      call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
+
+      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
+      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
+      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
+      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+
+      !associate (nx => size(u0, in))
+      !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
+      !end associate
+   end subroutine solve_u
+
+   subroutine flux_choice_helper(cg,pflx,cdim,i,j)
+
+      use constants,        only: xdim, ydim, zdim
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
+
+
+      implicit none
+
+      type(grid_container), pointer, intent(in)    :: cg
+      real, dimension(:,:), pointer, intent(inout) :: pflx
+      integer,                       intent(in)    :: cdim, i, j
+
+      if (cdim==xdim) then
+         pflx => cg%w(wna%xflx)%get_sweep(xdim,i,j)
+      else if (cdim==ydim) then
+         pflx => cg%w(wna%yflx)%get_sweep(ydim,i,j)
+      else
+         pflx => cg%w(wna%zflx)%get_sweep(zdim,i,j)
+      endif
+
+   end subroutine flux_choice_helper
 end module solvecg_unsplit

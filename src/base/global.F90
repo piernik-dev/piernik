@@ -183,7 +183,7 @@ contains
       use bcast,      only: piernik_MPI_Bcast
       use constants,  only: big_float, one, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
-           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, UNSPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
@@ -423,6 +423,8 @@ contains
             which_solver = HLLC_SPLIT
          case ("riemann", "Riemann", "RIEMANN")
             which_solver = RIEMANN_SPLIT
+         case ("UNSPLIT", "unsplit", "van_leer")
+            which_solver = UNSPLIT
          case default
             call die("[global:init_global] unrecognized solver: '" // trim(solver_str) // "'")
       end select
@@ -430,7 +432,7 @@ contains
       select case (which_solver)
          case (RTVD_SPLIT)
             divB_0 = "CT"  ! no other option
-         case (RIEMANN_SPLIT)
+         case (RIEMANN_SPLIT, UNSPLIT )
             if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Riemann solver is implemented only for cartesian geometry")
          case (HLLC_SPLIT)
 #ifdef MAGNETIC
@@ -500,6 +502,8 @@ contains
                call printinfo("    HD solver: HLLC.", V_INFO)
             case (RIEMANN_SPLIT)
                call printinfo("    (M)HD solver: Riemann.", V_INFO)
+            case (UNSPLIT)
+               call printinfo("     (M)HD solver: Unsplit Van Leer.", V_INFO)
             case default
                call die("[global:init_global] unrecognized hydro solver")
          end select
