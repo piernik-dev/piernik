@@ -136,11 +136,18 @@ contains
       nx =  cg%n_(xdim)
       ny =  cg%n_(ydim)
       nz =  cg%n_(zdim)
-
       do ddim=xdim,zdim
          if (.not. dom%has_dir(ddim)) cycle
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
             do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
+
+               if (ddim==xdim) then
+                  pflux => cg%w(wna%xflx)%get_sweep(xdim,i1,i2)
+               else if (ddim==ydim) then
+                  pflux => cg%w(wna%yflx)%get_sweep(ydim,i1,i2)
+               else if (ddim==zdim) then 
+                  pflux => cg%w(wna%zflx)%get_sweep(zdim,i1,i2)
+               endif
 
                if (.not. allocated(u)) then
                   allocate(u(cg%n_(ddim), size(cg%u,1)))
@@ -148,13 +155,14 @@ contains
                   deallocate(u)
                   allocate(u(cg%n_(ddim), size(cg%u,1)))
                endif
-
-               call flux_choice_helper(cg, pflux, ddim, i1, i2)
                
                pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
+               write(111,*) first_stage(integration_order)
+               if (istep == first_stage(integration_order)) pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+
 
                u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
-               
+           
                if (.not. allocated(flux)) then
                   allocate(flux(size(u, 1)-1,size(u, 2)))
                else
@@ -168,22 +176,25 @@ contains
 
                call solve_u(u,cs2,eflx,flux)
 
-               pflux(:,:) = transpose(flux)
-            
+               call cg%save_outfluxes(ddim, i1, i2, eflx)
+
+               pflux(:,2:) = transpose(flux)
+
             end do
          end do
       end do
-      
       if (istep==first_stage(integration_order)) then
+         !call apply_divergence(cg, wna%fi, uhi, istep)
          cg%w(uhi)%arr(:,2:nx-1,2:ny-1,2:nz-1) = cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) - &
-         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,1:nx-2,1:ny-2,1:nz-2) - cg%f(:,2:nx-1,2:ny-1,2:nz-1) )  - &
-         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,1:nx-2,1:ny-2,1:nz-2) - cg%g(:,2:nx-1,2:ny-1,2:nz-1) )  - &
-         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,1:nx-2,1:ny-2,1:nz-2) - cg%h(:,2:nx-1,2:ny-1,2:nz-1) )  
+         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,2:nx-1,2:ny-1,2:nz-1) - cg%f(:,3:nx,3:ny,3:nz) )  - &
+         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,2:nx-1,2:ny-1,2:nz-1) - cg%g(:,3:nx,3:ny,3:nz) )  - &
+         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,2:nx-1,2:ny-1,2:nz-1) - cg%h(:,3:nx,3:ny,3:nz) )  
       else if (istep==last_stage(integration_order)) then
+         !call apply_divergence(cg, wna%fi, wna%fi, istep)
          cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) = cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) - &
-         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,1:nx-2,1:ny-2,1:nz-2) - cg%f(:,2:nx-1,2:ny-1,2:nz-1) )  - &
-         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,1:nx-2,1:ny-2,1:nz-2) - cg%g(:,2:nx-1,2:ny-1,2:nz-1) )  - &
-         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,1:nx-2,1:ny-2,1:nz-2) - cg%h(:,2:nx-1,2:ny-1,2:nz-1) )
+         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,2:nx-1,2:ny-1,2:nz-1) - cg%f(:,3:nx,3:ny,3:nz) )  - &
+         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,2:nx-1,2:ny-1,2:nz-1) - cg%g(:,3:nx,3:ny,3:nz) )  - &
+         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,2:nx-1,2:ny-1,2:nz-1) - cg%h(:,3:nx,3:ny,3:nz) )
       end if 
       !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
       deallocate(u,flux)
@@ -233,26 +244,4 @@ contains
       !end associate
    end subroutine solve_u
 
-   subroutine flux_choice_helper(cg,pflx,cdim,i,j)
-
-      use constants,        only: xdim, ydim, zdim
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-
-      implicit none
-
-      type(grid_container), pointer, intent(in)    :: cg
-      real, dimension(:,:), pointer, intent(inout) :: pflx
-      integer,                       intent(in)    :: cdim, i, j
-
-      if (cdim==xdim) then
-         pflx => cg%w(wna%xflx)%get_sweep(xdim,i,j)
-      else if (cdim==ydim) then
-         pflx => cg%w(wna%yflx)%get_sweep(ydim,i,j)
-      else
-         pflx => cg%w(wna%zflx)%get_sweep(zdim,i,j)
-      endif
-
-   end subroutine flux_choice_helper
 end module solvecg_unsplit
