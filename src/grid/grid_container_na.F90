@@ -79,6 +79,7 @@ module grid_cont_na
       ! These should be private procedures but we need them in cg_list_global:reg_var
       procedure :: add_na                !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d             !< Register a new 4D entry in current cg with given name.
+      procedure :: set_initial_flux
 
    end type grid_container_na_t
 

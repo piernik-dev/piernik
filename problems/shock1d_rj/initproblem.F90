@@ -187,7 +187,6 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
@@ -265,7 +264,6 @@ contains
                      cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
                      cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
                      cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
-
                      if (fl%has_energy) then
 
                         cg%u(fl%ien,i,j,k) = pre ! p/(gamma - 1)
@@ -298,7 +296,6 @@ contains
                   enddo
                enddo
             enddo
-
             cgl => cgl%nxt
          enddo
       enddo

@@ -78,7 +78,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
       integer :: nmag, i
 
@@ -113,7 +113,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
       integer,                       intent(in) :: istep    
 
       integer                                    :: i1, i2, ddim
@@ -132,10 +132,6 @@ contains
          i_cs_iso2 = -1
       endif
       cs2 => null()
-
-      nx =  cg%n_(xdim)
-      ny =  cg%n_(ydim)
-      nz =  cg%n_(zdim)
       do ddim=xdim,zdim
          if (.not. dom%has_dir(ddim)) cycle
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
@@ -157,9 +153,8 @@ contains
                endif
                
                pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
-               write(111,*) first_stage(integration_order)
                if (istep == first_stage(integration_order)) pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-
+            
 
                u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
            
@@ -183,20 +178,7 @@ contains
             end do
          end do
       end do
-      if (istep==first_stage(integration_order)) then
-         !call apply_divergence(cg, wna%fi, uhi, istep)
-         cg%w(uhi)%arr(:,2:nx-1,2:ny-1,2:nz-1) = cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) - &
-         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,2:nx-1,2:ny-1,2:nz-1) - cg%f(:,3:nx,3:ny,3:nz) )  - &
-         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,2:nx-1,2:ny-1,2:nz-1) - cg%g(:,3:nx,3:ny,3:nz) )  - &
-         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,2:nx-1,2:ny-1,2:nz-1) - cg%h(:,3:nx,3:ny,3:nz) )  
-      else if (istep==last_stage(integration_order)) then
-         !call apply_divergence(cg, wna%fi, wna%fi, istep)
-         cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) = cg%w(wna%fi)%arr(:,2:nx-1,2:ny-1,2:nz-1) - &
-         dt/cg%dl(xdim) * rk_coef(istep) * (cg%f(:,2:nx-1,2:ny-1,2:nz-1) - cg%f(:,3:nx,3:ny,3:nz) )  - &
-         dt/cg%dl(ydim) * rk_coef(istep) * (cg%g(:,2:nx-1,2:ny-1,2:nz-1) - cg%g(:,3:nx,3:ny,3:nz) )  - &
-         dt/cg%dl(zdim) * rk_coef(istep) * (cg%h(:,2:nx-1,2:ny-1,2:nz-1) - cg%h(:,3:nx,3:ny,3:nz) )
-      end if 
-      !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
+      call apply_flux(cg,istep)
       deallocate(u,flux)
       nullify(cs2)
 
@@ -244,4 +226,105 @@ contains
       !end associate
    end subroutine solve_u
 
+   subroutine apply_flux(cg, istep)
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use constants,          only: xdim, ydim, zdim, first_stage, last_stage, rk_coef, uh_n, ORTHO1, LO, HI, I_ONE, I_TWO, pdims
+      use global,             only: integration_order, dt, nstep
+      use named_array_list,   only: wna
+
+      implicit none
+
+      type(grid_container), pointer, intent(inout) :: cg
+      integer,                       intent(in)    :: istep
+
+      integer :: afdim, uhi, iul, iuh, jul, juh, kul, kuh , igli, ighi, jgli, jghi, kgli, kghi, &
+                 iglo, igho, jglo, jgho, kglo, kgho
+
+      iul = lbound(cg%w(wna%fi)%arr , 2)
+      iuh = ubound(cg%w(wna%fi)%arr , 2) 
+      jul = lbound(cg%w(wna%fi)%arr , 3)
+      juh = ubound(cg%w(wna%fi)%arr , 3)
+      kul = lbound(cg%w(wna%fi)%arr , 4)
+      kuh = ubound(cg%w(wna%fi)%arr , 4)
+      
+      if (dom%has_dir(xdim))  then
+         iul = iul + I_ONE
+         iuh = iuh - I_ONE
+      endif
+      if (dom%has_dir(ydim)) then 
+         jul = jul + I_ONE
+         juh = juh - I_ONE
+      endif
+      if (dom%has_dir(zdim)) then
+         kul = kul + I_ONE
+         kuh = kuh - I_ONE
+      endif
+
+      igli = lbound(cg%w(wna%xflx)%arr , 2)   ;  iglo = lbound(cg%w(wna%xflx)%arr , 2)
+      ighi = ubound(cg%w(wna%xflx)%arr , 2)   ;  igho = ubound(cg%w(wna%xflx)%arr , 2)
+      jgli = lbound(cg%w(wna%xflx)%arr , 3)   ;  jglo = lbound(cg%w(wna%xflx)%arr , 3)
+      jghi = ubound(cg%w(wna%xflx)%arr , 3)   ;  jgho = ubound(cg%w(wna%xflx)%arr , 3)
+      kgli = lbound(cg%w(wna%xflx)%arr , 4)   ;  kglo = lbound(cg%w(wna%xflx)%arr , 4)
+      kghi = ubound(cg%w(wna%xflx)%arr , 4)   ;  kgho = ubound(cg%w(wna%xflx)%arr , 4)
+      
+      if (dom%has_dir(xdim)) then
+         igli = igli + I_ONE
+         ighi = ighi - I_TWO
+         iglo = iglo + I_TWO
+      endif
+      if (dom%has_dir(ydim)) then
+         jgli = jgli + I_ONE
+         jghi = jghi - I_TWO
+         jglo = jglo + I_TWO
+      endif
+      if (dom%has_dir(zdim)) then
+         kgli = kgli + I_ONE
+         kghi = kghi - I_TWO
+         kglo = kglo + I_TWO
+      endif
+      uhi = wna%ind(uh_n)
+      if (istep==first_stage(integration_order)) then
+         cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
+         do afdim=xdim,zdim
+            if (.not. dom%has_dir(afdim)) then
+               cycle
+            else
+               if (afdim==xdim) then
+                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%w(wna%xflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%w(wna%xflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+               else if (afdim==ydim) then
+                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%w(wna%yflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%w(wna%yflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
+               else if (afdim==zdim) then
+                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%w(wna%zflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%w(wna%zflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+               end if
+            end if
+         end do
+      else if (istep==last_stage(integration_order)) then
+         do afdim=xdim,zdim
+            if (.not. dom%has_dir(afdim)) then
+               cycle
+            else
+               if (afdim==xdim) then
+                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%w(wna%xflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%w(wna%xflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+               else if (afdim==ydim) then
+                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%w(wna%yflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%w(wna%yflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
+               else if (afdim==zdim) then
+                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%w(wna%zflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%w(wna%zflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+               end if
+            end if
+         end do
+      end if
+   end subroutine apply_flux
 end module solvecg_unsplit
