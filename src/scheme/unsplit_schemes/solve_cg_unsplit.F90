@@ -78,7 +78,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
       integer :: nmag, i
 
@@ -106,14 +106,14 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use constants,        only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, cs_i2_n, first_stage, last_stage, xdim, ydim, zdim
-      use global,           only: dt, integration_order
+      use global,           only: dt, integration_order, nstep
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use fluxtypes,        only: ext_fluxes
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: istep    
 
       integer                                    :: i1, i2, ddim
@@ -167,24 +167,27 @@ contains
                
                if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 
-               call cg%set_fluxpointers(ddim, i1, i2, eflx)
+               
+               !call cg%set_fluxpointers(ddim, i1, i2, eflx)
 
-               call solve_u(u,cs2,eflx,flux)
+               call solve_u(u,cs2,flux)
 
-               call cg%save_outfluxes(ddim, i1, i2, eflx)
+               !call cg%save_outfluxes(ddim, i1, i2, eflx)
 
                pflux(:,2:) = transpose(flux)
-
+               !pflux(:,1)  = pflux(:,2)      ! simple outflow BC on the first interface
+               !pflux(:,size(pflux,2)) = pflux(:,size(pflux,2)-1)
             end do
          end do
       end do
+
       call apply_flux(cg,istep)
       deallocate(u,flux)
       nullify(cs2)
 
    end subroutine solve_cg_u
 
-   subroutine solve_u(ui, cs2, eflx, flx)
+   subroutine solve_u(ui, cs2, flx)
 
       use fluxtypes,      only: ext_fluxes
       use hlld,           only: riemann_wrap_u
@@ -194,10 +197,10 @@ contains
       implicit none
 
       !real, dimension(:,:),        intent(in)    :: u0     !< cell-centered initial fluid states
-      real, dimension(:,:),        intent(inout) :: ui       !< cell-centered intermediate fluid states
+      real, dimension(:,:),        intent(in) :: ui       !< cell-centered intermediate fluid states
       real, dimension(:), pointer, intent(in)    :: cs2     !< square of local isothermal sound speed
       !real,                        intent(in)    :: dtodx   !< timestep advance: RK-factor * timestep / cell length
-      type(ext_fluxes),            intent(inout) :: eflx    !< external fluxes
+      !type(ext_fluxes),            intent(inout) :: eflx    !< external fluxes
       real, dimension(:,:),        intent(inout) :: flx     !< Output flux of a 1D chain of a domain at a fixed ortho location of that dimension
 
       ! left and right states at interfaces 1 .. n-1
@@ -216,10 +219,10 @@ contains
       call interpol(ui, ql, qr)
       call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      !if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
+      !if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
+      !if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
+      !if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
 
       !associate (nx => size(u0, in))
       !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
@@ -235,7 +238,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in)    :: istep
 
       integer :: afdim, uhi, iul, iuh, jul, juh, kul, kuh , igli, ighi, jgli, jghi, kgli, kghi, &
@@ -291,15 +294,15 @@ contains
                cycle
             else
                if (afdim==xdim) then
-                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(xdim) * rk_coef(istep) * (cg%w(wna%xflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%w(wna%xflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
                else if (afdim==ydim) then
-                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(ydim) * rk_coef(istep) * (cg%w(wna%yflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%w(wna%yflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
                else if (afdim==zdim) then
-                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(zdim) * rk_coef(istep) * (cg%w(wna%zflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%w(wna%zflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
                end if
@@ -311,15 +314,15 @@ contains
                cycle
             else
                if (afdim==xdim) then
-                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(xdim) * rk_coef(istep) * (cg%w(wna%xflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%w(wna%xflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
                else if (afdim==ydim) then
-                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(ydim) * rk_coef(istep) * (cg%w(wna%yflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%w(wna%yflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
                else if (afdim==zdim) then
-                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) - &
+                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(zdim) * rk_coef(istep) * (cg%w(wna%zflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%w(wna%zflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
                end if
