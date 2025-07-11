@@ -174,7 +174,7 @@ contains
 
                !call cg%save_outfluxes(ddim, i1, i2, eflx)
 
-               pflux(:,2:) = transpose(flux)
+               pflux(:,2:) = transpose(flux(:, iarr_all_swp(ddim,:)))
                !pflux(:,1)  = pflux(:,2)      ! simple outflow BC on the first interface
                !pflux(:,size(pflux,2)) = pflux(:,size(pflux,2)-1)
             end do
@@ -295,16 +295,16 @@ contains
             else
                if (afdim==xdim) then
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%w(wna%xflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%w(wna%xflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
-               else if (afdim==ydim) then
+                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%fx(:,iglo:igho,jglo:jgho,kglo:kgho) )
+               else if (afdim==ydim) then                                                           
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%w(wna%yflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%w(wna%yflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
+                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%gy(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
                else if (afdim==zdim) then
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%w(wna%zflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%w(wna%zflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%hz(:,iglo:igho,jglo:jgho,kglo:kgho) )
                end if
             end if
          end do
@@ -315,16 +315,16 @@ contains
             else
                if (afdim==xdim) then
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%w(wna%xflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%w(wna%xflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%fx(:,iglo:igho,jglo:jgho,kglo:kgho) )
                else if (afdim==ydim) then
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%w(wna%yflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%w(wna%yflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
+                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%gy(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
                else if (afdim==zdim) then
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%w(wna%zflx)%arr(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%w(wna%zflx)%arr(:,iglo:igho,jglo:jgho,kglo:kgho) )
+                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,igli:ighi,jgli:jghi,kgli:kghi) &
+                                                                                          - cg%hz(:,iglo:igho,jglo:jgho,kglo:kgho) )
                end if
             end if
          end do

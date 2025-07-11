@@ -1,12 +1,12 @@
 $BASE_DOMAIN
-  n_d = 1,1,512
+  n_d = 512,1,1
   nb  = 4
-  bnd_xl = 'per'
-  bnd_xr = 'per'
+  bnd_xl = 'out'
+  bnd_xr = 'out'
   bnd_yl = 'per'
   bnd_yr = 'per'
-  bnd_zl = 'out'
-  bnd_zr = 'out'
+  bnd_zl = 'per'
+  bnd_zr = 'per'
   xmin   =  0.0
   xmax   =  1.0
   ymin   =  0.0
@@ -39,7 +39,7 @@ $OUTPUT_CONTROL
    dt_res = 0.0
    dt_log = 0.02
    dt_tsl = 0.02
-   vars(1:) = 'dens', 'ener', 'velz', 'pres'
+   vars(1:) = 'dens', 'ener', 'velx', 'pres'
 /
 
 $FLUID_NEUTRAL
@@ -71,7 +71,6 @@ $PROBLEM_CONTROL
    bxr = 0.0
    byr = 0.0
    bzr = 0.0
-   dir = "z"
 /
 
 $AMR

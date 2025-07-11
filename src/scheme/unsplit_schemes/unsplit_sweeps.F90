@@ -69,6 +69,9 @@ contains
 
         cgl => leaves%first
         do while (associated(cgl))
+            !cgl%cg%f(:,:,:,:) = 0.0                         ! This looks unsafe. Might come back to bite your ass later. Careful 
+            !cgl%cg%g(:,:,:,:) = 0.0
+            !cgl%cg%h(:,:,:,:) = 0.0
             call prepare_sources(cgl%cg)
             cgl => cgl%nxt
         enddo

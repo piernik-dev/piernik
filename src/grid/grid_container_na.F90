@@ -66,9 +66,9 @@ module grid_cont_na
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components
       real, dimension(:,:,:,:), pointer :: b     => null()  !< Main array of magnetic field's components
-      real, dimension(:,:,:,:), pointer :: f     => null()  !< Main array of X-faced flux field components
-      real, dimension(:,:,:,:), pointer :: g     => null()  !< Main array of Y-faced flux field components
-      real, dimension(:,:,:,:), pointer :: h     => null()  !< Main array of Z-faced flux field components
+      real, dimension(:,:,:,:), pointer :: fx     => null()  !< Main array of X-faced flux field components
+      real, dimension(:,:,:,:), pointer :: gy     => null()  !< Main array of Y-faced flux field components
+      real, dimension(:,:,:,:), pointer :: hz     => null()  !< Main array of Z-faced flux field components
 
    contains
 
@@ -146,9 +146,9 @@ contains
       ! shortcuts
       if (wna%fi   > INVALID)  this%u  => this%w(wna%fi)%arr
       if (wna%bi   > INVALID)  this%b  => this%w(wna%bi)%arr
-      if (wna%xflx > INVALID)  this%f  => this%w(wna%xflx)%arr
-      if (wna%yflx > INVALID)  this%g  => this%w(wna%yflx)%arr
-      if (wna%zflx > INVALID)  this%h  => this%w(wna%zflx)%arr
+      if (wna%xflx > INVALID)  this%fx  => this%w(wna%xflx)%arr
+      if (wna%yflx > INVALID)  this%gy  => this%w(wna%yflx)%arr
+      if (wna%zflx > INVALID)  this%hz  => this%w(wna%zflx)%arr
 
       if (qna%wai > INVALID) this%wa => this%q(qna%wai)%arr
 
@@ -244,10 +244,10 @@ contains
 
       class(grid_container_na_t), intent(inout) :: this !< object invoking type-bound procedure
 
-      if (associated(this%f) .and. associated(this%g) .and. associated(this%h)) then
-            this%f(:,:,:,:) = 0.0
-            this%g(:,:,:,:) = 0.0
-            this%h(:,:,:,:) = 0.0
+      if (associated(this%fx) .and. associated(this%gy) .and. associated(this%hz)) then
+            this%fx(:,:,:,:) = 0.0
+            this%gy(:,:,:,:) = 0.0
+            this%hz(:,:,:,:) = 0.0
       end if
    end subroutine set_initial_flux
 end module grid_cont_na
