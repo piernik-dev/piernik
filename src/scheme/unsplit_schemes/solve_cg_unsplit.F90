@@ -110,7 +110,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use fluxtypes,        only: ext_fluxes
-
+      use unsplit_source,   only: apply_source
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
@@ -180,8 +180,8 @@ contains
             end do
          end do
       end do
-
       call apply_flux(cg,istep)
+      call apply_source(cg,istep)
       deallocate(u,flux)
       nullify(cs2)
 

@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 64, 64
+    n_d = 512, 512, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -48,9 +48,9 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.8
-    smalld = 1.e-3
-    smallei= 1.e-5
+    cfl    = 0.1
+    smalld = 1.e-8
+    smallei= 1.e-8
     solver_str = "unsplit"
  /
 
