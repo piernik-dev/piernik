@@ -117,7 +117,7 @@ contains
       integer,                       intent(in) :: istep    
 
       integer                                    :: i1, i2, ddim
-      integer(kind=4)                            :: uhi, nx, ny, nz
+      integer(kind=4)                            :: uhi
       real, dimension(:,:),allocatable           :: u
       real, dimension(:,:), pointer              :: pu, pflux
       real, dimension(:),   pointer              :: cs2
@@ -273,19 +273,21 @@ contains
       
       if (dom%has_dir(xdim)) then
          igli = igli + I_ONE
-         ighi = ighi - I_TWO
+         ighi = ighi - I_ONE
          iglo = iglo + I_TWO
       endif
       if (dom%has_dir(ydim)) then
          jgli = jgli + I_ONE
-         jghi = jghi - I_TWO
+         jghi = jghi - I_ONE
          jglo = jglo + I_TWO
       endif
       if (dom%has_dir(zdim)) then
          kgli = kgli + I_ONE
-         kghi = kghi - I_TWO
+         kghi = kghi - I_ONE
          kglo = kglo + I_TWO
       endif
+      !write(111,*) igli,ighi,jgli,jghi,kgli,kghi,iglo,igho,jglo,jgho,kglo,kgho,iul,iuh,jul,juh,kul,kuh
+      !stop
       uhi = wna%ind(uh_n)
       if (istep==first_stage(integration_order)) then
          cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
