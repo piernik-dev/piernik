@@ -85,6 +85,7 @@ contains
 
             do while (associated(cgl))
                 cg => cgl%cg
+                call cg%cleanup_flux()
                 call solve_cg_unsplit(cg,istep)
                 cgl => cgl%nxt
             end do

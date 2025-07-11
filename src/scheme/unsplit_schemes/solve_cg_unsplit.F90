@@ -292,43 +292,35 @@ contains
       if (istep==first_stage(integration_order)) then
          cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
          do afdim=xdim,zdim
-            if (.not. dom%has_dir(afdim)) then
-               cycle
-            else
-               if (afdim==xdim) then
+               if (afdim==xdim .and. dom%has_dir(afdim)) then
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%fx(:,iglo:igho,jglo:jgho,kglo:kgho) )
-               else if (afdim==ydim) then                                                           
+               else if (afdim==ydim .and. dom%has_dir(afdim)) then                                                           
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%gy(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
-               else if (afdim==zdim) then
+               else if (afdim==zdim .and. dom%has_dir(afdim)) then
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%hz(:,iglo:igho,jglo:jgho,kglo:kgho) )
                end if
-            end if
          end do
       else if (istep==last_stage(integration_order)) then
          do afdim=xdim,zdim
-            if (.not. dom%has_dir(afdim)) then
-               cycle
-            else
-               if (afdim==xdim) then
+               if (afdim==xdim .and. dom%has_dir(afdim)) then
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%fx(:,iglo:igho,jglo:jgho,kglo:kgho) )
-               else if (afdim==ydim) then
+               else if (afdim==ydim .and. dom%has_dir(afdim)) then
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%gy(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
-               else if (afdim==zdim) then
+               else if (afdim==zdim .and. dom%has_dir(afdim)) then
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
                                                          dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,igli:ighi,jgli:jghi,kgli:kghi) &
                                                                                           - cg%hz(:,iglo:igho,jglo:jgho,kglo:kgho) )
                end if
-            end if
          end do
       end if
    end subroutine apply_flux
