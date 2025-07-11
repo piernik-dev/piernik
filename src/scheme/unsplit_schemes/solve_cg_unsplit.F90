@@ -168,11 +168,11 @@ contains
                if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 
                
-               !call cg%set_fluxpointers(ddim, i1, i2, eflx)
+               call cg%set_fluxpointers(ddim, i1, i2, eflx)
 
-               call solve_u(u,cs2,flux)
+               call solve_u(u,cs2, eflx, flux)
 
-               !call cg%save_outfluxes(ddim, i1, i2, eflx)
+               call cg%save_outfluxes(ddim, i1, i2, eflx)
 
                pflux(:,2:) = transpose(flux(:, iarr_all_swp(ddim,:)))
                !pflux(:,1)  = pflux(:,2)      ! simple outflow BC on the first interface
@@ -187,7 +187,7 @@ contains
 
    end subroutine solve_cg_u
 
-   subroutine solve_u(ui, cs2, flx)
+   subroutine solve_u(ui, cs2, eflx, flx)
 
       use fluxtypes,      only: ext_fluxes
       use hlld,           only: riemann_wrap_u
@@ -200,7 +200,7 @@ contains
       real, dimension(:,:),        intent(in) :: ui       !< cell-centered intermediate fluid states
       real, dimension(:), pointer, intent(in)    :: cs2     !< square of local isothermal sound speed
       !real,                        intent(in)    :: dtodx   !< timestep advance: RK-factor * timestep / cell length
-      !type(ext_fluxes),            intent(inout) :: eflx    !< external fluxes
+      type(ext_fluxes),            intent(inout) :: eflx    !< external fluxes
       real, dimension(:,:),        intent(inout) :: flx     !< Output flux of a 1D chain of a domain at a fixed ortho location of that dimension
 
       ! left and right states at interfaces 1 .. n-1
@@ -219,10 +219,10 @@ contains
       call interpol(ui, ql, qr)
       call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
 
-      !if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      !if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      !if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      !if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
+      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
+      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
+      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
 
       !associate (nx => size(u0, in))
       !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
@@ -289,7 +289,7 @@ contains
       !write(111,*) igli,ighi,jgli,jghi,kgli,kghi,iglo,igho,jglo,jgho,kglo,kgho,iul,iuh,jul,juh,kul,kuh
       !stop
       uhi = wna%ind(uh_n)
-      if (istep==first_stage(integration_order)) then
+      if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
          cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
          do afdim=xdim,zdim
                if (afdim==xdim .and. dom%has_dir(afdim)) then

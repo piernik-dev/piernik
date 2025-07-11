@@ -46,6 +46,7 @@ contains
 
     subroutine unsplit_sweep()
         use cg_list,                            only: cg_list_element
+        use cg_cost_data,                       only: I_MHD, I_REFINE
         use grid_cont,                          only: grid_container
         use cg_leaves,                          only: leaves
         use dataio_pub,                         only: die
@@ -55,17 +56,31 @@ contains
         use solvecg_unsplit,                    only: solve_cg_unsplit
         use sources,                            only: prepare_sources
         use global,                             only: integration_order, which_solver 
-        use constants,                          only: first_stage, last_stage, UNSPLIT
+        use constants,                          only: first_stage, last_stage, UNSPLIT, PPP_CG
         use unsplit_update_boundary,            only: update_boundaries
+        use cg_list_dataop,                     only: cg_list_dataop_t
+        use pppmpi,                             only: req_ppp
+        use MPIF,                               only: MPI_STATUS_IGNORE
+        use MPIFUN,                             only: MPI_Waitany
+        use fc_fluxes,                          only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
+
+
         implicit none
 
 
-
+        type(cg_list_dataop_t), pointer  :: sl
+        type(req_ppp)                    :: req
+        logical                          :: all_processed, all_received
+        integer                          :: blocks_done
+        integer(kind=4)                  :: n_recv, g
         type(cg_list_element), pointer   :: cgl
         type(grid_container),  pointer   :: cg
         integer                          :: istep
+        character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
 
         if (which_solver /= UNSPLIT) call die("[unsplit_sweeps:unsplit_sweep] Only compatible with UNSPLIT solver")
+        sl => leaves%prioritized_cg(-1, covered_too = .true.)
+
 
         cgl => leaves%first
         do while (associated(cgl))
@@ -76,23 +91,57 @@ contains
             cgl => cgl%nxt
         enddo
 
+
+
         !all_processed = .false.
         !blocks_done = 0
         
         do istep = first_stage(integration_order), last_stage(integration_order)
             
-            cgl => leaves%first    ! This should be modified to point to the first leaf of prioritized leaves . Maybe important only in AMR ? 
+            call initiate_flx_recv(req, -1)
+            n_recv = req%n
+            all_processed = .false.
+            do while (.not. all_processed)
+                all_processed = .true.
+                blocks_done = 0
+                ! OPT this loop should probably go from finest to coarsest for better compute-communicate overlap.
+                cgl => sl%first
+            !cgl => leaves%first    ! This should be modified to point to the first leaf of prioritized leaves . Maybe important only in AMR ? 
 
-            do while (associated(cgl))
-                cg => cgl%cg
-                call cg%cleanup_flux()
-                call solve_cg_unsplit(cg,istep)
-                cgl => cgl%nxt
-            end do
+                do while (associated(cgl))
+                    cg => cgl%cg
+
+                    if (.not. cg%processed) then
+                        call recv_cg_finebnd(req,-1, cg, all_received)
+                        if (all_received) then
+
+                            call cg%cleanup_flux()
+
+                            call solve_cg_unsplit(cg,istep)
+
+                            call send_cg_coarsebnd(req, -1, cg)
+                            blocks_done = blocks_done + 1
+                        else
+                            all_processed = .false.
+                        endif
+                    endif
+
+                    cgl => cgl%nxt
+                end do
+                if (.not. all_processed .and. blocks_done == 0) then
+                if (n_recv > 0) call MPI_Waitany(n_recv, req%r(:n_recv), g, MPI_STATUS_IGNORE, err_mpi)
+                ! g is the number of completed operations
+                endif
+            enddo
+
+            call req%waitall("sweeps")
 
             call update_boundaries(istep)
-
         end do
+        call sl%delete
+        deallocate(sl)
+
+
     end subroutine unsplit_sweep   
 
 end module unsplit_sweeps

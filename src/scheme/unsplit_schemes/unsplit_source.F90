@@ -89,7 +89,7 @@ contains
                 do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
 
                     pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
-                    if (istep == first_stage(integration_order)) pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+                    if (istep == last_stage(integration_order)) pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
                     
 
                     u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
