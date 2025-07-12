@@ -185,10 +185,6 @@ contains
                tflux(:,2:) = transpose(flux(:, iarr_all_swp(ddim,:)))
                tflux(:,1) = 0.0
                pflux(:,:) = tflux
-
-
-               !pflux(:,1)  = pflux(:,2)      ! simple outflow BC on the first interface
-               !pflux(:,size(pflux,2)) = pflux(:,size(pflux,2)-1)
             end do
          end do
       end do
@@ -208,10 +204,8 @@ contains
 
       implicit none
 
-      !real, dimension(:,:),        intent(in)    :: u0     !< cell-centered initial fluid states
-      real, dimension(:,:),        intent(in) :: ui       !< cell-centered intermediate fluid states
+      real, dimension(:,:),        intent(in)    :: ui       !< cell-centered intermediate fluid states
       real, dimension(:), pointer, intent(in)    :: cs2     !< square of local isothermal sound speed
-      !real,                        intent(in)    :: dtodx   !< timestep advance: RK-factor * timestep / cell length
       type(ext_fluxes),            intent(inout) :: eflx    !< external fluxes
       real, dimension(:,:),        intent(inout) :: flx     !< Output flux of a 1D chain of a domain at a fixed ortho location of that dimension
 
@@ -219,8 +213,7 @@ contains
       real, dimension(size(ui, 1)-1, size(ui, 2)), target :: ql, qr
       integer, parameter :: in = 1  ! index for cells
 
-      ! fluxes through interfaces 1 .. n-1
-      !real, dimension(size(u0, 1)-1, size(u0, 2)), target :: flx
+
 
       ! updates required for higher order of integration will likely have shorter length
       if (size(flx,dim=1) /= size(ui, 1)-1 .or. size(flx,dim=2) /= size(ui, 2)  ) then
@@ -236,176 +229,88 @@ contains
       if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
       if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
 
-      !associate (nx => size(u0, in))
-      !   u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
-      !end associate
    end subroutine solve_u
 
    subroutine apply_flux(cg, istep)
-      use domain,             only: dom
-      use grid_cont,          only: grid_container
-      use constants,          only: xdim, ydim, zdim, first_stage, last_stage, rk_coef, uh_n, ORTHO1, LO, HI, I_ONE, I_TWO, I_THREE, pdims
-      use global,             only: integration_order, dt, nstep
-      use named_array_list,   only: wna
+      use domain,             only : dom
+      use grid_cont,          only : grid_container
+      use global,             only : integration_order, dt
+      use named_array_list,   only : wna
+      use constants,          only : xdim, ydim, zdim, first_stage, last_stage, rk_coef, &
+                                     uh_n, I_ONE, ndims
 
       implicit none
 
-      type(grid_container), pointer, intent(in)    :: cg
-      integer,                       intent(in)    :: istep
+      type :: fxptr
+         real, pointer :: flx(:,:,:,:)
+      end type fxptr
 
-      integer                                      :: afdim, uhi, iul, iuh, jul, juh, kul, kuh
-      !real, dimension(:,:,:,:), pointer                :: fld
-      !nb = dom%nb
+      type(grid_container), pointer, intent(in)   :: cg
+      integer,                       intent(in)   :: istep
 
-      iul = lbound(cg%w(wna%fi)%arr , 2) ; iuh = ubound(cg%w(wna%fi)%arr , 2) 
-      jul = lbound(cg%w(wna%fi)%arr , 3) ; juh = ubound(cg%w(wna%fi)%arr , 3)
-      kul = lbound(cg%w(wna%fi)%arr , 4) ; kuh = ubound(cg%w(wna%fi)%arr , 4)
-      
-      if (dom%has_dir(xdim))  then
-         iul = iul + I_ONE
-         iuh = iuh - I_ONE
-      endif
-      if (dom%has_dir(ydim)) then 
-         jul = jul + I_ONE
-         juh = juh - I_ONE
-      endif
-      if (dom%has_dir(zdim)) then
-         kul = kul + I_ONE
-         kuh = kuh - I_ONE
-      endif
+      logical                     :: active(ndims)
+      integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
+      integer                     :: d, afdim, uhi
+      real, pointer               :: T(:,:,:,:)
+      type(fxptr)                 :: F(ndims)
 
-      !write(111,*) igli,ighi,jgli,jghi,kgli,kghi,iglo,igho,jglo,jgho,kglo,kgho,iul,iuh,jul,juh,kul,kuh
+      active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
+
+      F(xdim)%flx => cg%fx   ;  F(ydim)%flx => cg%gy   ;  F(zdim)%flx => cg%hz
+
+      L0 = [ lbound(cg%w(wna%fi)%arr,2), lbound(cg%w(wna%fi)%arr,3), lbound(cg%w(wna%fi)%arr,4) ]
+      U0 = [ ubound(cg%w(wna%fi)%arr,2), ubound(cg%w(wna%fi)%arr,3), ubound(cg%w(wna%fi)%arr,4) ]
 
       uhi = wna%ind(uh_n)
-      ! if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
-      !    cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
-      !    fld => cg%w(uhi)%arr
-      ! else if (istep==last_stage(integration_order) .or. integration_order<2) then
-      !    fld => cg%w(wna%fi)%arr
-
-
       if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
          cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
-         do afdim=xdim,zdim
-               if (afdim==xdim .and. dom%has_dir(afdim)) then
-                  if (dom%has_dir(ydim)) then
-                     jul = jul + I_THREE ; juh = juh - I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul + I_THREE ; kuh = kuh - I_THREE
-                  endif
+         T => cg%w(uhi)%arr
+      else if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
+         T => cg%w(wna%fi)%arr
+      endif
 
-                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,iul:iuh,jul:juh,kul:kuh) &
-                                                                                          - cg%fx(:,iul+I_ONE:iuh+I_ONE,jul:juh,kul:kuh) )
-                  if (dom%has_dir(ydim)) then
-                     jul = jul - I_THREE ; juh = juh + I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul - I_THREE ; kuh = kuh + I_THREE
-                  endif 
+      do afdim = xdim, zdim
+         if (.not. active(afdim)) cycle
 
-               else if (afdim==ydim .and. dom%has_dir(afdim)) then 
+         call bounds_for_flux(L0,U0,active,afdim,L,U)
 
-                  if (dom%has_dir(xdim)) then
-                     iul = iul + I_THREE ; iuh = iuh - I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul + I_THREE ; kuh = kuh - I_THREE
-                  endif           
+         shift = 0 ;  shift(afdim) = I_ONE    
 
-                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,iul:iuh,jul:juh,kul:kuh) &
-                                                                                          - cg%gy(:,iul:iuh,jul+I_ONE:juh+I_ONE,kul:kuh) )  
-                  if (dom%has_dir(xdim)) then
-                     iul = iul - I_THREE ; iuh = iuh + I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul - I_THREE ; kuh = kuh + I_THREE
-                  endif   
-
-               else if (afdim==zdim .and. dom%has_dir(afdim)) then
-
-                  if (dom%has_dir(xdim)) then
-                     iul = iul + I_THREE ; iuh = iuh - I_THREE
-                  endif
-                  if (dom%has_dir(ydim)) then
-                     jul = jul + I_THREE ; juh = juh - I_THREE
-                  endif 
-
-                  cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,iul:iuh,jul:juh,kul:kuh) &
-                                                                                          - cg%hz(:,iul:iuh,jul:juh,kul+I_ONE:kuh+I_ONE) )
-
-                  if (dom%has_dir(xdim)) then
-                     iul = iul - I_THREE ; iuh = iuh + I_THREE
-                  endif
-                  if (dom%has_dir(ydim)) then
-                     jul = jul - I_THREE ; juh = juh + I_THREE
-                  endif 
-
-               end if
-         end do
-         
-      else if (istep==last_stage(integration_order) .or. integration_order<2) then
-         do afdim=xdim,zdim
-               if (afdim==xdim .and. dom%has_dir(afdim)) then
-                  if (dom%has_dir(ydim)) then
-                     jul = jul + I_THREE ; juh = juh - I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul + I_THREE ; kuh = kuh - I_THREE
-                  endif
-
-                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,iul:iuh,jul:juh,kul:kuh) &
-                                                                                          - cg%fx(:,iul+I_ONE:iuh+I_ONE,jul:juh,kul:kuh) )
-                  if (dom%has_dir(ydim)) then
-                     jul = jul - I_THREE ; juh = juh + I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul - I_THREE ; kuh = kuh + I_THREE
-                  endif 
-
-               else if (afdim==ydim .and. dom%has_dir(afdim)) then 
-                  if (dom%has_dir(xdim)) then
-                     iul = iul + I_THREE ; iuh = iuh - I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul + I_THREE ; kuh = kuh - I_THREE
-                  endif           
-
-                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,iul:iuh,jul:juh,kul:kuh) &
-                                                                                          - cg%gy(:,iul:iuh,jul+I_ONE:juh+I_ONE,kul:kuh) )  
-                  if (dom%has_dir(xdim)) then
-                     iul = iul - I_THREE ; iuh = iuh + I_THREE
-                  endif
-                  if (dom%has_dir(zdim)) then
-                     kul = kul - I_THREE ; kuh = kuh + I_THREE
-                  endif   
-
-               else if (afdim==zdim .and. dom%has_dir(afdim)) then
-                  if (dom%has_dir(xdim)) then
-                     iul = iul + I_THREE ; iuh = iuh - I_THREE
-                  endif
-                  if (dom%has_dir(ydim)) then
-                     jul = jul + I_THREE ; juh = juh - I_THREE
-                  endif 
-
-                  cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,iul:iuh,jul:juh,kul:kuh) &
-                                                                                          - cg%hz(:,iul:iuh,jul:juh,kul+I_ONE:kuh+I_ONE) )
-
-                  if (dom%has_dir(xdim)) then
-                     iul = iul - I_THREE ; iuh = iuh + I_THREE
-                  endif
-                  if (dom%has_dir(ydim)) then
-                     jul = jul - I_THREE ; juh = juh + I_THREE
-                  endif 
-
-               end if
-         end do
-      end if
+         T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) = T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) &
+            + dt / cg%dl(afdim) * rk_coef(istep) * ( &
+               F(afdim)%flx(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) - &
+               F(afdim)%flx(:, L(xdim)+shift(xdim):U(xdim)+shift(xdim), &
+                           L(ydim)+shift(ydim):U(ydim)+shift(ydim), &
+                           L(zdim)+shift(zdim):U(zdim)+shift(zdim)) )
+      end do
    end subroutine apply_flux
+
+   subroutine bounds_for_flux(L0,U0,active,afdim,L,U)
+      use constants, only: xdim, zdim, I_ONE, ndims
+      use domain,    only: dom
+
+      implicit none
+
+      integer, intent(in)            :: L0(ndims), U0(ndims)   ! original bounds
+      logical, intent(in)            :: active(ndims)          ! dom%has_dir flags
+      integer, intent(in)            :: afdim                  ! direction we are updating (1,2,3)
+      integer, intent(out)           :: L(ndims), U(ndims)     ! returned bounds
+
+      integer :: d,nb_1
+
+      L = L0 ;  U = U0                     ! start from raw array bounds
+      nb_1 = dom%nb - I_ONE
+
+      do d = xdim, zdim
+         if (active(d)) then               ! remove outer 1-cell ghosts
+            L(d) = L(d) + I_ONE
+            U(d) = U(d) - I_ONE
+            if (d /= afdim) then           ! shrink transverse dirs by 3 extra
+               L(d) = L(d) + nb_1
+               U(d) = U(d) - nb_1
+            end if
+         end if
+      end do
+   end subroutine bounds_for_flux
+
 end module solvecg_unsplit
