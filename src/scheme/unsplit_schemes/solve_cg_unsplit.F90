@@ -194,7 +194,7 @@ contains
       end do
       call apply_flux(cg,istep)
       call apply_source(cg,istep)
-      deallocate(u,flux)
+      deallocate(u,flux,tflux)
       nullify(cs2)
 
    end subroutine solve_cg_u

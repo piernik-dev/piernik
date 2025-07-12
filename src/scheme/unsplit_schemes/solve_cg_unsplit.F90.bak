@@ -157,7 +157,6 @@ contains
          endif  
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
             do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
-               write(*,*) "ATTENTION !!!!!!!!!!", i1,i2
                if (ddim==xdim) then
                   pflux => cg%w(wna%xflx)%get_sweep(xdim,i1,i2)
                else if (ddim==ydim) then
@@ -245,7 +244,7 @@ contains
    subroutine apply_flux(cg, istep)
       use domain,             only: dom
       use grid_cont,          only: grid_container
-      use constants,          only: xdim, ydim, zdim, first_stage, last_stage, rk_coef, uh_n, ORTHO1, LO, HI, I_ONE, I_TWO, pdims
+      use constants,          only: xdim, ydim, zdim, first_stage, last_stage, rk_coef, uh_n, ORTHO1, LO, HI, I_ONE, I_TWO, I_THREE, pdims
       use global,             only: integration_order, dt, nstep
       use named_array_list,   only: wna
 
@@ -254,16 +253,13 @@ contains
       type(grid_container), pointer, intent(in)    :: cg
       integer,                       intent(in)    :: istep
 
-      integer :: afdim, uhi, iul, iuh, jul, juh, kul, kuh , igli, ighi, jgli, jghi, kgli, kghi, &
-                 iglo, igho, jglo, jgho, kglo, kgho,nb
-      nb = dom%nb
+      integer                                      :: afdim, uhi, iul, iuh, jul, juh, kul, kuh
+      !real, dimension(:,:,:,:), pointer                :: fld
+      !nb = dom%nb
 
-      iul = lbound(cg%w(wna%fi)%arr , 2)
-      iuh = ubound(cg%w(wna%fi)%arr , 2) 
-      jul = lbound(cg%w(wna%fi)%arr , 3)
-      juh = ubound(cg%w(wna%fi)%arr , 3)
-      kul = lbound(cg%w(wna%fi)%arr , 4)
-      kuh = ubound(cg%w(wna%fi)%arr , 4)
+      iul = lbound(cg%w(wna%fi)%arr , 2) ; iuh = ubound(cg%w(wna%fi)%arr , 2) 
+      jul = lbound(cg%w(wna%fi)%arr , 3) ; juh = ubound(cg%w(wna%fi)%arr , 3)
+      kul = lbound(cg%w(wna%fi)%arr , 4) ; kuh = ubound(cg%w(wna%fi)%arr , 4)
       
       if (dom%has_dir(xdim))  then
          iul = iul + I_ONE
@@ -278,65 +274,136 @@ contains
          kuh = kuh - I_ONE
       endif
 
-      igli = lbound(cg%w(wna%xflx)%arr , 2)   ;  iglo = lbound(cg%w(wna%xflx)%arr , 2)
-      ighi = ubound(cg%w(wna%xflx)%arr , 2)   ;  igho = ubound(cg%w(wna%xflx)%arr , 2)
-      jgli = lbound(cg%w(wna%xflx)%arr , 3)   ;  jglo = lbound(cg%w(wna%xflx)%arr , 3)
-      jghi = ubound(cg%w(wna%xflx)%arr , 3)   ;  jgho = ubound(cg%w(wna%xflx)%arr , 3)
-      kgli = lbound(cg%w(wna%xflx)%arr , 4)   ;  kglo = lbound(cg%w(wna%xflx)%arr , 4)
-      kghi = ubound(cg%w(wna%xflx)%arr , 4)   ;  kgho = ubound(cg%w(wna%xflx)%arr , 4)
-      
-      if (dom%has_dir(xdim)) then
-         igli = igli + I_ONE
-         ighi = ighi - I_ONE
-         iglo = iglo + I_TWO
-      endif
-      if (dom%has_dir(ydim)) then
-         jgli = jgli + I_ONE
-         jghi = jghi - I_ONE
-         jglo = jglo + I_TWO
-      endif
-      if (dom%has_dir(zdim)) then
-         kgli = kgli + I_ONE
-         kghi = kghi - I_ONE
-         kglo = kglo + I_TWO
-      endif
       !write(111,*) igli,ighi,jgli,jghi,kgli,kghi,iglo,igho,jglo,jgho,kglo,kgho,iul,iuh,jul,juh,kul,kuh
 
       uhi = wna%ind(uh_n)
+      ! if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
+      !    cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
+      !    fld => cg%w(uhi)%arr
+      ! else if (istep==last_stage(integration_order) .or. integration_order<2) then
+      !    fld => cg%w(wna%fi)%arr
+
+
       if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
          cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
          do afdim=xdim,zdim
                if (afdim==xdim .and. dom%has_dir(afdim)) then
-                  
+                  if (dom%has_dir(ydim)) then
+                     jul = jul + I_THREE ; juh = juh - I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul + I_THREE ; kuh = kuh - I_THREE
+                  endif
 
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%fx(:,iglo:igho,jglo:jgho,kglo:kgho) )
-               else if (afdim==ydim .and. dom%has_dir(afdim)) then                                                           
+                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,iul:iuh,jul:juh,kul:kuh) &
+                                                                                          - cg%fx(:,iul+I_ONE:iuh+I_ONE,jul:juh,kul:kuh) )
+                  if (dom%has_dir(ydim)) then
+                     jul = jul - I_THREE ; juh = juh + I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul - I_THREE ; kuh = kuh + I_THREE
+                  endif 
+
+               else if (afdim==ydim .and. dom%has_dir(afdim)) then 
+
+                  if (dom%has_dir(xdim)) then
+                     iul = iul + I_THREE ; iuh = iuh - I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul + I_THREE ; kuh = kuh - I_THREE
+                  endif           
+
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%gy(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
+                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,iul:iuh,jul:juh,kul:kuh) &
+                                                                                          - cg%gy(:,iul:iuh,jul+I_ONE:juh+I_ONE,kul:kuh) )  
+                  if (dom%has_dir(xdim)) then
+                     iul = iul - I_THREE ; iuh = iuh + I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul - I_THREE ; kuh = kuh + I_THREE
+                  endif   
+
                else if (afdim==zdim .and. dom%has_dir(afdim)) then
+
+                  if (dom%has_dir(xdim)) then
+                     iul = iul + I_THREE ; iuh = iuh - I_THREE
+                  endif
+                  if (dom%has_dir(ydim)) then
+                     jul = jul + I_THREE ; juh = juh - I_THREE
+                  endif 
+
                   cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(uhi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%hz(:,iglo:igho,jglo:jgho,kglo:kgho) )
+                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,iul:iuh,jul:juh,kul:kuh) &
+                                                                                          - cg%hz(:,iul:iuh,jul:juh,kul+I_ONE:kuh+I_ONE) )
+
+                  if (dom%has_dir(xdim)) then
+                     iul = iul - I_THREE ; iuh = iuh + I_THREE
+                  endif
+                  if (dom%has_dir(ydim)) then
+                     jul = jul - I_THREE ; juh = juh + I_THREE
+                  endif 
+
                end if
          end do
          
       else if (istep==last_stage(integration_order) .or. integration_order<2) then
          do afdim=xdim,zdim
                if (afdim==xdim .and. dom%has_dir(afdim)) then
+                  if (dom%has_dir(ydim)) then
+                     jul = jul + I_THREE ; juh = juh - I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul + I_THREE ; kuh = kuh - I_THREE
+                  endif
+
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%fx(:,iglo:igho,jglo:jgho,kglo:kgho) )
-               else if (afdim==ydim .and. dom%has_dir(afdim)) then
+                                                         dt/cg%dl(xdim) * rk_coef(istep) * (cg%fx(:,iul:iuh,jul:juh,kul:kuh) &
+                                                                                          - cg%fx(:,iul+I_ONE:iuh+I_ONE,jul:juh,kul:kuh) )
+                  if (dom%has_dir(ydim)) then
+                     jul = jul - I_THREE ; juh = juh + I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul - I_THREE ; kuh = kuh + I_THREE
+                  endif 
+
+               else if (afdim==ydim .and. dom%has_dir(afdim)) then 
+                  if (dom%has_dir(xdim)) then
+                     iul = iul + I_THREE ; iuh = iuh - I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul + I_THREE ; kuh = kuh - I_THREE
+                  endif           
+
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%gy(:,iglo:igho,jglo:jgho,kglo:kgho) )                                                                          
+                                                         dt/cg%dl(ydim) * rk_coef(istep) * (cg%gy(:,iul:iuh,jul:juh,kul:kuh) &
+                                                                                          - cg%gy(:,iul:iuh,jul+I_ONE:juh+I_ONE,kul:kuh) )  
+                  if (dom%has_dir(xdim)) then
+                     iul = iul - I_THREE ; iuh = iuh + I_THREE
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     kul = kul - I_THREE ; kuh = kuh + I_THREE
+                  endif   
+
                else if (afdim==zdim .and. dom%has_dir(afdim)) then
+                  if (dom%has_dir(xdim)) then
+                     iul = iul + I_THREE ; iuh = iuh - I_THREE
+                  endif
+                  if (dom%has_dir(ydim)) then
+                     jul = jul + I_THREE ; juh = juh - I_THREE
+                  endif 
+
                   cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) = cg%w(wna%fi)%arr(:,iul:iuh,jul:juh,kul:kuh) + &
-                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,igli:ighi,jgli:jghi,kgli:kghi) &
-                                                                                          - cg%hz(:,iglo:igho,jglo:jgho,kglo:kgho) )
+                                                         dt/cg%dl(zdim) * rk_coef(istep) * (cg%hz(:,iul:iuh,jul:juh,kul:kuh) &
+                                                                                          - cg%hz(:,iul:iuh,jul:juh,kul+I_ONE:kuh+I_ONE) )
+
+                  if (dom%has_dir(xdim)) then
+                     iul = iul - I_THREE ; iuh = iuh + I_THREE
+                  endif
+                  if (dom%has_dir(ydim)) then
+                     jul = jul - I_THREE ; juh = juh + I_THREE
+                  endif 
+
                end if
          end do
       end if
