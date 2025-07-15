@@ -148,9 +148,11 @@ run_piernik() {
                 local xmul=2
                 run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf("%7.4f %7.4f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
+                grep -q Spent *log || return 1  # exception: some piernik threads have returned prematurely
                 ;;
         esac
     fi
+    return 0
 }
 
 format_output() {
@@ -198,8 +200,15 @@ run_benchmark() {
             fi
 
             run_piernik $problem $scaling $threads "$mpirun_cmd" $max_mem
+            OOM=$?
             [ $scaling != flood ] && echo
             echo
+
+            # Check if we got any exception
+            if [ $OOM != 0 ]; then
+                echo "## Warning: Invalid output detected (possible OOM). Skipping higher thread counts."
+                break
+            fi
         done
     ) | format_output
     echo
