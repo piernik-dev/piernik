@@ -64,11 +64,15 @@ module grid_cont_na
 #endif /* NBODY */
 
       ! handy shortcuts to some entries in w(:)
-      real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components
-      real, dimension(:,:,:,:), pointer :: b     => null()  !< Main array of magnetic field's components
-      real, dimension(:,:,:,:), pointer :: fx     => null()  !< Main array of X-faced flux field components
-      real, dimension(:,:,:,:), pointer :: gy     => null()  !< Main array of Y-faced flux field components
-      real, dimension(:,:,:,:), pointer :: hz     => null()  !< Main array of Z-faced flux field components
+      real, dimension(:,:,:,:), pointer :: u       => null()  !< Main array of all fluids' components
+      real, dimension(:,:,:,:), pointer :: b       => null()  !< Main array of magnetic field's components
+      real, dimension(:,:,:,:), pointer :: fx      => null()  !< Main array of X-faced flux field components
+      real, dimension(:,:,:,:), pointer :: gy      => null()  !< Main array of Y-faced flux field components
+      real, dimension(:,:,:,:), pointer :: hz      => null()  !< Main array of Z-faced flux field components
+      real, dimension(:,:,:,:), pointer :: bfx     => null()  !< Main array of X-faced flux field components
+      real, dimension(:,:,:,:), pointer :: bgy     => null()  !< Main array of Y-faced flux field components
+      real, dimension(:,:,:,:), pointer :: bhz     => null()  !< Main array of Z-faced flux field components
+      real, dimension(:,:,:,:), pointer :: psiflx  => null()  !< Main array of Z-faced flux field components
 
    contains
 
@@ -144,12 +148,16 @@ contains
       call check_mem_usage
 
       ! shortcuts
-      if (wna%fi   > INVALID)  this%u  => this%w(wna%fi)%arr
-      if (wna%bi   > INVALID)  this%b  => this%w(wna%bi)%arr
-      if (wna%xflx > INVALID)  this%fx  => this%w(wna%xflx)%arr
-      if (wna%yflx > INVALID)  this%gy  => this%w(wna%yflx)%arr
-      if (wna%zflx > INVALID)  this%hz  => this%w(wna%zflx)%arr
-
+      if (wna%fi     > INVALID)  this%u       => this%w(wna%fi)%arr
+      if (wna%bi     > INVALID)  this%b       => this%w(wna%bi)%arr
+      if (wna%xflx   > INVALID)  this%fx      => this%w(wna%xflx)%arr
+      if (wna%yflx   > INVALID)  this%gy      => this%w(wna%yflx)%arr
+      if (wna%zflx   > INVALID)  this%hz      => this%w(wna%zflx)%arr
+      if (wna%xbflx  > INVALID)  this%bfx     => this%w(wna%xbflx)%arr
+      if (wna%ybflx  > INVALID)  this%bgy     => this%w(wna%ybflx)%arr
+      if (wna%zbflx  > INVALID)  this%bhz     => this%w(wna%zbflx)%arr
+      if (wna%psiflx > INVALID)  this%psiflx  => this%w(wna%psiflx)%arr
+     
       if (qna%wai > INVALID) this%wa => this%q(qna%wai)%arr
 
 #ifdef ISO
@@ -248,6 +256,12 @@ contains
             this%fx(:,:,:,:) = 0.0
             this%gy(:,:,:,:) = 0.0
             this%hz(:,:,:,:) = 0.0
+      end if
+      if (associated(this%bfx) .and. associated(this%bgy) .and. associated(this%bhz) .and. associated(this%psiflx)) then
+            this%bfx(:,:,:,:)    = 0.0
+            this%bgy(:,:,:,:)    = 0.0
+            this%bhz(:,:,:,:)    = 0.0
+            this%psiflx(:,:,:,:) = 0.0
       end if
    end subroutine cleanup_flux
 end module grid_cont_na

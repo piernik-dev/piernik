@@ -245,8 +245,13 @@ module constants
    character(len=dsetnamelen), parameter :: zflx_n   = "zflx"   !< main Z face-flux array
 
    ! magnetic field
-   character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main magnetic field array
-   character(len=dsetnamelen), parameter :: magh_n  = "magh"    !< auxiliary array for half-step values
+   character(len=dsetnamelen), parameter :: mag_n      = "mag"      !< main magnetic field array
+   character(len=dsetnamelen), parameter :: magh_n     = "magh"     !< auxiliary array for half-step values
+   character(len=dsetnamelen), parameter :: xbflx_n    = "xbflx"    !< main X face-flux array of magnetic field
+   character(len=dsetnamelen), parameter :: ybflx_n    = "ybflx"    !< main Y face-flux array of magnetic field
+   character(len=dsetnamelen), parameter :: zbflx_n    = "zbflx"    !< main Z face-flux array of magnetic field
+   character(len=dsetnamelen), parameter :: psiflx_n   = "psiflx"   !< main array carrying the flux of the auxillary scalar psi
+
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity

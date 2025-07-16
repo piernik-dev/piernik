@@ -26,32 +26,6 @@
 !
 #include "piernik.h"
 
-!>
-!! \brief HLLD Riemann solver for ideal magnetohydrodynamics
-!!
-!! Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
-!! Dr. Artur Gawryszczak, CAMK, Warszawa.
-!!
-!! RK(N) with N .GE. 3 could be helpful for WENO3 ( this statement to be tested )
-!!
-!! Reference:Relativistic Hydrodynamics, L. Rezzolla, O. Zanotti
-!! ---------------------------------------------------------------------------
-!! L (or dtodx)--> discretization of spatial differential operator (Eq. 9.135)
-!! ---------------------------------------------------------------------------
-!! RK2 (Eq. 9.140)
-!! u^(1)   = u^(n) + \Delta t L(u^(n))
-!! u^(n+1) = 1/2 ( u^(n) + u^(1) + \Delta t L(u^(1)  )
-!! ---------------------------------------------------------------------------
-!! RK3 (Eq. 9.141)
-!! u^(1)   = u(n) + \Delta t L(u^(n))
-!! u^(2)   = 1/4 ( 3 u^(n) + u^(1) + \Delta t L(u^(1) ) )
-!! u^(n+1) = 1/3 u^(n) + 2/3 u^(2) + 2/3 \Delta t (u^(2))
-!! ---------------------------------------------------------------------------
-!!
-!! Energy fix up routines for CT and its related comments are not used in the current version.
-!! The algorithm is simply present for experimental purposes.
-!<
-
 module solvecg_unsplit
 
 ! pulled by ANY
@@ -67,15 +41,16 @@ contains
 
    subroutine solve_cg_unsplit(cg,istep)
 
-      use constants,        only: mag_n, GEO_XYZ
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use fluidindex,       only: flind
-      use grid_cont,        only: grid_container
-      use global,           only: use_fargo
-      use named_array_list, only: wna
-      use sources,          only: prepare_sources
-       
+      use constants,             only: mag_n, GEO_XYZ
+      use dataio_pub,            only: die
+      use domain,                only: dom
+      use fluidindex,            only: flind
+      use grid_cont,             only: grid_container
+      use global,                only: use_fargo
+      use named_array_list,      only: wna
+      use sources,               only: prepare_sources
+      use unsplit_mag_modules,   only: solve_cg_ub
+
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
@@ -87,13 +62,13 @@ contains
       call prepare_sources(cg)
 
       if (wna%exists(mag_n)) then
-         call die("[solve_cg_unsplit:solve_cg_unsplit] Magnetic field is still unsafe for the flux named arrays")
+         !call die("[solve_cg_unsplit:solve_cg_unsplit] Magnetic field is still unsafe for the flux named arrays")
          nmag = 0
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
          enddo
          if (nmag > 1) call die("[solve_cg_riemann:solve_cg_riemann] At most one magnetized fluid is implemented")
-         !call solve_cg_ub(cg, ddim, istep)
+            call solve_cg_ub(cg, istep)
       else
          call solve_cg_u(cg,istep)
       endif
@@ -111,6 +86,7 @@ contains
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use fluxtypes,        only: ext_fluxes
       use unsplit_source,   only: apply_source
+
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg

@@ -57,6 +57,8 @@ contains
       call update_chspeed
 
 
+      call eglm
+      call glmdamping(.true.)
       t = t + dt
 
       call unsplit_sweep
@@ -64,7 +66,7 @@ contains
       dtm = dt
 
       call eglm
-      call glmdamping
+      call glmdamping(.true.)
       call update_magic_mass
 
     end subroutine fluid_update_unsplit

@@ -42,10 +42,10 @@ contains
     subroutine apply_source(cg,istep)
         use grid_cont,          only: grid_container
         use named_array_list,   only: wna, qna
-        use constants,          only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, cs_i2_n, first_stage, last_stage, xdim, ydim, zdim
+        use constants,          only: pdims, ORTHO1, ORTHO2, LO, HI, magh_n, uh_n, rk_coef, cs_i2_n, first_stage, last_stage, xdim, ydim, zdim
         use global,             only: dt, integration_order, nstep
         use domain,             only: dom
-        use fluidindex,         only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
+        use fluidindex,         only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
         use sources,            only: internal_sources, care_for_positives
 
         implicit none
@@ -53,14 +53,16 @@ contains
         type(grid_container), pointer,     intent(in) :: cg
         integer,                           intent(in) :: istep
 
-        integer                                                     :: ddim, i1, i2, uhi
+        integer                                                     :: ddim, i1, i2, uhi, bhi
         real, dimension(:,:),allocatable                            :: u
-        real, dimension(:,:), pointer                               :: pu
+        real, dimension(:,:), pointer                               :: pu,pb
         real, allocatable, target                                   :: vx(:,:)
-        real, dimension(1, 1)                                       :: b ! ugly
+        real, dimension(1, 1)                                       :: b_ugly ! ugly
+        real, dimension(:,:),allocatable                            :: b
         real, dimension(:,:),allocatable                            :: u1
 
         uhi = wna%ind(uh_n)
+        bhi = wna%ind(magh_n)
 
         do ddim=xdim,zdim
 
@@ -71,7 +73,13 @@ contains
                 allocate(u(cg%n_(ddim), size(cg%u,1)))
 
             endif
+            if (.not. allocated(b)) then
+                allocate(b(cg%n_(ddim), size(cg%b,1)))
+            else
+                deallocate(b)
+                allocate(b(cg%n_(ddim), size(cg%b,1)))
 
+            endif
             if (.not. allocated(vx)) then
                 allocate(vx(size(u,1), flind%fluids))
             else
@@ -89,25 +97,33 @@ contains
                 do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
 
                     pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
-                    if (istep == last_stage(integration_order)) pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+                    pb => cg%w(bhi)%get_sweep(ddim,i1,i2)
+                    if (istep == first_stage(integration_order) .or. integration_order < 2 ) then
+                            pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+                            pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
+                    endif
                     
 
                     u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
+                    b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
 
                     u1 = u
 
                     vx = u(:, iarr_all_mx) / u(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-
+#ifdef MAGNETIC
                     call internal_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
 
                     call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)
+#else
+                    call internal_sources(size(u, 1, kind=4), u, u1, b_ugly, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
 
+                    call care_for_positives(size(u, 1, kind=4), u1, b_ugly, cg, ddim, i1, i2)
+#endif /* MAGNETIC */
                     pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
-
                 end do        
             end do
 
-            deallocate(vx,u1,u)
+            deallocate(vx,u1,u,b)
             
         end do
     end subroutine apply_source
