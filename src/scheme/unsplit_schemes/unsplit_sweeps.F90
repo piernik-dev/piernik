@@ -49,7 +49,7 @@ contains
 !      use cg_leaves,      only: leaves
       use constants,      only: first_stage, DIVB_HDC,xdim,zdim, UNSPLIT
       use domain,         only: dom
-      use global,         only: sweeps_mgu, integration_order, divB_0_method, which_solver_type
+      use global,         only: sweeps_mgu, integration_order, divB_0_method, which_solver
 #ifdef MAGNETIC
       use all_boundaries, only: all_mag_boundaries
 #endif /* MAGNETIC */
@@ -82,7 +82,7 @@ contains
          enddo
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
-         if (which_solver_type==UNSPLIT) then
+         if (which_solver==UNSPLIT) then
             call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
          else
             call all_mag_boundaries ! ToDo: take care of psi boundaries
