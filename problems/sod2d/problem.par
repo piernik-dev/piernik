@@ -28,14 +28,14 @@ $RESTART_CONTROL
 /
 
 $END_CONTROL
-  tend = 0.2
+  tend = 0.5
   nend = 10000000
 /
 
 $OUTPUT_CONTROL
-   problem_name = 'sod'
-   run_id = 'spl'
-   dt_hdf = 0.02
+   problem_name = 'sod2d'
+   run_id = 'tst'
+   dt_hdf = 0.1
    dt_res = 0.0
    dt_log = 0.02
    dt_tsl = 0.02
@@ -47,11 +47,12 @@ $FLUID_NEUTRAL
 /
 
 $NUMERICAL_SETUP
-  cfl     = 0.2
+  cfl     = 0.4
   smalld  = 1.e-5
   smallei = 1.e-5
   limiter = 'vanleer'
   solver_str = 'riemann'
+  solver_type = 'unsplit'
 /
 
 $PROBLEM_CONTROL
@@ -71,6 +72,10 @@ $PROBLEM_CONTROL
    bxr = 0.0
    byr = 0.0
    bzr = 0.0
+
+   theta = 0.785398163 ! pi/4
+   c = 0.5
+   face = 'xy'
 /
 
 $AMR

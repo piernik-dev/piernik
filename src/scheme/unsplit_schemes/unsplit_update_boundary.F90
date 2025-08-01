@@ -91,7 +91,7 @@ contains
          end do
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
-         call all_mag_boundaries ! ToDo: take care of psi boundaries
+         call all_mag_boundaries(istep=istep) ! ToDo: take care of psi boundaries
 #endif /* MAGNETIC */
       endif
 

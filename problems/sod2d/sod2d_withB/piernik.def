@@ -1,0 +1,13 @@
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
+
+#undef ISO
+
+#define DEBUG
+
+#define IONIZED
+
+#define MAGNETIC
+
+#undef GRAV

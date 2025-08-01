@@ -43,6 +43,54 @@ module unsplit_sweeps
    public :: unsplit_sweep
 
 contains
+   subroutine update_boundaries(istep)
+
+      use all_boundaries, only: all_fluid_boundaries
+!      use cg_leaves,      only: leaves
+      use constants,      only: first_stage, DIVB_HDC,xdim,zdim, UNSPLIT
+      use domain,         only: dom
+      use global,         only: sweeps_mgu, integration_order, divB_0_method, which_solver_type
+#ifdef MAGNETIC
+      use all_boundaries, only: all_mag_boundaries
+#endif /* MAGNETIC */
+
+      implicit none
+
+      integer,                  intent(in) :: istep
+
+      integer(kind=4)                      :: ub_i
+
+      do ub_i=xdim,zdim
+            if (dom%has_dir(ub_i)) then
+               if (sweeps_mgu) then
+                  if (istep == first_stage(integration_order)) then
+                     call all_fluid_boundaries(nocorners = .true., dir = ub_i)
+                  else
+                     call all_fluid_boundaries(nocorners = .true.)
+                  endif
+               else
+                  ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
+                  ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
+
+                  ! if (istep == first_stage(integration_order)) then
+                  !    call all_fluid_boundaries(nocorners = .true.)
+                  ! else
+                     call all_fluid_boundaries(istep=istep) !(nocorners = .true., dir = cdim)
+                  ! endif
+               endif
+            endif
+         enddo
+      if (divB_0_method == DIVB_HDC) then
+#ifdef MAGNETIC
+         if (which_solver_type==UNSPLIT) then
+            call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
+         else
+            call all_mag_boundaries ! ToDo: take care of psi boundaries
+         endif
+#endif /* MAGNETIC */
+      endif
+
+   end subroutine update_boundaries
 
     subroutine unsplit_sweep()
         use cg_list,                            only: cg_list_element
@@ -57,7 +105,6 @@ contains
         use sources,                            only: prepare_sources
         use global,                             only: integration_order, which_solver 
         use constants,                          only: first_stage, last_stage, UNSPLIT, PPP_CG
-        use unsplit_update_boundary,            only: update_boundaries
         use cg_list_dataop,                     only: cg_list_dataop_t
         use pppmpi,                             only: req_ppp
         use MPIF,                               only: MPI_STATUS_IGNORE
