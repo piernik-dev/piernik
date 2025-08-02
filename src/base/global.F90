@@ -46,7 +46,7 @@ module global
         &    repetitive_steps, integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, waitall_timeout, &
-        &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver, use_uhi
+        &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver, use_uhi, which_solver_type
 
 
    logical         :: dn_negative = .false.
@@ -67,6 +67,7 @@ module global
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
    integer         :: tstep_attempt            !< /= 0 when we retry timesteps
    integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT or RIEMANN_SPLIT
+   integer         :: which_solver_type        !< one of SPLIT or UNSPLIT
    logical         :: use_uhi = .false.        !<.true. ⇒ apply BCs to uhi
 
    ! Namelist variables
@@ -111,7 +112,8 @@ module global
    integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
    integer(kind=4)               :: ord_fluid_prolong !< prolongation order for u
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
-   character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
+   character(len=cbuff_len)      :: solver_str           !< allow to switch between RIEMANN and RTVD without recompilation
+   character(len=cbuff_len)      :: solver_type          !< allow to switch between RIEMANN and RTVD without recompilation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
@@ -200,8 +202,9 @@ contains
 
       ! Begin processing of namelist parameters
 
-      which_solver = RIEMANN_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
-      divB_0       = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
+      which_solver      = RIEMANN_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
+      which_solver_type = SPLIT
+      divB_0            = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
 
       ! For RIEMANN_SPLIT 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
       ! Leave RTVD defaults as they were before the implementation of the Riemann HLLD solver
@@ -258,6 +261,7 @@ contains
       ord_fluid_prolong = O_INJ        !< O_INJ and O_LIN ensure monotonicity and nonnegative density and energy
       do_external_corners =.false.
       solver_str = ""
+      solver_type = ""
 
       prefer_merged_MPI = .true.  ! Non-merged MPI in internal_boundaries are implemented without buffers, which can be faster, especially for bsize(:) larger than 3*16, but in some non-periodic setups internal_boundaries_MPI_1by1 has tag collisions, so merged_MPI is currently safer.
       MPI_wrapper_stats = .false.
@@ -319,6 +323,7 @@ contains
          cbuff(6) = interpol_str
          cbuff(7) = psi_bnd_str
          cbuff(8) = solver_str
+         cbuff(9) = solver_type
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
@@ -408,6 +413,7 @@ contains
          interpol_str          = cbuff(6)
          psi_bnd_str           = cbuff(7)
          solver_str            = cbuff(8)
+         solver_type           = cbuff(9)
 
          integration_order     = ibuff(1)
          print_divB            = ibuff(2)
@@ -429,6 +435,16 @@ contains
             which_solver = UNSPLIT
          case default
             call die("[global:init_global] unrecognized solver: '" // trim(solver_str) // "'")
+      end select
+
+      select case (solver_type)
+         case ("")  ! leave the default
+         case ("split", "SPLIT", "Split")
+            which_solver_type = SPLIT
+         case ("unsplit", "UNSPLIT", "Unsplit")
+            which_solver_type = UNSPLIT
+         case default
+            call die("[global:init_global] unrecognized solver type: '" // trim(solver_type) // "'")
       end select
 
       select case (which_solver)
@@ -472,6 +488,11 @@ contains
          divB_0_method = DIVB_CT
       endif
 
+      if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) then
+         if (master) call warn("[global:init_global] RTVD works only with Constrained Transport. Enforcing.")
+         divB_0_method = DIVB_CT
+      endif
+
       !> reshape_b should carefully check things here
       cc_mag = .false.
       select case (divB_0_method)
@@ -502,13 +523,21 @@ contains
                call printinfo("    (M)HD solver: RTVD.", V_INFO)
             case (HLLC_SPLIT)
                call printinfo("    HD solver: HLLC.", V_INFO)
-            case (RIEMANN_SPLIT)
-               call printinfo("    (M)HD solver: Riemann.", V_INFO)
-            case (UNSPLIT)
-               call printinfo("     (M)HD solver: Unsplit Van Leer.", V_INFO)
+            case (RIEMANN)
+               if (which_solver_type == SPLIT)   call printinfo("    (M)HD solver:Split Riemann.", V_INFO)
+               if (which_solver_type == UNSPLIT) call printinfo("    (M)HD solver:Unsplit Riemann.", V_INFO)
             case default
                call die("[global:init_global] unrecognized hydro solver")
          end select
+
+         if (which_solver_type == UNSPLIT) then
+            if (cfl> 0.5) call warn("[global:init_global] Unsplit MHD solver chosen. CFL > 0.5 may lead to unexpected result.")
+         endif
+#ifdef MAGNETIC
+         if (which_solver_type == UNSPLIT) then
+            if (cfl_glm /= 0.3) call warn("[global:init_global] Unsplit MHD solver chosen. Ideal CFL_GLM = 0.3. Anything else may lead to unexpected result.")
+         endif
+#endif /* MAGNETIC */
       endif
 
 #ifdef MAGNETIC
