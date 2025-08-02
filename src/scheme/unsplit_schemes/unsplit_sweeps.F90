@@ -64,9 +64,9 @@ contains
             if (dom%has_dir(ub_i)) then
                if (sweeps_mgu) then
                   if (istep == first_stage(integration_order)) then
-                     call all_fluid_boundaries(nocorners = .true., dir = ub_i)
+                     call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep=istep)
                   else
-                     call all_fluid_boundaries(nocorners = .true.)
+                     call all_fluid_boundaries(nocorners = .true.,istep=istep)
                   endif
                else
                   ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
@@ -82,11 +82,7 @@ contains
          enddo
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
-         if (which_solver==UNSPLIT) then
             call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
-         else
-            call all_mag_boundaries ! ToDo: take care of psi boundaries
-         endif
 #endif /* MAGNETIC */
       endif
 
