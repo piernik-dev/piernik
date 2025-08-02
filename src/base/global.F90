@@ -117,7 +117,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str, ord_mag_prolong, ord_fluid_prolong, do_external_corners, solver_str, solver_type
 
    logical :: prefer_merged_MPI  !< prefer internal_boundaries_MPI_merged over internal_boundaries_MPI_1by1
    real :: waitall_timeout       !< when > 0. then replace MPI_Waitall with MPI_Test* calls and print some diagnostics it the timeout is reached
@@ -187,7 +187,7 @@ contains
       use bcast,      only: piernik_MPI_Bcast
       use constants,  only: big_float, one, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
-           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, UNSPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, SPLIT, UNSPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
@@ -450,7 +450,7 @@ contains
       select case (which_solver)
          case (RTVD_SPLIT)
             divB_0 = "CT"  ! no other option
-         case (RIEMANN_SPLIT, UNSPLIT )
+         case (RIEMANN_SPLIT)
             if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Riemann solver is implemented only for cartesian geometry")
          case (HLLC_SPLIT)
 #ifdef MAGNETIC
@@ -523,7 +523,7 @@ contains
                call printinfo("    (M)HD solver: RTVD.", V_INFO)
             case (HLLC_SPLIT)
                call printinfo("    HD solver: HLLC.", V_INFO)
-            case (RIEMANN)
+            case (RIEMANN_SPLIT)
                if (which_solver_type == SPLIT)   call printinfo("    (M)HD solver:Split Riemann.", V_INFO)
                if (which_solver_type == UNSPLIT) call printinfo("    (M)HD solver:Unsplit Riemann.", V_INFO)
             case default

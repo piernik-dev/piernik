@@ -225,6 +225,7 @@ module constants
    enum, bind(C)
       enumerator :: SPLIT      !! MHD Riemann split solver
       enumerator :: UNSPLIT    !! MHD Riemann unsplit solver
+   end enum
 
    ! Perhaps it may make sense to create compatibility matrix for solvers.
    ! AMR, magnetic, FARGO, resistivity, ...
