@@ -80,12 +80,13 @@ contains
    subroutine solve_cg_u(cg,istep)
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
-      use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, uh_n, rk_coef, cs_i2_n, first_stage, last_stage, xdim, ydim, zdim
-      use global,           only: dt, integration_order, nstep
+      use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, uh_n, cs_i2_n, first_stage, xdim, ydim, zdim
+      use global,           only: integration_order
       use domain,           only: dom
-      use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
+      use fluidindex,       only: iarr_all_swp
       use fluxtypes,        only: ext_fluxes
       use unsplit_source,   only: apply_source
+      use diagnostics,      only: my_allocate, my_deallocate
 
       implicit none
 
@@ -102,7 +103,6 @@ contains
       real, dimension(:,:),allocatable           :: tflux
       type(ext_fluxes)                           :: eflx
       integer                                    :: i_cs_iso2
-      integer :: dummy
       uhi = wna%ind(uh_n)
       if (qna%exists(cs_i2_n)) then
          i_cs_iso2 = qna%ind(cs_i2_n)
@@ -112,25 +112,9 @@ contains
       cs2 => null()
       do ddim=xdim,zdim
          if (.not. dom%has_dir(ddim)) cycle
-         if (.not. allocated(u)) then
-            allocate(u(cg%n_(ddim), size(cg%u,1)))
-         else
-            deallocate(u)
-            allocate(u(cg%n_(ddim), size(cg%u,1)))
-         endif
-
-         if (.not. allocated(flux)) then
-            allocate(flux(size(u, 1)-1,size(u, 2)))
-         else
-            deallocate(flux)
-            allocate(flux(size(u, 1)-1,size(u, 2)))
-         endif    
-         if (.not. allocated(tflux)) then
-            allocate(tflux(size(u, 2),size(u, 1)))
-         else
-            deallocate(tflux)
-            allocate(tflux(size(u, 2),size(u, 1)))
-         endif  
+         call my_allocate(u,[cg%n_(ddim), size(cg%u,1,kind=4)])
+         call my_allocate(flux,[size(u, 1,kind=4)-I_ONE,size(u, 2,kind=4)])
+         call my_allocate(tflux,[size(u, 2,kind=4),size(u, 1,kind=4)])
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
             do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
                if (ddim==xdim) then
@@ -163,10 +147,12 @@ contains
                pflux(:,:) = tflux
             end do
          end do
+
+         call my_deallocate(u); call my_deallocate(flux); call my_deallocate(tflux)
+
       end do
       call apply_flux(cg,istep)
       call apply_source(cg,istep)
-      deallocate(u,flux,tflux)
       nullify(cs2)
 
    end subroutine solve_cg_u
@@ -187,9 +173,6 @@ contains
 
       ! left and right states at interfaces 1 .. n-1
       real, dimension(size(ui, 1)-1, size(ui, 2)), target :: ql, qr
-      integer, parameter :: in = 1  ! index for cells
-
-
 
       ! updates required for higher order of integration will likely have shorter length
       if (size(flx,dim=1) /= size(ui, 1)-1 .or. size(flx,dim=2) /= size(ui, 2)  ) then
@@ -212,7 +195,7 @@ contains
       use grid_cont,          only : grid_container
       use global,             only : integration_order, dt
       use named_array_list,   only : wna
-      use constants,          only : xdim, ydim, zdim, first_stage, last_stage, rk_coef, &
+      use constants,          only : xdim, ydim, zdim, last_stage, rk_coef, &
                                      uh_n, I_ONE, ndims
 
       implicit none
@@ -226,10 +209,11 @@ contains
 
       logical                     :: active(ndims)
       integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer                     :: d, afdim, uhi
+      integer                     :: afdim, uhi
       real, pointer               :: T(:,:,:,:)
       type(fxptr)                 :: F(ndims)
 
+      T=> null()
       active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
 
       F(xdim)%flx => cg%fx   ;  F(ydim)%flx => cg%gy   ;  F(zdim)%flx => cg%hz
@@ -238,11 +222,12 @@ contains
       U0 = [ ubound(cg%w(wna%fi)%arr,2), ubound(cg%w(wna%fi)%arr,3), ubound(cg%w(wna%fi)%arr,4) ]
 
       uhi = wna%ind(uh_n)
-      if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
+
+      if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
+         T => cg%w(wna%fi)%arr
+      else
          cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
          T => cg%w(uhi)%arr
-      else if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-         T => cg%w(wna%fi)%arr
       endif
 
       do afdim = xdim, zdim

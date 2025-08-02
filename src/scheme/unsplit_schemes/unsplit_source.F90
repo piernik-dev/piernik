@@ -61,10 +61,11 @@ contains
       integer(kind=4)                                             :: uhi, ddim
       integer                                                     :: i1, i2
       real, dimension(:,:),allocatable                            :: u
-      real, dimension(:,:), pointer                               :: pu,pb
+      real, dimension(:,:), pointer                               :: pu
       real, allocatable, target                                   :: vx(:,:)
       real, dimension(:,:),allocatable                            :: u1
 #ifdef MAGNETIC
+      real, dimension(:,:), pointer                               :: pb
       real, dimension(:,:),allocatable                            :: b
       integer                                                     :: bhi
       bhi = wna%ind(magh_n)

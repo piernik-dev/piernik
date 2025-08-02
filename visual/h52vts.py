@@ -40,7 +40,7 @@ def make_output_path(in_path, in_root, out_root):
     # Split off the extension
     base, _ = os.path.splitext(rel_path)
     # Join with the output root and add the new extension
-    return os.path.join(out_root, base + ".vth")
+    return os.path.join(out_root, base + ".vts")
 
 def ensure_dir_exists(path):
     """Create parent directories for a file path if they don’t exist."""

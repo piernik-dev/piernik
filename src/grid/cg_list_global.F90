@@ -230,7 +230,7 @@ contains
    subroutine register_fluids(this)
 
       use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS, xflx_n, yflx_n, zflx_n, &
-                             xbflx_n, ybflx_n, zbflx_n, psiflx_n, UNSPLIT
+      &                     UNSPLIT
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
       use global,     only: ord_fluid_prolong, which_solver_type
@@ -238,7 +238,8 @@ contains
       use constants,  only: cs_i2_n
 #endif /* ISO */
 #ifdef MAGNETIC
-      use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER, psi_n, psih_n
+      use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER,&
+      &                     psi_n, psih_n, xbflx_n, ybflx_n, zbflx_n, psiflx_n
       use global,     only: cc_mag, ord_mag_prolong
 #endif /* MAGNETIC */
 

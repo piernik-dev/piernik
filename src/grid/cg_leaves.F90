@@ -359,7 +359,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_dataop, only: cg_list_dataop_t
-      use constants,      only: ndims,xdim,zdim
+      use constants,      only: xdim,zdim
       implicit none
 
       class(cg_leaves_t),         intent(in) :: this  !< object invoking type-bound procedure
