@@ -40,13 +40,14 @@ contains
    subroutine solve_cg_ub(cg,istep)
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
-      use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, magh_n, uh_n, rk_coef,&
-                                  psi_n,psih_n,psidim, cs_i2_n, first_stage, last_stage, xdim, ydim, zdim
-      use global,           only: dt, integration_order, nstep
+      use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, magh_n, uh_n, &
+                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim
+      use global,           only: integration_order
       use domain,           only: dom
-      use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
+      use fluidindex,       only: iarr_all_swp, iarr_mag_swp
       use fluxtypes,        only: ext_fluxes
       use unsplit_source,   only: apply_source
+      use diagnostics,      only: my_allocate, my_deallocate
 
       implicit none
 
@@ -85,10 +86,14 @@ contains
 
       do ddim=xdim,zdim
         if (.not. dom%has_dir(ddim)) cycle
-         allocate(u(cg%n_(ddim), size(cg%u,1)), b(cg%n_(ddim), size(cg%b,1)))
-         allocate(b_psi(size(b,1), size(b,2) + I_ONE ))                           ! one more for psi.We wont use it now though
-         allocate(flux(size(u, 1)-1,size(u, 2)),tflux(size(u, 2),size(u, 1)))
-         allocate(bflux(size(b, 1)-1,size(b_psi, 2)),tbflux(size(b_psi, 2),size(b, 1))) 
+
+         call my_allocate(u,[cg%n_(ddim), size(cg%u,1)])
+         call my_allocate(b,[cg%n_(ddim), size(cg%b,1)])
+         call my_allocate(b_psi,[size(b,1), size(b,2) + I_ONE ])
+         call my_allocate(flux,[size(u, 1)-1,size(u, 2)])
+         call my_allocate(tflux,[size(u, 2),size(u, 1)])
+         call my_allocate(bflux,[size(b, 1)-1,size(b_psi, 2)])
+         call my_allocate(tbflux,[size(b_psi, 2),size(b, 1)]) 
 
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
             do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
@@ -147,7 +152,9 @@ contains
 
             end do
          end do
-         deallocate(u, flux, tflux, b, b_psi, tbflux, bflux)
+         call my_deallocate(u); call my_deallocate(flux); call my_deallocate(tflux)
+         call my_deallocate(b); call my_deallocate(b_psi); call my_deallocate(tbflux)
+         call my_deallocate(bflux)
       end do
       call apply_flux(cg,istep,.true.)
       call apply_flux(cg,istep,.false.)
@@ -159,7 +166,7 @@ contains
 
    subroutine solve(ui, bi, cs2, eflx, flx, bflx)
 
-      use constants,      only: DIVB_HDC, xdim, ydim, zdim
+      use constants,      only: DIVB_HDC
       use fluxtypes,      only: ext_fluxes
       use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
@@ -180,8 +187,6 @@ contains
       real, dimension(size(bi, 1)-1, size(bi, 2)), target :: bl, br
 
       ! updates required for higher order of integration will likely have shorter length
-
-      integer, parameter :: in = 1  ! index for cells
 
       bflx = huge(1.)
 
@@ -207,10 +212,9 @@ contains
    subroutine apply_flux(cg, istep, mag)
       use domain,             only : dom
       use grid_cont,          only : grid_container
-      use global,             only : integration_order, dt, nstep
+      use global,             only : integration_order, dt
       use named_array_list,   only : wna
-      use fluidindex,         only : flind 
-      use constants,          only : xdim, ydim, zdim, first_stage, last_stage, rk_coef, &
+      use constants,          only : xdim, ydim, zdim, last_stage, rk_coef, &
                                      uh_n, I_ONE, ndims, magh_n
 
       implicit none
@@ -225,40 +229,40 @@ contains
 
       logical                     :: active(ndims)
       integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer                     :: d, afdim, uhi, bhi, lo, hi
+      integer                     :: afdim, uhi, bhi
       real, pointer               :: T(:,:,:,:)
       type(fxptr)                 :: F(ndims)
 
+      T => null()
       active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
 
       if (mag) then
 
-        F(xdim)%flx => cg%bfx   ;  F(ydim)%flx => cg%bgy   ;  F(zdim)%flx => cg%bhz
+         F(xdim)%flx => cg%bfx   ;  F(ydim)%flx => cg%bgy   ;  F(zdim)%flx => cg%bhz
 
-        L0 = [ lbound(cg%w(wna%bi)%arr,2), lbound(cg%w(wna%bi)%arr,3), lbound(cg%w(wna%bi)%arr,4) ]
-        U0 = [ ubound(cg%w(wna%bi)%arr,2), ubound(cg%w(wna%bi)%arr,3), ubound(cg%w(wna%bi)%arr,4) ]
+         L0 = [ lbound(cg%w(wna%bi)%arr,2), lbound(cg%w(wna%bi)%arr,3), lbound(cg%w(wna%bi)%arr,4) ]
+         U0 = [ ubound(cg%w(wna%bi)%arr,2), ubound(cg%w(wna%bi)%arr,3), ubound(cg%w(wna%bi)%arr,4) ]
 
-        bhi = wna%ind(magh_n)
-        if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
+         bhi = wna%ind(magh_n)
+         if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
+            T => cg%w(wna%bi)%arr
+         else 
             cg%w(bhi)%arr(:,:,:,:) = cg%w(wna%bi)%arr(:,:,:,:)
             T => cg%w(bhi)%arr
-        else if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-            T => cg%w(wna%bi)%arr
-        endif
+         endif
       else
-        F(xdim)%flx => cg%fx   ;  F(ydim)%flx => cg%gy   ;  F(zdim)%flx => cg%hz
+         F(xdim)%flx => cg%fx   ;  F(ydim)%flx => cg%gy   ;  F(zdim)%flx => cg%hz
 
-        L0 = [ lbound(cg%w(wna%fi)%arr,2), lbound(cg%w(wna%fi)%arr,3), lbound(cg%w(wna%fi)%arr,4) ]
-        U0 = [ ubound(cg%w(wna%fi)%arr,2), ubound(cg%w(wna%fi)%arr,3), ubound(cg%w(wna%fi)%arr,4) ]
+         L0 = [ lbound(cg%w(wna%fi)%arr,2), lbound(cg%w(wna%fi)%arr,3), lbound(cg%w(wna%fi)%arr,4) ]
+         U0 = [ ubound(cg%w(wna%fi)%arr,2), ubound(cg%w(wna%fi)%arr,3), ubound(cg%w(wna%fi)%arr,4) ]
 
-        uhi = wna%ind(uh_n)
-        if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
+         uhi = wna%ind(uh_n)
+         if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
+            T => cg%w(wna%fi)%arr
+         else
             cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
             T => cg%w(uhi)%arr
-        else if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-            T => cg%w(wna%fi)%arr
-        endif
-
+         endif
       endif
       do afdim = xdim, zdim
          if (.not. active(afdim)) cycle                   
@@ -278,10 +282,10 @@ contains
    subroutine update_psi(cg,istep)
       use domain,             only : dom
       use grid_cont,          only : grid_container
-      use global,             only : integration_order, dt, nstep
+      use global,             only : integration_order, dt
       use named_array_list,   only : qna
-      use constants,          only : xdim, ydim, zdim, first_stage, last_stage, rk_coef, &
-                                     I_ONE, ndims, psi_n,psidim,psih_n
+      use constants,          only : xdim, ydim, zdim, last_stage, rk_coef, &
+                                     I_ONE, ndims, psi_n, psih_n
 
       implicit none
 
@@ -291,10 +295,10 @@ contains
 
       logical                     :: active(ndims)
       integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer                     :: d, afdim, psihi, psii
+      integer                     :: afdim, psihi, psii
       real, pointer               :: TP(:,:,:)
 
-
+      TP => null()
       
       active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
 
@@ -302,11 +306,12 @@ contains
       psihi = qna%ind(psih_n)
       L0 = [ lbound(cg%q(psii)%arr,1), lbound(cg%q(psii)%arr,2), lbound(cg%q(psii)%arr,3) ]
       U0 = [ ubound(cg%q(psii)%arr,1), ubound(cg%q(psii)%arr,2), ubound(cg%q(psii)%arr,3) ]
-      if (istep==first_stage(integration_order) .and. integration_order>I_ONE) then
-        cg%q(psihi)%arr(:,:,:) = cg%q(psii)%arr(:,:,:)
-        TP => cg%q(psihi)%arr
-      else if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-        TP => cg%q(psii)%arr
+
+      if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
+         TP => cg%q(psii)%arr
+      else
+         cg%q(psihi)%arr(:,:,:) = cg%q(psii)%arr(:,:,:)
+         TP => cg%q(psihi)%arr
       endif
 
       do afdim = xdim, zdim

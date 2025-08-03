@@ -182,8 +182,11 @@ contains
       type(grid_container),   pointer :: cg
       integer                         :: p
       real                            :: m 
-
-      if (theta == pi/2. .or. theta == 1.5*pi .or. theta == -pi/2. .or. theta == - 1.5*pi ) then
+      real, parameter                 :: tol = 1e-10  
+      real                            :: theta_mod
+      theta_mod = modulo(theta, 2.0*pi)
+      p = nint(2.0 * theta_mod / pi)  ! nearest integer to 2*theta/pi
+      if (mod(p,2) == 1 .and. abs(theta_mod - p*pi/2.0) < tol) then 
          call die("[initproblem:problem_initial_conditions] theta cannot be odd multiple of pi/2")
       endif
       m = tan(theta) 

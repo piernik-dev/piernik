@@ -46,7 +46,7 @@ contains
 
       use cg_list_dataop,      only: expanded_domain
       use dataio_pub,          only: halfstep
-      use global,              only: dt, dtm, t
+      use global,              only: dt, t
       use hdc,                 only: update_chspeed,glmdamping, eglm
       use mass_defect,         only: update_magic_mass
       use timestep_retry,      only: repeat_fluidstep
