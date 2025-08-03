@@ -92,8 +92,8 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: istep
 
-      integer                                    :: i1, i2, ddim
-      integer(kind=4)                            :: uhi
+      integer                                    :: i1, i2
+      integer(kind=4)                            :: uhi, ddim
       real, dimension(:,:),allocatable           :: u
       real, dimension(:,:), pointer              :: pu
       real, dimension(:,:), pointer              :: pflux

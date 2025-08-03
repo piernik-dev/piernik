@@ -379,6 +379,10 @@ custom_gold:
 # Target to run all gold tests
 gold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
+	# Ensure the GOLDSPACE directory exists
+	[ -e $(GOLDSPACE) ] && rm -rf $(GOLDSPACE) || true # Optional: Clean it before starting
+	mkdir -p $(GOLDSPACE) # Create the directory if it doesn't exist
+
 	$(MAKE) -k $(GOLD_TESTS) || \
 		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."

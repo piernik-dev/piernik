@@ -41,7 +41,7 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, magh_n, uh_n, &
-                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim
+                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim, I_ONE
       use global,           only: integration_order
       use domain,           only: dom
       use fluidindex,       only: iarr_all_swp, iarr_mag_swp
@@ -54,8 +54,8 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: istep
 
-      integer                                    :: i1, i2, ddim
-      integer(kind=4)                            :: uhi, bhi, psii, psihi
+      integer                                    :: i1, i2
+      integer(kind=4)                            :: uhi, bhi, psii, psihi, ddim
       real, dimension(:,:),allocatable           :: u
       real, dimension(:,:),allocatable           :: b
       real, dimension(:,:),allocatable           :: b_psi                ! This will carry both b and psi so it will have one extra size in dim=2
@@ -87,13 +87,13 @@ contains
       do ddim=xdim,zdim
         if (.not. dom%has_dir(ddim)) cycle
 
-         call my_allocate(u,[cg%n_(ddim), size(cg%u,1)])
-         call my_allocate(b,[cg%n_(ddim), size(cg%b,1)])
-         call my_allocate(b_psi,[size(b,1), size(b,2) + I_ONE ])
-         call my_allocate(flux,[size(u, 1)-1,size(u, 2)])
-         call my_allocate(tflux,[size(u, 2),size(u, 1)])
-         call my_allocate(bflux,[size(b, 1)-1,size(b_psi, 2)])
-         call my_allocate(tbflux,[size(b_psi, 2),size(b, 1)])
+         call my_allocate(u,[cg%n_(ddim), size(cg%u,1, kind=4)])
+         call my_allocate(b,[cg%n_(ddim), size(cg%b,1, kind=4)])
+         call my_allocate(b_psi,[size(b,1, kind=4), size(b,2, kind=4) + I_ONE ])
+         call my_allocate(flux,[size(u, 1, kind=4)-I_ONE,size(u, 2, kind=4)])
+         call my_allocate(tflux,[size(u, 2, kind=4),size(u, 1, kind=4)])
+         call my_allocate(bflux,[size(b, 1, kind=4)-I_ONE,size(b_psi, 2, kind=4)])
+         call my_allocate(tbflux,[size(b_psi, 2, kind=4),size(b, 1, kind=4)])
 
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
             do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
@@ -229,7 +229,7 @@ contains
 
       logical                     :: active(ndims)
       integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer(kind=4)             :: afdim, uhi, bhi
+      integer                     :: afdim, uhi, bhi
       real, pointer               :: T(:,:,:,:)
       type(fxptr)                 :: F(ndims)
 
@@ -295,7 +295,7 @@ contains
 
       logical                     :: active(ndims)
       integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer(kind=4)             :: afdim, psihi, psii
+      integer                     :: afdim, psihi, psii
       real, pointer               :: TP(:,:,:)
 
       TP => null()
