@@ -59,14 +59,14 @@ contains
       integer,                  intent(in) :: istep
 
       integer(kind=4)                      :: ub_i
-
-      do ub_i=xdim,zdim
-            if (dom%has_dir(ub_i)) then
                if (sweeps_mgu) then
                   if (istep == first_stage(integration_order)) then
-                     call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep=istep)
+                     do ub_i=xdim,zdim
+                        if (.not. dom%has_dir(ub_i)) cycle
+                        call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep=istep)
+                     enddo
                   else
-                     call all_fluid_boundaries(nocorners = .true.,istep=istep)
+                  call all_fluid_boundaries(nocorners = .true.,istep=istep)
                   endif
                else
                   ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
@@ -78,8 +78,6 @@ contains
                      call all_fluid_boundaries(istep=istep) !(nocorners = .true., dir = cdim)
                   ! endif
                endif
-            endif
-         enddo
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
             call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
@@ -131,11 +129,6 @@ contains
             cgl => cgl%nxt
         enddo
 
-
-
-        !all_processed = .false.
-        !blocks_done = 0
-        
         do istep = first_stage(integration_order), last_stage(integration_order)
             
             call initiate_flx_recv(req, -1)
