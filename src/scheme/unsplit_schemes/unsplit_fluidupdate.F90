@@ -27,8 +27,8 @@
 #include "piernik.h"
 
 !>
-!! The job this module is to update boundaries. This was previously inside the module sweeps . Moved here so that this can be called inside 
-!! solver after each time step on the entire 
+!! The job this module is to update boundaries. This was previously inside the module sweeps . Moved here so that this can be called inside
+!! solver after each time step on the entire
 !<
 
 module unsplit_fluidupdate

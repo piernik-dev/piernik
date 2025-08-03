@@ -46,7 +46,6 @@ contains
       use domain,                only: dom
       use fluidindex,            only: flind
       use grid_cont,             only: grid_container
-      use global,                only: use_fargo
       use named_array_list,      only: wna
       use sources,               only: prepare_sources
       use unsplit_mag_modules,   only: solve_cg_ub
@@ -67,7 +66,7 @@ contains
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
          enddo
-         if (nmag > 1) call die("[solve_cg_riemann:solve_cg_riemann] At most one magnetized fluid is implemented")
+         if (nmag > 1) call die("[solve_cg_unsplit:solve_cg_unsplit] At most one magnetized fluid is implemented")
             call solve_cg_ub(cg, istep)
       else
          call solve_cg_u(cg,istep)
@@ -91,7 +90,7 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
-      integer,                       intent(in) :: istep    
+      integer,                       intent(in) :: istep
 
       integer                                    :: i1, i2, ddim
       integer(kind=4)                            :: uhi
@@ -116,27 +115,27 @@ contains
          call my_allocate(flux,[size(u, 1,kind=4)-I_ONE,size(u, 2,kind=4)])
          call my_allocate(tflux,[size(u, 2,kind=4),size(u, 1,kind=4)])
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
-            do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)  
+            do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
                if (ddim==xdim) then
                   pflux => cg%w(wna%xflx)%get_sweep(xdim,i1,i2)
                else if (ddim==ydim) then
                   pflux => cg%w(wna%yflx)%get_sweep(ydim,i1,i2)
-               else if (ddim==zdim) then 
+               else if (ddim==zdim) then
                   pflux => cg%w(wna%zflx)%get_sweep(zdim,i1,i2)
                endif
 
 
                pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
                if (istep == first_stage(integration_order) .or. integration_order < 2 ) pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-            
+
 
                u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
 
 
-               
+
                if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 
-               
+
                call cg%set_fluxpointers(ddim, i1, i2, eflx)
                call solve_u(u,cs2, eflx, flux)
 
@@ -145,12 +144,12 @@ contains
                tflux(:,2:) = transpose(flux(:, iarr_all_swp(ddim,:)))
                tflux(:,1) = 0.0
                pflux(:,:) = tflux
-            end do
-         end do
+            enddo
+         enddo
 
          call my_deallocate(u); call my_deallocate(flux); call my_deallocate(tflux)
 
-      end do
+      enddo
       call apply_flux(cg,istep)
       call apply_source(cg,istep)
       nullify(cs2)
@@ -176,7 +175,7 @@ contains
 
       ! updates required for higher order of integration will likely have shorter length
       if (size(flx,dim=1) /= size(ui, 1)-1 .or. size(flx,dim=2) /= size(ui, 2)  ) then
-         call die("[solvecg_unsplit:solve_u] flux array dimension does not match the expected dimensions")
+         call die("[solve_cg_unsplit:solve_u] flux array dimension does not match the expected dimensions")
       endif
 
 
@@ -191,11 +190,11 @@ contains
    end subroutine solve_u
 
    subroutine apply_flux(cg, istep)
-      use domain,             only : dom
-      use grid_cont,          only : grid_container
-      use global,             only : integration_order, dt
-      use named_array_list,   only : wna
-      use constants,          only : xdim, ydim, zdim, last_stage, rk_coef, &
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use global,             only: integration_order, dt
+      use named_array_list,   only: wna
+      use constants,          only: xdim, ydim, zdim, last_stage, rk_coef, &
                                      uh_n, I_ONE, ndims
 
       implicit none
@@ -235,7 +234,7 @@ contains
 
          call bounds_for_flux(L0,U0,active,afdim,L,U)
 
-         shift = 0 ;  shift(afdim) = I_ONE    
+         shift = 0 ;  shift(afdim) = I_ONE
 
          T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) = T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) &
             + dt / cg%dl(afdim) * rk_coef(istep) * ( &
@@ -243,7 +242,7 @@ contains
                F(afdim)%flx(:, L(xdim)+shift(xdim):U(xdim)+shift(xdim), &
                            L(ydim)+shift(ydim):U(ydim)+shift(ydim), &
                            L(zdim)+shift(zdim):U(zdim)+shift(zdim)) )
-      end do
+      enddo
    end subroutine apply_flux
 
    subroutine bounds_for_flux(L0,U0,active,afdim,L,U)
@@ -269,9 +268,9 @@ contains
             if (d /= afdim) then           ! shrink transverse dirs by 3 extra
                L(d) = L(d) + nb_1
                U(d) = U(d) - nb_1
-            end if
-         end if
-      end do
+            endif
+         endif
+      enddo
    end subroutine bounds_for_flux
 
 end module solvecg_unsplit

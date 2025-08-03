@@ -295,7 +295,7 @@ contains
       use named_array_list, only: qna
 
       implicit none
-      
+
       logical,optional,           intent(in) :: half
 
       type(cg_list_element), pointer :: cgl

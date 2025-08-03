@@ -24,11 +24,13 @@ import subprocess
 import sys
 import argparse
 
+
 def find_h5_files(root_dir):
     """Recursively find all .h5 files under root_dir."""
     print(f"Searching for .h5 files in: {root_dir}")
     pattern = os.path.join(root_dir, "**", "*.h5")
     return sorted(glob.glob(pattern, recursive=True))
+
 
 def make_output_path(in_path, in_root, out_root):
     """
@@ -42,6 +44,7 @@ def make_output_path(in_path, in_root, out_root):
     # Join with the output root and add the new extension
     return os.path.join(out_root, base + ".vts")
 
+
 def ensure_dir_exists(path):
     """Create parent directories for a file path if they don’t exist."""
     # Get the directory part of the path
@@ -50,6 +53,7 @@ def ensure_dir_exists(path):
     if directory and not os.path.isdir(directory):
         os.makedirs(directory, exist_ok=True)
         print(f"Created directory: {directory}")
+
 
 def main(args):
     """Main execution function driven by command-line arguments."""
@@ -61,11 +65,10 @@ def main(args):
 
     print(f"\nFound {len(h5_files)} files to process.\n")
 
-    # 2. Loop and convert each file
     for idx, h5_path in enumerate(h5_files, start=1):
         # Determine the corresponding output path for the .vts file
         vts_path = make_output_path(h5_path, args.input_dir, args.output_dir)
-        
+
         # Ensure the subdirectory for the output file exists
         ensure_dir_exists(vts_path)
 
@@ -82,14 +85,14 @@ def main(args):
                 h5_path,
                 vts_path
             ]
-            
+
             result = subprocess.run(
                 command,
                 check=True,            # Raise an exception if the script fails
                 capture_output=True,   # Capture stdout and stderr
                 text=True              # Decode stdout/stderr as text
             )
-            
+
             # Print the output from the conversion script for diagnostics
             if result.stdout:
                 # Indent the output for clarity
@@ -107,18 +110,19 @@ def main(args):
             print("--- Converter's Standard Error ----", file=sys.stderr)
             print(e.stderr, file=sys.stderr)
             print("-----------------------------------", file=sys.stderr)
-        
+
         print("-" * 20)
 
     print("Batch conversion complete.")
 
+
 if __name__ == "__main__":
     # Set up the command-line argument parser
     parser = argparse.ArgumentParser(
-        description="Batch convert Piernik HDF5 (.h5) files to VTK Structured Grid (.vts) files.",
-        formatter_class=argparse.RawTextHelpFormatter # Preserves newlines in help text
+        description="  Batch convert Piernik HDF5 (.h5) files to VTK Structured Grid (.vts) files.  ",
+        formatter_class=argparse.RawTextHelpFormatter  # Preserves newlines in help text
     )
-    
+
     parser.add_argument(
         "input_dir",
         help="The root directory containing .h5 files to convert (searched recursively)."
@@ -139,7 +143,7 @@ if __name__ == "__main__":
     if not os.path.isdir(parsed_args.input_dir):
         print(f"Error: Input directory not found at '{parsed_args.input_dir}'", file=sys.stderr)
         sys.exit(1)
-        
+
     if not os.path.isfile(parsed_args.converter_script):
         print(f"Error: Converter script not found at '{parsed_args.converter_script}'", file=sys.stderr)
         sys.exit(1)

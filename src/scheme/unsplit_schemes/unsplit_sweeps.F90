@@ -29,7 +29,7 @@
 !>
 !! \brief The job of this module is simple : Pass a  block of cg to solve to do a unsplit update of the state
 !! Currently we dont not add AMR support or ppp monitoring. Sister module sweeps is used for directional sweep update and is called by
-!! fluid update module. We will call this module from fluid_unsplit_update which is in turn mentioned in fluid_update to keep this line of 
+!! fluid update module. We will call this module from fluid_unsplit_update which is in turn mentioned in fluid_update to keep this line of
 !! additions away from the main code and merger it later. We are not adding fargo support either. This will be the first update after this works
 !<
 
@@ -59,25 +59,19 @@ contains
       integer,                  intent(in) :: istep
 
       integer(kind=4)                      :: ub_i
-               if (sweeps_mgu) then
-                  if (istep == first_stage(integration_order)) then
-                     do ub_i=xdim,zdim
-                        if (.not. dom%has_dir(ub_i)) cycle
-                        call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep=istep)
-                     enddo
-                  else
-                  call all_fluid_boundaries(nocorners = .true.,istep=istep)
-                  endif
-               else
-                  ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
-                  ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
 
-                  ! if (istep == first_stage(integration_order)) then
-                  !    call all_fluid_boundaries(nocorners = .true.)
-                  ! else
-                     call all_fluid_boundaries(istep=istep) !(nocorners = .true., dir = cdim)
-                  ! endif
-               endif
+      if (sweeps_mgu) then
+         if (istep == first_stage(integration_order)) then
+            do ub_i=xdim,zdim
+               if (.not. dom%has_dir(ub_i)) cycle
+               call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep=istep)
+            enddo
+         else
+         call all_fluid_boundaries(nocorners = .true.,istep=istep)
+         endif
+      else
+            call all_fluid_boundaries(istep=istep)
+      endif
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
             call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
@@ -95,7 +89,7 @@ contains
       use constants,        only: first_stage, last_stage, INVALID, PPP_CG, UNSPLIT
       use dataio_pub,       only: die
       use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
-      use global,           only: integration_order, use_fargo, which_solver_type
+      use global,           only: integration_order, which_solver_type
       use grid_cont,        only: grid_container
       use MPIF,             only: MPI_STATUS_IGNORE
       use MPIFUN,           only: MPI_Waitany
@@ -159,7 +153,7 @@ contains
                      ! The recv_cg_finebnd and send_cg_coarsebnd aren't MHD, so we should count them separately.
                      ! The tricky part is that we need to fit all the switching inside the conditional part
                      ! and don't mess pairing and don't let them to nest.
-                     
+
                      call cg%cleanup_flux()      ! Seems unnecessary.This just sets the flux array to 0.0
 
                      call cg%costs%start

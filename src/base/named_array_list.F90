@@ -96,13 +96,13 @@ module named_array_list
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi     = INVALID                            !< fluid                                     : cg%w(wna%fi)
       integer(kind=4) :: bi     = INVALID                            !< magnetic field                            : cg%w(wna%bi)
-      integer(kind=4) :: xflx   = INVALID                            !< X face-flux field                         : cg%w(wna%xflx)      
-      integer(kind=4) :: yflx   = INVALID                            !< Y face-flux field                         : cg%w(wna%yflx)   
+      integer(kind=4) :: xflx   = INVALID                            !< X face-flux field                         : cg%w(wna%xflx)
+      integer(kind=4) :: yflx   = INVALID                            !< Y face-flux field                         : cg%w(wna%yflx)
       integer(kind=4) :: zflx   = INVALID                            !< Z face-flux field                         : cg%w(wna%zflx)
-      integer(kind=4) :: xbflx  = INVALID                            !< X face-flux field of magnetic field       : cg%w(wna%xbflx)      
-      integer(kind=4) :: ybflx  = INVALID                            !< Y face-flux field of magnetic field       : cg%w(wna%ybflx)   
-      integer(kind=4) :: zbflx  = INVALID                            !< Z face-flux field of magnetic field       : cg%w(wna%zbflx)  
-      integer(kind=4) :: psiflx = INVALID                            !< flux of the auxillary scalar psi          : cg%w(wna%psiflx)  
+      integer(kind=4) :: xbflx  = INVALID                            !< X face-flux field of magnetic field       : cg%w(wna%xbflx)
+      integer(kind=4) :: ybflx  = INVALID                            !< Y face-flux field of magnetic field       : cg%w(wna%ybflx)
+      integer(kind=4) :: zbflx  = INVALID                            !< Z face-flux field of magnetic field       : cg%w(wna%zbflx)
+      integer(kind=4) :: psiflx = INVALID                            !< flux of the auxillary scalar psi          : cg%w(wna%psiflx)
 
    contains
       procedure :: add2lst => add2lst_w                          !< Add a 4D array to the list

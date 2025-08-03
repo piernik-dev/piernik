@@ -260,7 +260,7 @@ contains
       call this%reg_var(wa_n, multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
-      
+
       if (which_solver_type == UNSPLIT) then
          call this%reg_var(xflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! X Face-Fluid flux array
          call this%reg_var(yflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! Y Face-Fluid flux array
@@ -279,7 +279,7 @@ contains
 #ifdef MAGNETIC
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
-      
+
       if (which_solver_type == UNSPLIT) then
          call this%reg_var(xbflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
          call this%reg_var(ybflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
@@ -435,9 +435,9 @@ contains
                   call lst(wna%psiflx)%set_compname(xdim,   "psixflx")
                   call lst(wna%psiflx)%set_compname(ydim,   "psiyflx")
                   call lst(wna%psiflx)%set_compname(zdim,   "psizflx")
-               
+
                endif
-               
+
          end select
 
       end subroutine set_magnetic_names
@@ -631,7 +631,7 @@ contains
                   call lst(wna%zflx)%set_compname(flind%ion%imy, "zfmomyi")
                   call lst(wna%zflx)%set_compname(flind%ion%imz, "zfmomzi")
                   if (flind%ion%has_energy) call lst(wna%zflx)%set_compname(flind%ion%ien, "zfenei")
-                  
+
                endif
 
                if (has_neu) then
@@ -645,7 +645,7 @@ contains
                   call lst(wna%yflx)%set_compname(flind%neu%imx, "yfmomxn")
                   call lst(wna%yflx)%set_compname(flind%neu%imy, "yfmomyn")
                   call lst(wna%yflx)%set_compname(flind%neu%imz, "yfmomzn")
-                  if (flind%neu%has_energy) call lst(wna%yflx)%set_compname(flind%neu%ien, "yfenen")     
+                  if (flind%neu%has_energy) call lst(wna%yflx)%set_compname(flind%neu%ien, "yfenen")
 
                   call lst(wna%zflx)%set_compname(flind%neu%idn, "zfdenn")
                   call lst(wna%zflx)%set_compname(flind%neu%imx, "zfmomxn")

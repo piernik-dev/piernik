@@ -88,7 +88,7 @@ def load_and_stitch_data(fname, field_names):
         # Get global grid physical properties from the root attributes
         origin = f["simulation_parameters"].attrs["domain_left_edge"]
         domain_size = f["simulation_parameters"].attrs["domain_right_edge"] - origin
-        
+
         # For cell-centered data, spacing is domain size / number of cells.
         spacing = domain_size / np.maximum(1, global_cell_dims)
 
@@ -110,9 +110,9 @@ def load_and_stitch_data(fname, field_names):
 
                 # Define the slice where this block goes in the big array
                 slc = np.s_[
-                    offset[2] : offset[2] + dims[2],
-                    offset[1] : offset[1] + dims[1],
-                    offset[0] : offset[0] + dims[0],
+                    offset[2]: offset[2] + dims[2],
+                    offset[1]: offset[1] + dims[1],
+                    offset[0]: offset[0] + dims[0],
                 ]
                 stitched_field[slc] = block_data
 
@@ -137,7 +137,7 @@ def create_vtk_grid(stitched_data, cell_dims, origin, spacing):
     """
     # --- 1. Create the vtkStructuredGrid object and set its dimensions ---
     grid = vtkStructuredGrid()
-    
+
     # --- MODIFIED LOGIC ---
     # Determine the number of points (nodes) needed to define the grid.
     # If a dimension has only 1 cell (e.g., a 2D plane), it's represented by 1 layer of points.
@@ -170,7 +170,7 @@ def create_vtk_grid(stitched_data, cell_dims, origin, spacing):
     # Create a meshgrid and reshape it to a list of (x,y,z) points.
     zz, yy, xx = np.meshgrid(z_coords, y_coords, x_coords, indexing='ij')
     point_coords = np.vstack([xx.ravel('C'), yy.ravel('C'), zz.ravel('C')]).T
-    
+
     # Convert the numpy array of points to a VTK points array
     vtk_points_array = numpy_support.numpy_to_vtk(point_coords.astype(np.float32), deep=True)
     points.SetData(vtk_points_array)

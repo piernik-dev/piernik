@@ -13,7 +13,6 @@
 #  Usage:
 #     python convert_piernik_amr_to_vtk.py <input_file.h5> <output_file.vth>
 #
-
 import sys
 import h5py
 import numpy as np
@@ -83,7 +82,7 @@ def create_vtk_amr_dataset(h5_file, field_names):
     print("Initializing VTK AMR structure...")
     num_levels = len(all_levels)
     sim_params = h5_file["simulation_parameters"].attrs
-    
+
     refine_by = int(sim_params["refine_by"][0])
 
     coarsest_meta = next((m for m in block_meta if m["level"] == 0), None)
@@ -92,15 +91,15 @@ def create_vtk_amr_dataset(h5_file, field_names):
 
     origin = sim_params["domain_left_edge"]
     coarsest_spacing = coarsest_meta["spacing"]
-        
+
     # --- FIX: Pre-calculate the number of blocks per level ---
     blocks_per_level = [sum(1 for m in block_meta if m["level"] == i) for i in range(num_levels)]
 
     amr_dataset = vtkOverlappingAMR()
-    
+
     # --- FIX: Initialize the AMR object with the number of levels AND the block counts ---
     amr_dataset.Initialize(num_levels, blocks_per_level)
-    
+
     amr_dataset.SetGridDescription(VTK_XYZ_GRID)
     amr_dataset.SetOrigin(origin)
 
@@ -110,23 +109,23 @@ def create_vtk_amr_dataset(h5_file, field_names):
 
     # --- 3. Define the AMR block structure and load data ---
     print("Defining AMR boxes and loading data for each block...")
-    
+
     block_meta.sort(key=lambda m: (m["level"], m["name"]))
-    
+
     block_idx_per_level = [0] * num_levels
     for meta in block_meta:
         level = meta["level"]
         offset = meta["offset"]
         dims = meta["dims"]
-        
+
         lo_corner = offset
         hi_corner = offset + dims - 1
-        
+
         box = vtkAMRBox(lo_corner, hi_corner)
-        
+
         block_idx = block_idx_per_level[level]
         amr_dataset.SetAMRBox(level, block_idx, box)
-        
+
         grid = vtkUniformGrid()
         grid.SetOrigin(meta["origin"])
         grid.SetSpacing(meta["spacing"])
@@ -140,11 +139,11 @@ def create_vtk_amr_dataset(h5_file, field_names):
             vtk_array = numpy_support.numpy_to_vtk(flat_array, deep=True)
             vtk_array.SetName(field)
             cell_data.AddArray(vtk_array)
-            
+
         amr_dataset.SetDataSet(level, block_idx, grid)
-        
+
         block_idx_per_level[level] += 1
-        
+
     print("Finished loading all blocks.")
     return amr_dataset
 

@@ -37,17 +37,17 @@ module initproblem
 ! See: Gary A. Sod, J.Comp.Physics 27,1-31(1978) !
 ! ------------------------------------------!
 
-   use constants, only: singlechar
+   use constants, only: I_TWO
 
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real               :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
-   real               :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
-   character(len=2)   :: face
-   real               :: theta, c
+   real                   :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
+   real                   :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
+   character(len=I_TWO)   :: face
+   real                   :: theta, c
    namelist /PROBLEM_CONTROL/  dl,vxl,vyl,vzl,bxl,byl,bzl,el,dr,vxr,vyr,vzr,bxr,byr,bzr,er,face, theta ,c
 
 contains
@@ -152,7 +152,7 @@ contains
          byr = rbuff(14)
          bzr = rbuff(15)
          er  = rbuff(16)
-         theta = rbuff(17) 
+         theta = rbuff(17)
          c = rbuff(18)
          face = trim(cbuff(1))
 
@@ -181,12 +181,16 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       integer                         :: p
-      real                            :: m 
-
-      if (theta == pi/2. .or. theta == 1.5*pi .or. theta == -pi/2. .or. theta == - 1.5*pi ) then
+      real                            :: m
+      real, parameter                 :: tol = 1e-10
+      real                            :: theta_mod
+      theta_mod = modulo(theta, 2.0*pi)
+      p = nint(2.0 * theta_mod / pi)  ! nearest integer to 2*theta/pi
+      if (mod(p,2) == 1 .and. abs(theta_mod - p*pi/2.0) < tol) then
          call die("[initproblem:problem_initial_conditions] theta cannot be odd multiple of pi/2")
       endif
-      m = tan(theta) 
+      m = tan(theta)
+
 
       !   Secondary parameters
       do p = 1, flind%fluids

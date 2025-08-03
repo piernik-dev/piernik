@@ -157,7 +157,7 @@ contains
       if (wna%ybflx  > INVALID)  this%bgy     => this%w(wna%ybflx)%arr
       if (wna%zbflx  > INVALID)  this%bhz     => this%w(wna%zbflx)%arr
       if (wna%psiflx > INVALID)  this%psiflx  => this%w(wna%psiflx)%arr
-     
+
       if (qna%wai > INVALID) this%wa => this%q(qna%wai)%arr
 
 #ifdef ISO
@@ -256,12 +256,12 @@ contains
             this%fx(:,:,:,:) = 0.0
             this%gy(:,:,:,:) = 0.0
             this%hz(:,:,:,:) = 0.0
-      end if
+      endif
       if (associated(this%bfx) .and. associated(this%bgy) .and. associated(this%bhz) .and. associated(this%psiflx)) then
             this%bfx(:,:,:,:)    = 0.0
             this%bgy(:,:,:,:)    = 0.0
             this%bhz(:,:,:,:)    = 0.0
             this%psiflx(:,:,:,:) = 0.0
-      end if
+      endif
    end subroutine cleanup_flux
 end module grid_cont_na

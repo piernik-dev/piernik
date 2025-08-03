@@ -81,7 +81,7 @@ contains
       call req%init(owncomm = .true., label = "fc_flx")
       do g = 1, size(req%r)
          req%r(g) = MPI_REQUEST_NULL
-      end do
+      enddo
       nullify(cgl)
       if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)
          if (max_level >= base_level_id) cgl => leaves%up_to_level(max_level)%p
@@ -105,11 +105,11 @@ contains
                      enddo
                   end associate
                endif
-            end do
+            enddo
             call cgl%cg%costs%stop(I_MHD)
             cgl => cgl%nxt
          enddo
-      else 
+      else
          do while (associated(cgl))
             call cgl%cg%costs%start
             cgl%cg%processed = .false.
@@ -126,8 +126,8 @@ contains
             endif
             call cgl%cg%costs%stop(I_MHD)
             cgl => cgl%nxt
-         end do
-      end if
+         enddo
+      endif
    end subroutine initiate_flx_recv
 
 !> \brief Test if expected fluxes from fine grids have already arrived.
@@ -194,7 +194,7 @@ contains
                   enddo
                end associate
             endif
-         end do
+         enddo
       else
          if (allocated(cg%rif_tgt%seg)) then
             associate ( seg => cg%rif_tgt%seg )
@@ -227,7 +227,7 @@ contains
             enddo
             end associate
          endif
-      end if
+      endif
       call ppp_main%stop(recv_label, PPP_MPI)
    end subroutine recv_cg_finebnd
 
@@ -289,8 +289,8 @@ contains
                endif
             enddo
             end associate
-         endif 
-         end do
+         endif
+         enddo
       else
          if (allocated(cg%rof_tgt%seg)) then
             associate ( seg => cg%rof_tgt%seg )
@@ -324,7 +324,7 @@ contains
             enddo
             end associate
          endif
-      end if
+      endif
 
       call ppp_main%stop(send_label, PPP_MPI)
 
