@@ -46,14 +46,15 @@ module initproblem
 
 contains
 
-!-----------------------------------------------------------------------------
    subroutine problem_pointers
+
+      use user_hooks, only: finalize_problem
 
       implicit none
 
-   end subroutine problem_pointers
+      finalize_problem => verify_test
 
-!-----------------------------------------------------------------------------
+   end subroutine problem_pointers
 
    subroutine read_problem_par
 
@@ -225,5 +226,21 @@ subroutine problem_initial_conditions
       enddo
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
+
+   subroutine verify_test
+
+      use mpisetup,   only: master
+      use dataio_pub, only: msg, printinfo
+      use constants,  only: V_INFO
+
+      implicit none
+
+      if (master) then
+         call printinfo("", V_INFO, .true.)
+         write(msg, *) 'Copy compare_slices.py from problem folder to the run folder and make sure '
+         write(msg, *)  'the cpaw_tst_0000.h5 file is the intial file '
+         write(msg, *)  'cpaw_tst_0001.h5 is the last file .  Then run python compare_slices.py'
+      endif
+   end subroutine verify_test
+   
 end module initproblem
