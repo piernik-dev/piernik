@@ -82,22 +82,22 @@ contains
 
    subroutine unsplit_sweep()
 
-      use cg_cost_data,     only: I_MHD, I_REFINE
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use cg_list_dataop,   only: cg_list_dataop_t
-      use constants,        only: first_stage, last_stage, INVALID, PPP_CG, UNSPLIT
-      use dataio_pub,       only: die
-      use fc_fluxes_unsplit,only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
-      use global,           only: integration_order, which_solver_type
-      use grid_cont,        only: grid_container
-      use MPIF,             only: MPI_STATUS_IGNORE
-      use MPIFUN,           only: MPI_Waitany
-      use mpisetup,         only: err_mpi
-      use ppp,              only: ppp_main
-      use pppmpi,           only: req_ppp
-      use sources,          only: prepare_sources
-      use solvecg_unsplit,  only: solve_cg_unsplit
+      use cg_cost_data,      only: I_MHD, I_REFINE
+      use cg_leaves,         only: leaves
+      use cg_list,           only: cg_list_element
+      use cg_list_dataop,    only: cg_list_dataop_t
+      use constants,         only: first_stage, last_stage, INVALID, PPP_CG, UNSPLIT
+      use dataio_pub,        only: die
+      use fc_fluxes_unsplit, only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
+      use global,            only: integration_order, which_solver_type
+      use grid_cont,         only: grid_container
+      use MPIF,              only: MPI_STATUS_IGNORE
+      use MPIFUN,            only: MPI_Waitany
+      use mpisetup,          only: err_mpi
+      use ppp,               only: ppp_main
+      use pppmpi,            only: req_ppp
+      use sources,           only: prepare_sources
+      use solvecg_unsplit,   only: solve_cg_unsplit
 
       implicit none
 

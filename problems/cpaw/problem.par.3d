@@ -1,0 +1,73 @@
+$BASE_DOMAIN
+  n_d = 64,32,32
+  nb  = 4
+  bnd_xl = 'per'
+  bnd_xr = 'per'
+  bnd_yl = 'per'
+  bnd_yr = 'per'
+  bnd_zl = 'per'
+  bnd_zr = 'per'
+  xmin   =  0.0
+  xmax   =  1.0
+  ymin   =  0.0
+  ymax   =  0.5
+  zmin   =  0.0
+  zmax   =  0.5
+/
+
+$MPI_BLOCKS
+/
+
+$UNITS
+/
+
+$RESTART_CONTROL
+   restart  = 'last'
+   res_id   = ''
+   nrestart = 0
+/
+
+$END_CONTROL
+  tend = 0.333333333
+  nend = 100000
+/
+
+$OUTPUT_CONTROL
+   problem_name = 'cpaw'
+   run_id = 'tst'
+   dt_hdf = 0.05
+   dt_res = 0.0
+   dt_log = 0.02
+   dt_tsl = 0.02
+   vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'magB', "pres", "divb", "divb4", "psi"
+/
+
+$FLUID_NEUTRAL
+  gamma = 1.6667
+/
+
+$NUMERICAL_SETUP
+  cfl     = 0.4
+  smalld  = 1.e-5
+  smallei = 1.e-5
+  limiter = 'vanleer'
+  solver_str = 'riemann'
+  solver_type = 'split'
+  cfl_glm = 0.3
+  print_divb = 10
+/
+
+$PROBLEM_CONTROL
+   d0  = 1.0
+   p0  = 0.1
+   vx0 = 0.0
+   vy0 = 0.0
+   vz0 = 0.0
+   A   = 0.1
+   kx  = 6.283185307   ! 2pi
+   ky  = 12.566370614  ! 4pi
+   kz  = 12.566370614  ! 4pi
+/
+
+$AMR
+/
