@@ -88,7 +88,7 @@ contains
       use cg_list_dataop,   only: cg_list_dataop_t
       use constants,        only: first_stage, last_stage, INVALID, PPP_CG, UNSPLIT
       use dataio_pub,       only: die
-      use fc_fluxes,        only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
+      use fc_fluxes_unsplit,only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
       use global,           only: integration_order, which_solver_type
       use grid_cont,        only: grid_container
       use MPIF,             only: MPI_STATUS_IGNORE
