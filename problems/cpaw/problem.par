@@ -7,12 +7,12 @@ $BASE_DOMAIN
   bnd_yr = 'per'
   bnd_zl = 'per'
   bnd_zr = 'per'
-  xmin   =  0.0
-  xmax   =  1.0
+  xmin   =  0.0 
+  xmax   =  1.0   
   ymin   =  0.0
-  ymax   =  0.5
+  ymax   =  0.5       ! kx/ky
   zmin   =  0.0
-  zmax   =  1.0
+  zmax   =  1.0       ! kx/kz but since kz = 0 effectively drop this dimension
 /
 
 $MPI_BLOCKS
@@ -28,7 +28,7 @@ $RESTART_CONTROL
 /
 
 $END_CONTROL
-  tend = 0.447213595
+  tend = 0.447213595     ! one time-period T = kx/sqrt(kx**2 + ky**2 + kz**2)
   nend = 100000
 /
 
@@ -64,8 +64,8 @@ $PROBLEM_CONTROL
    vy0 = 0.0
    vz0 = 0.0
    A   = 0.1
-   kx  = 6.283185307
-   ky  = 12.566370614
+   kx  = 6.283185307         ! 2pi
+   ky  = 12.566370614        ! 4pi
    kz  = 0.0
 /
 

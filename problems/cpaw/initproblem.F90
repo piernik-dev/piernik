@@ -33,7 +33,7 @@ module initproblem
 ! See: Andrea Mignone, Petros Tzeferacosa   !
 ! A Second-Order Unsplit Godunov Scheme for !
 ! Cell-Centered MHD: the CTU-GLM scheme     !
-!   arXiv:0911.3410v1                       !
+! arXiv:0911.3410v1                         !
 ! ----------------------------------------- !
 
    implicit none
@@ -66,11 +66,11 @@ contains
       implicit none
 
       d0  = 1.0
-      p0  = 1.0
+      p0  = 0.1
       vx0 = 1.0
       vy0 = 0.0
       vz0 = 0.0
-      A   = 1./10.
+      A   = 0.1
       vA  = 1.0
       kx  = 1.0
       ky  = 0.0
@@ -148,26 +148,21 @@ subroutine problem_initial_conditions
       type(grid_container),   pointer :: cg
       integer                         :: p
       
-      ! --- Declarations for the rotation procedure ---
       real, dimension(3, 3)           :: rot_matrix, rot_matrix_inv
       real, dimension(3)              :: v_prime, b_prime, v_final, b_final
       real, dimension(3)              :: pos_vec, pos_vec_prime
       real                            :: aa, g, k_prime
 
-      ! --- Pre-calculate rotation matrices and constants outside the main loop ---
       aa = atan(ky/kx)
       g = atan(cos(aa) * (kz/kx))
       k_prime = sqrt(kx**2 + ky**2 + kz**2)
 
-      ! Construct the rotation matrix (fills column by column)
       rot_matrix = reshape([cos(aa)*cos(g), sin(aa)*cos(g), sin(g), &
                            -sin(aa),         cos(aa),         0.0,   &
                            -cos(aa)*sin(g), -sin(aa)*sin(g), cos(g)], [3, 3])
 
-      ! For a rotation matrix, the inverse is simply the transpose
       rot_matrix_inv = transpose(rot_matrix)
 
-      ! --- Loop over fluids and grid ---
       do p = 1, flind%fluids
 
          fl => flind%all_fluids(p)%fl
@@ -182,24 +177,18 @@ subroutine problem_initial_conditions
                   do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                      zk = cg%z(k)
 
-                     ! --- Correct 5-Step Logic for Rotated Wave Initialization ---
 
-                     ! 1. Transform lab coordinates back to the wave's coordinate frame
                      pos_vec = [xi, yj, zk]
                      pos_vec_prime = matmul(rot_matrix_inv, pos_vec)
 
-                     ! 2. Calculate phase using the simple formula (phi = k' * x')
                      phi = k_prime * pos_vec_prime(1) 
 
-                     ! 3. Define the simple 1D wave vectors in the wave's frame
                      v_prime = [vx0, vy0 + A * sin(phi), vz0 + A * cos(phi)]
                      b_prime = [vA * sqrt(d0), -sqrt(d0) * A * sin(phi), -sqrt(d0) * A * cos(phi)]
 
-                     ! 4. Rotate the physical vectors back to the lab frame
                      v_final = matmul(rot_matrix, v_prime)
                      b_final = matmul(rot_matrix, b_prime)
 
-                     ! 5. Assign the final, correct vector components to the grid
                      cg%u(fl%idn,i,j,k) = d0
                      cg%u(fl%imx,i,j,k) = v_final(1)
                      cg%u(fl%imy,i,j,k) = v_final(2)
@@ -237,7 +226,7 @@ subroutine problem_initial_conditions
 
       if (master) then
          call printinfo("", V_INFO, .true.)
-         write(msg, *) 'Copy compare_slices.py from problem folder to the run folder and make sure '
+         write(msg, *)  'Copy compare_slices.py from problem folder to the run folder and make sure '
          write(msg, *)  'the cpaw_tst_0000.h5 file is the intial file '
          write(msg, *)  'cpaw_tst_0001.h5 is the last file .  Then run python compare_slices.py'
       endif

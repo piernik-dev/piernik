@@ -10,9 +10,9 @@ $BASE_DOMAIN
   xmin   =  0.0
   xmax   =  1.0
   ymin   =  0.0
-  ymax   =  0.5
+  ymax   =  0.5            ! kx/ky
   zmin   =  0.0
-  zmax   =  0.5
+  zmax   =  0.5            ! kx/kz 
 /
 
 $MPI_BLOCKS
@@ -28,7 +28,7 @@ $RESTART_CONTROL
 /
 
 $END_CONTROL
-  tend = 0.333333333
+  tend = 0.333333333        ! one time-period T = kx/sqrt(kx**2 + ky**2 + kz**2)
   nend = 100000
 /
 
