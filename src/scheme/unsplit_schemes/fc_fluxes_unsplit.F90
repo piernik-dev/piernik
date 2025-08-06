@@ -27,9 +27,9 @@
 #include "piernik.h"
 
 !>
-!! This is a complete copy of the fc_fluxes.F90 file in grid folder . THe only change is the 
-!! ugly sphagettification of all the subroutines to adapt each of the modules 
-!! to unsplit scheme. As of now I have no better efficient idea. 
+!! This is a complete copy of the fc_fluxes.F90 file in grid folder . THe only change is the
+!! ugly sphagettification of all the subroutines to adapt each of the modules
+!! to unsplit scheme. As of now I have no better efficient idea.
 !<
 
 module fc_fluxes_unsplit
@@ -172,7 +172,7 @@ contains
                            else if (all(cg%finebnd(re_c_f_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                               lh = HI
                            else
-                              call die("[fc_fluxes:recv_cg_finebnd] Cannot determine side (Recv)")
+                              call die("[fc_fluxes_unsplit:recv_cg_finebnd] Cannot determine side (Recv)")
                               lh = INVALID
                            endif
                            cg%finebnd(re_c_f_i, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
@@ -205,7 +205,7 @@ contains
                      else if (all(cg%finebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                         lh = HI
                      else
-                        call die("[fc_fluxes:recv_cg_finebnd] Cannot determine side (Recv)")
+                        call die("[fc_fluxes_unsplit:recv_cg_finebnd] Cannot determine side (Recv)")
                         lh = INVALID
                      endif
                      cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
@@ -260,7 +260,7 @@ contains
                   else if (all(cg%coarsebnd(se_c_c_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                      lh = HI
                   else
-                     call die("[fc_fluxes:send_cg_coarsebnd] Cannot determine side (Send)")
+                     call die("[fc_fluxes_unsplit:send_cg_coarsebnd] Cannot determine side (Send)")
                      lh = INVALID
                   endif
 
@@ -294,7 +294,7 @@ contains
                   else if (all(cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                      lh = HI
                   else
-                     call die("[fc_fluxes:send_cg_coarsebnd] Cannot determine side (Send)")
+                     call die("[fc_fluxes_unsplit:send_cg_coarsebnd] Cannot determine side (Send)")
                      lh = INVALID
                   endif
 

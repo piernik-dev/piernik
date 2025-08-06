@@ -531,7 +531,7 @@ contains
          dc = var(3:3)
       else if (var(1:3) == "mag" .or. var(1:3) == "mom") then
          dc = var(4:4)
-      else if (var(2:5) == "fmom") then 
+      else if (var(2:5) == "fmom") then
          dc = var(6:6)
       else
          dc = '_'

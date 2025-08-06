@@ -503,17 +503,17 @@ contains
             if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
          case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
             if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
-         case("xfdenn","xfdeni","xfdend")
+         case ("xfdenn","xfdeni","xfdend")
             if (associated(fl_dni)) then
-               if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%idn, RNG) 
+               if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%idn, RNG)
             endif
-         case("yfdenn","yfdeni","yfdend")
+         case ("yfdenn","yfdeni","yfdend")
             if (associated(fl_dni)) then
-               if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%idn, RNG) 
+               if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%idn, RNG)
             endif
-         case("zfdenn","zfdeni","zfdend")
+         case ("zfdenn","zfdeni","zfdend")
             if (associated(fl_dni)) then
-               if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%idn, RNG) 
+               if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%idn, RNG)
             endif
          case ("xfmomxn", "xfmomyn", "xfmomzn","xfmomxd", "xfmomyd", "xfmomzd","xfmomxi", "xfmomyi", "xfmomzi")
                if (associated(fl_dni)) then
@@ -527,17 +527,17 @@ contains
                if (associated(fl_dni)) then
                  if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%imx + i_xyz, RNG)
                endif
-         case("xfenen","xfenei","xfened")
+         case ("xfenen","xfenei","xfened")
             if (associated(fl_dni) .and. fl_dni%ien /= INVALID )  then
-               if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%ien, RNG) 
+               if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%ien, RNG)
             endif
-         case("yfenen","yfenei","yfened")
+         case ("yfenen","yfenei","yfened")
             if (associated(fl_dni) .and. fl_dni%ien /= INVALID) then
-               if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%ien, RNG) 
+               if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%ien, RNG)
             endif
-         case("zfenen","zfenei","zfened")
+         case ("zfenen","zfenei","zfened")
             if (associated(fl_dni) .and. fl_dni%ien /= INVALID) then
-               if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%ien, RNG) 
+               if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%ien, RNG)
             endif
          case ("enen", "enei")
 #ifdef ISO

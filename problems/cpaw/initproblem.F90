@@ -130,8 +130,7 @@ subroutine problem_initial_conditions
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: xdim, ydim, zdim, LO, HI, pi
-      use dataio_pub,  only: die
+      use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -147,7 +146,7 @@ subroutine problem_initial_conditions
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       integer                         :: p
-      
+
       real, dimension(3, 3)           :: rot_matrix, rot_matrix_inv
       real, dimension(3)              :: v_prime, b_prime, v_final, b_final
       real, dimension(3)              :: pos_vec, pos_vec_prime
@@ -181,7 +180,7 @@ subroutine problem_initial_conditions
                      pos_vec = [xi, yj, zk]
                      pos_vec_prime = matmul(rot_matrix_inv, pos_vec)
 
-                     phi = k_prime * pos_vec_prime(1) 
+                     phi = k_prime * pos_vec_prime(1)
 
                      v_prime = [vx0, vy0 + A * sin(phi), vz0 + A * cos(phi)]
                      b_prime = [vA * sqrt(d0), -sqrt(d0) * A * sin(phi), -sqrt(d0) * A * cos(phi)]
@@ -231,5 +230,5 @@ subroutine problem_initial_conditions
          write(msg, *)  'cpaw_tst_0001.h5 is the last file .  Then run python compare_slices.py'
       endif
    end subroutine verify_test
-   
+
 end module initproblem
