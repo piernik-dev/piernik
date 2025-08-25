@@ -190,6 +190,7 @@ contains
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, SPLIT, UNSPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
+      use func,       only: operator(.notequals.)
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
 
       implicit none
@@ -531,11 +532,11 @@ contains
          end select
 
          if (which_solver_type == UNSPLIT) then
-            if (cfl> 0.5) call warn("[global:init_global] Unsplit MHD solver chosen. CFL > 0.5 may lead to unexpected result.")
+            if (cfl > 0.5) call warn("[global:init_global] Unsplit MHD solver chosen. CFL > 0.5 may lead to unexpected result.")
          endif
 #ifdef MAGNETIC
          if (which_solver_type == UNSPLIT) then
-            if (cfl_glm /= 0.3) call warn("[global:init_global] Unsplit MHD solver chosen. Ideal CFL_GLM = 0.3. Anything else may lead to unexpected result.")
+            if (cfl_glm .notequals. 0.3) call warn("[global:init_global] Unsplit MHD solver chosen. Ideal CFL_GLM = 0.3. Anything else may lead to unexpected result.")
          endif
 #endif /* MAGNETIC */
       endif
