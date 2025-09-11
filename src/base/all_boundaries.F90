@@ -95,7 +95,7 @@ contains
       logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
       integer,         optional, intent(in) :: istep
 
-      integer(kind=4)                     :: d
+      integer(kind=4) :: d, ind
       character(len=*), parameter :: abf_label = "all_fluid_boundaries"
 
       if (present(dir)) then
@@ -107,25 +107,20 @@ contains
 !      call finest%level%restrict_to_base
 
       ! should be more selective (modified leaves?)
-      if (present(istep) .and. istep==first_stage(integration_order)) then
-         call leaves%leaf_arr4d_boundaries(wna%ind(uh_n), dir=dir, nocorners=nocorners)
-         if (present(dir)) then
-            call leaves%bnd_u(dir)
-         else
-            do d = xdim, zdim
-               if (dom%has_dir(d)) call leaves%bnd_u(d)
-            enddo
-         endif
-      else
-         call leaves%leaf_arr4d_boundaries(wna%fi, dir=dir, nocorners=nocorners)
-         if (present(dir)) then
-            call leaves%bnd_u(dir)
-         else
-            do d = xdim, zdim
-               if (dom%has_dir(d)) call leaves%bnd_u(d)
-            enddo
-         endif
+      ind = wna%fi
+      if (present(istep)) then
+         if (istep == first_stage(integration_order)) ind = wna%ind(uh_n)
       endif
+      call leaves%leaf_arr4d_boundaries(ind, dir=dir, nocorners=nocorners)
+
+      if (present(dir)) then
+         call leaves%bnd_u(dir)
+      else
+         do d = xdim, zdim
+            if (dom%has_dir(d)) call leaves%bnd_u(d)
+         enddo
+      endif
+
       call ppp_main%stop(abf_label)
 
    end subroutine all_fluid_boundaries
@@ -142,9 +137,10 @@ contains
       use ppp,              only: ppp_main
 
       implicit none
-      integer,         optional, intent(in) :: istep
 
-      integer(kind=4) :: dir
+      integer, optional, intent(in) :: istep
+
+      integer(kind=4) :: dir, ind
       character(len=*), parameter :: abm_label = "all_mag_boundaries"
 
       call ppp_main%start(abm_label, PPP_MAG)
@@ -154,32 +150,23 @@ contains
          if (dom%has_dir(dir)) call leaves%bnd_b(dir)
       enddo
 
-      if (present(istep) .and. istep==first_stage(integration_order)) then
-         call leaves%leaf_arr4d_boundaries(wna%ind(magh_n))
-      else
-         call leaves%leaf_arr4d_boundaries(wna%bi)
+      ind = wna%bi
+      if (present(istep)) then
+         if (istep == first_stage(integration_order)) ind = wna%ind(magh_n)
       endif
+      call leaves%leaf_arr4d_boundaries(ind)
 
-      if (present(istep) .and. istep==first_stage(integration_order)) then
-
-         if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psih_n))
-
-         if (qna%exists(psi_n)) then
-            if (psi_bnd == BND_INVALID) then
-               call leaves%external_boundaries(qna%ind(psih_n))
-            else
-               call leaves%external_boundaries(qna%ind(psih_n), bnd_type=psi_bnd)
-            endif
+      if (qna%exists(psi_n)) then  ! assumed that qna%exists(psih_n) too
+         ind = qna%ind(psi_n)
+         if (present(istep)) then
+            if (istep == first_stage(integration_order)) ind = qna%ind(psih_n)
          endif
-      else
-         if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
 
-         if (qna%exists(psi_n)) then
-            if (psi_bnd == BND_INVALID) then
-               call leaves%external_boundaries(qna%ind(psi_n))
-            else
-               call leaves%external_boundaries(qna%ind(psi_n), bnd_type=psi_bnd)
-            endif
+         call leaves%leaf_arr3d_boundaries(ind)
+         if (psi_bnd == BND_INVALID) then
+            call leaves%external_boundaries(ind)
+         else
+            call leaves%external_boundaries(ind, bnd_type=psi_bnd)
          endif
       endif
 
