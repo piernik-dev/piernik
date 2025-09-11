@@ -303,8 +303,8 @@ contains
                vv(1)  = vv(2)
                vv(cg%n_(vdir)) = vv(cg%n_(vdir)-1)
 
-               vibj => cg%q(qna%wai)%get_sweep(vdir,i1,i2)
-               call tvdb(vibj, cg%w(wna%bi)%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
+               vibj => cg%q(qna%wai)%get_sweep(vdir, i1, i2)
+               call tvdb(vibj, cg%w(wna%bi)%get_sweep(vdir,bdir, i1, i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
                NULLIFY(pm1, pm2, pd1, pd2)
 
             enddo

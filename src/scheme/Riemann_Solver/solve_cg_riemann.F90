@@ -171,16 +171,16 @@ contains
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
 
             ! transposition for compatibility with RTVD-based routines
-            pu0 => cg%w(uhi)%get_sweep(ddim,i1,i2)
-            pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+            pu0 => cg%w(uhi)%get_sweep(ddim, i1, i2)
+            pu => cg%w(wna%fi)%get_sweep(ddim, i1, i2)
             if (istep == first_stage(integration_order)) pu0 = pu
             ! such copy is a bit faster than whole copy of u and we don't have to modify all the source routines
 
             u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
 
-            pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-            pb0 => cg%w(bhi)%get_sweep(ddim,i1,i2)
+            pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2)
+            pb0 => cg%w(bhi)%get_sweep(ddim, i1, i2)
             if (istep == first_stage(integration_order)) pb0 = pb
 
             if (cc_mag) then
@@ -196,15 +196,15 @@ contains
                b(:, :) = interpolate_mag_field(ddim, cg, i1, i2, wna%bi)
             endif
 
-            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
+            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim, i1, i2)
 
             call cg%set_fluxpointers(ddim, i1, i2, eflx)
             u1 = u
             b1(:, xdim:zdim) = b
             vx = u(:, iarr_all_mx) / u(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
             if (psii > INVALID) then
-               ppsi0 => cg%q(psihi)%get_sweep(ddim,i1,i2)
-               ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
+               ppsi0 => cg%q(psihi)%get_sweep(ddim, i1, i2)
+               ppsi => cg%q(psii)%get_sweep(ddim, i1, i2)
                if (istep == first_stage(integration_order)) ppsi0 = ppsi
 
                b0(:, psidim) = ppsi0(:)
@@ -278,13 +278,13 @@ contains
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
 
             ! transposition for compatibility with RTVD-based routines
-            pu0 => cg%w(uhi)%get_sweep(ddim,i1,i2)
-            pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+            pu0 => cg%w(uhi)%get_sweep(ddim, i1, i2)
+            pu => cg%w(wna%fi)%get_sweep(ddim, i1, i2)
             if (istep == first_stage(integration_order)) pu0 = pu
 
             u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
-            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
+            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim, i1, i2)
 
             call cg%set_fluxpointers(ddim, i1, i2, eflx)
             u1 = u

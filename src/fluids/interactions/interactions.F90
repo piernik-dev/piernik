@@ -337,7 +337,7 @@ contains
          initbalsara = .false.
       endif
 
-      cs_iso2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+      cs_iso2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep, i1, i2)
       drag(:) = dt * half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, tfl(LO)) - vx(:, tfl(HI)) )**2)
 
       delta(:) = one + drag(:) * (u1(:, iarr_all_dn(tfl(LO))) + u1(:, iarr_all_dn(tfl(HI))))
@@ -349,7 +349,7 @@ contains
          vprim(:, tfl(LO)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(LO))) + drag(:))*u1(:, iarr_all_mx(tfl(LO))) + drag(:)*u1(:, iarr_all_mx(tfl(HI))) )
          vprim(:, tfl(HI)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(HI))) + drag(:))*u1(:, iarr_all_mx(tfl(HI))) + drag(:)*u1(:, iarr_all_mx(tfl(LO))) )
       case (RK2_2)
-         u0(:, iarr_all_swp(sweep,:)) = transpose(cg%w(wna%ind(uh_n))%get_sweep(sweep,i1,i2))
+         u0(:, iarr_all_swp(sweep,:)) = transpose(cg%w(wna%ind(uh_n))%get_sweep(sweep, i1, i2))
          vprim(:, tfl(HI)) =  delta(:)*( drag(:)*( u0(:, iarr_all_dn(tfl(HI)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(LO))) &
                                                  - u0(:, iarr_all_dn(tfl(LO)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(HI))) &
                                                  + u1(:, iarr_all_mx(tfl(LO))) ) + u1(:, iarr_all_mx(tfl(HI))) * ( 1./u1(:, iarr_all_dn(tfl(HI))) + drag(:) )  )
@@ -418,7 +418,7 @@ contains
          initbalsara = .false.
       endif
 
-      cs_iso2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+      cs_iso2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep, i1, i2)
       drag(:) = half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, tfl(LO)) - vx(:, tfl(HI)) )**2)
 
       delta(:) = one + dt * drag(:) * (u1(:, iarr_all_dn(tfl(LO))) + u1(:, iarr_all_dn(tfl(HI))))
