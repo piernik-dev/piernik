@@ -376,13 +376,12 @@ custom_gold:
 		esac \
 	done
 
-# Target to run all gold tests
+# Target to run all gold tests.
+# Call `make gold-clean` explicitly if a cleanup is required.
+# Typically it shouldn't be required and existing files from previous gold runs can save some execution time here.
 gold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
-	# Ensure the GOLDSPACE directory exists
-	[ -e $(GOLDSPACE) ] && rm -rf $(GOLDSPACE) || true # Optional: Clean it before starting
 	mkdir -p $(GOLDSPACE) # Create the directory if it doesn't exist
-
 	$(MAKE) -k $(GOLD_TESTS) || \
 		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."
