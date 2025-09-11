@@ -12,7 +12,7 @@ $BASE_DOMAIN
   ymin   =  0.0
   ymax   =  0.5            ! kx/ky
   zmin   =  0.0
-  zmax   =  0.5            ! kx/kz 
+  zmax   =  0.5            ! kx/kz
 /
 
 $MPI_BLOCKS

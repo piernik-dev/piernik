@@ -218,7 +218,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      if (which_solver_type == UNSPLIT) then
+      if (which_solver_type == UNSPLIT) then  ! here it should be something more general than just split/unsplit difference
          dt = min(min(dt, dt_max), ((tend-t)) + (two*epsilon(one)*((tend-t))))
       else
          dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))

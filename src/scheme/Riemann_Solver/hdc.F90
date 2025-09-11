@@ -296,7 +296,7 @@ contains
 
       implicit none
 
-      logical,optional,           intent(in) :: half
+      logical, optional, intent(in) :: half
 
       type(cg_list_element), pointer :: cgl
 

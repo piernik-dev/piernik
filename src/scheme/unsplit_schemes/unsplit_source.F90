@@ -39,7 +39,8 @@ contains
 
 ! This routine has to conform to the interface defined in sweeps::sweep
 
-   subroutine apply_source(cg,istep)
+   subroutine apply_source(cg, istep)
+
       use grid_cont,          only: grid_container
       use named_array_list,   only: wna
       use constants,          only: pdims, ORTHO1, ORTHO2, LO, HI, uh_n, rk_coef, first_stage, xdim, zdim, last_stage
@@ -71,27 +72,29 @@ contains
       bhi = wna%ind(magh_n)
 #else /* !MAGNETIC */
       real, dimension(1, 1)                                       :: b_ugly ! ugly
+
       b_ugly = 0.0
 #endif /* !MAGNETIC */
+
       uhi = wna%ind(uh_n)
-      do ddim=xdim,zdim
+      do ddim = xdim, zdim
          if (.not. dom%has_dir(ddim)) cycle
-         call my_allocate(u,[cg%n_(ddim), size(cg%u,1,kind=4)])
-         call my_allocate(vx,[size(u,1,kind=4), flind%fluids])
-         call my_allocate(u1,[size(u, 1,kind=4),size(u, 2,kind=4)])
+         call my_allocate(u, [cg%n_(ddim), size(cg%u, 1, kind=4)])
+         call my_allocate(vx, [size(u, 1, kind=4), flind%fluids])
+         call my_allocate(u1, [size(u, 1, kind=4),size(u, 2, kind=4)])
 #ifdef MAGNETIC
-         call my_allocate(b,[cg%n_(ddim), size(cg%b,1,kind=4)])
+         call my_allocate(b, [cg%n_(ddim), size(cg%b, 1, kind=4)])
 #endif /* MAGNETIC */
          do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
             do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
-               pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+               pu => cg%w(wna%fi)%get_sweep(ddim, i1, i2)
 #ifdef MAGNETIC
-               pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
+               pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2)
 #endif /* MAGNETIC */
-               if (istep == first_stage(integration_order) .or. integration_order < 2 ) then
-                  pu => cg%w(uhi)%get_sweep(ddim,i1,i2)
+               if (istep == first_stage(integration_order) .or. integration_order < 2) then
+                  pu => cg%w(uhi)%get_sweep(ddim, i1, i2)
 #ifdef MAGNETIC
-                  pb => cg%w(bhi)%get_sweep(ddim,i1,i2)
+                  pb => cg%w(bhi)%get_sweep(ddim, i1, i2)
 #endif /* MAGNETIC */
                     endif
                   u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
@@ -125,5 +128,7 @@ contains
             call my_deallocate(b)
 #endif /* MAGNETIC */
       enddo
+
    end subroutine apply_source
+
 end module unsplit_source

@@ -56,32 +56,36 @@ contains
       use cg_leaves,    only: leaves
       use domain,       only: dom
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, base_level_id,xdim,zdim
+      use constants,    only: LO, HI, base_level_id, xdim, zdim
       use pppmpi,       only: req_ppp
       use MPIF,         only:  MPI_REQUEST_NULL
       implicit none
 
       type(req_ppp),             intent(inout) :: req
-      integer(kind=4),optional,  intent(in)    :: cdim
+      integer(kind=4), optional, intent(in)    :: cdim
       integer(kind=4), optional, intent(in)    :: max_level
 
       type(cg_list_element), pointer :: cgl
       integer :: g
       integer :: in_f_re_i
+
       call req%init(owncomm = .true., label = "fc_flx")
+
       do g = 1, size(req%r)
          req%r(g) = MPI_REQUEST_NULL
       enddo
+
       nullify(cgl)
       if (present(max_level)) then  ! exclude some finest levels (useful in crdiffusion)
          if (max_level >= base_level_id) cgl => leaves%up_to_level(max_level)%p
       else  ! operate on the whole structure
          cgl => leaves%first
       endif
+
       if (.not. present(cdim) .or. cdim==-1) then
          do while (associated(cgl))
             call cgl%cg%costs%start
-            do in_f_re_i=xdim,zdim
+            do in_f_re_i = xdim, zdim
                if (.not. dom%has_dir(in_f_re_i)) cycle
                cgl%cg%processed = .false.
                cgl%cg%finebnd(in_f_re_i, LO)%uflx(:, :, :) = 0. !> \warning overkill
@@ -118,16 +122,17 @@ contains
             cgl => cgl%nxt
          enddo
       endif
+
    end subroutine initiate_flx_recv
 
 !> \brief Test if expected fluxes from fine grids have already arrived.
 
    subroutine recv_cg_finebnd(req, cdim, cg, all_received)
 
-      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI,xdim,zdim
+      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI, xdim, zdim
       use dataio_pub, only: die
       use fluidindex, only: flind
-      use domain,         only: dom
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test, MPI_Wait
       use mpisetup,   only: err_mpi
@@ -150,7 +155,7 @@ contains
 
       if (present(all_received)) all_received = .true.
       if (.not. present(cdim) .or. cdim==-1) then
-         do re_c_f_i=xdim,zdim
+         do re_c_f_i = xdim, zdim
             if (.not. dom%has_dir(re_c_f_i)) cycle
             if (allocated(cg%rif_tgt%seg)) then
                associate ( seg => cg%rif_tgt%seg )
@@ -218,14 +223,16 @@ contains
             end associate
          endif
       endif
+
       call ppp_main%stop(recv_label, PPP_MPI)
+
    end subroutine recv_cg_finebnd
 
 !> \brief Do a non-blocking MPI Send of fluxes for coarse neighbors.
 
    subroutine send_cg_coarsebnd(req, cdim, cg)
 
-      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI,xdim,zdim
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI, xdim, zdim
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
@@ -245,8 +252,9 @@ contains
       character(len=*), parameter :: send_label = "cg_send_coarse_bnd"
 
       call ppp_main%start(send_label, PPP_MPI)
+
       if (.not. present(cdim) .or. cdim==-1) then
-         do se_c_c_i=xdim,zdim
+         do se_c_c_i = xdim, zdim
             if (.not. dom%has_dir(se_c_c_i)) cycle
             if (allocated(cg%rof_tgt%seg)) then
             associate ( seg => cg%rof_tgt%seg )

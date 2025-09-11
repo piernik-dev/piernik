@@ -369,54 +369,57 @@ contains
 
       type(cg_list_dataop_t), pointer :: sorted_leaves
       type(cg_list_element),  pointer :: cgl
+
       allocate(sorted_leaves)
       call sorted_leaves%init_new("sorted_leaves")
+
+      ! ToDo: despaghettify
       if (.not. present(dir) .or. dir==-1) then
          cgl => this%first
-            do while (associated(cgl))
-               cgl%cg%processed = .false.
-               do pr_cg_i=xdim,zdim
-                  if (cgl%cg%is_sending_fc_flux(pr_cg_i) .and. .not. cgl%cg%is_receiving_fc_flux(pr_cg_i)) then
+         do while (associated(cgl))
+            cgl%cg%processed = .false.
+            do pr_cg_i = xdim, zdim
+               if (cgl%cg%is_sending_fc_flux(pr_cg_i) .and. .not. cgl%cg%is_receiving_fc_flux(pr_cg_i)) then
+                  call sorted_leaves%add(cgl%cg)
+                  cgl%cg%processed = .true.
+               endif
+            enddo
+            cgl => cgl%nxt
+         enddo
+
+         cgl => this%first
+         do while (associated(cgl))
+            if (.not. cgl%cg%processed) then
+               do pr_cg_i = xdim, zdim
+                  if (cgl%cg%is_sending_fc_flux(pr_cg_i)) then
                      call sorted_leaves%add(cgl%cg)
                      cgl%cg%processed = .true.
                   endif
                enddo
-               cgl => cgl%nxt
-            enddo
-
-            cgl => this%first
-            do while (associated(cgl))
-                  if (.not. cgl%cg%processed) then
-                     do pr_cg_i=xdim,zdim
-                        if (cgl%cg%is_sending_fc_flux(pr_cg_i)) then
-                           call sorted_leaves%add(cgl%cg)
-                           cgl%cg%processed = .true.
-                        endif
-                     enddo
-                  endif
-               cgl => cgl%nxt
-            enddo
+            endif
+            cgl => cgl%nxt
+         enddo
       else
          cgl => this%first
-            do while (associated(cgl))
-               cgl%cg%processed = .false.
-                  if (cgl%cg%is_sending_fc_flux(dir) .and. .not. cgl%cg%is_receiving_fc_flux(dir)) then
-                     call sorted_leaves%add(cgl%cg)
-                     cgl%cg%processed = .true.
-                  endif
-               cgl => cgl%nxt
-            enddo
+         do while (associated(cgl))
+            cgl%cg%processed = .false.
+            if (cgl%cg%is_sending_fc_flux(dir) .and. .not. cgl%cg%is_receiving_fc_flux(dir)) then
+               call sorted_leaves%add(cgl%cg)
+               cgl%cg%processed = .true.
+            endif
+            cgl => cgl%nxt
+         enddo
 
-            cgl => this%first
-            do while (associated(cgl))
-                  if (.not. cgl%cg%processed) then
-                        if (cgl%cg%is_sending_fc_flux(dir)) then
-                           call sorted_leaves%add(cgl%cg)
-                           cgl%cg%processed = .true.
-                        endif
-                  endif
-               cgl => cgl%nxt
-            enddo
+         cgl => this%first
+         do while (associated(cgl))
+            if (.not. cgl%cg%processed) then
+               if (cgl%cg%is_sending_fc_flux(dir)) then
+                  call sorted_leaves%add(cgl%cg)
+                  cgl%cg%processed = .true.
+               endif
+            endif
+            cgl => cgl%nxt
+         enddo
       endif
       cgl => this%first
       do while (associated(cgl))

@@ -43,11 +43,12 @@ module unsplit_sweeps
    public :: unsplit_sweep
 
 contains
+
    subroutine update_boundaries(istep)
 
       use all_boundaries, only: all_fluid_boundaries
 !      use cg_leaves,      only: leaves
-      use constants,      only: first_stage, DIVB_HDC,xdim,zdim
+      use constants,      only: first_stage, DIVB_HDC, xdim, zdim
       use domain,         only: dom
       use global,         only: sweeps_mgu, integration_order, divB_0_method
 #ifdef MAGNETIC
@@ -56,25 +57,25 @@ contains
 
       implicit none
 
-      integer,                  intent(in) :: istep
+      integer, intent(in) :: istep
 
-      integer(kind=4)                      :: ub_i
+      integer(kind=4) :: ub_i
 
       if (sweeps_mgu) then
          if (istep == first_stage(integration_order)) then
-            do ub_i=xdim,zdim
+            do ub_i = xdim, zdim
                if (.not. dom%has_dir(ub_i)) cycle
-               call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep=istep)
+               call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep = istep)
             enddo
          else
-         call all_fluid_boundaries(nocorners = .true.,istep=istep)
+            call all_fluid_boundaries(nocorners = .true., istep = istep)
          endif
       else
-            call all_fluid_boundaries(istep=istep)
+         call all_fluid_boundaries(istep=istep)
       endif
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
-            call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
+         call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
 #endif /* MAGNETIC */
       endif
 
@@ -109,7 +110,7 @@ contains
       logical                          :: all_processed, all_received
       integer                          :: blocks_done
       integer(kind=4)                  :: n_recv, g
-      character(len=*), parameter :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
+      character(len=*), parameter      :: solve_cgs_label = "solve_bunch_of_cg", cg_label = "solve_cg", init_src_label = "init_src"
 
       call ppp_main%start("unsplit_sweep")
 

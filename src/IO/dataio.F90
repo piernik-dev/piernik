@@ -1685,7 +1685,7 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
-      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half, V_LOG,UNSPLIT
+      use constants,          only: DIVB_HDC, I_ZERO, RIEMANN_SPLIT, half, V_LOG, UNSPLIT
       use dataio_pub,         only: msg
       use func,               only: sq_sum3
       use global,             only: cfl, divB_0_method, which_solver, cc_mag

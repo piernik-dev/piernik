@@ -108,7 +108,7 @@ contains
 
       ! should be more selective (modified leaves?)
       if (present(istep) .and. istep==first_stage(integration_order)) then
-         call leaves%leaf_arr4d_boundaries(wna%ind(uh_n) , dir=dir, nocorners=nocorners)
+         call leaves%leaf_arr4d_boundaries(wna%ind(uh_n), dir=dir, nocorners=nocorners)
          if (present(dir)) then
             call leaves%bnd_u(dir)
          else
@@ -135,7 +135,7 @@ contains
 
       use cg_leaves,        only: leaves
 !!$      use cg_list_global,   only: all_cg
-      use constants,        only: xdim, zdim, psi_n, BND_INVALID, PPP_MAG,psih_n,magh_n, first_stage
+      use constants,        only: xdim, zdim, psi_n, BND_INVALID, PPP_MAG, psih_n, magh_n, first_stage
       use domain,           only: dom
       use global,           only: psi_bnd, integration_order
       use named_array_list, only: wna, qna

@@ -71,7 +71,7 @@ $PROBLEM_CONTROL
    bxr = 0.0
    byr = 0.0
    bzr = 0.0
- 
+
    theta = 0.785398163    ! pi/4
    c = 0.5
    face = 'xz'

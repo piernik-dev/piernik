@@ -141,6 +141,7 @@ contains
 
       if (.not. allocated(hdf_vars)) allocate(hdf_vars(0))
 
+      ! ToDo: consider despaghettification
       do i = lbound(vars, 1), ubound(vars, 1)
          select case (trim(vars(i)))
             case ('')

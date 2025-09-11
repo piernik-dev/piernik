@@ -73,8 +73,8 @@ $PROBLEM_CONTROL
    bzr = 0.0
 
    theta = 0.785398163  ! pi/4
-   c = 0.5 
-   face = 'yz'      
+   c = 0.5
+   face = 'yz'
 /
 
 $AMR
