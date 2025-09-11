@@ -299,8 +299,7 @@ contains
       logical, optional, intent(in) :: half
 
       type(cg_list_element), pointer :: cgl
-
-      real :: fac
+      real :: fac, dt_eff
 
       if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to if (.not. qna%exists(psi_n))
       if (which_solver /= RIEMANN_SPLIT) call die("[hdc:glmdamping] Only Riemann solver has DIVB_HDC implemented")
@@ -309,16 +308,18 @@ contains
 
          fac = 0.
 
+         dt_eff = dt
+         if (present(half)) then
+            if (half) dt_eff = dt/2.0
+         endif
+
          if (dom%eff_dim > 0) then
             cgl => leaves%first
             do while (associated(cgl))
                call cgl%cg%costs%start
 
-               if (present(half) .and. half) then
-                  fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/(dt/2.0)))
-               else if (.not. present(half) .or. .not. half) then
-                  fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt))
-               endif
+               fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt_eff))
+
                call cgl%cg%costs%stop(I_MHD)
                cgl => cgl%nxt
             enddo
