@@ -769,6 +769,8 @@ contains
       real, dimension(1:2)                :: x_vec_0, x_vec, delta, x_in
       integer(kind=4)                     :: nsubstep = 100, k
 
+      exit_code = .true.  ! Ensure always set
+
       ! alpha and n are set !
 
       if (minval(p3(1:2)) > tiny(zero) .and. p3(3) <= zero) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
@@ -878,6 +880,8 @@ contains
       real, dimension(1:2), intent(inout) :: prev_solution
       logical,              intent(out)   :: exit_code
       real, dimension(1:2)                :: x_vec
+
+      exit_code = .true.  ! Ensure always set
 
       x_vec = prev_solution
       call NR_algorithm(x_vec, exit_code)
@@ -991,6 +995,7 @@ contains
       real,    intent(inout) :: x
       logical, intent(out)   :: exit_code
 
+      exit_code = .false.
       if (abs(x) >= q_big) then
          x = sign(one, x) * q_big
          exit_code = .true.
