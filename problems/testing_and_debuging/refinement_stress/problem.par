@@ -1,5 +1,5 @@
- ! An advection test run as a background for a fast-changing refinement structure
- 
+! An advection test run as a background for a fast-changing refinement structure
+
  $BASE_DOMAIN
     n_d = 32, 32, 1
     bnd_xl = 'per'
