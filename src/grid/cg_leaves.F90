@@ -359,7 +359,8 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_dataop, only: cg_list_dataop_t
-      use constants,      only: xdim,zdim
+      use constants,      only: xdim, zdim, INVALID
+
       implicit none
 
       class(cg_leaves_t),         intent(in) :: this  !< object invoking type-bound procedure
@@ -369,12 +370,20 @@ contains
 
       type(cg_list_dataop_t), pointer :: sorted_leaves
       type(cg_list_element),  pointer :: cgl
+      logical :: alldir
 
       allocate(sorted_leaves)
       call sorted_leaves%init_new("sorted_leaves")
 
+      alldir = .false.
+      if (.not. present(dir)) then
+         alldir = .true.
+      else
+         if (dir == INVALID) alldir = .true.
+      endif
+
       ! ToDo: despaghettify
-      if (.not. present(dir) .or. dir==-1) then
+      if (alldir) then
          cgl => this%first
          do while (associated(cgl))
             cgl%cg%processed = .false.
