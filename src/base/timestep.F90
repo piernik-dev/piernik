@@ -116,13 +116,13 @@ contains
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use cmp_1D_mpi,         only: compare_array1D
-      use constants,          only: one, two, zero, half, pMIN, pMAX, UNSPLIT
+      use constants,          only: one, two, zero, half, pMIN, pMAX, RIEMANN_UNSPLIT
       use dataio,             only: write_crashed
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
       use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, &
-      &                             dt_max, nstep, repetitive_steps, which_solver_type
+      &                             dt_max, nstep, repetitive_steps, which_solver
       use grid_cont,          only: grid_container
       use mpisetup,           only: master
       use ppp,                only: ppp_main
@@ -218,7 +218,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      if (which_solver_type == UNSPLIT) then  ! here it should be something more general than just split/unsplit difference
+      if (which_solver == RIEMANN_UNSPLIT) then  ! here it should be something more general than just split/unsplit difference
          dt = min(min(dt, dt_max), ((tend-t)) + (two*epsilon(one)*((tend-t))))
       else
          dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))

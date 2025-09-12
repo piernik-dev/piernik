@@ -87,10 +87,10 @@ contains
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
       use cg_list_dataop,    only: cg_list_dataop_t
-      use constants,         only: first_stage, last_stage, INVALID, PPP_CG, UNSPLIT
+      use constants,         only: first_stage, last_stage, INVALID, PPP_CG, RIEMANN_UNSPLIT
       use dataio_pub,        only: die
       use fc_fluxes_unsplit, only: initiate_flx_recv, recv_cg_finebnd, send_cg_coarsebnd
-      use global,            only: integration_order, which_solver_type
+      use global,            only: integration_order, which_solver
       use grid_cont,         only: grid_container
       use MPIF,              only: MPI_STATUS_IGNORE
       use MPIFUN,            only: MPI_Waitany
@@ -114,7 +114,7 @@ contains
 
       call ppp_main%start("unsplit_sweep")
 
-      if (which_solver_type /= UNSPLIT) call die("[unsplit_sweeps:unsplit_sweep] Only compatible with UNSPLIT solver")
+      if (which_solver /= RIEMANN_UNSPLIT) call die("[unsplit_sweeps:unsplit_sweep] Only compatible with UNSPLIT solver")
 
       sl => leaves%prioritized_cg(INVALID, covered_too = .true.)
 

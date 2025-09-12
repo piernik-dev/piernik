@@ -229,11 +229,10 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS, xflx_n, yflx_n, zflx_n, &
-      &                     UNSPLIT
+      use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS, xflx_n, yflx_n, zflx_n, RIEMANN_UNSPLIT
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: ord_fluid_prolong, which_solver_type
+      use global,     only: ord_fluid_prolong, which_solver
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
@@ -261,7 +260,7 @@ contains
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
 
-      if (which_solver_type == UNSPLIT) then
+      if (which_solver == RIEMANN_UNSPLIT) then  ! or rather .not. is_split ?
          call this%reg_var(xflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! X Face-Fluid flux array
          call this%reg_var(yflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! Y Face-Fluid flux array
          call this%reg_var(zflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! Z Face-Fluid flux array
@@ -280,7 +279,7 @@ contains
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
 
-      if (which_solver_type == UNSPLIT) then
+      if (which_solver == RIEMANN_UNSPLIT) then
          call this%reg_var(xbflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
          call this%reg_var(ybflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
          call this%reg_var(zbflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
@@ -405,8 +404,8 @@ contains
 #ifdef MAGNETIC
       subroutine set_magnetic_names
 
-         use constants,        only: xdim, ydim, zdim, UNSPLIT
-         use global,           only: which_solver_type
+         use constants,        only: xdim, ydim, zdim, RIEMANN_UNSPLIT
+         use global,           only: which_solver
          use named_array_list, only: wna, na_var_4d
 
          implicit none
@@ -418,7 +417,7 @@ contains
                call lst(wna%bi)%set_compname(ydim, "magy")
                call lst(wna%bi)%set_compname(zdim, "magz")
 
-               if (which_solver_type == UNSPLIT) then
+               if (which_solver == RIEMANN_UNSPLIT) then
 
                   call lst(wna%xbflx)%set_compname(xdim,   "bxxflx")
                   call lst(wna%xbflx)%set_compname(ydim,   "byxflx")

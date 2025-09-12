@@ -215,16 +215,10 @@ module constants
 
    ! solver str
    enum, bind(C)
-      enumerator :: RTVD_SPLIT    !! MHD RTVD, as it was implemented from the beginning of Piernik
-      enumerator :: HLLC_SPLIT    !! non-magnetic (pure HD) HLLC as first attempt of something more precise than RTVD, lacks many features an ma be removed at some point
-      enumerator :: RIEMANN_SPLIT !! MHD Riemann, implementations by Varadarajan Parthasarathy; HD variant is slower than HLLC_SPLIT
-   end enum
-
-   ! solver type
-
-   enum, bind(C)
-      enumerator :: SPLIT      !! MHD Riemann split solver
-      enumerator :: UNSPLIT    !! MHD Riemann unsplit solver
+      enumerator :: RTVD_SPLIT      !! MHD RTVD, as it was implemented from the beginning of Piernik
+      enumerator :: HLLC_SPLIT      !! non-magnetic (pure HD) HLLC as first attempt of something more precise than RTVD, lacks many features an ma be removed at some point
+      enumerator :: RIEMANN_SPLIT   !! MHD Riemann, implementations by Varadarajan Parthasarathy; HD variant is slower than HLLC_SPLIT
+      enumerator :: RIEMANN_UNSPLIT !! unsplit MHD Riemann
    end enum
 
    ! Perhaps it may make sense to create compatibility matrix for solvers.

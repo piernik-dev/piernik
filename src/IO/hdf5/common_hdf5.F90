@@ -104,11 +104,11 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,      only: dsetnamelen, singlechar, UNSPLIT
+      use constants,      only: dsetnamelen, singlechar, RIEMANN_UNSPLIT
       use fluidindex,     only: flind
       use dataio_pub,     only: warn, die
       use fluids_pub,     only: has_ion, has_dst, has_neu
-      use global,         only: cc_mag, which_solver_type
+      use global,         only: cc_mag, which_solver
       use mpisetup,       only: master
 #ifdef COSM_RAYS
       use cr_data,        only: cr_names, cr_spectral
@@ -203,7 +203,7 @@ contains
             case ("divb_diml")
                call append_var("divb_norm")
             case ('xflux')
-               if (which_solver_type /= UNSPLIT) call die("[common_hdf5:init_hdf5] Flux variable only avaible for unsplit riemann solver")
+               if (which_solver /= RIEMANN_UNSPLIT) call die("[common_hdf5:init_hdf5] Flux variable only avaible for unsplit riemann solver")
                if (has_dst) then
                   call append_var('xfdend')
                   call append_var('xfmomxd')
@@ -225,7 +225,7 @@ contains
                   if (flind%ion%has_energy) call append_var('xfenei')
                endif
             case ('yflux')
-               if (which_solver_type /= UNSPLIT) call die("[common_hdf5:init_hdf5] Flux variable only avaible for unsplit riemann solver")
+               if (which_solver /= RIEMANN_UNSPLIT) call die("[common_hdf5:init_hdf5] Flux variable only avaible for unsplit riemann solver")
                if (has_dst) then
                   call append_var('yfdend')
                   call append_var('yfmomxd')
@@ -247,7 +247,7 @@ contains
                   if (flind%ion%has_energy) call append_var('yfenei')
                endif
             case ('zflux')
-               if (which_solver_type /= UNSPLIT) call die("[common_hdf5:init_hdf5] Flux variable only avaible for unsplit riemann solver")
+               if (which_solver /= RIEMANN_UNSPLIT) call die("[common_hdf5:init_hdf5] Flux variable only avaible for unsplit riemann solver")
                if (has_dst) then
                   call append_var('zfdend')
                   call append_var('zfmomxd')

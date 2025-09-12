@@ -59,10 +59,10 @@ contains
 
    subroutine fluid_update
 
-      use constants,           only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT, SPLIT, UNSPLIT, I_ONE, I_TWO
+      use constants,           only: RTVD_SPLIT, RIEMANN_SPLIT, HLLC_SPLIT, RIEMANN_UNSPLIT, I_ONE, I_TWO
       use dataio_pub,          only: die
       use domain,              only: dom, is_refined
-      use global,              only: which_solver, which_solver_type
+      use global,              only: which_solver
       use fluidupdate_hllc,    only: fluid_update_simple
       use ppp,                 only: ppp_main
       use unsplit_fluidupdate, only: fluid_update_unsplit
@@ -82,8 +82,9 @@ contains
          case (RTVD_SPLIT)
             call fluid_update_full
          case (RIEMANN_SPLIT)
-            if (which_solver_type == SPLIT)  call fluid_update_full
-            if (which_solver_type == UNSPLIT)  call fluid_update_unsplit
+            call fluid_update_full
+         case (RIEMANN_UNSPLIT)
+            call fluid_update_unsplit
          case default
             call die("[fluidupdate:fluid_update] unknown solver")
       end select
