@@ -75,11 +75,16 @@ if [ ! -e ${RUN_GOLD_DIR}${OUTPUT} ] ; then
     cp python/piernik_setup.py ${GOLD_CLONE}/python/piernik_setup_today.py
     (
 	cd $GOLD_CLONE
+	[ -e __error__ ] && rm __error__
 	git fetch -q $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
-	git checkout -q $GOLD_COMMIT
+	git checkout -q $GOLD_COMMIT || ( echo "Error: Unable to checkout GOLD_COMMIT – make sure it has been pushed to github" > __error__; exit 3 )
 	rsync -avxq --delete "${BASE_DIR}"/compilers/ ./compilers
 	python3 python/piernik_setup_today.py $PROBLEM_NAME $SETUP_PARAMS -o $FLAT_PROBLEM_NAME  # prepares $OBJ in $GOLD_DIR
     )
+    if [ -e ${GOLD_CLONE}/__error__ ] ; then
+	cat ${GOLD_CLONE}/__error__ 1>&2
+	exit 3
+    fi
     cp -a ${GOLD_CLONE}/$OBJ $GOLD_DIR
 
     # Copy whole directories from appropriate runs directories in case there is something more than piernik and problem.par
@@ -88,17 +93,19 @@ if [ ! -e ${RUN_GOLD_DIR}${OUTPUT} ] ; then
 
     # Compile the gold version of Piernik
     sed -i 's/-fcheck=all/& -fcheck=no-array-temps/' ${GOLD_DIR}$OBJ"/Makefile"
-    make -j -C ${GOLD_DIR}$OBJ > ${GOLD_DIR}make.stdout 2>&1
-
-    # Run the gold version of Piernik problem
     (
-	cd $RUN_GOLD_DIR
-	eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > gold_stdout
-    )
+	make -j -C ${GOLD_DIR}$OBJ > ${GOLD_DIR}make.stdout 2>&1
 
-    # Leave a mark to avoid unnecessary recalculation of the gold problem
-    echo $GOLD_COMMIT > $GOLD_SHA_FILE
-fi &
+	# Run the gold version of Piernik problem
+	(
+	    cd $RUN_GOLD_DIR
+	    eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > gold_stdout
+	)
+
+	# Leave a mark to avoid unnecessary recalculation of the gold problem
+	echo $GOLD_COMMIT > $GOLD_SHA_FILE
+    ) &
+fi
 
 # Clean up after previous runs and create directories
 rm -rf ${TEST_DIR}$OBJ ${TEST_DIR}runs
@@ -118,7 +125,12 @@ sed -i 's/-fcheck=all/& -fcheck=no-array-temps/' ${TEST_DIR}$OBJ"/Makefile"
 make -j -C ${TEST_DIR}$OBJ > ${TEST_DIR}/make.stdout 2>&1
 
 # Detect whether we have genuine riemann setup (which is unlikely to run in RTVD)
-grep -qi '^ *solver_str *= *"riemann"' ${RUN_GOLD_DIR}/problem.par && RIEMANN=1 || RIEMANN=0
+if [ -e ${RUN_GOLD_DIR}/problem.par ] ; then
+    grep -qi '^ *solver_str *= *"riemann"' ${RUN_GOLD_DIR}/problem.par && RIEMANN=1 || RIEMANN=0
+else
+    echo "Error: Gold test failed fatally. Aborting." 1>&2
+    exit 3
+fi
 # ToDo set this up in the config file to make it easier to implement dual RTVD/Riemann gold tests
 
 # Run the tests on current version of Piernik
