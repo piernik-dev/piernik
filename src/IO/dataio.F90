@@ -940,7 +940,7 @@ contains
       open(newunit=unlink_stat, file='restart_list.tmp', status='unknown')
       close(unlink_stat, status='delete')
 
-      do nres = 999, 0, -1
+      do nres = 9999, 0, -1
          inquire(file = trim(output_fname(RD,'.res', nres)), exist = exist)
          if (exist) then
             restart_number = nres
