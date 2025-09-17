@@ -93,7 +93,7 @@ contains
       use cg_cost_data, only: I_MHD
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: GEO_XYZ, pMAX, small, DIVB_HDC, RIEMANN_SPLIT
+      use constants,    only: GEO_XYZ, pMAX, pMIN, small, DIVB_HDC, RIEMANN_SPLIT
       use dataio_pub,   only: die
       use domain,       only: dom
       use global,       only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
@@ -135,7 +135,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_MPI_Allreduce(chspeed, pMAX)
+      call piernik_MPI_Allreduce(chspeed, merge(pMIN, pMAX, ch_grid))
 
    end subroutine update_chspeed
 
