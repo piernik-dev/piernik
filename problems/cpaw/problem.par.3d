@@ -52,7 +52,6 @@ $NUMERICAL_SETUP
   smallei = 1.e-5
   limiter = 'vanleer'
   solver_str = 'riemann'
-  solver_type = 'split'
   cfl_glm = 0.3
   print_divb = 10
 /

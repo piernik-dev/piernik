@@ -65,7 +65,7 @@ def sine_wave_model(x, amplitude, wavenumber, phase, offset):
 
 
 file_initial = 'cpaw_tst_0000.h5'
-file_final = 'cpaw_tst_0001.h5'
+file_final = 'cpaw_tst_0001.h5'                # Make sure you choose the correct file coresponding to t = T
 variables_to_plot = ['mag_field_y', 'mag_field_z']
 
 # Theoretical wavenumbers from your parameter file (for initial guesses)
