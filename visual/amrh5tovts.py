@@ -12,7 +12,10 @@ produce a single, portable output file where possible.
 import sys
 import h5py
 import numpy as np
-
+import multiprocessing as mp
+import argparse
+import os
+from functools import partial
 # --- VTK Imports ---
 try:
     from vtk import (
@@ -160,45 +163,66 @@ def create_vtk_amr_dataset(h5_file, field_names):
     return amr
 
 
+
+def convert_file(input_path, output_dir):
+    base = os.path.basename(input_path).replace(".h5", ".vthb")
+    output_path = os.path.join(output_dir, base)
+
+    try:
+        with h5py.File(input_path, "r") as f:
+            field_names = get_field_names(f)
+            vtk_amr_dataset = create_vtk_amr_dataset(f, field_names)
+
+        print(f"[write] Writing VTK file: {output_path}")
+        writer = vtkXMLUniformGridAMRWriter()
+        writer.SetFileName(output_path)
+        writer.SetInputData(vtk_amr_dataset)
+
+        if output_path.lower().endswith(".vthb"):
+            if hasattr(writer, "SetDataModeToAppended"):
+                writer.SetDataModeToAppended()
+            if hasattr(writer, "EncodeAppendedDataOff"):
+                writer.EncodeAppendedDataOff()
+
+        if hasattr(writer, "SetUseSubdirectory"):
+            writer.SetUseSubdirectory(0)
+
+        if writer.Write() == 0:
+            raise RuntimeError("VTK writer failed.")
+
+        print(f"[done] {input_path} → {output_path}")
+    except Exception as e:
+        print(f"[error] Failed to convert {input_path}: {e}")
+
+
 def main():
-    """
-    Main function to parse arguments and drive the conversion process.
-    """
-    if len(sys.argv) != 3:
-        print(f"Usage: python {sys.argv[0]} <input.h5> <output.vthb>", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Convert Piernik AMR HDF5 to .vthb (VTK AMR)")
+    parser.add_argument("input", nargs="?", help="Input .h5 file (if omitted, all *.h5 files in directory)")
+    parser.add_argument("output", nargs="?", help="Output .vthb file (only with single input)")
+    parser.add_argument("-j", "--jobs", type=int, default=mp.cpu_count(),
+                        help="Number of parallel jobs [default: all cores]")
+    args = parser.parse_args()
 
-    input_filename, output_filename = sys.argv[1], sys.argv[2]
-    print(f"Starting conversion of '{input_filename}' to '{output_filename}'")
+    output_dir = "vthb_out"
+    os.makedirs(output_dir, exist_ok=True)
 
-    with h5py.File(input_filename, "r") as f:
-        field_names = get_field_names(f)
-        vtk_amr_dataset = create_vtk_amr_dataset(f, field_names)
+    if args.input is None:
+        # Batch mode: all .h5 files
+        files = sorted(f for f in os.listdir(".") if f.endswith(".h5"))
+        print(f"[info] Converting {len(files)} .h5 files using {args.jobs} processes...")
 
-    print(f"Writing VTK file: {output_filename}")
-    writer = vtkXMLUniformGridAMRWriter()
-    writer.SetFileName(output_filename)
-    writer.SetInputData(vtk_amr_dataset)
-
-    # Configure writer for single-file output (.vthb) where possible.
-    if output_filename.lower().endswith(".vthb"):
-        print("[info] .vthb extension detected, enabling single-file appended mode.")
-        if hasattr(writer, "SetDataModeToAppended"):
-            writer.SetDataModeToAppended()
-        if hasattr(writer, "EncodeAppendedDataOff"):
-            writer.EncodeAppendedDataOff()
-
-    # Prevent creation of a subdirectory for piece files.
-    if hasattr(writer, "SetUseSubdirectory"):
-        writer.SetUseSubdirectory(0)
-
-    if writer.Write() == 0:
-        raise RuntimeError("VTK writer failed to write the file.")
-
-    print("\nConversion complete!")
-
+        with mp.Pool(processes=args.jobs) as pool:
+            pool.map(partial(convert_file, output_dir=output_dir), files)
+    else:
+        if args.output is None:
+            base = os.path.splitext(os.path.basename(args.input))[0]
+            output = os.path.join(output_dir, base + ".vthb")
+        else:
+            output = os.path.join(output_dir, os.path.basename(args.output))
+        convert_file(args.input, output_dir)
 
 if __name__ == "__main__":
     main()
+
 
 
