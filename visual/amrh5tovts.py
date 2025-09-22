@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""
+Converts Piernik-style AMR (Adaptive Mesh Refinement) HDF5 simulation data
+into a single VTK Overlapping AMR file (.vthb or .vth) suitable for
+visualization in tools like ParaView.
+
+The script correctly handles both 2D (as a thin plane) and 3D datasets,
+calculates the necessary AMR metadata, and uses the modern VTK writer to
+produce a single, portable output file where possible.
+"""
+
 import sys
 import h5py
 import numpy as np
@@ -9,135 +19,156 @@ try:
         vtkOverlappingAMR,
         vtkAMRBox,
         vtkUniformGrid,
-        vtkCellData,
-        vtkFloatArray,
-        vtkXMLUniformGridAMRWriter,   # NEW WRITER
+        vtkXMLUniformGridAMRWriter,
         VTK_XYZ_GRID, VTK_XY_PLANE, VTK_XZ_PLANE, VTK_YZ_PLANE
     )
     from vtk.util import numpy_support
 except ImportError:
-    print("Error: The 'vtk' Python package is required.")
-    print("Please install it, for example using: pip install vtk")
+    print("Error: The 'vtk' Python package is required.", file=sys.stderr)
+    print("Please install it, for example using: pip install vtk", file=sys.stderr)
     sys.exit(1)
 
 
 def get_field_names(h5_file):
+    """
+    Scans the first data block in the HDF5 file to find all field names.
+
+    Args:
+        h5_file (h5py.File): An open HDF5 file object.
+
+    Returns:
+        list[str]: A list of the dataset names (fields).
+    """
     print("Scanning for available data fields...")
-    first_block_name = list(h5_file["data"].keys())[0]
-    field_names = list(h5_file["data"][first_block_name].keys())
-    print(f"Found fields: {field_names}")
-    return field_names
+    try:
+        first_block_name = next(iter(h5_file["data"]))
+        field_names = list(h5_file["data"][first_block_name].keys())
+        print(f"Found fields: {field_names}")
+        return field_names
+    except (StopIteration, KeyError):
+        raise ValueError("HDF5 file does not contain a '/data' group or it is empty.")
 
 
 def create_vtk_amr_dataset(h5_file, field_names):
-    # --- 1) Read block metadata ---
-    print("Reading block metadata...")
-    block_meta = []
-    all_levels = set()
-    for name in h5_file["data"].keys():
-        g = h5_file["data"][name]
-        level = int(np.array(g.attrs["level"]).ravel()[0])
-        all_levels.add(level)
-        meta = {
-            "name": name,
-            "level": level,
-            "offset": g.attrs["off"].astype(int),
-            "dims":   g.attrs["n_b"].astype(int),
-            "spacing": g.attrs["dl"],
-            "origin":  g.attrs["left_edge"],
-        }
-        block_meta.append(meta)
+    """
+    Builds the vtkOverlappingAMR dataset from the HDF5 source file.
 
-    # Determine if dataset is 2-D (one axis==1 for all blocks)
+    Args:
+        h5_file (h5py.File): The open HDF5 file.
+        field_names (list[str]): The names of the fields to process.
+
+    Returns:
+        vtkOverlappingAMR: The fully constructed VTK AMR dataset.
+    """
+    # --- 1. Gather Block Metadata ---
+    print("Reading block metadata...")
+    blocks = []
+    levels_set = set()
+    for name, g in h5_file["data"].items():
+        lvl = int(np.array(g.attrs["level"]).ravel()[0])
+        levels_set.add(lvl)
+        blocks.append(dict(
+            name=name,
+            level=lvl,
+            dims=g.attrs["n_b"].astype(int),
+            spacing=np.array(g.attrs["dl"], float),
+            origin=np.array(g.attrs["left_edge"], float)
+        ))
+
+    levels = sorted(levels_set)
+    level_to_index = {L: i for i, L in enumerate(levels)}
+    num_levels = len(levels)
+
+    # --- 2. Determine Dimensionality and Per-Level Spacing ---
     collapsed_axis = None
     for ax in range(3):
-        if all(m["dims"][ax] == 1 for m in block_meta):
+        if all(b["dims"][ax] == 1 for b in blocks):
             collapsed_axis = ax
             break
 
-    # --- 2) Init AMR ---
-    print("Initializing VTK AMR structure...")
-    num_levels = len(all_levels)
-    sim_params = h5_file["simulation_parameters"].attrs
-    refine_by = int(np.array(sim_params["refine_by"]).ravel()[0])
+    level_spacing = {
+        L: next(b["spacing"] for b in blocks if b["level"] == L)
+        for L in levels
+    }
 
-    coarsest_meta = next((m for m in block_meta if m["level"] == 0), None)
-    if not coarsest_meta:
-        raise ValueError("No level-0 blocks found.")
+    # --- 3. Initialize AMR Container ---
+    print("Initializing VTK AMR container...")
+    amr = vtkOverlappingAMR()
+    blocks_per_level = [sum(1 for b in blocks if b["level"] == L) for L in levels]
+    amr.Initialize(num_levels, blocks_per_level)
 
-    origin = sim_params["domain_left_edge"]
-    coarsest_spacing = coarsest_meta["spacing"]
-
-    blocks_per_level = [sum(1 for m in block_meta if m["level"] == i) for i in range(num_levels)]
-
-    amr_dataset = vtkOverlappingAMR()
-    amr_dataset.Initialize(num_levels, blocks_per_level)
-
-    # Grid description: true 2-D when possible
     if collapsed_axis is None:
-        amr_dataset.SetGridDescription(VTK_XYZ_GRID)
+        amr.SetGridDescription(VTK_XYZ_GRID)
     else:
-        plane = {0: VTK_YZ_PLANE, 1: VTK_XZ_PLANE, 2: VTK_XY_PLANE}[collapsed_axis]
-        amr_dataset.SetGridDescription(plane)
+        plane_map = {0: VTK_YZ_PLANE, 1: VTK_XZ_PLANE, 2: VTK_XY_PLANE}
+        amr.SetGridDescription(plane_map[collapsed_axis])
 
-    amr_dataset.SetOrigin(origin)
-    for i in range(num_levels):
-        level_spacing = coarsest_spacing / (refine_by**i)
-        amr_dataset.SetSpacing(i, level_spacing)
+    try:
+        domain_left = np.array(h5_file["simulation_parameters"].attrs["domain_left_edge"], float)
+    except KeyError:
+        domain_left = np.min([b["origin"] for b in blocks], axis=0)
+    amr.SetOrigin(domain_left)
 
-    # --- 3) Fill AMR ---
-    print("Defining AMR boxes and loading data for each block...")
-    block_meta.sort(key=lambda m: (m["level"], m["name"]))
-    block_idx_per_level = [0] * num_levels
+    for i, L in enumerate(levels):
+        amr.SetSpacing(i, level_spacing[L])
+        if i > 0:
+            prev_level = levels[i - 1]
+            ratio = level_spacing[prev_level][0] / level_spacing[L][0]
+            amr.SetRefinementRatio(i, int(round(ratio)))
 
-    for meta in block_meta:
-        level = meta["level"]
-        offset = meta["offset"]
-        dims = meta["dims"].copy()  # cells (nx, ny, nz)
+    # --- 4. Populate AMR with Boxes and Grid Data ---
+    print("Populating AMR with block data...")
+    blocks.sort(key=lambda b: (b["level"], b["name"]))
+    next_idx = [0] * num_levels
 
-        # AMR box in cell indices
-        lo_corner = offset
-        hi_corner = offset + dims - 1
-        box = vtkAMRBox(lo_corner, hi_corner)
+    for b in blocks:
+        level_idx = level_to_index[b["level"]]
+        block_idx = next_idx[level_idx]
+        dims = b["dims"]
 
-        block_idx = block_idx_per_level[level]
-        amr_dataset.SetAMRBox(level, block_idx, box)
+        # AMRBox is defined in the index space of its own level.
+        lo = np.rint((b["origin"] - domain_left) / level_spacing[b["level"]]).astype(int)
+        hi = lo + dims - 1
+        box = vtkAMRBox(lo, hi)
+        amr.SetAMRBox(level_idx, block_idx, box)
 
-        grid = vtkUniformGrid()
-        grid.SetOrigin(meta["origin"])
-        grid.SetSpacing(meta["spacing"])
+        # Create the vtkUniformGrid for this block.
+        ug = vtkUniformGrid()
+        ug.SetOrigin(b["origin"])
+        ug.SetSpacing(b["spacing"])
 
-        # POINT dims need special handling for 2-D:
-        pdims = dims + 1  # point counts
+        point_dims = dims + 1
         if collapsed_axis is not None:
-            pdims[collapsed_axis] = 1  # true 2-D plane (no 1-cell thickness)
+            point_dims[collapsed_axis] = 1
+        ug.SetDimensions(int(point_dims[0]), int(point_dims[1]), int(point_dims[2]))
 
-        grid.SetDimensions(int(pdims[0]), int(pdims[1]), int(pdims[2]))
-
-        # Cell-centered arrays
-        cell_data = grid.GetCellData()
+        # Attach cell data arrays.
+        cell_data = ug.GetCellData()
         for field in field_names:
-            data_zyx = h5_file["data"][meta["name"]][field][:]
-            flat_array = np.asarray(data_zyx, dtype=np.float32).ravel(order="C")
-            vtk_array = numpy_support.numpy_to_vtk(flat_array, deep=True)
-            vtk_array.SetName(field)
-            cell_data.AddArray(vtk_array)
+            arr_data = h5_file["data"][b["name"]][field][:]
+            flat_arr = arr_data.astype(np.float32).ravel(order="C")
+            vtk_arr = numpy_support.numpy_to_vtk(flat_arr, deep=True)
+            vtk_arr.SetName(field)
+            cell_data.AddArray(vtk_arr)
 
-        amr_dataset.SetDataSet(level, block_idx, grid)
-        block_idx_per_level[level] += 1
+        amr.SetDataSet(level_idx, block_idx, ug)
+        next_idx[level_idx] += 1
 
-    print("Finished loading all blocks.")
-    return amr_dataset
+    for i, L in enumerate(levels):
+        print(f"[build] Level {L} (Index {i}): {blocks_per_level[i]} blocks, spacing={level_spacing[L]}")
+
+    return amr
 
 
 def main():
+    """
+    Main function to parse arguments and drive the conversion process.
+    """
     if len(sys.argv) != 3:
-        print("Usage: python convert_piernik_amr_to_vtk.py <input_file.h5> <output_file.vth|.vthb>")
+        print(f"Usage: python {sys.argv[0]} <input.h5> <output.vthb>", file=sys.stderr)
         sys.exit(1)
 
-    input_filename = sys.argv[1]
-    output_filename = sys.argv[2]
-
+    input_filename, output_filename = sys.argv[1], sys.argv[2]
     print(f"Starting conversion of '{input_filename}' to '{output_filename}'")
 
     with h5py.File(input_filename, "r") as f:
@@ -149,28 +180,25 @@ def main():
     writer.SetFileName(output_filename)
     writer.SetInputData(vtk_amr_dataset)
 
-# IMPORTANT: write the meta/root file (.vth or .vthb)
-    if hasattr(writer, "SetWriteMetaFile"):
-       writer.SetWriteMetaFile(1)   # <-- this is the key change
+    # Configure writer for single-file output (.vthb) where possible.
+    if output_filename.lower().endswith(".vthb"):
+        print("[info] .vthb extension detected, enabling single-file appended mode.")
+        if hasattr(writer, "SetDataModeToAppended"):
+            writer.SetDataModeToAppended()
+        if hasattr(writer, "EncodeAppendedDataOff"):
+            writer.EncodeAppendedDataOff()
 
-# Optional: keep piece files in the same directory (no extra subfolder)
+    # Prevent creation of a subdirectory for piece files.
     if hasattr(writer, "SetUseSubdirectory"):
-      writer.SetUseSubdirectory(0)
+        writer.SetUseSubdirectory(0)
 
-# If you pass a .vthb filename, try to pack data into the root (single-file if supported)
-    ext = output_filename.lower()
-    if ext.endswith(".vthb"):
-        if hasattr(writer, "SetDataModeToAppended"): writer.SetDataModeToAppended()
-        if hasattr(writer, "EncodeAppendedDataOff"): writer.EncodeAppendedDataOff()
-        if hasattr(writer, "SetCompressorTypeToNone"): writer.SetCompressorTypeToNone()
-
-    ok = writer.Write()
-    if ok == 0:
-       raise RuntimeError("VTK writer failed (no file written).")
+    if writer.Write() == 0:
+        raise RuntimeError("VTK writer failed to write the file.")
 
     print("\nConversion complete!")
 
 
 if __name__ == "__main__":
     main()
+
 
