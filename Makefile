@@ -256,7 +256,7 @@ IOv2:
 			$(ECHO) -e "  Restart: t = 1.0, nproc = 3" ;\
 			$(MPIEXEC) -n 3 ./piernik -n '&END_CONTROL tend = 2.0 /' -n '&OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out ;\
 			$(ECHO) -e "  Finish:  t = 2.0" ;\
-			../../$(BIN_DIR)/gdf_distance moving_pulse_ts{1,2}_0002.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance moving_pulse_ts{1,2}_0002.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/IOv2.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
@@ -274,7 +274,7 @@ Jeans:
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs2"/' ;\
-			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.4f, period error = %.4f", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
@@ -311,7 +311,7 @@ Maclaurin:
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs2"/' ;\
-			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
