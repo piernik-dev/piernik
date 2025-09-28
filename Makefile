@@ -221,6 +221,7 @@ view_dep: dep
 py3:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	python3 $(PYTHON_DIR)/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Python 3 test "$(FAILED) && exit 1 )
@@ -229,6 +230,7 @@ py3:
 noHDF5:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/crtest_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  NoHDF5 test "$(FAILED) && exit 1 )
@@ -237,6 +239,7 @@ noHDF5:
 I64:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/chimaera_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  64-bit integer test "$(FAILED) && exit 1 )
@@ -245,6 +248,7 @@ I64:
 IOv2:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/advection_test_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) advection_test -p problem.par.restart_test_v2 -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/IOv2.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(ECHO) -e "run_id = ts1\n  Start:   t = 0.0, nproc = 1" ;\
@@ -266,6 +270,7 @@ IOv2:
 Jeans:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/jeans_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) jeans -o $${OTMPDIR//obj_/} -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Jeans.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
@@ -277,7 +282,7 @@ Jeans:
 			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.4f, period error = %.4f", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
+		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.5f, period error = %.5f (expected: -0.00025, 0.00574)", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
 		cp $${RUNDIR}/jeans.{png,csv} $(ARTIFACTS) &&\
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED)". $${NORM}, ${ARTIFACTS}/jeans.png created." ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(FAILED) && exit 1 )
@@ -286,6 +291,7 @@ Jeans:
 Maclaurin:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) maclaurin -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Maclaurin.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
@@ -293,7 +299,7 @@ Maclaurin:
 			$(ECHO) "L2 error norm,min. error,max. error" > maclaurin.csv ;\
 			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\),.*= *\([^ ]*\) *\(.*\)$$/\1 , \2 , \3/' >> maclaurin.csv ;\
 		) >> $(ARTIFACTS)/Maclaurin.setup.stdout && \
-		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.5f", $$1) }' $${RUNDIR}/maclaurin.csv ) ;\
+		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.5f (expected: 0.00336)", $$1) }' $${RUNDIR}/maclaurin.csv ) ;\
 		cp $${RUNDIR}/maclaurin.{png,csv} $(ARTIFACTS) &&\
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)". $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(FAILED) && exit 1 )
@@ -302,6 +308,7 @@ Maclaurin:
 3body:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/3body_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) 2body/3body -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/3body.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
@@ -314,7 +321,7 @@ Maclaurin:
 			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
+		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f (expected: 0.0044, 3.1e-08, 0.0039)", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
 		cp $${RUNDIR}/3body.csv $(ARTIFACTS) &&\
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)". $${NORM}" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
