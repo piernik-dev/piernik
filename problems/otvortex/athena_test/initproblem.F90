@@ -143,7 +143,8 @@ contains
 
                xi = cg%x(i)
                vy  = sin(dpi*xi)
-               by  = b0*sin(dpi*xi)
+               by  = b0*sin(dpi*xi)  ! The only difference with original otvortex implementation
+               ! ToDo: unify these files and add a parameter that controls the difference
 
                cg%u(fl%imx,i,j,:) = vx*cg%u(fl%idn,i,j,:)
                cg%u(fl%imy,i,j,:) = vy*cg%u(fl%idn,i,j,:)

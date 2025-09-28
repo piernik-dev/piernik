@@ -57,10 +57,10 @@
 
  $GRAVITY
  /
- 
- ! Resistivity is not used as riemann solver does not support it 
- 
- $RESISTIVITY            
+
+ ! Resistivity is not used as riemann solver does not support it
+
+ $RESISTIVITY
    eta_0      = 1.0e-4
    cfl_resist = 0.5
    eta_1      = 0.0
