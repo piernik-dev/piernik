@@ -20,7 +20,6 @@
  $RESTART_CONTROL
     restart  = 'none'
     res_id   = ''
-    nrestart = 0
  /
 
  $END_CONTROL
