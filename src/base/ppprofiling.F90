@@ -232,7 +232,7 @@ contains
       if (.not. watch_debug    ) disable_mask = disable_mask + PPP_DEBUG
       if (.not. watch_aux      ) disable_mask = disable_mask + PPP_AUX
 
-      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile.ascii'
+      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', max(0, nrestart), '.ppprofile.ascii'
 
       call ppp_main%init("main", xxl)
 

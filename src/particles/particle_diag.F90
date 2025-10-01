@@ -204,7 +204,7 @@ contains
 
       kdt = dt ; if (.not.twodtscheme) kdt = half * dt
 
-      write(plog_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'_out.log'
+      write(plog_file,'(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', max(0, nrestart), '_out.log'
       open(newunit=lun_out, file=plog_file, status='unknown',  position='append')
       cgl => leaves%first
       do while (associated(cgl))

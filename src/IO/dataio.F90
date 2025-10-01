@@ -60,7 +60,6 @@ module dataio
    character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
-   integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
 #endif /* HDF5 */
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
@@ -240,7 +239,7 @@ contains
       call piernik_MPI_Bcast(restarted_sim)
 
       if (master) then
-         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
+         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',max(0, nrestart),'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
@@ -585,7 +584,7 @@ contains
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
-      nres = nrestart
+      nres = max(0, nrestart)
 
       if (restarted_sim) then
 #ifdef HDF5
@@ -593,8 +592,7 @@ contains
          call read_restart_hdf5
          nstep_start = nstep
          t_start     = t
-         nres_start  = nrestart
-         nhdf_start  = nhdf-1
+         nhdf_start  = nhdf - 1
 #else /* !HDF5 */
          call die("[dataio:init_dataio] cannot use restart without HDF5")
 #endif /* !HDF5 */
@@ -1051,7 +1049,7 @@ contains
       endif
 
       if (master) then
-         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',max(0, nrestart),'.tsl'
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, field_len, ["nstep   ", "time    ", "timestep", "mass    "])
