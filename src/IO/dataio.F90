@@ -236,6 +236,7 @@ contains
 #endif /* HDF5 */
       call piernik_MPI_Barrier
       call piernik_MPI_Bcast(nrestart)
+      restarted_sim = (nrestart > INVALID)
       call piernik_MPI_Bcast(restarted_sim)
 
       if (master) then
@@ -258,7 +259,7 @@ contains
    subroutine dataio_par_io
 
       use bcast,      only: piernik_MPI_Bcast
-      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name
+      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name, INVALID
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors, piernik_verbosity
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc
 
@@ -269,7 +270,7 @@ contains
       restart       = 'last'   ! 'last': automatic choice of the last restart file regardless of "nrestart" value;
                               ! if something else is set: "nrestart" value is fixing
       res_id        = ''
-      nrestart      = 3
+      nrestart      = INVALID
 
       dt_hdf        = 0.0
       dt_res        = 0.0
@@ -924,7 +925,7 @@ contains
    subroutine find_last_restart(restart_number)
 
       use common_hdf5, only: output_fname
-      use constants,   only: RD
+      use constants,   only: RD, INVALID
       use dataio_pub,  only: restarted_sim
 
       implicit none
@@ -935,7 +936,7 @@ contains
       integer                      :: unlink_stat
       logical                      :: exist
 
-      restart_number = 0
+      restart_number = INVALID
 
       open(newunit=unlink_stat, file='restart_list.tmp', status='unknown')
       close(unlink_stat, status='delete')
