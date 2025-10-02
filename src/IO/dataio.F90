@@ -166,7 +166,7 @@ contains
 
       use barrier,      only: piernik_MPI_Barrier
       use bcast,        only: piernik_MPI_Bcast
-      use constants,    only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG
+      use constants,    only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG, I_ZERO
       use dataio_pub,   only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                  tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
            &                  move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
@@ -239,7 +239,7 @@ contains
       call piernik_MPI_Bcast(restarted_sim)
 
       if (master) then
-         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',max(0, nrestart),'.log'
+         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',max(I_ZERO, nrestart),'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
@@ -511,7 +511,7 @@ contains
 
    subroutine init_dataio
 
-      use constants,    only: PIERNIK_INIT_IO_IC, V_DEBUG, V_LOG
+      use constants,    only: PIERNIK_INIT_IO_IC, V_DEBUG, V_LOG, I_ZERO
       use dataio_pub,   only: code_progress, die, maxenvlen, nres, nrestart, printinfo, restarted_sim, warn
       use domain,       only: dom
       use mpisetup,     only: master
@@ -584,7 +584,7 @@ contains
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
-      nres = max(0, nrestart)
+      nres = max(I_ZERO, nrestart)
 
       if (restarted_sim) then
 #ifdef HDF5
@@ -960,7 +960,7 @@ contains
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO
+      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO, I_ZERO
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -1049,7 +1049,7 @@ contains
       endif
 
       if (master) then
-         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',max(0, nrestart),'.tsl'
+         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',max(I_ZERO, nrestart),'.tsl'
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, field_len, ["nstep   ", "time    ", "timestep", "mass    "])
