@@ -77,7 +77,7 @@ GOLD_TEST_SCRIPT = $(JENKINS_DIR)/gold_test.sh
 
 # Sets of tests
 QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
-ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body
+ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body CPAW
 GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
 
 # Common command sequences
@@ -325,6 +325,23 @@ Maclaurin:
 		cp $${RUNDIR}/3body.csv $(ARTIFACTS) &&\
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)". $${NORM}" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
+
+# Target to run Propagation of Circularly polarized Alfvén Waves
+CPAW:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/cpaw_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
+	$(SETUP) cpaw -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/CPAW.setup.stdout && \
+		( cd $${RUNDIR} ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&BASE_DOMAIN n_d = 128, 64, 1 /';\
+			$(ECHO) "L2 error norm" > CPAW.csv ;\
+			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\).*$$/\1/' >> CPAW.csv ;\
+		) >> $(ARTIFACTS)/CPAW.setup.stdout && \
+		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.8f (expected: 0.00102726)", $$1) }' $${RUNDIR}/CPAW.csv ) ;\
+		cp $${RUNDIR}/CPAW.csv $(ARTIFACTS) &&\
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(PASSED)". $${NORM}" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(FAILED) && exit 1 )
+
 
 # Target to run all CI artifact tests
 artifacts:
