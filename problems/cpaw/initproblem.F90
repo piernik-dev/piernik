@@ -28,23 +28,27 @@
 #include "piernik.h"
 
 module initproblem
-! ----------------------------------------- !
-! Initial condition for a CPAW              !
-! See: Andrea Mignone, Petros Tzeferacosa   !
-! A Second-Order Unsplit Godunov Scheme for !
-! Cell-Centered MHD: the CTU-GLM scheme     !
-! arXiv:0911.3410v1                         !
-! ----------------------------------------- !
+
+!>
+!! \brief Initial condition for a Propagation of Circularly polarized Alfv´en Waves (CPAW)
+!!
+!! \details See section 4.1 in
+!!   Andrea Mignone, Petros Tzeferacos
+!!   A Second-Order Unsplit Godunov Scheme for Cell-Centered MHD: the CTU-GLM scheme
+!!   https://arxiv.org/pdf/0911.3410
+!<
 
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                   :: d0, p0, vx0, vy0, vz0, A, vA, kx, ky, kz
+   real                     :: d0, p0, vx0, vy0, vz0, A, vA, kx, ky, kz
    namelist /PROBLEM_CONTROL/  d0, p0, vx0, vy0, vz0, A, vA, kx, ky, kz
 
 contains
+
+!> \brief Set up custom pointers to tweak the code execution according to our needs
 
    subroutine problem_pointers
 
@@ -56,15 +60,17 @@ contains
 
    end subroutine problem_pointers
 
+!> \brief Read the runtime parameters specified in the namelist
+
    subroutine read_problem_par
 
       use bcast,      only: piernik_MPI_Bcast
-      use constants,  only: cbuff_len
       use dataio_pub, only: nh
-      use mpisetup,   only: rbuff, cbuff, master, slave
+      use mpisetup,   only: rbuff, master, slave
 
       implicit none
 
+      ! the default values
       d0  = 1.0
       p0  = 0.1
       vx0 = 1.0
@@ -75,6 +81,7 @@ contains
       kx  = 1.0
       ky  = 0.0
       kz  = 0.0
+
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -106,7 +113,6 @@ contains
       endif
 
       call piernik_MPI_Bcast(rbuff)
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -121,23 +127,22 @@ contains
          ky  = rbuff(9)
          kz  = rbuff(10)
 
-
       endif
 
    end subroutine read_problem_par
-!-----------------------------------------------------------------------------
-subroutine problem_initial_conditions
+
+!> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
+
+   subroutine problem_initial_conditions
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: xdim, ydim, zdim, LO, HI
+      use constants,   only: xdim, ydim, zdim, LO, HI, ndims
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
-#ifndef ISO
-!      use global,      only: smallei
-#endif /* !ISO */
+
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -147,18 +152,18 @@ subroutine problem_initial_conditions
       type(grid_container),   pointer :: cg
       integer                         :: p
 
-      real, dimension(3, 3)           :: rot_matrix, rot_matrix_inv
-      real, dimension(3)              :: v_prime, b_prime, v_final, b_final
-      real, dimension(3)              :: pos_vec, pos_vec_prime
+      real, dimension(ndims, ndims)   :: rot_matrix, rot_matrix_inv
+      real, dimension(ndims)          :: v_prime, b_prime, v_final, b_final
+      real, dimension(ndims)          :: pos_vec, pos_vec_prime
       real                            :: aa, g, k_prime
 
       aa = atan(ky/kx)
       g = atan(cos(aa) * (kz/kx))
       k_prime = sqrt(kx**2 + ky**2 + kz**2)
 
-      rot_matrix = reshape([cos(aa)*cos(g), sin(aa)*cos(g), sin(g), &
-                           -sin(aa),         cos(aa),         0.0,   &
-                           -cos(aa)*sin(g), -sin(aa)*sin(g), cos(g)], [3, 3])
+      rot_matrix = reshape([cos(aa)*cos(g),  sin(aa)*cos(g), sin(g), &
+                           -sin(aa),         cos(aa),        0.0,    &
+                           -cos(aa)*sin(g), -sin(aa)*sin(g), cos(g)], [ndims, ndims])
 
       rot_matrix_inv = transpose(rot_matrix)
 
@@ -169,13 +174,13 @@ subroutine problem_initial_conditions
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   xi = cg%x(i)
                   do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                      zk = cg%z(k)
-
 
                      pos_vec = [xi, yj, zk]
                      pos_vec_prime = matmul(rot_matrix_inv, pos_vec)
@@ -189,46 +194,48 @@ subroutine problem_initial_conditions
                      b_final = matmul(rot_matrix, b_prime)
 
                      cg%u(fl%idn,i,j,k) = d0
-                     cg%u(fl%imx,i,j,k) = v_final(1)
-                     cg%u(fl%imy,i,j,k) = v_final(2)
-                     cg%u(fl%imz,i,j,k) = v_final(3)
+                     cg%u(fl%imx,i,j,k) = v_final(xdim)
+                     cg%u(fl%imy,i,j,k) = v_final(ydim)
+                     cg%u(fl%imz,i,j,k) = v_final(zdim)
 
                      if (fl%has_energy) then
-
-                        cg%u(fl%ien,i,j,k) = p0/(fl%gam_1) + ekin(v_final(1), v_final(2), v_final(3), d0)
+                        cg%u(fl%ien,i,j,k) = p0/(fl%gam_1) + ekin(v_final(xdim), v_final(ydim), v_final(zdim), d0)
 
                         if (fl%is_magnetized) then
-
-                           cg%b(xdim,i,j,k)   =  b_final(1)
-                           cg%b(ydim,i,j,k)   =  b_final(2)
-                           cg%b(zdim,i,j,k)   =  b_final(3)
-                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(b_final(1), b_final(2), b_final(3))
+                           cg%b(xdim,i,j,k)   =  b_final(xdim)
+                           cg%b(ydim,i,j,k)   =  b_final(ydim)
+                           cg%b(zdim,i,j,k)   =  b_final(zdim)
+                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(b_final(xdim), b_final(ydim), b_final(zdim))
                         endif
-
                      endif
+
                   enddo
                enddo
             enddo
+
             cgl => cgl%nxt
          enddo
       enddo
 
    end subroutine problem_initial_conditions
 
+!> \brief Final routine called after the endo of the simulation
+
    subroutine verify_test
 
       use mpisetup,   only: master
-      use dataio_pub, only: msg, printinfo
+      use dataio_pub, only: printinfo
       use constants,  only: V_INFO
 
       implicit none
 
+      ! ToDo: Add L2 or L1 error norm computation (assuming that tend was set to a full period).
       if (master) then
-         call printinfo("", V_INFO, .true.)
-         write(msg, *)  'Copy compare_slices.py from problem folder to the run folder and make sure '
-         write(msg, *)  'the cpaw_tst_0000.h5 file is the intial file '
-         write(msg, *)  'cpaw_tst_0001.h5 is the last file .  Then run python compare_slices.py'
+         call printinfo('Copy compare_slices.py from problem folder to the run folder.', V_INFO)
+         call printinfo('Make sure that the cpaw_tst_0000.h5 file is the intial file and cpaw_tst_0001.h5 is the last file.', V_INFO)
+         call printinfo('Then run python compare_slices.py to see the comparison.', V_INFO)
       endif
+
    end subroutine verify_test
 
 end module initproblem

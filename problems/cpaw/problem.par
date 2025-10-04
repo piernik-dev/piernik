@@ -24,15 +24,15 @@ $UNITS
 $RESTART_CONTROL
    restart  = 'last'
    res_id   = ''
-   nrestart = 0
 /
 
 $END_CONTROL
-  tend = 0.447213595     ! one time-period T = kx/sqrt(kx**2 + ky**2 + kz**2)
-  nend = 100000
+  tend = 0.447213595     ! one time-period T = kx/sqrt(kx**2 + ky**2 + kz**2), here 2pi /sqrt(20 pi^2) = 1/sqrt(5.)
+!  nend = 100000
 /
 
 $OUTPUT_CONTROL
+!   verbosity = "laconic"
    problem_name = 'cpaw'
    run_id = 'tst'
    dt_hdf = 0.5
@@ -47,13 +47,14 @@ $FLUID_NEUTRAL
 /
 
 $NUMERICAL_SETUP
-  cfl     = 0.4
+  cfl     = 0.3  ! For the unsplit solver cfl = 0.41 is near the maximum obtainable without triggering numerical instabilities
   smalld  = 1.e-5
   smallei = 1.e-5
   limiter = 'vanleer'
-  solver_str = 'riemann'
+  solver_str = 'unsplit'
   cfl_glm = 0.3
   print_divb = 10
+!  cflcontrol = 'auto'
 /
 
 $PROBLEM_CONTROL
@@ -63,8 +64,8 @@ $PROBLEM_CONTROL
    vy0 = 0.0
    vz0 = 0.0
    A   = 0.1
-   kx  = 6.283185307         ! 2pi
-   ky  = 12.566370614        ! 4pi
+   kx  = 6.283185307   ! 2pi
+   ky  = 12.566370614  ! 4pi
    kz  = 0.0
 /
 
