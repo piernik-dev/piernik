@@ -68,7 +68,8 @@ module global
    integer         :: tstep_attempt            !< /= 0 when we retry timesteps
    integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT or RIEMANN_UNSPLIT
    logical         :: is_split                 !< do we use directional splitting or not?
-   logical         :: use_uhi = .false.        !<.true. ⇒ apply BCs to uhi
+   logical         :: use_uhi = .false.        !< .true. ⇒ apply BCs to uhi
+   real, parameter :: cfl_unsplit = 0.3        !< maximum recommended CFL factor for the unsplit solver
 
    ! Namelist variables
 
@@ -189,7 +190,6 @@ contains
            &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, RIEMANN_UNSPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
-      use func,       only: operator(.notequals.)
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
 
       implicit none
@@ -526,7 +526,8 @@ contains
          endif
 #ifdef MAGNETIC
          if (.not. is_split) then
-            if (cfl_glm .notequals. 0.3) call warn("[global:init_global] Unsplit MHD solver chosen. Ideal CFL_GLM = 0.3. Anything else may lead to unexpected result.")
+            if (cfl > cfl_unsplit) call warn("[global:init_global] Unsplit MHD solver may be unstable with CFL > 0.3")
+            if (cfl_glm > cfl_unsplit) call warn("[global:init_global] Unsplit MHD solver chosen. Ideal CFL_GLM = 0.3. Anything else may lead to unexpected result.")
          endif
 #endif /* MAGNETIC */
       endif
