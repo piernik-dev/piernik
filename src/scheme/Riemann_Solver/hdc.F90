@@ -166,7 +166,11 @@ contains
          if (ch_grid) then
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
-            cgl%cg%wa = merge(small, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt, dom%eff_dim == 0)
+            if (dt > 0.) then
+               cgl%cg%wa = merge(small, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt, dom%eff_dim == 0)
+            else
+               cgl%cg%wa = small
+            endif
          else
             ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke
