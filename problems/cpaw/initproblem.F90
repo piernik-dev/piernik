@@ -30,7 +30,7 @@
 module initproblem
 
 !>
-!! \brief Initial condition for a Propagation of Circularly polarized Alfv´en Waves (CPAW)
+!! \brief Initial condition for a Propagation of Circularly polarized Alfvén Waves (CPAW)
 !!
 !! \details See section 4.1 in
 !!   Andrea Mignone, Petros Tzeferacos
@@ -38,13 +38,28 @@ module initproblem
 !!   https://arxiv.org/pdf/0911.3410
 !<
 
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                     :: d0, p0, vx0, vy0, vz0, A, vA, kx, ky, kz
+   ! namelist parameters
+   real :: d0   !! uniform density
+   real :: p0   !! uniform pressure
+   real :: vx0  !! x-velocity in the domain
+   real :: vy0  !! y-velocity in the domain
+   real :: vz0  !! z-velocity in the domain
+   real :: A    !! perturbation wave amplitude
+   real :: vA   !! fraction of the Alfvén speed for perturbed wave
+   real :: kx   !! x-wavenumber
+   real :: ky   !! y-wavenumber
+   real :: kz   !! z-wavenumber
    namelist /PROBLEM_CONTROL/  d0, p0, vx0, vy0, vz0, A, vA, kx, ky, kz
+
+   ! other private data
+   character(len=dsetnamelen), parameter :: ini_B_n = "ini_B"
 
 contains
 
@@ -64,9 +79,11 @@ contains
 
    subroutine read_problem_par
 
-      use bcast,      only: piernik_MPI_Bcast
-      use dataio_pub, only: nh
-      use mpisetup,   only: rbuff, master, slave
+      use bcast,          only: piernik_MPI_Bcast
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B, ndims
+      use dataio_pub,     only: nh
+      use mpisetup,       only: rbuff, master, slave
 
       implicit none
 
@@ -129,19 +146,23 @@ contains
 
       endif
 
+      call all_cg%reg_var(ini_B_n, restart_mode = AT_NO_B, dim4=ndims)
+
    end subroutine read_problem_par
 
 !> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
 
    subroutine problem_initial_conditions
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: xdim, ydim, zdim, LO, HI, ndims
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag
-      use grid_cont,   only: grid_container
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI, ndims
+      use dataio_pub,       only: die
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
 
       implicit none
 
@@ -152,10 +173,11 @@ contains
       type(grid_container),   pointer :: cg
       integer                         :: p
 
-      real, dimension(ndims, ndims)   :: rot_matrix, rot_matrix_inv
-      real, dimension(ndims)          :: v_prime, b_prime, v_final, b_final
-      real, dimension(ndims)          :: pos_vec, pos_vec_prime
-      real                            :: aa, g, k_prime
+      real, dimension(ndims, ndims)     :: rot_matrix, rot_matrix_inv
+      real, dimension(ndims)            :: v_prime, b_prime, v_final, b_final
+      real, dimension(ndims)            :: pos_vec, pos_vec_prime
+      real                              :: aa, g, k_prime
+      real, dimension(:,:,:,:), pointer :: ini_B
 
       aa = atan(ky/kx)
       g = atan(cos(aa) * (kz/kx))
@@ -175,6 +197,9 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
+            ini_B => cg%w(wna%ind(ini_B_n))%arr
+            if (.not. associated(ini_B)) call die("[initproblem:problem_initial_conditions] ini_B not found")
+
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
@@ -193,22 +218,21 @@ contains
                      v_final = matmul(rot_matrix, v_prime)
                      b_final = matmul(rot_matrix, b_prime)
 
-                     cg%u(fl%idn,i,j,k) = d0
-                     cg%u(fl%imx,i,j,k) = v_final(xdim)
-                     cg%u(fl%imy,i,j,k) = v_final(ydim)
-                     cg%u(fl%imz,i,j,k) = v_final(zdim)
+                     cg%u(fl%idn, i, j, k) = d0
+                     cg%u(fl%imx, i, j, k) = v_final(xdim)
+                     cg%u(fl%imy, i, j, k) = v_final(ydim)
+                     cg%u(fl%imz, i, j, k) = v_final(zdim)
 
                      if (fl%has_energy) then
-                        cg%u(fl%ien,i,j,k) = p0/(fl%gam_1) + ekin(v_final(xdim), v_final(ydim), v_final(zdim), d0)
+                        cg%u(fl%ien, i, j, k) = p0/(fl%gam_1) + ekin(v_final(xdim), v_final(ydim), v_final(zdim), d0)
 
                         if (fl%is_magnetized) then
-                           cg%b(xdim,i,j,k)   =  b_final(xdim)
-                           cg%b(ydim,i,j,k)   =  b_final(ydim)
-                           cg%b(zdim,i,j,k)   =  b_final(zdim)
-                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(b_final(xdim), b_final(ydim), b_final(zdim))
+                           cg%b(xdim:zdim, i, j, k) = b_final(:)
+                           cg%u(fl%ien, i, j, k) = cg%u(fl%ien, i, j, k) + emag(b_final(xdim), b_final(ydim), b_final(zdim))
                         endif
                      endif
 
+                     ini_B(:, i, j, k) = b_final(:)
                   enddo
                enddo
             enddo
@@ -219,21 +243,67 @@ contains
 
    end subroutine problem_initial_conditions
 
-!> \brief Final routine called after the endo of the simulation
+!>
+!! \brief Final routine called after the endo of the simulation
+!!
+!! \ToDo For long runs maybe call it every period?
+!<
 
    subroutine verify_test
 
-      use mpisetup,   only: master
-      use dataio_pub, only: printinfo
-      use constants,  only: V_INFO
+      use allreduce,        only: piernik_MPI_Allreduce
+      use cg_list,          only: cg_list_element
+      use cg_leaves,        only: leaves
+      use constants,        only: V_ESSENTIAL, V_INFO, xdim, zdim, pSUM
+      use dataio_pub,       only: msg, printinfo, die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
+      use named_array_list, only: wna
 
       implicit none
 
-      ! ToDo: Add L2 or L1 error norm computation (assuming that tend was set to a full period).
+      enum, bind(C)
+         enumerator :: N_D, N_2
+      end enum
+      real, dimension(N_D:N_2) :: norm
+      type(cg_list_element),  pointer   :: cgl
+      type(grid_container),   pointer   :: cg
+      real, dimension(:,:,:,:), pointer :: ini_B
+      integer :: d
+
       if (master) then
          call printinfo('Copy compare_slices.py from problem folder to the run folder.', V_INFO)
          call printinfo('Make sure that the cpaw_tst_0000.h5 file is the intial file and cpaw_tst_0001.h5 is the last file.', V_INFO)
          call printinfo('Then run python compare_slices.py to see the comparison.', V_INFO)
+      endif
+
+      norm = 0.
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         ini_B => cg%w(wna%ind(ini_B_n))%arr
+         if (.not. associated(ini_B)) call die("[initproblem:verify_test] ini_B not found")
+
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               cg%wa(RNG) = ini_B(d, RNG) - cg%b(d, RNG)
+               norm(N_D) = norm(N_D) + sum(cg%wa(RNG)**2, mask=cg%leafmap)
+               norm(N_2) = norm(N_2) + sum(ini_B(d, RNG)**2, mask=cg%leafmap)
+            endif
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+      do d = N_D, N_2
+         call piernik_MPI_Allreduce(norm(d), pSUM)
+      enddo
+
+      if (master) then
+         write(msg,'(a,f12.8)')"[initproblem:verify_test] L2 error norm od the B field = ", sqrt(norm(N_D)/norm(N_2))
+         call printinfo(msg, V_ESSENTIAL)
       endif
 
    end subroutine verify_test
