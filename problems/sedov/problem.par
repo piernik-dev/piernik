@@ -80,5 +80,5 @@
  /
 
  $AMR
-!  auto_bsize = .false.  ! This may be needed for HLLC solver or moregenerally, when blocky decomposition is not desired
+!  auto_bsize = .false.  ! This may be needed for HLLC solver or more generally, when blocky decomposition is not desired
  /
