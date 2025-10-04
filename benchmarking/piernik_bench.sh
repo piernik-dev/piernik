@@ -141,7 +141,7 @@ run_piernik() {
                 ;;
             crtest)
                 local xmul=512
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%8.4f %8.4f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "p+-cycles" | awk '{if (NR==1) printf("%8.4f %8.4f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
                 ;;
             maclaurin)
@@ -232,7 +232,7 @@ process_output() {
             ( grep "dWallClock" $dir/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$core');} {if ($3 != 0) {printf(" %8.4f ", $12); t+=$12; n++;}} END {printf(" %9.5f\n", t/n)}'
             ;;
         crtest)
-            grep "C01cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %8.4f %8.4f ", '$core', $5, $8)}'
+            grep "p+-cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %8.4f %8.4f ", '$core', $5, $8)}'
             awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
             ;;
         maclaurin)
