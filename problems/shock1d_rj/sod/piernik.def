@@ -4,8 +4,6 @@
 
 #undef ISO
 
-#define DEBUG
-
 #define NEUTRAL
 
 #undef GRAV

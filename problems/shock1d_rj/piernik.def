@@ -4,7 +4,6 @@
 
 #undef ISO
 
-#define DEBUG
 #define IONIZED
 
 #define MAGNETIC

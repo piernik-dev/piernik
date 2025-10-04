@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 512, 1, 1
+    n_d = 512, 4, 4
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -35,7 +35,7 @@
  $OUTPUT_CONTROL
     problem_name ='shock1d'
     run_id  =  'r1a'
-    dt_hdf  = 0.001
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 0.1
     dt_tsl  = 0.1
@@ -47,12 +47,10 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.2
+    cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-5
     limiter= 'vanleer'
-    print_divb = 1
-    solver_str = 'unsplit'
  /
 
  $RESISTIVITY
