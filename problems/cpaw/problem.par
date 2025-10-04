@@ -1,3 +1,19 @@
+! This problem seems to schow nearly 2nd order spatial accuracy:
+! resolution L2-error
+!  32   16   0.00996214
+!  48   24   0.00559514
+!  64   32   0.00347388
+!  96   48   0.00171573
+!  128  64   0.00102726
+!  192  96   0.00049221
+!  256 128   0.00029084
+!  384 192   0.00013753
+!  512 256   0.00008043
+!  768 384   0.00003744
+! 1024 512   0.00002160
+! The L2 reduction with resolution is slower than expected but it may be due
+! to increasing number of timesteps required
+
 $BASE_DOMAIN
   n_d = 512,256,1
   nb  = 4
