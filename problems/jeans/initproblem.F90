@@ -376,7 +376,7 @@ contains
             write(g_lun,'(a)') 'print "#maxdiff = ", maxdiff'
             write(g_lun,'(a)') 'set print "jeans.csv"'
             write(g_lun,'(a)') 'print "amplitude_rel_error,period_rel_error,damping_factor/period"'
-            write(g_lun,'(a)') 'print (1. - aa/a), ",", (1- bb/b), ",", c/bb'
+            write(g_lun,'(a)') 'print (1. - aa/a), " , ", (1- bb/b), " , ", c/bb'
          endif
          close(g_lun)
       endif
