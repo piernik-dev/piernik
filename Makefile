@@ -158,7 +158,7 @@ pep8: pycodestyle
 pycodestyle:
 	TSTNAME="  Pycodestyle check "; \
 	REMARK=" (with --ignore=E501,E722,W504,W605)"; \
-	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance $(BIN_DIR)/ask_jenkins --ignore=E501,E722,W504,W605 && \
+	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance --ignore=E501,E722,W504,W605 && \
 		$(ECHO) -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
 		( $(ECHO) -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
