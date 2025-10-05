@@ -42,12 +42,20 @@ MAKEFLAGS += -s
 ALLOBJ = $(wildcard obj*)
 
 # Terminal colors and formatting
-GREEN = "\033[32;1m"
-RED = "\033[31;1m"
-BLUE = "\033[34;1m"
-RESET = "\033[0m"
+RED    = "\033[31;1m"
+GREEN  = "\033[32;1m"
+YELLOW = "\033[33;1m"
+BLUE   = "\033[34;1m"
+PURPLE = "\033[35;1m"
+CYAN   = "\033[36;1m"
+WHITE  = "\033[37;1m"
+GRAY   = "\033[90;1m"
+RESET  = "\033[0m"
 PASSED = $(GREEN)passed$(RESET)
 FAILED = $(RED)failed$(RESET)
+OK = $(CYAN)OK$(RESET)
+DIFF = $(YELLOW)Differs!$(RESET)
+COLORTEST = $(RED) RED $(GREEN) GREEN $(YELLOW) YELLOW $(BLUE) BLUE $(PURPLE) PURPLE $(CYAN) CYAN $(WHITE) WHITE $(GRAY) GRAY $(RESET) back to normal
 
 # Directory structure
 PROBLEMS_DIR = problems
@@ -87,7 +95,7 @@ endef
 
 # Define phony targets
 .PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
-	oldgold gold-serial gold-clean pep8 view_dep \
+	oldgold gold-serial gold-clean pep8 view_dep colortest \
 	CI QA artifacts gold $(QA_TESTS) $(ARTIFACT_TESTS) $(GOLD_TESTS)
 
 # Default target to build all object directories
@@ -183,6 +191,10 @@ help:
 	@$(ECHO) "  CI        - Run all CI checks       (QA artifacts gold)"
 	@$(ECHO) "  help      - Show this help"
 
+# Testing ANSI colors in current terminal
+colortest:
+	$(ECHO) -e "Color test:"$(COLORTEST)
+
 # Target to run all QA checks
 QA:
 	$(ECHO) -e $(BLUE)"Starting QA checks ..."$(RESET)
@@ -207,7 +219,7 @@ dep:
 		mv $$OTMPDIR"/"$$GRAPH $(ARTIFACTS)/ && $(cleanup_tmpdir) ;\
 	fi ;\
 	if [ -e $(ARTIFACTS)"/$$GRAPH" ] ; then \
-		$(ECHO) -e "  Dependency test "$(PASSED)". The graph for the $$PROBLEM problem was stored as $(ARTIFACTS)/$$GRAPH" ;\
+		$(ECHO) -e "  Dependency test "$(PASSED)", the graph for the $$PROBLEM problem was stored as $(ARTIFACTS)/$$GRAPH" ;\
 	else \
 		[ -e $$OTMPDIR/setup.stdout ] && ( cat $$OTMPDIR/setup.stdout ; rm -r $$OTMPDIR ) ;\
 		$(ECHO) -e "  Dependency graph creation "$(FAILED) && exit 1 ;\
@@ -282,9 +294,9 @@ Jeans:
 			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.5f, period error = %.5f (expected: -0.00025, 0.00574)", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
+		NORM=$$( awk '{exp_a = -0.0002475700224982; exp_p = 0.00574478339226114; if (NR==2) { printf("Amplitude error = %.16f, period error = %.16f", 1.*$$1, 1.*$$3); if ($$1 != exp_a || $$3 != exp_p) printf(" '$(DIFF)' (expected: %.16f, %.16f)", exp_a, exp_p); else printf(" '$(OK)'");} }' $${RUNDIR}/jeans.csv ) ;\
 		cp $${RUNDIR}/jeans.{png,csv} $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED)". $${NORM}, ${ARTIFACTS}/jeans.png created." ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED)", $${NORM}, ${ARTIFACTS}/jeans.png created" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(FAILED) && exit 1 )
 
 # Target to run Maclaurin test with accuracy check
@@ -299,9 +311,9 @@ Maclaurin:
 			$(ECHO) "L2 error norm,min. error,max. error" > maclaurin.csv ;\
 			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\),.*= *\([^ ]*\) *\(.*\)$$/\1 , \2 , \3/' >> maclaurin.csv ;\
 		) >> $(ARTIFACTS)/Maclaurin.setup.stdout && \
-		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.5f (expected: 0.00336)", $$1) }' $${RUNDIR}/maclaurin.csv ) ;\
+		NORM=$$( awk '{exp_n = 0.003359; if (NR==2) { printf("L2 error norm = %.6f", $$1); if ($$1 != exp_n) printf(" '$(DIFF)' (expected: %.6f)", exp_n); else printf(" '$(OK)'");} }' $${RUNDIR}/maclaurin.csv ) ;\
 		cp $${RUNDIR}/maclaurin.{png,csv} $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)". $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)", $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(FAILED) && exit 1 )
 
 # Target to run 3-body test with accuracy and restart checks (here restart also checks particles)
@@ -321,9 +333,9 @@ Maclaurin:
 			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f (expected: 0.0044, 3.1e-08, 0.0039)", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
+		NORM=$$( awk '{exp_p = 0.004358; exp_m = 3.05544e-08; exp_am = 0.00385792; if (NR==2) { printf("Period error = %.6f, momentum error = %.6g, angular momentum error = %.8f", 1.*$$1, 1.*$$3, 1*$$5); if ($$1 != exp_p || $$3 != exp_m || $$5 != exp_am) printf(" '$(DIFF)' (expected: %.6f, %.6g, %.8f)", exp_p, exp_m, exp_am); else printf(" '$(OK)'");} }' $${RUNDIR}/3body.csv ) ;\
 		cp $${RUNDIR}/3body.csv $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)". $${NORM}" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)", $${NORM}" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
 
 # Target to run Propagation of Circularly polarized Alfvén Waves
@@ -337,9 +349,9 @@ CPAW:
 			$(ECHO) "L2 error norm" > CPAW.csv ;\
 			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\).*$$/\1/' >> CPAW.csv ;\
 		) >> $(ARTIFACTS)/CPAW.setup.stdout && \
-		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.8f (expected: 0.00102726)", $$1) }' $${RUNDIR}/CPAW.csv ) ;\
+		NORM=$$( awk '{exp_n = 0.00102726; if (NR==2) { printf("L2 error norm = %.8f", $$1); if ($$1 != exp_n) printf(" '$(DIFF)' (expected: %.8f)", exp_n); else printf(" '$(OK)'");} }' $${RUNDIR}/CPAW.csv ) ;\
 		cp $${RUNDIR}/CPAW.csv $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(PASSED)". $${NORM}" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(PASSED)", $${NORM}" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(FAILED) && exit 1 )
 
 
