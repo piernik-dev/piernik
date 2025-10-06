@@ -228,13 +228,13 @@ contains
 
          implicit none
 
-         type(cg_list_element), pointer :: cgl
+         type(cg_list_element), pointer :: cur_cgl
 
-         cgl => leaves%first
-         do while (associated(cgl))
-            call cgl%cg%costs%start
+         cur_cgl => leaves%first
+         do while (associated(cur_cgl))
+            call cur_cgl%cg%costs%start
 
-            associate (cg => cgl%cg)
+            associate (cg => cur_cgl%cg)
                if (cg%flag%get(int(cg%ijkse, kind=8), cg%leafmap)) cg%flag%derefine = .false.
                if (cg%l%id >= level_max) call cg%flag%clear
                if (cg%l%id <  level_min) call cg%flag%set
@@ -242,8 +242,8 @@ contains
                if (cg%l%id <= level_min) cg%flag%derefine = .false.
             end associate
 
-            call cgl%cg%costs%stop(I_REFINE)
-            cgl => cgl%nxt
+            call cur_cgl%cg%costs%stop(I_REFINE)
+            cur_cgl => cur_cgl%nxt
          enddo
 
       end subroutine sanitize_ref_flags
