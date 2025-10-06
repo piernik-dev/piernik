@@ -272,7 +272,7 @@ contains
       if (sweep == xdim) then
          pbb   =>   bb(:,:)
          if (qna%exists(cs_i2_n)) then
-            cs2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+            cs2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep, i1, i2)
          else
             cs2 => null()
          endif

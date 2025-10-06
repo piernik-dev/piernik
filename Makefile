@@ -166,7 +166,7 @@ pep8: pycodestyle
 pycodestyle:
 	TSTNAME="  Pycodestyle check "; \
 	REMARK=" (with --ignore=E501,E722,W504,W605)"; \
-	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance $(BIN_DIR)/ask_jenkins --ignore=E501,E722,W504,W605 && \
+	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance --ignore=E501,E722,W504,W605 && \
 		$(ECHO) -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
 		( $(ECHO) -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
@@ -272,7 +272,7 @@ IOv2:
 			$(ECHO) -e "  Restart: t = 1.0, nproc = 3" ;\
 			$(MPIEXEC) -n 3 ./piernik -n '&END_CONTROL tend = 2.0 /' -n '&OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out ;\
 			$(ECHO) -e "  Finish:  t = 2.0" ;\
-			../../$(BIN_DIR)/gdf_distance moving_pulse_ts{1,2}_0002.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance moving_pulse_ts{1,2}_0002.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/IOv2.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  IO v2 test "$(PASSED) ) || \
@@ -291,7 +291,7 @@ Jeans:
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL dt_hdf = 1.0 dt_res = 1.0 run_id = "rs2"/' ;\
-			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		NORM=$$( awk '{exp_a = -0.0002475700224982; exp_p = 0.00574478339226114; if (NR==2) { printf("Amplitude error = %.16f, period error = %.16f", 1.*$$1, 1.*$$3); if ($$1 != exp_a || $$3 != exp_p) printf(" '$(DIFF)' (expected: %.16f, %.16f)", exp_a, exp_p); else printf(" '$(OK)'");} }' $${RUNDIR}/jeans.csv ) ;\
@@ -330,7 +330,7 @@ Maclaurin:
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
 			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs2"/' ;\
-			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 | tee compare.log ;\
+			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
 		NORM=$$( awk '{exp_p = 0.004358; exp_m = 3.05544e-08; exp_am = 0.00385792; if (NR==2) { printf("Period error = %.6f, momentum error = %.6g, angular momentum error = %.8f", 1.*$$1, 1.*$$3, 1*$$5); if ($$1 != exp_p || $$3 != exp_m || $$5 != exp_am) printf(" '$(DIFF)' (expected: %.6f, %.6g, %.8f)", exp_p, exp_m, exp_am); else printf(" '$(OK)'");} }' $${RUNDIR}/3body.csv ) ;\
@@ -379,7 +379,7 @@ gold-clean:
 # Function to run a single gold test
 define run_gold_test
 	$(GOLD_TEST_SCRIPT) $(CONFIG_DIR)/$(1).config > $(GOLDSPACE)/$(1).gold_stdout 2> $(GOLDSPACE)/$(1).gold_stderr && \
-		$(ECHO) -e "  $(1) test "$(PASSED) || \
+		( grep Warning $(GOLDSPACE)/$(1).gold_stderr; $(ECHO) -e "  $(1) test "$(PASSED) ) || \
 		( $(ECHO) -e "  $(1) test "$(FAILED)" (more details in $(GOLDSPACE)/$(1).gold_std*)" && exit 1 )
 endef
 

@@ -60,7 +60,6 @@ module dataio
    character(len=dsetnamelen), dimension(nvarsmx) :: pvars !< array of 4-character strings standing for variables to dump in particle hdf files
 #ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
-   integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
 #endif /* HDF5 */
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
@@ -167,7 +166,7 @@ contains
 
       use barrier,      only: piernik_MPI_Barrier
       use bcast,        only: piernik_MPI_Bcast
-      use constants,    only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG
+      use constants,    only: cwdlen, PIERNIK_INIT_MPI, INVALID, V_DEBUG, I_ZERO
       use dataio_pub,   only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                  tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, restarted_sim, &
            &                  move_file, parfile, parfilelines, log_file, maxparlen, maxparfilelines, can_i_write, ierrh, par_file
@@ -236,10 +235,11 @@ contains
 #endif /* HDF5 */
       call piernik_MPI_Barrier
       call piernik_MPI_Bcast(nrestart)
+      restarted_sim = (nrestart > INVALID)
       call piernik_MPI_Bcast(restarted_sim)
 
       if (master) then
-         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
+         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',max(I_ZERO, nrestart),'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
@@ -258,7 +258,7 @@ contains
    subroutine dataio_par_io
 
       use bcast,      only: piernik_MPI_Bcast
-      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name
+      use constants,  only: idlen, cbuff_len, INT4, V_SILENT, V_DEBUG, V_VERBOSE, V_INFO, V_ESSENTIAL, V_WARN, v_name, INVALID
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, h5_64bit, nh, set_colors, piernik_verbosity
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc
 
@@ -269,7 +269,7 @@ contains
       restart       = 'last'   ! 'last': automatic choice of the last restart file regardless of "nrestart" value;
                               ! if something else is set: "nrestart" value is fixing
       res_id        = ''
-      nrestart      = 3
+      nrestart      = INVALID
 
       dt_hdf        = 0.0
       dt_res        = 0.0
@@ -511,7 +511,7 @@ contains
 
    subroutine init_dataio
 
-      use constants,    only: PIERNIK_INIT_IO_IC, V_DEBUG, V_LOG
+      use constants,    only: PIERNIK_INIT_IO_IC, V_DEBUG, V_LOG, I_ZERO
       use dataio_pub,   only: code_progress, die, maxenvlen, nres, nrestart, printinfo, restarted_sim, warn
       use domain,       only: dom
       use mpisetup,     only: master
@@ -584,7 +584,7 @@ contains
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
-      nres = nrestart
+      nres = max(I_ZERO, nrestart)
 
       if (restarted_sim) then
 #ifdef HDF5
@@ -592,8 +592,7 @@ contains
          call read_restart_hdf5
          nstep_start = nstep
          t_start     = t
-         nres_start  = nrestart
-         nhdf_start  = nhdf-1
+         nhdf_start  = nhdf - 1
 #else /* !HDF5 */
          call die("[dataio:init_dataio] cannot use restart without HDF5")
 #endif /* !HDF5 */
@@ -924,7 +923,7 @@ contains
    subroutine find_last_restart(restart_number)
 
       use common_hdf5, only: output_fname
-      use constants,   only: RD
+      use constants,   only: RD, INVALID
       use dataio_pub,  only: restarted_sim
 
       implicit none
@@ -935,7 +934,7 @@ contains
       integer                      :: unlink_stat
       logical                      :: exist
 
-      restart_number = 0
+      restart_number = INVALID
 
       open(newunit=unlink_stat, file='restart_list.tmp', status='unknown')
       close(unlink_stat, status='delete')
@@ -961,7 +960,7 @@ contains
       use cg_cost_data,     only: I_OTHER
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO
+      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE, INVALID, PPP_IO, I_ZERO
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -1050,7 +1049,7 @@ contains
       endif
 
       if (master) then
-         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',max(I_ZERO, nrestart),'.tsl'
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, field_len, ["nstep   ", "time    ", "timestep", "mass    "])

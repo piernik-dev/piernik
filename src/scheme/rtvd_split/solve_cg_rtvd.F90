@@ -116,9 +116,9 @@ contains
 
             call set_geo_coeffs(cdim, flind, i1, i2, cg)
 
-            pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
-            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
-            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
+            pu                     => cg%w(wna%fi   )%get_sweep(cdim, i1, i2)
+            pu0                    => cg%w(uhi      )%get_sweep(cdim, i1, i2)
+            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim, i1, i2)
 
             u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
 

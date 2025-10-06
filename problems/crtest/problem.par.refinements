@@ -27,7 +27,6 @@
  $RESTART_CONTROL
     restart  = 'last'
     res_id   = ''
-    nrestart = 0
  /
 
  $END_CONTROL

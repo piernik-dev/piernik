@@ -426,6 +426,7 @@ contains
             which_solver = RTVD_SPLIT
          case ("hllc", "HLLC")
             which_solver = HLLC_SPLIT
+            call warn("[global:init_global] The HLLC solver is not maintained and may be less acurate or nonfunctional on some setups. Don't use it for production runs.")
          case ("riemann", "Riemann", "RIEMANN", "RIEMANN_SPLIT", "riemann_split")
             which_solver = RIEMANN_SPLIT
          case ("UNSPLIT", "unsplit", "van_leer", "Riemann_unsplit", "RIEMANN_UNSPLIT", "riemann_unsplit")  ! This is not the most clear way to choose the solver

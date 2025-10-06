@@ -113,17 +113,17 @@ contains
 
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=RESISTIVITY)
+         write(nh%lun, nml=RESISTIVITY)
          close(nh%lun)
          open(newunit=nh%lun, file=nh%par_file)
          nh%errstr=""
          read(unit=nh%lun, nml=RESISTIVITY, iostat=nh%ierrh, iomsg=nh%errstr)
          close(nh%lun)
          call nh%namelist_errh(nh%ierrh, "RESISTIVITY")
-         read(nh%cmdl_nml,nml=RESISTIVITY, iostat=nh%ierrh)
+         read(nh%cmdl_nml, nml=RESISTIVITY, iostat=nh%ierrh)
          call nh%namelist_errh(nh%ierrh, "RESISTIVITY", .true.)
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-         write(nh%lun,nml=RESISTIVITY)
+         write(nh%lun, nml=RESISTIVITY)
          close(nh%lun)
          call nh%compare_namelist()
 
@@ -261,10 +261,10 @@ contains
             wb = wb + eh**2
          endif
 
-!        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
-!        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:)- jc2 ))
+!        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:) - jc2 ))
+!        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:) - jc2 ))
          where (wb(:,:,:) - jc2 > zero)
-            eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
+            eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:) - jc2)
          elsewhere
             eta(:,:,:) = eta_0
          endwhere
@@ -282,7 +282,7 @@ contains
             eh(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)-1) = eh(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)-1) + eta(:,:,cg%lhn(zdim,LO):cg%lhn(zdim,HI)-2) + eta(:,:,cg%lhn(zdim,LO)+2:cg%lhn(zdim,HI))
             eh(:,:,cg%lhn(zdim,LO)) = eh(:,:,cg%lhn(zdim,LO)+1) ; eh(:,:,cg%lhn(zdim,HI)) = eh(:,:,cg%lhn(zdim,HI)-1)
          endif
-         eh = real((eh + eta_scale*eta)*d_eta_factor)
+         eh = real((eh + eta_scale*eta) * d_eta_factor)
 
          where (eta > eta_0) eta = eh
 
@@ -382,7 +382,7 @@ contains
 !! \brief
 !! \todo overload me or use class(*) if you dare
 !<
-   subroutine vanleer_limiter(f,a,b)
+   subroutine vanleer_limiter(f, a, b)
 
       implicit none
 
@@ -392,9 +392,9 @@ contains
       ! locals
       real, dimension(size(a,1))        :: c !< a*b
 
-      c = a*b                                                                    !> \todo OPTIMIZE ME
+      c = a * b                                                                    !> \todo OPTIMIZE ME
       where (c > 0.0)
-         f = f+2.0*c/(a+b)
+         f = f + 2.0 * c/(a + b)
       endwhere
 
    end subroutine vanleer_limiter
@@ -419,8 +419,8 @@ contains
       wp(1:n-1) = half*(w(2:n) - w(1:n-1))                   ; wp(n) = wp(n-1)
       wm(2:n)   = wp(1:n-1)                                  ; wm(1) = wm(2)
 
-      call vanleer_limiter(w,wm,wp)
-      wcu1d     = w*dt
+      call vanleer_limiter(w, wm, wp)
+      wcu1d     = w * dt
 
    end subroutine tvdd_1d
 
@@ -458,7 +458,7 @@ contains
 
       n1 = I_ONE + mod(sdir    ,   ndims)
       n2 = I_ONE + mod(sdir+I_ONE, ndims)
-      etadir = sum([xdim,ydim,zdim]) - ibdir - sdir
+      etadir = sum([xdim, ydim, zdim]) - ibdir - sdir
 
       call compute_resist
 
@@ -476,9 +476,9 @@ contains
 
          do i1 = cg%lhn(n1,LO), cg%lhn(n1,HI)
             do i2 = cg%lhn(n2,LO), cg%lhn(n2,HI)
-               b1d   => cg%w(wna%bi)%get_sweep(sdir,ibdir,i1,i2)
-               eta1d => cg%q(eta_i )%get_sweep(sdir,      i1,i2)
-               wcu1d => cg%q(wcu_i )%get_sweep(sdir,      i1,i2)
+               b1d   => cg%w(wna%bi)%get_sweep(sdir, ibdir, i1, i2)
+               eta1d => cg%q(eta_i )%get_sweep(sdir,        i1, i2)
+               wcu1d => cg%q(wcu_i )%get_sweep(sdir,        i1, i2)
                call tvdd_1d(b1d, eta1d, cg%idl(sdir), dt, wcu1d)
             enddo
          enddo
