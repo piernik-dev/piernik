@@ -227,15 +227,15 @@ contains
       implicit none
 
       class(generic_na), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
+      integer(kind=4),   intent(in) :: dim_
       integer(kind=4) :: n
 
       n = INVALID
       select type(this)
          type is (named_array3d)
-            n = lbound(this%arr,dim=dim_,kind=4)
+            n = lbound(this%arr, dim=dim_, kind=4)
          type is (named_array4d)
-            n = lbound(this%arr,dim=dim_,kind=4)
+            n = lbound(this%arr, dim=dim_, kind=4)
          class default
             call die("[named_array:ub] No lower bound for generic named array")
       end select
@@ -244,7 +244,7 @@ contains
 
 !> \brief Initialize named array with a predefined simple array
 
-   subroutine array3d_associate(this,other)
+   subroutine array3d_associate(this, other)
 
       implicit none
 
@@ -257,7 +257,7 @@ contains
 
 !> \brief Initialize named array with a predefined simple array
 
-   subroutine array4d_associate(this,other)
+   subroutine array4d_associate(this, other)
 
       implicit none
 
@@ -270,7 +270,7 @@ contains
 
 !> \brief Get a selected line of values
 
-   function array3d_get_sweep(this,ndim,i1,i2) result(p1d)
+   function array3d_get_sweep(this, ndim, i1, i2) result(p1d)
 
       use constants, only: xdim, ydim, zdim
 
@@ -280,18 +280,18 @@ contains
       integer(kind=4),      intent(in)    :: ndim
       integer,              intent(in)    :: i1, i2
 
-      real, dimension(:), pointer         :: p1d
+      real, dimension(:), pointer :: p1d
 
       if (.not.associated(this%arr)) then
          p1d => null()
       else
          select case (ndim)
             case (xdim)
-               p1d => this%arr(:,i1,i2)
+               p1d => this%arr(:, i1, i2)
             case (ydim)
-               p1d => this%arr(i2,:,i1)
+               p1d => this%arr(i2, :, i1)
             case (zdim)
-               p1d => this%arr(i1,i2,:)
+               p1d => this%arr(i1, i2, :)
          end select
       endif
 
@@ -299,7 +299,7 @@ contains
 
 !> \brief Get a selected line of values of one variable
 
-   function array4d_get_sweep_one_var(this,ndim,nn,i1,i2) result(p1d)
+   function array4d_get_sweep_one_var(this, ndim, nn, i1, i2) result(p1d)
 
       use constants, only: xdim, ydim, zdim
 
@@ -309,22 +309,22 @@ contains
       integer(kind=4),      intent(in)    :: ndim, nn
       integer,              intent(in)    :: i1, i2
 
-      real, dimension(:),  pointer        :: p1d
+      real, dimension(:), pointer :: p1d
 
       select case (ndim)
          case (xdim)
-            p1d => this%arr(nn,:,i1,i2)
+            p1d => this%arr(nn, :, i1, i2)
          case (ydim)
-            p1d => this%arr(nn,i2,:,i1)
+            p1d => this%arr(nn, i2, :, i1)
          case (zdim)
-            p1d => this%arr(nn,i1,i2,:)
+            p1d => this%arr(nn, i1, i2, :)
       end select
 
    end function array4d_get_sweep_one_var
 
 !> \brief Get a selected line of values of all variables
 
-   function array4d_get_sweep(this,ndim,i1,i2) result(p1d)
+   function array4d_get_sweep(this, ndim, i1, i2) result(p1d)
 
       use constants, only: xdim, ydim, zdim
 
@@ -334,15 +334,15 @@ contains
       integer(kind=4),      intent(in)    :: ndim
       integer,              intent(in)    :: i1, i2
 
-      real, dimension(:,:), pointer       :: p1d
+      real, dimension(:,:), pointer :: p1d
 
       select case (ndim)
          case (xdim)
-            p1d => this%arr(:,:,i1,i2)
+            p1d => this%arr(:, :, i1, i2)
          case (ydim)
-            p1d => this%arr(:,i2,:,i1)
+            p1d => this%arr(:, i2, :, i1)
          case (zdim)
-            p1d => this%arr(:,i1,i2,:)
+            p1d => this%arr(:, i1, i2, :)
       end select
 
    end function array4d_get_sweep
@@ -365,7 +365,7 @@ contains
       class(named_array3d),  intent(inout) :: this
       integer, dimension(:), intent(in)    :: v
 
-      real                                     :: p
+      real :: p
 
       if (associated(this%arr)) then
          p = this%arr(v(xdim), v(ydim), v(zdim))
@@ -392,10 +392,10 @@ contains
       class(named_array4d),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: v
 
-      real,    dimension(:),     pointer       :: p1d
+      real, dimension(:), pointer :: p1d
 
       if (associated(this%arr)) then
-         p1d => this%arr(:,v(xdim),v(ydim),v(zdim))
+         p1d => this%arr(:, v(xdim), v(ydim), v(zdim))
       else
          call die("[named_array:array4d_point] this%arr not associated")
          p1d => null() ! suppress use of uninitialized variable warning
@@ -419,10 +419,10 @@ contains
       integer(kind=4),               intent(in)    :: nn
       integer(kind=4), dimension(:), intent(in)    :: v
 
-      real                                     :: p
+      real :: p
 
       if (associated(this%arr)) then
-         p = this%arr(nn,v(xdim),v(ydim),v(zdim))
+         p = this%arr(nn, v(xdim), v(ydim), v(zdim))
       else
          call die("[named_array:array4d_point_one_var] this%arr not associated")
          p = -huge(1.) ! suppress use of uninitialized variable warning
@@ -432,7 +432,7 @@ contains
 
 !> \brief Get a selected range of values
 
-   function array3d_span(this,v1,v2) result(p3d)
+   function array3d_span(this, v1, v2) result(p3d)
 
       use constants, only: xdim, ydim, zdim
 
@@ -441,19 +441,19 @@ contains
       class(named_array3d),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
-      real,    dimension(:,:,:), pointer       :: p3d
+      real, dimension(:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
       else
-         p3d => this%arr(v1(xdim):v2(xdim),v1(ydim):v2(ydim),v1(zdim):v2(zdim))
+         p3d => this%arr(v1(xdim):v2(xdim), v1(ydim):v2(ydim), v1(zdim):v2(zdim))
       endif
 
    end function array3d_span
 
 !> \brief Get a selected range of values
 
-   function array3d_span_ijkse(this,v) result(p3d)
+   function array3d_span_ijkse(this, v) result(p3d)
 
       use constants, only: xdim, ydim, zdim, LO, HI
 
@@ -462,19 +462,19 @@ contains
       class(named_array3d),            intent(inout) :: this
       integer(kind=4), dimension(:,:), intent(in)    :: v
 
-      real,    dimension(:,:,:), pointer             :: p3d
+      real, dimension(:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
       else
-         p3d => this%arr(v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
+         p3d => this%arr(v(xdim,LO):v(xdim,HI), v(ydim,LO):v(ydim,HI), v(zdim,LO):v(zdim,HI))
       endif
 
    end function array3d_span_ijkse
 
 !> \brief Get a selected range of values
 
-   function array3d_span_ijkse8(this,v) result(p3d)
+   function array3d_span_ijkse8(this, v) result(p3d)
 
       use constants, only: xdim, ydim, zdim, LO, HI
 
@@ -483,19 +483,19 @@ contains
       class(named_array3d),            intent(inout) :: this
       integer(kind=8), dimension(:,:), intent(in)    :: v
 
-      real,    dimension(:,:,:), pointer             :: p3d
+      real, dimension(:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
       else
-         p3d => this%arr(v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
+         p3d => this%arr(v(xdim,LO):v(xdim,HI), v(ydim,LO):v(ydim,HI), v(zdim,LO):v(zdim,HI))
       endif
 
    end function array3d_span_ijkse8
 
 !> \brief Get a selected range of values of one variable
 
-   function array4d_span_one_var(this,nn,v1,v2) result(p3d)
+   function array4d_span_one_var(this, nn, v1, v2) result(p3d)
 
       use constants, only: xdim, ydim, zdim
 
@@ -505,7 +505,7 @@ contains
       integer(kind=4),               intent(in)    :: nn
       integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
-      real,    dimension(:,:,:),  pointer      :: p3d
+      real, dimension(:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -527,19 +527,19 @@ contains
       integer(kind=4),                  intent(in)    :: nn
       integer(kind=4), dimension(:, :), intent(in)    :: v
 
-      real,    dimension(:,:,:),  pointer            :: p3d
+      real, dimension(:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
       else
-         p3d => this%arr(nn,v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
+         p3d => this%arr(nn, v(xdim,LO):v(xdim,HI), v(ydim,LO):v(ydim,HI), v(zdim,LO):v(zdim,HI))
       endif
 
    end function array4d_span_one_var_ijkse
 
 !> \brief Get a selected line of values of all variables
 
-   function array4d_span(this,v1,v2) result(p3d)
+   function array4d_span(this, v1, v2) result(p3d)
 
       use constants, only: xdim, ydim, zdim
 
@@ -548,19 +548,19 @@ contains
       class(named_array4d),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
-      real,    dimension(:,:,:,:), pointer     :: p3d
+      real, dimension(:,:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
       else
-         p3d => this%arr(:,v1(xdim):v2(xdim),v1(ydim):v2(ydim),v1(zdim):v2(zdim))
+         p3d => this%arr(:, v1(xdim):v2(xdim), v1(ydim):v2(ydim), v1(zdim):v2(zdim))
       endif
 
    end function array4d_span
 
 !> \brief Get a selected line of values of all variables
 
-   function array4d_span_ijkse(this,v) result(p3d)
+   function array4d_span_ijkse(this, v) result(p3d)
 
       use constants, only: xdim, ydim, zdim, LO, HI
 
@@ -569,17 +569,17 @@ contains
       class(named_array4d),             intent(inout) :: this
       integer(kind=4), dimension(:, :), intent(in)    :: v
 
-      real,    dimension(:,:,:,:), pointer           :: p3d
+      real, dimension(:,:,:,:), pointer :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
       else
-         p3d => this%arr(:,v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
+         p3d => this%arr(:, v(xdim,LO):v(xdim,HI), v(ydim,LO):v(ydim,HI), v(zdim,LO):v(zdim,HI))
       endif
 
    end function array4d_span_ijkse
 
-   function array4d_span_ijkse8(this,v) result(p3d)
+   function array4d_span_ijkse8(this, v) result(p3d)
 
       use constants,  only: xdim, ydim, zdim, LO, HI
       use dataio_pub, only: msg, die
@@ -589,7 +589,7 @@ contains
       class(named_array4d),             intent(inout) :: this
       integer(kind=8), dimension(:, :), intent(in)    :: v
 
-      real,    dimension(:,:,:,:), pointer           :: p3d
+      real, dimension(:,:,:,:), pointer :: p3d
 
       integer :: d
 
@@ -602,7 +602,7 @@ contains
                call die(msg) ! we want backtrace
             endif
          enddo
-         p3d => this%arr(:,v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
+         p3d => this%arr(:, v(xdim,LO):v(xdim,HI), v(ydim,LO):v(ydim,HI), v(zdim,LO):v(zdim,HI))
       endif
 
    end function array4d_span_ijkse8

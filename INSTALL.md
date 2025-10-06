@@ -6,19 +6,23 @@ For a typical desktop Linux installation you may need to add few packages to be 
 
 For Ubuntu try:
 
-    sudo apt install git make mpich libhdf5-mpich-dev libfftw3-dev pkg-config python pycodestyle python-numpy gfortran python3-requests
+    sudo apt install git make openmpi-bin libhdf5-openmpi-dev libfftw3-dev \
+    pkg-config pycodestyle python3-numpy gfortran graphviz parallel gnuplot \
+    python-h5py
 
 If the above complains that `E: Unable to locate package mpich` then do:
 
     sudo add-apt-repository universe
 
-and try again to install the pacages mentioned above. You may use `libhdf5-openmpi-dev` and `openmpi-bin` if you prefer OpenMPI over MPICH.
+and try again to install the pacages mentioned above. You may use `libhdf5-mpich-dev` and `mpich` if you prefer MPICH over OpenMPI.
 
-## Fedora 32 and newer
+## Fedora 32 .. 42 and possibly newer
 
 For Fedora try:
 
-    sudo dnf install make hdf5-openmpi-devel fftw-devel python environment-modules python3-pycodestyle python2-numpy python3-h5py python3-requests
+    sudo dnf install git make hdf5-openmpi-devel fftw-devel environment-modules \
+    graphviz gnuplot-wx python python3-pycodestyle python3-numpy python3-h5py \
+    python3-matplotlib parallel python-h5py gnuplot
 
 You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
 
@@ -50,17 +54,19 @@ You may use `hdf5-mpich-devel` if you prefer MPICH over OpenMPI.
 
     You can also get rid of these *hardening* and *fortyfying* features (as these are unlikely to be important for a Piernik user and may negatively impact code performance) by stripping them off from the wrappers:
 
-        sudo sed -i 's/-specs=[^ "]*//g' /usr/lib64/mpich/bin/h5pfc /usr/lib64/mpich/bin/mpif90
+        sudo sed -i 's/-specs=[^ "]*//g' /usr/lib64/mpich/bin/h5pfc \
+        /usr/lib64/mpich/bin/mpif90
 
 * If you see warnings saying that `-Werror=format-security` is not valid for Fortran, do:
 
-        sudo sed -i 's/-Werror=format-security//' /usr/lib64/mpich/bin/h5pfc /usr/lib64/mpich/bin/mpif90
+        sudo sed -i 's/-Werror=format-security//' /usr/lib64/mpich/bin/h5pfc \
+        /usr/lib64/mpich/bin/mpif90
 
     Remember that doing so is a sort of hack, which may take revenge on you in a distant future.
 
 If you have installed OpenMPI libraries, remember to replace `mpich` with `openmpi` in the `sed` calls above.
 
-### other systems
+### Other systems
 
 On other systems you need to find your own way (and you may choose to describe it here). You will need:
 
@@ -91,21 +97,19 @@ Also look at the top of `Makefile` to find some useful tricks.
 
 The file `bin/bash_completion.sh` may also make your life with Piernik a little bit easier by allowing to complete some setup options and problem names.
 
-## Advanced features of Piernik
+## Continuous Integration in Piernik
 
-If you want to run so called `gold tests`, you will need Gnu Parallel (optional) and h5py:
+To check whether the Piernik code works well with your modifications one can run the included tests. We used to maintain a Jenkins server for it but recently we switched to equivalent implementation in Makefile. To run all the tests, invoke:
 
-    sudo dnf install parallel python-h5py
+    make CI -j
 
-or
+Do it always before you commit to the repository anything that is intended to be merged with the `master` branch. Do not use the `-j` flag on old computers equipped with a quad-core CPU or less.
 
-    apt install parallel python3-h5py
+There are three groups of tests there: `QA`, `artifacts` and `gold`. You can run one group or only particular tests (e.g. when only one test is failing). Do
 
-(on Fedora or Ubuntu, respectively).
+    make help
 
-Then you can execute so called "gold tests" locally by invoking `make gold`
-or `make gold-serial` (when `make gold` requires too many resources, e.g. on
-a laptop).
+to get current list of implemented checks.
 
 # Setting up Intel Fortran compiler
 
@@ -119,7 +123,12 @@ which should set up the latest versions of everything.
 
 For Piernik you need also to compile HDF5 as it is not bundled in oneAPI repository. You can find the HDF5 sources [here](https://www.hdfgroup.org/downloads/hdf5/source-code/), download them and unpack somewhere. Then configure and compile, eg.:
 
-    ./configure --prefix=${HOME}/intel/HDF5 --enable-fortran --enable-shared --enable-parallel  --with-pic CC=mpiicc FC=mpiifort CXX=mpiicpc CFLAGS="-fPIC -O3 -xHost -ip -fno-alias -align" FFLAGS="-fPIC -O3 -xHost -ip -fno-alias -align" CXXFLAGS="-fPIC -O3 -xHost -ip -fno-alias -align" FFLAGS="-I/opt/intel/oneapi/mpi/latest/include -L/opt/intel/oneapi/mpi/latest/lib"
+    ./configure --prefix=${HOME}/intel/HDF5 --enable-fortran --enable-shared \
+    --enable-parallel  --with-pic CC=mpiicc FC=mpiifort CXX=mpiicpc \
+    CFLAGS="-fPIC -O3 -xHost -ip -fno-alias -align" \
+    FFLAGS="-fPIC -O3 -xHost -ip -fno-alias -align" \
+    CXXFLAGS="-fPIC -O3 -xHost -ip -fno-alias -align" \
+    FFLAGS="-I/opt/intel/oneapi/mpi/latest/include -L/opt/intel/oneapi/mpi/latest/lib"
     make -j
     make install
 

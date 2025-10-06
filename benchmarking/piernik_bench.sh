@@ -67,7 +67,7 @@ prepare_directories() {
 }
 
 awkfor() {
-    awk '{printf("%19s %7s %7s %7s %8s\n", $1, $2, $3, $4, $5)}'
+    awk '{printf("%19s %8s %8s %8s %8s\n", $1, $2, $3, $4, $5)}'
 }
 
 make_objects() {
@@ -137,20 +137,22 @@ run_piernik() {
         case $problem in
             sedov)
                 local xmul=1
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f ", t/n)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf(" %8.4f ", $12); t+=$12; n++;}} END {printf(" %9.5f ", t/n)}'
                 ;;
             crtest)
                 local xmul=512
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "C01cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "p+-cycles" | awk '{if (NR==1) printf("%8.4f %8.4f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
                 ;;
             maclaurin)
                 local xmul=2
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "cycles" | awk '{printf(" %8.4f %8.4f ", $5, $8)}'
                 awk '/Spent/ { printf("%s ", $5) }' *log
+                grep -q Spent *log || return 1  # exception: some piernik threads have returned prematurely
                 ;;
         esac
     fi
+    return 0
 }
 
 format_output() {
@@ -198,8 +200,15 @@ run_benchmark() {
             fi
 
             run_piernik $problem $scaling $threads "$mpirun_cmd" $max_mem
+            OOM=$?
             [ $scaling != flood ] && echo
             echo
+
+            # Check if we got any exception
+            if [ $OOM != 0 ]; then
+                echo "## Warning: Invalid output detected (possible OOM). Skipping higher thread counts."
+                break
+            fi
         done
     ) | format_output
     echo
@@ -220,14 +229,14 @@ process_output() {
     local dir=${3:-.}
     case $problem in
         sedov)
-            ( grep "dWallClock" $dir/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$core');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;}} END {printf("%7.3f\n", t/n)}'
+            ( grep "dWallClock" $dir/_stdout_ || echo "" ) | awk 'BEGIN {t=0; n=0; printf("%3d",'$core');} {if ($3 != 0) {printf(" %8.4f ", $12); t+=$12; n++;}} END {printf(" %9.5f\n", t/n)}'
             ;;
         crtest)
-            grep "C01cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$core', $5, $8)}'
+            grep "p+-cycles" $dir/_stdout_ | awk '{if (NR==1) printf("%d %8.4f %8.4f ", '$core', $5, $8)}'
             awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
             ;;
         maclaurin)
-            grep cycles $dir/_stdout_ | awk 'BEGIN {printf("%d", '$core');} {printf("%7.3f %7.3f ", $5, $8)}'
+            grep cycles $dir/_stdout_ | awk 'BEGIN {printf("%d", '$core');} {printf(" %8.4f %8.4f ", $5, $8)}'
             grep -q cycles $dir/_stdout_ || echo ""
             awk '/Spent/ { printf("%s\n", $5) }' $dir/*log
             ;;
@@ -249,7 +258,8 @@ run_on_cores() {
     for j in $cores; do
         if [ $sequential -eq 1 ]; then
             ( cd $j && taskset -c $(( $j - 1 )) ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' /' > _stdout_ 2> /dev/null
-              process_output $problem $j )
+              process_output $problem $j
+              sleep 1 )
         else
             ( cd $j && taskset -c $(( $j - 1 )) ./piernik -n '&BASE_DOMAIN n_d = 3*'$nx' /' > _stdout_ 2> /dev/null ) &
         fi
@@ -285,12 +295,14 @@ profile_cores() {
         # Trick: +1 to "processor" number to be consistent with the 1-based numbering elsewhere
         PHYS_CORES=$(awk '
             function min(a,b) { return (a<b)?a:b; }
-            # Process lines containing "processor" or "core id"
-            /^processor|^core id/ {
+            # Process lines containing "processor", "core id", or "physical id"
+            /^processor|^core id|^physical id/ {
                 if ($1 ~ /processor/) p=$NF;
+                if ($1 ~ /physical/) phys=$NF;
                 if ($1 ~ /core/) {
-                    if ($NF in cores) cores[$NF] = min(p, cores[$NF]);
-                    else cores[$NF] = p;
+                    core_id = phys "-" $NF;  # Combine physical id and core id
+                    if (core_id in cores) cores[core_id] = min(p, cores[core_id]);
+                    else cores[core_id] = p;
                 }
             }
             # Print the physical cores

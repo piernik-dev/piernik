@@ -158,7 +158,7 @@ pep8: pycodestyle
 pycodestyle:
 	TSTNAME="  Pycodestyle check "; \
 	REMARK=" (with --ignore=E501,E722,W504,W605)"; \
-	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance $(BIN_DIR)/ask_jenkins --ignore=E501,E722,W504,W605 && \
+	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance --ignore=E501,E722,W504,W605 && \
 		$(ECHO) -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
 		( $(ECHO) -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
 
@@ -343,7 +343,7 @@ gold-clean:
 # Function to run a single gold test
 define run_gold_test
 	$(GOLD_TEST_SCRIPT) $(CONFIG_DIR)/$(1).config > $(GOLDSPACE)/$(1).gold_stdout 2> $(GOLDSPACE)/$(1).gold_stderr && \
-		$(ECHO) -e "  $(1) test "$(PASSED) || \
+		( grep Warning $(GOLDSPACE)/$(1).gold_stderr; $(ECHO) -e "  $(1) test "$(PASSED) ) || \
 		( $(ECHO) -e "  $(1) test "$(FAILED)" (more details in $(GOLDSPACE)/$(1).gold_std*)" && exit 1 )
 endef
 
