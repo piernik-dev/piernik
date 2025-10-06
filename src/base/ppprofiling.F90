@@ -135,7 +135,7 @@ contains
 
       use bcast,         only: piernik_MPI_Bcast
       use constants,     only: PPP_IO, PPP_MG, PPP_GRAV, PPP_CR, PPP_PART, PPP_MPI, &
-           &                   PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX
+           &                   PPP_AMR, PPP_CG, PPP_MAG, PPP_PROB, PPP_DEBUG, PPP_AUX, I_ZERO
       use dataio_pub,    only: nh, log_wr, problem_name, run_id, nrestart
       use mpisetup,      only: lbuff, master, slave
       use ppp_eventlist, only: use_profiling, disable_mask, profile_file
@@ -232,7 +232,7 @@ contains
       if (.not. watch_debug    ) disable_mask = disable_mask + PPP_DEBUG
       if (.not. watch_aux      ) disable_mask = disable_mask + PPP_AUX
 
-      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', nrestart, '.ppprofile.ascii'
+      write(profile_file, '(6a,i3.3,a)') trim(log_wr), '/', trim(problem_name), '_', trim(run_id), '_', max(I_ZERO, nrestart), '.ppprofile.ascii'
 
       call ppp_main%init("main", xxl)
 

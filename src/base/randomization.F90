@@ -49,6 +49,7 @@ contains
 !<
    subroutine init_randomization
 
+      use constants,  only: INVALID
       use dataio_pub, only: nrestart
 
       implicit none
@@ -59,7 +60,7 @@ contains
       if (.not.allocated(initseed)) allocate(initseed(seed_size))
       if (.not.allocated(redoseed)) allocate(redoseed(seed_size))
 
-      if (nrestart == 0) then
+      if (nrestart == INVALID) then
          do i= 1,seed_size; initseed(i)= 2**i; enddo   ! Simple seed 2,4,8,16,..
       endif
       call random_seed(PUT=initseed)

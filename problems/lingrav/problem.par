@@ -23,7 +23,6 @@
 
  $RESTART_CONTROL
     restart      = 'last'
-    nrestart     = 0
     res_id       = ''
  /
 
