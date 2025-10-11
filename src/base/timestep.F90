@@ -28,7 +28,6 @@
 
 !>
 !! \brief This module gathers all applicable timestep limits and computes next timestep.
-!! \deprecated remove "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required features and/or bug fixes
 !<
 
 module timestep
@@ -36,20 +35,12 @@ module timestep
    implicit none
 
    private
-   public :: time_step, cfl_manager, check_cfl_violation
-#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
+   public :: time_step, check_cfl_violation
    public :: init_time_step
-#endif /* __INTEL_COMPILER || _CRAYFTN */
 
    logical :: unwanted_negatives = .false.
    logical :: flexible_shrink
-#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
-   procedure(), pointer :: cfl_manager
-#else /* ! (__INTEL_COMPILER || _CRAYFTN) */
-   procedure(), pointer :: cfl_manager => init_time_step
-#endif /* !(__INTEL_COMPILER || _CRAYFTN) */
+   logical :: cfl_manager_active, cfl_manager_adaptive
 
 contains
 
@@ -71,34 +62,31 @@ contains
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
       repetitive_steps = .false.
+      cfl_manager_active = .true.
+      cfl_manager_adaptive = .false.
       select case (cflcontrol)
          case ('warn')
-            cfl_manager => cfl_warn
+            ! already set
          case ('redo', 'repeat')
-            cfl_manager => cfl_warn
             repetitive_steps = .true.
             flexible_shrink  = .false.
          case ('flex', 'flexible')
-            cfl_manager => cfl_warn
             repetitive_steps = .true.
             flexible_shrink  = .true.
          case ('auto', 'adaptive')
-            cfl_manager => cfl_auto
+         ! Timestep changes are used to estimate safe value of CFL for the next timestep (EXPERIMENTAL)
+            cfl_manager_adaptive = .true.
          case ('none', '')
-            if (associated(cfl_manager)) nullify(cfl_manager)
+            cfl_manager_active = .false.
          case default
             write(msg, '(3a)')"[timestep:init_time_step] Unknown cfl_manager '",trim(cflcontrol),"'. Assuming 'none'."
             call warn(msg)
-            if (associated(cfl_manager)) nullify(cfl_manager)
+            cfl_manager_active = .false.
       end select
-      if (.not.associated(cfl_manager)) then
+      if (.not.cfl_manager_active) then
          call warn("[timestep:init_time_step] cfl_manager was not associated.")
          return
       endif
-#if !(defined(__INTEL_COMPILER) || defined(_CRAYFTN))
-      !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
-      call cfl_manager
-#endif /* !__INTEL_COMPILER && !_CRAYFTN */
 
    end subroutine init_time_step
 
@@ -121,12 +109,12 @@ contains
       use dataio_pub,         only: tend, msg, warn
       use fargo,              only: timestep_fargo
       use fluidtypes,         only: var_numbers
-      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep, repetitive_steps
+      use global,             only: t, dt_old, dt_full, dt_max_grow, dt_initial, dt_min, dt_max, nstep
       use grid_cont,          only: grid_container
       use mpisetup,           only: master
       use ppp,                only: ppp_main
       use sources,            only: timestep_sources
-      use timestep_pub,       only: c_all, c_all_old
+      use timestep_pub,       only: c_all
 #ifdef COSM_RAYS
       use timestepcosmicrays, only: timestep_crs
 #endif /* COSM_RAYS */
@@ -206,8 +194,7 @@ contains
          if (dt_old > zero) dt = min(dt, dt_old*dt_max_grow)
       endif
 
-      if (associated(cfl_manager) .and. (main_call .neqv. repetitive_steps)) call cfl_manager
-      if (main_call) c_all_old = c_all
+      call cfl_manager(main_call)
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then
@@ -307,30 +294,53 @@ contains
 !>
 !! \brief This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
 !<
+   subroutine cfl_manager(main_call)
 
-   subroutine cfl_warn
-
-      use constants,    only: I_ONE, one
+      use constants,    only: I_ONE, one, half, zero
       use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, dt_cur_shrink, dt_shrink, repetitive_steps, tstep_attempt
+      use global,       only: cfl, cfl_max, dt, dt_old, dt_cur_shrink, dt_shrink, repetitive_steps, tstep_attempt
       use mpisetup,     only: master
       use repeatstep,   only: repeat_step, set_repeat_step, sync_repeat_step, clear_repeat_step
-      use timestep_pub, only: c_all, c_all_old, stepcfl
+      use timestep_pub, only: c_all, c_all_old, cfl_c, stepcfl
 
       implicit none
 
-      stepcfl = cfl * dt_cur_shrink
-      if (c_all_old > 0.) stepcfl = c_all / c_all_old * cfl * dt_cur_shrink
+      logical, intent(in) :: main_call
+      real                :: stepcfl_old
 
-      call clear_repeat_step
-      call set_repeat_step(unwanted_negatives)  ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
+      if (cfl_manager_active .and. (main_call .neqv. repetitive_steps)) then
+
+      stepcfl_old = stepcfl
+      if (c_all_old > zero) then
+         stepcfl = c_all / c_all_old * cfl * dt_cur_shrink
+      else
+         stepcfl = cfl * dt_cur_shrink
+         stepcfl_old = cfl
+      endif
+
+      if (cfl_manager_adaptive) then
+
+         if (stepcfl > zero .and. dt_old > zero) then
+            cfl_c = min(one, half * (cfl_c + min(one, stepcfl_old/stepcfl *dt/dt_old)))
+            dt = dt * cfl_c
+         else
+            cfl_c = one
+         endif
+
+      else
+
+         call clear_repeat_step
+         call set_repeat_step(unwanted_negatives)  ! \> information about unwanted_negatives from the last fluid_update call if disallow_negatives
+
+      endif
+
       if (master) then
          msg = ''
          if (stepcfl > cfl_max) then
-            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ", stepcfl
-            call set_repeat_step(.true.)
+            write(msg,'(a,g10.3)') "[timestep:cfl_manager] Possible violation of CFL: ", stepcfl
+            if (repetitive_steps) call set_repeat_step(.true.)
          else if (stepcfl < 2*cfl - cfl_max) then
-            write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
+            write(msg,'(2(a,g10.3))') "[timestep:cfl_manager] Low CFL: ", stepcfl, " << ", cfl
          endif
          if (len_trim(msg) > 0) call warn(msg)
       endif
@@ -351,52 +361,11 @@ contains
          call clear_repeat_step(.true.)  ! ignore repeat flag if step is not meant to be repeated
       endif
 
-   end subroutine cfl_warn
-
-!------------------------------------------------------------------------------------------
-!>
-!! \brief This routine detects sudden timestep changes due to strong velocity changes and interprets them as possible CFL criterion violations
-!! Timestep changes are used to estimate safe value of CFL for the next timestep (EXPERIMENTAL)
-!<
-
-   subroutine cfl_auto
-
-      use constants,    only: one, half, zero
-      use dataio_pub,   only: msg, warn
-      use global,       only: cfl, cfl_max, dt, dt_old
-      use mpisetup,     only: master
-      use timestep_pub, only: c_all, c_all_old, cfl_c, stepcfl
-
-      implicit none
-
-      real :: stepcfl_old
-
-      stepcfl_old = stepcfl
-      stepcfl = cfl
-      if (c_all_old > zero) then
-         stepcfl = c_all/c_all_old*cfl
-      else
-         stepcfl_old = cfl
       endif
 
-      if (stepcfl > zero .and. dt_old > zero) then
-         cfl_c = min(one, half * (cfl_c + min(one, stepcfl_old/stepcfl *dt/dt_old)))
-         dt = dt * cfl_c
-      else
-         cfl_c = one
-      endif
+      if (main_call) c_all_old = c_all
 
-      if (master) then
-         msg = ''
-         if (stepcfl > cfl_max) then
-            write(msg,'(a,g10.3)') "[timestep:cfl_auto] Possible violation of CFL: ",stepcfl
-         else if (stepcfl < 2*cfl - cfl_max) then
-            write(msg,'(2(a,g10.3))') "[timestep:cfl_auto] Low CFL: ", stepcfl, " << ", cfl
-         endif
-         if (len_trim(msg) > 0) call warn(msg)
-      endif
-
-   end subroutine cfl_auto
+   end subroutine cfl_manager
 
 !------------------------------------------------------------------------------------------
 !>
@@ -421,7 +390,6 @@ contains
 !! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.
 !! The final %timestep is multiplied by the Courant number specified in parameters of each task.
 !<
-
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
       use cg_level_connected, only: cg_level_connected_t

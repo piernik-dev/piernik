@@ -112,9 +112,9 @@ contains
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: init_opencl
 #endif /* PIERNIK_OPENCL */
+      use timestep,              only: init_time_step
 #if defined(__INTEL_COMPILER)
       !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
-      use timestep,              only: init_time_step
 #ifdef COSM_RAYS
       use crhelpers,             only: init_div_v
 #endif /* COSM_RAYS */
@@ -236,10 +236,7 @@ contains
       call init_multigrid                    ! depends on grid, geometry, units and arrays
 #endif /* MULTIGRID */
 
-#if defined(__INTEL_COMPILER)
-      !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call init_time_step
-#endif /* __INTEL_COMPILER */
 
       call init_fargo
 
