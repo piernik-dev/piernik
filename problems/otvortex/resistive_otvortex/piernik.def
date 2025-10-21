@@ -7,4 +7,4 @@
 #define IONIZED
 
 #define MAGNETIC
-#undef  RESISTIVE
+#define RESISTIVE

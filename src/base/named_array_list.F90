@@ -94,8 +94,16 @@ module named_array_list
 
    !> \brief the most commonly used 4D named arrays are u and b, thus we add shortcuts here
    type, extends(na_var_list) :: na_var_list_w
-      integer(kind=4) :: fi = INVALID                            !< fluid           : cg%w(wna%fi)
-      integer(kind=4) :: bi = INVALID                            !< magnetic field  : cg%w(wna%bi)
+      integer(kind=4) :: fi     = INVALID                            !< fluid                                     : cg%w(wna%fi)
+      integer(kind=4) :: bi     = INVALID                            !< magnetic field                            : cg%w(wna%bi)
+      integer(kind=4) :: xflx   = INVALID                            !< X face-flux field                         : cg%w(wna%xflx)
+      integer(kind=4) :: yflx   = INVALID                            !< Y face-flux field                         : cg%w(wna%yflx)
+      integer(kind=4) :: zflx   = INVALID                            !< Z face-flux field                         : cg%w(wna%zflx)
+      integer(kind=4) :: xbflx  = INVALID                            !< X face-flux field of magnetic field       : cg%w(wna%xbflx)
+      integer(kind=4) :: ybflx  = INVALID                            !< Y face-flux field of magnetic field       : cg%w(wna%ybflx)
+      integer(kind=4) :: zbflx  = INVALID                            !< Z face-flux field of magnetic field       : cg%w(wna%zbflx)
+      integer(kind=4) :: psiflx = INVALID                            !< flux of the auxillary scalar psi          : cg%w(wna%psiflx)
+
    contains
       procedure :: add2lst => add2lst_w                          !< Add a 4D array to the list
       procedure :: get_dim4                                      !< Get dim4 value for given array index
@@ -227,7 +235,7 @@ contains
    end subroutine add2lst_q
 
    subroutine add2lst_w(this, element)
-      use constants,  only: fluid_n, mag_n
+      use constants,  only: fluid_n, mag_n, xflx_n, yflx_n, zflx_n, xbflx_n, ybflx_n, zbflx_n, psiflx_n
       use dataio_pub, only: die, msg
 
       implicit none
@@ -265,8 +273,15 @@ contains
          type is (na_var_4d)
             if (allocated(lst(ubound(lst(:), dim=1))%compname)) deallocate(lst(ubound(lst(:), dim=1))%compname)
       end select
-      if (element%name == fluid_n) this%fi = ubound(this%lst(:), dim=1, kind=4)
-      if (element%name == mag_n)   this%bi = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == fluid_n)   this%fi      = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == mag_n)     this%bi      = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == xflx_n)    this%xflx    = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == yflx_n)    this%yflx    = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == zflx_n)    this%zflx    = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == xbflx_n)   this%xbflx   = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == ybflx_n)   this%ybflx   = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == zbflx_n)   this%zbflx   = ubound(this%lst(:), dim=1, kind=4)
+      if (element%name == psiflx_n)  this%psiflx  = ubound(this%lst(:), dim=1, kind=4)
 
       if (element%dim4 <= 0) then
          write(msg,'(3a,i0)')"[named_array_list:add2lst_w] Invalid dim4 for array '", trim(element%name), "': ", element%dim4

@@ -229,15 +229,16 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, AT_NO_B, PIERNIK_INIT_FLUIDS, xflx_n, yflx_n, zflx_n, RIEMANN_UNSPLIT
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: ord_fluid_prolong
+      use global,     only: ord_fluid_prolong, which_solver
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
 #ifdef MAGNETIC
-      use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER, psi_n, psih_n
+      use constants,  only: mag_n, magh_n, ndims, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, VAR_CENTER,&
+      &                     psi_n, psih_n, xbflx_n, ybflx_n, zbflx_n, psiflx_n
       use global,     only: cc_mag, ord_mag_prolong
 #endif /* MAGNETIC */
 
@@ -258,6 +259,14 @@ contains
       call this%reg_var(wa_n, multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all, ord_prolong = ord_fluid_prolong) !! Main array of all fluids' components (for t += dt/2)
+
+      if (which_solver == RIEMANN_UNSPLIT) then  ! or rather .not. is_split ?
+         call this%reg_var(xflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! X Face-Fluid flux array
+         call this%reg_var(yflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! Y Face-Fluid flux array
+         call this%reg_var(zflx_n, vital = .false., restart_mode = AT_NO_B, dim4 = flind%all, ord_prolong = ord_fluid_prolong)   !! Z Face-Fluid flux array
+         call set_flux_names
+      endif
+
       call set_fluid_names
 #ifdef COSM_RAYS
       call set_cr_names
@@ -269,6 +278,14 @@ contains
 #ifdef MAGNETIC
       call this%reg_var(mag_n,  vital = .true.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B, position=pia)  !! Main array of magnetic field's components, "b"
       call this%reg_var(magh_n, vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+
+      if (which_solver == RIEMANN_UNSPLIT) then
+         call this%reg_var(xbflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
+         call this%reg_var(ybflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
+         call this%reg_var(zbflx_n,   vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
+         call this%reg_var(psiflx_n,  vital = .false.,  dim4 = ndims, ord_prolong = ord_mag_prolong, restart_mode = AT_OUT_B)  !! Main array of magnetic field's components, "b"
+      endif
+
       call set_magnetic_names
 
       if (cc_mag) then
@@ -387,7 +404,8 @@ contains
 #ifdef MAGNETIC
       subroutine set_magnetic_names
 
-         use constants,        only: xdim, ydim, zdim
+         use constants,        only: xdim, ydim, zdim, RIEMANN_UNSPLIT
+         use global,           only: which_solver
          use named_array_list, only: wna, na_var_4d
 
          implicit none
@@ -398,6 +416,27 @@ contains
                call lst(wna%bi)%set_compname(xdim, "magx")
                call lst(wna%bi)%set_compname(ydim, "magy")
                call lst(wna%bi)%set_compname(zdim, "magz")
+
+               if (which_solver == RIEMANN_UNSPLIT) then
+
+                  call lst(wna%xbflx)%set_compname(xdim,   "bxxflx")
+                  call lst(wna%xbflx)%set_compname(ydim,   "byxflx")
+                  call lst(wna%xbflx)%set_compname(zdim,   "bzxflx")
+
+                  call lst(wna%ybflx)%set_compname(xdim,   "bxyflx")
+                  call lst(wna%ybflx)%set_compname(ydim,   "byyflx")
+                  call lst(wna%ybflx)%set_compname(zdim,   "bzyflx")
+
+                  call lst(wna%zbflx)%set_compname(xdim,   "bxzflx")
+                  call lst(wna%zbflx)%set_compname(ydim,   "byzflx")
+                  call lst(wna%zbflx)%set_compname(zdim,   "bzzflx")
+
+                  call lst(wna%psiflx)%set_compname(xdim,   "psixflx")
+                  call lst(wna%psiflx)%set_compname(ydim,   "psiyflx")
+                  call lst(wna%psiflx)%set_compname(zdim,   "psizflx")
+
+               endif
+
          end select
 
       end subroutine set_magnetic_names
@@ -563,4 +602,73 @@ contains
 
    end subroutine mark_orphans
 
+   subroutine set_flux_names
+
+         use fluidindex,       only: flind
+         use fluids_pub,       only: has_dst, has_ion, has_neu
+         use named_array_list, only: wna, na_var_4d
+
+         implicit none
+
+         select type (lst => wna%lst)
+            type is (na_var_4d)
+               if (has_ion) then
+                  call lst(wna%xflx)%set_compname(flind%ion%idn, "xfdeni")
+                  call lst(wna%xflx)%set_compname(flind%ion%imx, "xfmomxi")
+                  call lst(wna%xflx)%set_compname(flind%ion%imy, "xfmomyi")
+                  call lst(wna%xflx)%set_compname(flind%ion%imz, "xfmomzi")
+                  if (flind%ion%has_energy) call lst(wna%xflx)%set_compname(flind%ion%ien, "xfenei")
+
+                  call lst(wna%yflx)%set_compname(flind%ion%idn, "yfdeni")
+                  call lst(wna%yflx)%set_compname(flind%ion%imx, "yfmomxi")
+                  call lst(wna%yflx)%set_compname(flind%ion%imy, "yfmomyi")
+                  call lst(wna%yflx)%set_compname(flind%ion%imz, "yfmomzi")
+                  if (flind%ion%has_energy) call lst(wna%yflx)%set_compname(flind%ion%ien, "yfenei")
+
+                  call lst(wna%zflx)%set_compname(flind%ion%idn, "zfdeni")
+                  call lst(wna%zflx)%set_compname(flind%ion%imx, "zfmomxi")
+                  call lst(wna%zflx)%set_compname(flind%ion%imy, "zfmomyi")
+                  call lst(wna%zflx)%set_compname(flind%ion%imz, "zfmomzi")
+                  if (flind%ion%has_energy) call lst(wna%zflx)%set_compname(flind%ion%ien, "zfenei")
+
+               endif
+
+               if (has_neu) then
+                  call lst(wna%xflx)%set_compname(flind%neu%idn, "xfdenn")
+                  call lst(wna%xflx)%set_compname(flind%neu%imx, "xfmomxn")
+                  call lst(wna%xflx)%set_compname(flind%neu%imy, "xfmomyn")
+                  call lst(wna%xflx)%set_compname(flind%neu%imz, "xfmomzn")
+                  if (flind%neu%has_energy) call lst(wna%xflx)%set_compname(flind%neu%ien, "xfenen")
+
+                  call lst(wna%yflx)%set_compname(flind%neu%idn, "yfdenn")
+                  call lst(wna%yflx)%set_compname(flind%neu%imx, "yfmomxn")
+                  call lst(wna%yflx)%set_compname(flind%neu%imy, "yfmomyn")
+                  call lst(wna%yflx)%set_compname(flind%neu%imz, "yfmomzn")
+                  if (flind%neu%has_energy) call lst(wna%yflx)%set_compname(flind%neu%ien, "yfenen")
+
+                  call lst(wna%zflx)%set_compname(flind%neu%idn, "zfdenn")
+                  call lst(wna%zflx)%set_compname(flind%neu%imx, "zfmomxn")
+                  call lst(wna%zflx)%set_compname(flind%neu%imy, "zfmomyn")
+                  call lst(wna%zflx)%set_compname(flind%neu%imz, "zfmomzn")
+                  if (flind%neu%has_energy) call lst(wna%zflx)%set_compname(flind%neu%ien, "zfenen")
+               endif
+
+               if (has_dst) then
+                  call lst(wna%xflx)%set_compname(flind%dst%idn, "xfdend")
+                  call lst(wna%xflx)%set_compname(flind%dst%imx, "xfmomxd")
+                  call lst(wna%xflx)%set_compname(flind%dst%imy, "xfmomyd")
+                  call lst(wna%xflx)%set_compname(flind%dst%imz, "xfmomzd")
+
+                  call lst(wna%yflx)%set_compname(flind%dst%idn, "yfdend")
+                  call lst(wna%yflx)%set_compname(flind%dst%imx, "yfmomxd")
+                  call lst(wna%yflx)%set_compname(flind%dst%imy, "yfmomyd")
+                  call lst(wna%yflx)%set_compname(flind%dst%imz, "yfmomzd")
+
+                  call lst(wna%zflx)%set_compname(flind%dst%idn, "zfdend")
+                  call lst(wna%zflx)%set_compname(flind%dst%imx, "zfmomxd")
+                  call lst(wna%zflx)%set_compname(flind%dst%imy, "zfmomyd")
+                  call lst(wna%zflx)%set_compname(flind%dst%imz, "zfmomzd")
+               endif
+         end select
+      end subroutine set_flux_names
 end module cg_list_global

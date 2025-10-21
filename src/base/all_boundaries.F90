@@ -79,11 +79,12 @@ contains
 
    end subroutine all_bnd_vital_q
 
-   subroutine all_fluid_boundaries(dir, nocorners)
+   subroutine all_fluid_boundaries(dir, nocorners, istep)
 
       use cg_leaves,          only: leaves
 !      use cg_level_finest,    only: finest
-      use constants,          only: xdim, zdim
+      use constants,          only: xdim, zdim, uh_n, first_stage
+      use global,             only: integration_order
       use domain,             only: dom
       use named_array_list,   only: wna
       use ppp,                only: ppp_main
@@ -92,8 +93,9 @@ contains
 
       integer(kind=4), optional, intent(in) :: dir       !< select only this direction
       logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
+      integer,         optional, intent(in) :: istep
 
-      integer(kind=4)                     :: d
+      integer(kind=4) :: d, ind
       character(len=*), parameter :: abf_label = "all_fluid_boundaries"
 
       if (present(dir)) then
@@ -105,7 +107,12 @@ contains
 !      call finest%level%restrict_to_base
 
       ! should be more selective (modified leaves?)
-      call leaves%leaf_arr4d_boundaries(wna%fi, dir=dir, nocorners=nocorners)
+      ind = wna%fi
+      if (present(istep)) then
+         if (istep == first_stage(integration_order)) ind = wna%ind(uh_n)
+      endif
+      call leaves%leaf_arr4d_boundaries(ind, dir=dir, nocorners=nocorners)
+
       if (present(dir)) then
          call leaves%bnd_u(dir)
       else
@@ -119,34 +126,47 @@ contains
    end subroutine all_fluid_boundaries
 
 #ifdef MAGNETIC
-   subroutine all_mag_boundaries
+   subroutine all_mag_boundaries(istep)
 
       use cg_leaves,        only: leaves
 !!$      use cg_list_global,   only: all_cg
-      use constants,        only: xdim, zdim, psi_n, BND_INVALID, PPP_MAG
+      use constants,        only: xdim, zdim, psi_n, BND_INVALID, PPP_MAG, psih_n, magh_n, first_stage
       use domain,           only: dom
-      use global,           only: psi_bnd
+      use global,           only: psi_bnd, integration_order
       use named_array_list, only: wna, qna
       use ppp,              only: ppp_main
 
       implicit none
 
-      integer(kind=4) :: dir
+      integer, optional, intent(in) :: istep
+
+      integer(kind=4) :: dir, ind
       character(len=*), parameter :: abm_label = "all_mag_boundaries"
 
       call ppp_main%start(abm_label, PPP_MAG)
 
+
       do dir = xdim, zdim
          if (dom%has_dir(dir)) call leaves%bnd_b(dir)
       enddo
-      call leaves%leaf_arr4d_boundaries(wna%bi)
-      if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
 
-      if (qna%exists(psi_n)) then
+      ind = wna%bi
+      if (present(istep)) then
+         if (istep == first_stage(integration_order)) ind = wna%ind(magh_n)
+      endif
+      call leaves%leaf_arr4d_boundaries(ind)
+
+      if (qna%exists(psi_n)) then  ! assumed that qna%exists(psih_n) too
+         ind = qna%ind(psi_n)
+         if (present(istep)) then
+            if (istep == first_stage(integration_order)) ind = qna%ind(psih_n)
+         endif
+
+         call leaves%leaf_arr3d_boundaries(ind)
          if (psi_bnd == BND_INVALID) then
-            call leaves%external_boundaries(qna%ind(psi_n))
+            call leaves%external_boundaries(ind)
          else
-            call leaves%external_boundaries(qna%ind(psi_n), bnd_type=psi_bnd)
+            call leaves%external_boundaries(ind, bnd_type=psi_bnd)
          endif
       endif
 

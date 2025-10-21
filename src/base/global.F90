@@ -46,7 +46,8 @@ module global
         &    repetitive_steps, integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, use_smallei, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, do_external_corners, prefer_merged_MPI, waitall_timeout, &
-        &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver
+        &    divB_0_method, cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd, ord_mag_prolong, ord_fluid_prolong, which_solver, use_uhi, is_split
+
 
    logical         :: dn_negative = .false.
    logical         :: ei_negative = .false.
@@ -65,7 +66,10 @@ module global
    logical         :: cc_mag                   !< use cell-centered magnetic field
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
    integer         :: tstep_attempt            !< /= 0 when we retry timesteps
-   integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT or RIEMANN_SPLIT
+   integer         :: which_solver             !< one of RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT or RIEMANN_UNSPLIT
+   logical         :: is_split                 !< do we use directional splitting or not?
+   logical         :: use_uhi = .false.        !< .true. ⇒ apply BCs to uhi
+   real, parameter :: cfl_unsplit = 0.3        !< maximum recommended CFL factor for the unsplit solver
 
    ! Namelist variables
 
@@ -109,7 +113,7 @@ module global
    integer(kind=4)               :: ord_mag_prolong   !< prolongation order for B and psi
    integer(kind=4)               :: ord_fluid_prolong !< prolongation order for u
    logical                       :: do_external_corners  !< when .true. then perform boundary exchanges inside external guardcells
-   character(len=cbuff_len)      :: solver_str        !< allow to switch between RIEMANN and RTVD without recompilation
+   character(len=cbuff_len)      :: solver_str           !< allow to switch between RIEMANN and RTVD without recompilation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, disallow_negatives, disallow_CRnegatives, cfl_max, use_smalld, use_smallei, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     max_redostep_attempts, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
@@ -183,7 +187,7 @@ contains
       use bcast,      only: piernik_MPI_Bcast
       use constants,  only: big_float, one, PIERNIK_INIT_DOMAIN, INVALID, DIVB_CT, DIVB_HDC, &
            &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO, O_INJ, O_LIN, O_I2, INVALID, &
-           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
+           &                RTVD_SPLIT, HLLC_SPLIT, RIEMANN_SPLIT, RIEMANN_UNSPLIT, GEO_XYZ, V_INFO, V_DEBUG, V_ESSENTIAL
       use dataio_pub, only: die, msg, warn, code_progress, printinfo, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave
@@ -198,8 +202,8 @@ contains
 
       ! Begin processing of namelist parameters
 
-      which_solver = RTVD_SPLIT  ! \todo: change the default to RIEMANN_SPLIT
-      divB_0       = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
+      which_solver      = RIEMANN_SPLIT
+      divB_0            = "HDC"  ! This is the default for the Riemann solver, for RTVD it will be changed to "CT" anyway
 
       ! For RIEMANN_SPLIT 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
       ! Leave RTVD defaults as they were before the implementation of the Riemann HLLD solver
@@ -415,6 +419,7 @@ contains
 
       endif
 
+      is_split = .true.
       select case (solver_str)
          case ("")  ! leave the default
          case ("rtvd", "RTVD")
@@ -422,8 +427,11 @@ contains
          case ("hllc", "HLLC")
             which_solver = HLLC_SPLIT
             call warn("[global:init_global] The HLLC solver is not maintained and may be less acurate or nonfunctional on some setups. Don't use it for production runs.")
-         case ("riemann", "Riemann", "RIEMANN")
+         case ("riemann", "Riemann", "RIEMANN", "RIEMANN_SPLIT", "riemann_split")
             which_solver = RIEMANN_SPLIT
+         case ("UNSPLIT", "unsplit", "van_leer", "Riemann_unsplit", "RIEMANN_UNSPLIT", "riemann_unsplit")  ! This is not the most clear way to choose the solver
+            which_solver = RIEMANN_UNSPLIT
+            is_split = .false.
          case default
             call die("[global:init_global] unrecognized solver: '" // trim(solver_str) // "'")
       end select
@@ -437,6 +445,8 @@ contains
 #ifdef MAGNETIC
             call die("[global:init_global] MAGNETIC not compatible with HLLC")
 #endif /* MAGNETIC */
+         case (RIEMANN_UNSPLIT)
+            if (dom%geometry_type /= GEO_XYZ) call die("[global:init_global] Unsplit riemann solver is implemented only for cartesian geometry")
          case default
             call die("[global:init_global] no solvers defined")
       end select
@@ -463,6 +473,11 @@ contains
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
+
+      if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) then
+         if (master) call warn("[global:init_global] RTVD works only with Constrained Transport. Enforcing.")
+         divB_0_method = DIVB_CT
+      endif
 
       if ((which_solver == RTVD_SPLIT) .and. (divB_0_method /= DIVB_CT)) then
          if (master) call warn("[global:init_global] RTVD works only with Constrained Transport. Enforcing.")
@@ -500,10 +515,22 @@ contains
             case (HLLC_SPLIT)
                call printinfo("    HD solver: HLLC.", V_INFO)
             case (RIEMANN_SPLIT)
-               call printinfo("    (M)HD solver: Riemann.", V_INFO)
+               call printinfo("    (M)HD solver:Split Riemann.", V_INFO)
+            case (RIEMANN_UNSPLIT)
+               call printinfo("    (M)HD solver:Unsplit Riemann.", V_INFO)
             case default
                call die("[global:init_global] unrecognized hydro solver")
          end select
+
+         if (.not. is_split) then
+            if (cfl > 0.5) call warn("[global:init_global] Unsplit MHD solver chosen. CFL > 0.5 may lead to unexpected result.")
+         endif
+#ifdef MAGNETIC
+         if (.not. is_split) then
+            if (cfl > cfl_unsplit) call warn("[global:init_global] Unsplit MHD solver may be unstable with CFL > 0.3")
+            if (cfl_glm > cfl_unsplit) call warn("[global:init_global] Unsplit MHD solver chosen. Ideal CFL_GLM = 0.3. Anything else may lead to unexpected result.")
+         endif
+#endif /* MAGNETIC */
       endif
 
 #ifdef MAGNETIC

@@ -93,7 +93,7 @@ contains
       use cg_cost_data, only: I_MHD
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: GEO_XYZ, pMAX, pMIN, small, DIVB_HDC, RIEMANN_SPLIT
+      use constants,    only: GEO_XYZ, pMAX, pMIN, small, DIVB_HDC, RIEMANN_SPLIT, RIEMANN_UNSPLIT
       use dataio_pub,   only: die
       use domain,       only: dom
       use global,       only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method, which_solver
@@ -104,7 +104,7 @@ contains
       integer                         :: i, j, k
 
       if (divB_0_method /= DIVB_HDC) return
-      if (which_solver /= RIEMANN_SPLIT) call die("[hdc:update_chspeed] Only Riemann solver has DIVB_HDC implemented")
+      if (all(which_solver /= [RIEMANN_SPLIT, RIEMANN_UNSPLIT])) call die("[hdc:update_chspeed] Only Riemann solvers have DIVB_HDC implemented")
 
       if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
       if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
@@ -166,7 +166,11 @@ contains
          if (ch_grid) then
             ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
-            cgl%cg%wa = merge(small, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt, dom%eff_dim == 0)
+            if (dt > 0.) then
+               cgl%cg%wa = merge(small, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt, dom%eff_dim == 0)
+            else
+               cgl%cg%wa = small
+            endif
          else
             ! Bind chspeed to fastest possible gas waves. Beware: check whether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke
@@ -282,13 +286,13 @@ contains
 !!
 !! dedner A. Mignone et al. / Journal of Computational Physics 229 (2010) 5896–5920, eq. 9
 !<
-   subroutine glmdamping
+   subroutine glmdamping(half)
 
       use allreduce,        only: piernik_MPI_Allreduce
       use cg_cost_data,     only: I_MHD
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT
+      use constants,        only: psi_n, DIVB_HDC, pMIN, RIEMANN_SPLIT, RIEMANN_UNSPLIT
       use dataio_pub,       only: die
       use domain,           only: dom
       use global,           only: glm_alpha, dt, divB_0_method, which_solver
@@ -296,23 +300,29 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
+      logical, optional, intent(in) :: half
 
-      real :: fac
+      type(cg_list_element), pointer :: cgl
+      real :: fac, dt_eff
 
       if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to if (.not. qna%exists(psi_n))
-      if (which_solver /= RIEMANN_SPLIT) call die("[hdc:glmdamping] Only Riemann solver has DIVB_HDC implemented")
+      if (all(which_solver /= [RIEMANN_SPLIT, RIEMANN_UNSPLIT])) call die("[hdc:glmdamping] Only Riemann solvers have DIVB_HDC implemented")
 
       if (qna%exists(psi_n)) then
 
          fac = 0.
+
+         dt_eff = dt
+         if (present(half)) then
+            if (half) dt_eff = dt/2.0
+         endif
 
          if (dom%eff_dim > 0) then
             cgl => leaves%first
             do while (associated(cgl))
                call cgl%cg%costs%start
 
-               fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt))
+               fac = max(fac, glm_alpha*chspeed/(minval(cgl%cg%dl, mask=dom%has_dir)/dt_eff))
 
                call cgl%cg%costs%stop(I_MHD)
                cgl => cgl%nxt

@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 256, 256, 1
+    n_d = 128,128, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -25,7 +25,7 @@
  /
 
  $END_CONTROL
-    tend   = 0.60
+    tend   = 1.60
  /
 
  $OUTPUT_CONTROL
@@ -35,7 +35,7 @@
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
-    vars(1:) = 'magx', 'dens', 'magy', 'magz', 'pres', 'velx', 'vely', 'velz'
+    vars(1:) = 'magx', 'dens', 'magy', 'magz', 'pres', 'velx', 'vely', 'velz', 'divb', 'psi'
  /
 
  $FLUID_IONIZED
@@ -49,16 +49,20 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.8
+    cfl    = 0.2
     smalld = 1.e-3
     smallei= 1.e-5
     limiter= 'vanleer'
- /
+    solver_str = 'unsplit'
+    disallow_negatives = .false.
+    print_divb = 1
+    glm_alpha = 0.01
+    cfl_glm = 2.0
+    ch_grid = .false.
+/
 
  $GRAVITY
  /
-
- ! Resistivity is not used as riemann solver does not support it
 
  $RESISTIVITY
    eta_0      = 1.0e-4

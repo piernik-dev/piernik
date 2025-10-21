@@ -1,0 +1,89 @@
+! This problem seems to schow nearly 2nd order spatial accuracy:
+! resolution L2-error
+!  32   16   0.00996214
+!  48   24   0.00559514
+!  64   32   0.00347388
+!  96   48   0.00171573
+!  128  64   0.00102726
+!  192  96   0.00049221
+!  256 128   0.00029084
+!  384 192   0.00013753
+!  512 256   0.00008043
+!  768 384   0.00003744
+! 1024 512   0.00002160
+! The L2 reduction with resolution is slower than expected but it may be due
+! to increasing number of timesteps required
+
+$BASE_DOMAIN
+  n_d = 512,256,1
+  nb  = 4
+  bnd_xl = 'per'
+  bnd_xr = 'per'
+  bnd_yl = 'per'
+  bnd_yr = 'per'
+  bnd_zl = 'per'
+  bnd_zr = 'per'
+  xmin   =  0.0
+  xmax   =  1.0
+  ymin   =  0.0
+  ymax   =  0.5       ! kx/ky
+  zmin   =  0.0
+  zmax   =  1.0       ! kx/kz but since kz = 0 effectively drop this dimension
+/
+
+$MPI_BLOCKS
+/
+
+$UNITS
+/
+
+$RESTART_CONTROL
+   restart  = 'last'
+   res_id   = ''
+/
+
+$END_CONTROL
+  tend = 0.447213595     ! one time-period T = kx/sqrt(kx**2 + ky**2 + kz**2), here 2pi /sqrt(20 pi^2) = 1/sqrt(5.)
+!  nend = 100000
+/
+
+$OUTPUT_CONTROL
+!   verbosity = "laconic"
+   problem_name = 'cpaw'
+   run_id = 'tst'
+   dt_hdf = 0.5
+   dt_res = 0.0
+   dt_log = 0.02
+   dt_tsl = 0.02
+   vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'magB', "pres", "divb", "divb4", "psi"
+/
+
+$FLUID_NEUTRAL
+  gamma = 1.6667
+/
+
+$NUMERICAL_SETUP
+  cfl     = 0.3  ! For the unsplit solver cfl = 0.41 is near the maximum obtainable without triggering numerical instabilities
+  smalld  = 1.e-5
+  smallei = 1.e-5
+  limiter = 'vanleer'
+  solver_str = 'unsplit'
+  cfl_glm = 0.3
+  print_divb = 10
+!  cflcontrol = 'auto'
+/
+
+$PROBLEM_CONTROL
+   d0  = 1.0
+   p0  = 0.1
+   vx0 = 0.0
+   vy0 = 0.0
+   vz0 = 0.0
+   A   = 0.1
+   kx  = 6.283185307   ! 2pi
+   ky  = 12.566370614  ! 4pi
+   kz  = 0.0
+/
+
+$AMR
+/

@@ -64,8 +64,15 @@ module grid_cont_na
 #endif /* NBODY */
 
       ! handy shortcuts to some entries in w(:)
-      real, dimension(:,:,:,:), pointer :: u     => null()  !< Main array of all fluids' components
-      real, dimension(:,:,:,:), pointer :: b     => null()  !< Main array of magnetic field's components
+      real, dimension(:,:,:,:), pointer :: u       => null()  !< Main array of all fluids' components
+      real, dimension(:,:,:,:), pointer :: b       => null()  !< Main array of magnetic field's components
+      real, dimension(:,:,:,:), pointer :: fx      => null()  !< Main array of X-faced flux field components
+      real, dimension(:,:,:,:), pointer :: gy      => null()  !< Main array of Y-faced flux field components
+      real, dimension(:,:,:,:), pointer :: hz      => null()  !< Main array of Z-faced flux field components
+      real, dimension(:,:,:,:), pointer :: bfx     => null()  !< Main array of X-faced flux field components
+      real, dimension(:,:,:,:), pointer :: bgy     => null()  !< Main array of Y-faced flux field components
+      real, dimension(:,:,:,:), pointer :: bhz     => null()  !< Main array of Z-faced flux field components
+      real, dimension(:,:,:,:), pointer :: psiflx  => null()  !< Main array of Z-faced flux field components
 
    contains
 
@@ -76,6 +83,7 @@ module grid_cont_na
       ! These should be private procedures but we need them in cg_list_global:reg_var
       procedure :: add_na                !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d             !< Register a new 4D entry in current cg with given name.
+      procedure :: cleanup_flux
 
    end type grid_container_na_t
 
@@ -140,8 +148,16 @@ contains
       call check_mem_usage
 
       ! shortcuts
-      if (wna%fi > INVALID)  this%u  => this%w(wna%fi)%arr
-      if (wna%bi > INVALID)  this%b  => this%w(wna%bi)%arr
+      if (wna%fi     > INVALID)  this%u       => this%w(wna%fi)%arr
+      if (wna%bi     > INVALID)  this%b       => this%w(wna%bi)%arr
+      if (wna%xflx   > INVALID)  this%fx      => this%w(wna%xflx)%arr
+      if (wna%yflx   > INVALID)  this%gy      => this%w(wna%yflx)%arr
+      if (wna%zflx   > INVALID)  this%hz      => this%w(wna%zflx)%arr
+      if (wna%xbflx  > INVALID)  this%bfx     => this%w(wna%xbflx)%arr
+      if (wna%ybflx  > INVALID)  this%bgy     => this%w(wna%ybflx)%arr
+      if (wna%zbflx  > INVALID)  this%bhz     => this%w(wna%zbflx)%arr
+      if (wna%psiflx > INVALID)  this%psiflx  => this%w(wna%psiflx)%arr
+
       if (qna%wai > INVALID) this%wa => this%q(qna%wai)%arr
 
 #ifdef ISO
@@ -230,4 +246,22 @@ contains
 
    end subroutine set_constant_b_field
 
+   subroutine cleanup_flux(this)
+
+      implicit none
+
+      class(grid_container_na_t), intent(inout) :: this !< object invoking type-bound procedure
+
+      if (associated(this%fx) .and. associated(this%gy) .and. associated(this%hz)) then
+            this%fx(:,:,:,:) = 0.0
+            this%gy(:,:,:,:) = 0.0
+            this%hz(:,:,:,:) = 0.0
+      endif
+      if (associated(this%bfx) .and. associated(this%bgy) .and. associated(this%bhz) .and. associated(this%psiflx)) then
+            this%bfx(:,:,:,:)    = 0.0
+            this%bgy(:,:,:,:)    = 0.0
+            this%bhz(:,:,:,:)    = 0.0
+            this%psiflx(:,:,:,:) = 0.0
+      endif
+   end subroutine cleanup_flux
 end module grid_cont_na

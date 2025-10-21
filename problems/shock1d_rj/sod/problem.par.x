@@ -1,0 +1,77 @@
+$BASE_DOMAIN
+  n_d = 512,1,1
+  nb  = 4
+  bnd_xl = 'out'
+  bnd_xr = 'out'
+  bnd_yl = 'per'
+  bnd_yr = 'per'
+  bnd_zl = 'per'
+  bnd_zr = 'per'
+  xmin   =  0.0
+  xmax   =  1.0
+  ymin   =  0.0
+  ymax   =  1.0
+  zmin   =  0.0
+  zmax   =  1.0
+/
+
+$MPI_BLOCKS
+/
+
+$UNITS
+/
+
+$RESTART_CONTROL
+   restart  = 'last'
+   res_id   = ''
+   nrestart = 0
+/
+
+$END_CONTROL
+  tend = 0.2
+  nend = 1000000
+/
+
+$OUTPUT_CONTROL
+   problem_name = 'sod'
+   run_id = 'st1'
+   dt_hdf = 0.02
+   dt_res = 0.0
+   dt_log = 0.02
+   dt_tsl = 0.02
+   vars(1:) = 'dens', 'ener', 'velx', 'pres'
+/
+
+$FLUID_NEUTRAL
+  gamma = 1.6667
+/
+
+$NUMERICAL_SETUP
+  cfl     = 0.2
+  smalld  = 1.e-5
+  smallei = 1.e-5
+  limiter = 'vanleer'
+  solver_str = 'unsplit'
+/
+
+$PROBLEM_CONTROL
+   dl  = 1.0
+   vxl = 0.0
+   vyl = 0.0
+   vzl = 0.0
+   el  = 1.499925004
+   dr  = 0.125
+   vxr = 0.0
+   vyr = 0.0
+   vzr = 0.0
+   er  = 0.1499925004 !  1.199940003
+   bxl = 0.0
+   byl = 0.0
+   bzl = 0.0
+   bxr = 0.0
+   byr = 0.0
+   bzr = 0.0
+/
+
+$AMR
+/

@@ -90,6 +90,17 @@ contains
          case ("dend", "deni", "denn")
             f%fu = "\rm{g}/\rm{cm}^3"
             f%f2cgs = 1.0 / (gram/cm**3)
+         case ("xfdenn", "xfdend", "xfdeni","yfdenn", "yfdend", "yfdeni","zfdenn", "zfdend", "zfdeni")
+            f%fu = "\rm{g}/\rm{cm}^2/\rm{s}"
+            f%f2cgs = 1.0 / (gram/cm**2/sek)
+         case ("xfmomxn", "xfmomyn", "xfmomzn","xfmomxd", "xfmomyd", "xfmomzd","xfmomxi", "xfmomyi", "xfmomzi", &
+         &     "yfmomxn", "yfmomyn", "yfmomzn","yfmomxd", "yfmomyd", "yfmomzd","yfmomxi", "yfmomyi", "yfmomzi", &
+         &     "zfmomxn", "zfmomyn", "zfmomzn","zfmomxd", "zfmomyd", "zfmomzd","zfmomxi", "zfmomyi", "zfmomzi")
+            f%fu = "\rm{erg}/\rm{cm}^2/\rm{s}"
+            f%f2cgs = 1.0 / (erg/cm**2/sek)
+         case ("xfenen", "xfened", "xfenei","yfenen", "yfened", "yfenei","zfenen", "zfened", "zfenei")
+            f%fu = "\rm{erg}/\rm{cm}/\rm{s}^2"
+            f%f2cgs = 1.0 / (erg/cm/sek**2)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi", "v", "c_s", "cs")
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
@@ -116,6 +127,7 @@ contains
             f%fu= ""
          case ("magdir")
             f%fu = "\rm{radians}"
+         case ("xflux")
 #ifdef COSM_RAYS
          ! ToDo: Adopt for wider range
          case ("cr01" : "cr99")
@@ -233,6 +245,14 @@ contains
             case ("tdyn")
                newname="dynamical_time"
 #endif /* NBODY */
+            case ("xfdeni", "xfdenn", "xfdend", "yfdeni", "yfdenn", "yfdend", "zfdeni", "zfdenn", "zfdend")
+               write  (newname, '(A1,"_directed_density_flux")') var(1:1)
+         case ("xfmomxn", "xfmomyn", "xfmomzn","xfmomxd", "xfmomyd", "xfmomzd","xfmomxi", "xfmomyi", "xfmomzi", &
+         &     "yfmomxn", "yfmomyn", "yfmomzn","yfmomxd", "yfmomyd", "yfmomzd","yfmomxi", "yfmomyi", "yfmomzi", &
+         &     "zfmomxn", "zfmomyn", "zfmomzn","zfmomxd", "zfmomyd", "zfmomzd","zfmomxi", "zfmomyi", "zfmomzi")
+               write  (newname, '(A1,"_directed_momentum_",A1,"_flux")') var(1:1),var(6:6)
+            case ("xfenei", "xfenen", "xfened", "yfenei", "yfenen", "yfened", "zfenei", "zfenen", "zfened")
+               write  (newname, '(A1,"_directed_energy_flux")') var(1:1)
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -325,7 +345,7 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5,      only: common_shortcuts
-      use constants,        only: dsetnamelen, I_ONE
+      use constants,        only: dsetnamelen, I_ONE, INVALID
       use fluids_pub,       only: has_ion, has_neu, has_dst
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -483,6 +503,42 @@ contains
             if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG)
          case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
             if (associated(fl_dni)) tab(:,:,:) = cg%u(fl_dni%imx + i_xyz, RNG)
+         case ("xfdenn","xfdeni","xfdend")
+            if (associated(fl_dni)) then
+               if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%idn, RNG)
+            endif
+         case ("yfdenn","yfdeni","yfdend")
+            if (associated(fl_dni)) then
+               if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%idn, RNG)
+            endif
+         case ("zfdenn","zfdeni","zfdend")
+            if (associated(fl_dni)) then
+               if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%idn, RNG)
+            endif
+         case ("xfmomxn", "xfmomyn", "xfmomzn","xfmomxd", "xfmomyd", "xfmomzd","xfmomxi", "xfmomyi", "xfmomzi")
+               if (associated(fl_dni)) then
+                 if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%imx + i_xyz, RNG)
+               endif
+         case ("yfmomxn", "yfmomyn", "yfmomzn","yfmomxd", "yfmomyd", "yfmomzd","yfmomxi", "yfmomyi", "yfmomzi")
+               if (associated(fl_dni)) then
+                 if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%imx + i_xyz, RNG)
+               endif
+         case ("zfmomxn", "zfmomyn", "zfmomzn","zfmomxd", "zfmomyd", "zfmomzd","zfmomxi", "zfmomyi", "zfmomzi")
+               if (associated(fl_dni)) then
+                 if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%imx + i_xyz, RNG)
+               endif
+         case ("xfenen","xfenei","xfened")
+            if (associated(fl_dni) .and. fl_dni%ien /= INVALID )  then
+               if (associated(cg%fx)) tab(:,:,:) = cg%fx(fl_dni%ien, RNG)
+            endif
+         case ("yfenen","yfenei","yfened")
+            if (associated(fl_dni) .and. fl_dni%ien /= INVALID) then
+               if (associated(cg%gy)) tab(:,:,:) = cg%gy(fl_dni%ien, RNG)
+            endif
+         case ("zfenen","zfenei","zfened")
+            if (associated(fl_dni) .and. fl_dni%ien /= INVALID) then
+               if (associated(cg%hz)) tab(:,:,:) = cg%hz(fl_dni%ien, RNG)
+            endif
          case ("enen", "enei")
 #ifdef ISO
             if (associated(fl_dni)) tab(:,:,:) = ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG))

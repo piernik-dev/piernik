@@ -589,7 +589,7 @@ contains
          cg => cgl%cg
 
          inid => cg%q(qna%ind(inid_n))%arr
-         if (.not. associated(inid))then
+         if (.not. associated(inid)) then
             if (master) call warn("[initproblem:calculate_error_norm] Cannot compare results with the initial conditions.")
             return
          endif

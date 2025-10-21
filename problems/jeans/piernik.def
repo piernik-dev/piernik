@@ -7,6 +7,10 @@
 #define IONIZED
 
 #undef MAGNETIC
+#define NONMAGNETIC
+#if 0
+  Otherwise the HLLC solver will complain because IONIZED implies MAGNETIC
+#endif
 
 #define SELF_GRAV
 

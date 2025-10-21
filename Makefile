@@ -42,12 +42,20 @@ MAKEFLAGS += -s
 ALLOBJ = $(wildcard obj*)
 
 # Terminal colors and formatting
-GREEN = "\033[32;1m"
-RED = "\033[31;1m"
-BLUE = "\033[34;1m"
-RESET = "\033[0m"
+RED    = "\033[31;1m"
+GREEN  = "\033[32;1m"
+YELLOW = "\033[33;1m"
+BLUE   = "\033[34;1m"
+PURPLE = "\033[35;1m"
+CYAN   = "\033[36;1m"
+WHITE  = "\033[37;1m"
+GRAY   = "\033[90;1m"
+RESET  = "\033[0m"
 PASSED = $(GREEN)passed$(RESET)
 FAILED = $(RED)failed$(RESET)
+OK = $(CYAN)OK$(RESET)
+DIFF = $(YELLOW)Differs!$(RESET)
+COLORTEST = $(RED) RED $(GREEN) GREEN $(YELLOW) YELLOW $(BLUE) BLUE $(PURPLE) PURPLE $(CYAN) CYAN $(WHITE) WHITE $(GRAY) GRAY $(RESET) back to normal
 
 # Directory structure
 PROBLEMS_DIR = problems
@@ -77,7 +85,7 @@ GOLD_TEST_SCRIPT = $(JENKINS_DIR)/gold_test.sh
 
 # Sets of tests
 QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
-ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body
+ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body CPAW
 GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
 
 # Common command sequences
@@ -87,7 +95,7 @@ endef
 
 # Define phony targets
 .PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
-	oldgold gold-serial gold-clean pep8 view_dep \
+	oldgold gold-serial gold-clean pep8 view_dep colortest \
 	CI QA artifacts gold $(QA_TESTS) $(ARTIFACT_TESTS) $(GOLD_TESTS)
 
 # Default target to build all object directories
@@ -183,6 +191,10 @@ help:
 	@$(ECHO) "  CI        - Run all CI checks       (QA artifacts gold)"
 	@$(ECHO) "  help      - Show this help"
 
+# Testing ANSI colors in current terminal
+colortest:
+	$(ECHO) -e "Color test:"$(COLORTEST)
+
 # Target to run all QA checks
 QA:
 	$(ECHO) -e $(BLUE)"Starting QA checks ..."$(RESET)
@@ -207,7 +219,7 @@ dep:
 		mv $$OTMPDIR"/"$$GRAPH $(ARTIFACTS)/ && $(cleanup_tmpdir) ;\
 	fi ;\
 	if [ -e $(ARTIFACTS)"/$$GRAPH" ] ; then \
-		$(ECHO) -e "  Dependency test "$(PASSED)". The graph for the $$PROBLEM problem was stored as $(ARTIFACTS)/$$GRAPH" ;\
+		$(ECHO) -e "  Dependency test "$(PASSED)", the graph for the $$PROBLEM problem was stored as $(ARTIFACTS)/$$GRAPH" ;\
 	else \
 		[ -e $$OTMPDIR/setup.stdout ] && ( cat $$OTMPDIR/setup.stdout ; rm -r $$OTMPDIR ) ;\
 		$(ECHO) -e "  Dependency graph creation "$(FAILED) && exit 1 ;\
@@ -221,6 +233,7 @@ view_dep: dep
 py3:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	python3 $(PYTHON_DIR)/piernik_setup.py maclaurin -n -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/py3.setup.stdout && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Python 3 test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Python 3 test "$(FAILED) && exit 1 )
@@ -229,6 +242,7 @@ py3:
 noHDF5:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/crtest_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) crtest --param problem.par.build -d I_KNOW_WHAT_I_AM_DOING -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/noHDF5.setup.stdout && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  NoHDF5 test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  NoHDF5 test "$(FAILED) && exit 1 )
@@ -237,6 +251,7 @@ noHDF5:
 I64:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/chimaera_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) $(P) -o $${OTMPDIR//obj_/} --f90flags="-fdefault-integer-8 -Werror=conversion" > $(ARTIFACTS)/I64.setup.stdout && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  64-bit integer test "$(PASSED) ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  64-bit integer test "$(FAILED) && exit 1 )
@@ -245,6 +260,7 @@ I64:
 IOv2:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/advection_test_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) advection_test -p problem.par.restart_test_v2 -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/IOv2.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(ECHO) -e "run_id = ts1\n  Start:   t = 0.0, nproc = 1" ;\
@@ -266,6 +282,7 @@ IOv2:
 Jeans:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/jeans_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) jeans -o $${OTMPDIR//obj_/} -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Jeans.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
@@ -277,15 +294,16 @@ Jeans:
 			../../$(BIN_DIR)/gdf_distance jeans_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/Jeans.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{if (NR==2) printf("Amplitude error = %.4f, period error = %.4f", 1.*$$1, 1.*$$3) }' $${RUNDIR}/jeans.csv ) ;\
+		NORM=$$( awk '{exp_a = -0.0002475700224982; exp_p = 0.00574478339226114; if (NR==2) { printf("Amplitude error = %.16f, period error = %.16f", 1.*$$1, 1.*$$3); if ($$1 != exp_a || $$3 != exp_p) printf(" '$(DIFF)' (expected: %.16f, %.16f)", exp_a, exp_p); else printf(" '$(OK)'");} }' $${RUNDIR}/jeans.csv ) ;\
 		cp $${RUNDIR}/jeans.{png,csv} $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED)". $${NORM}, ${ARTIFACTS}/jeans.png created." ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(PASSED)", $${NORM}, ${ARTIFACTS}/jeans.png created" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Jeans test "$(FAILED) && exit 1 )
 
 # Target to run Maclaurin test with accuracy check
 Maclaurin:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/maclaurin_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) maclaurin -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/Maclaurin.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
@@ -293,15 +311,16 @@ Maclaurin:
 			$(ECHO) "L2 error norm,min. error,max. error" > maclaurin.csv ;\
 			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\),.*= *\([^ ]*\) *\(.*\)$$/\1 , \2 , \3/' >> maclaurin.csv ;\
 		) >> $(ARTIFACTS)/Maclaurin.setup.stdout && \
-		NORM=$$( awk '{if (NR==2) printf("L2 error norm = %.5f", $$1) }' $${RUNDIR}/maclaurin.csv ) ;\
+		NORM=$$( awk '{exp_n = 0.003359; if (NR==2) { printf("L2 error norm = %.6f", $$1); if ($$1 != exp_n) printf(" '$(DIFF)' (expected: %.6f)", exp_n); else printf(" '$(OK)'");} }' $${RUNDIR}/maclaurin.csv ) ;\
 		cp $${RUNDIR}/maclaurin.{png,csv} $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)". $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(PASSED)", $${NORM}, ${ARTIFACTS}/maclaurin.png created." ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  Maclaurin test "$(FAILED) && exit 1 )
 
 # Target to run 3-body test with accuracy and restart checks (here restart also checks particles)
 3body:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/3body_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) 2body/3body -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/3body.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			$(MPIEXEC) -n 1 ./piernik ;\
@@ -314,10 +333,27 @@ Maclaurin:
 			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
 		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{if (NR==2) printf("Period error = %.4f, momentum error = %.2g, angular momentum error = %.4f", 1.*$$1, 1.*$$3, 1*$$5) }' $${RUNDIR}/3body.csv ) ;\
+		NORM=$$( awk '{exp_p = 0.004358; exp_m = 3.05544e-08; exp_am = 0.00385792; if (NR==2) { printf("Period error = %.6f, momentum error = %.6g, angular momentum error = %.8f", 1.*$$1, 1.*$$3, 1*$$5); if ($$1 != exp_p || $$3 != exp_m || $$5 != exp_am) printf(" '$(DIFF)' (expected: %.6f, %.6g, %.8f)", exp_p, exp_m, exp_am); else printf(" '$(OK)'");} }' $${RUNDIR}/3body.csv ) ;\
 		cp $${RUNDIR}/3body.csv $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)". $${NORM}" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)", $${NORM}" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
+
+# Target to run Propagation of Circularly polarized Alfvén Waves
+CPAW:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/cpaw_$${OTMPDIR//obj_/} ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
+	$(SETUP) cpaw -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/CPAW.setup.stdout && \
+		( cd $${RUNDIR} ;\
+			$(MPIEXEC) -n 1 ./piernik -n '&BASE_DOMAIN n_d = 128, 64, 1 /';\
+			$(ECHO) "L2 error norm" > CPAW.csv ;\
+			grep -a L2 *log | tail -n 1 | sed 's/.*= *\(.*\).*$$/\1/' >> CPAW.csv ;\
+		) >> $(ARTIFACTS)/CPAW.setup.stdout && \
+		NORM=$$( awk '{exp_n = 0.00102726; if (NR==2) { printf("L2 error norm = %.8f", $$1); if ($$1 != exp_n) printf(" '$(DIFF)' (expected: %.8f)", exp_n); else printf(" '$(OK)'");} }' $${RUNDIR}/CPAW.csv ) ;\
+		cp $${RUNDIR}/CPAW.csv $(ARTIFACTS) &&\
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(PASSED)", $${NORM}" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  CPAW test "$(FAILED) && exit 1 )
+
 
 # Target to run all CI artifact tests
 artifacts:
@@ -376,9 +412,12 @@ custom_gold:
 		esac \
 	done
 
-# Target to run all gold tests
+# Target to run all gold tests.
+# Call `make gold-clean` explicitly if a cleanup is required.
+# Typically it shouldn't be required and existing files from previous gold runs can save some execution time here.
 gold:
 	$(ECHO) -e $(BLUE)"Starting gold tests ..."$(RESET)
+	mkdir -p $(GOLDSPACE) # Create the directory if it doesn't exist
 	$(MAKE) -k $(GOLD_TESTS) || \
 		( $(ECHO) -e $(RED)"Some gold tests failed."$(RESET)" Details can be found in $(GOLDSPACE) directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All gold tests "$(PASSED)". Details can be found in $(GOLDSPACE) directory."
