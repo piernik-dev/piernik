@@ -72,10 +72,10 @@ On other systems you need to find your own way (and you may choose to describe i
 
 * git
 * decent Fortran 2008 compiler (for such things as polymorphism or modern MPI interface)
-* MPI with Fortran support, preferably version that provides mpi_f08.mod. If it is limited to mpi.mod, it must provide interface to all MPI calls
-* hdf5 1.8.8 or newer with high-level library, Fortran 2003 interface and MPI support (--enable-shared --enable-fortran --enable-fortran2003 --enable-parallel) – it allows you to use a wrapper ‘h5pfc’ as a compiler
-* Python (unfortunately we still have some 2.7-based scripts), including packages such as h5py, numpy
-* There are optional tasks that depend on gnuplot, parallel, graphviz and yt
+* MPI with Fortran support, preferably version that provides `mpi_f08.mod`. If it is limited to `mpi.mod`, it must provide interface to all MPI calls
+* hdf5 1.8.8 or newer with high-level library, Fortran 2003 interface and MPI support (`--enable-shared --enable-fortran --enable-fortran2003 --enable-parallel`) – it allows you to use a wrapper `h5pfc` as a compiler
+* Python (unfortunately we still have some 2.7-based scripts), including packages such as `h5py`, `numpy`
+* There are optional tasks that depend on `gnuplot`, `parallel`, `graphviz` and `yt`
 
 ## Piernik
 
@@ -99,17 +99,30 @@ The file `bin/bash_completion.sh` may also make your life with Piernik a little 
 
 ## Continuous Integration in Piernik
 
-To check whether the Piernik code works well with your modifications one can run the included tests. We used to maintain a Jenkins server for it but recently we switched to equivalent implementation in Makefile. To run all the tests, invoke:
+To check whether the Piernik code works well with your modifications you can run the included test suite via the Makefile. The main entry is:
 
     make CI -j
 
-Do it always before you commit to the repository anything that is intended to be merged with the `master` branch. Do not use the `-j` flag on old computers equipped with a quad-core CPU or less.
+What this does
+- `make CI` runs the full set of automated checks that the project maintains.
+- The `-j` option enables parallel execution of independent test tasks; it speeds up the whole run on multicore machines.
+Run the CI (or at least the relevant group) locally before committing changes intended for master.
 
-There are three groups of tests there: `QA`, `artifacts` and `gold`. You can run one group or only particular tests (e.g. when only one test is failing). Do
+Tests are organized in three broad groups: `QA`, `artifacts` and `gold`. You can run a single group instead of the full CI. Example (group names are Makefile targets — use `make help` to confirm in your tree):
+
+    make QA
+    make artifacts -j
+    make gold -j
+
+If one test fails, re-run only that test to iterate faster. Run:
 
     make help
 
-to get current list of implemented checks.
+  to list available test targets and their exact names. Then invoke the specific target.
+
+Choosing `-j`
+- On machines with many cores, you may use just `-j` to finish faster.
+- On small machines (less than ~8 cores) using a modest parallelism (for example `-j 3`) is often the best tradeoff between throughput and resource contention.
 
 # Setting up Intel Fortran compiler
 

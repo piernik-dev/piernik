@@ -323,19 +323,28 @@ Maclaurin:
 	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) ;\
 	$(SETUP) 2body/3body -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/3body.setup.stdout && \
 		( cd $${RUNDIR} ;\
-			$(MPIEXEC) -n 1 ./piernik ;\
-			../../$(PROBLEMS_DIR)/2body/3body/particle_error.py leapfrog_tst_0001.h5 | tee 3body.csv ;\
-			$(RM) *.res ;\
-			$(ECHO) "Performing restart tests" ;\
-			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 10/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
-			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs1"/' ;\
-			$(MPIEXEC) -n 1 ./piernik -n '&END_CONTROL nend = 20/ &OUTPUT_CONTROL run_id = "rs2"/' ;\
-			../../$(BIN_DIR)/gdf_distance leapfrog_rs{1,2}_0001.h5 2>&1 | tee compare.log ;\
+			( $(MPIEXEC) -n 3 ./piernik ;\
+			../../$(PROBLEMS_DIR)/2body/3body/particle_error.py leapfrog_tst_0001.h5 | tee 3body.csv ) & pid_1=$$! ;\
+			# Run the two restart groups in parallel (the rs1 group contains two sequential mpiexec calls) ;\
+			RESTSTDIR=res ;\
+			( $(ECHO) "Performing restart tests" ;\
+				mkdir $${RESTSTDIR};\
+				cd $${RESTSTDIR} ;\
+				ln -s ../piernik ;\
+				cp ../problem.par . ;\
+				sed -i 's-problems-../problems-' problem.par ;\
+				$(MPIEXEC) -n 3 ./piernik -n '&END_CONTROL nend = 30/' ; \
+				$(MPIEXEC) -n 3 ./piernik ) >> stdout & pid_rs=$$! ;\
+			# Wait for both jobs to finish before comparing ;\
+			wait $$pid_1 $$pid_rs ;\
+			cat stdout ;\
+			../../$(BIN_DIR)/gdf_distance {,$${RESTSTDIR}/}leapfrog_tst_0001.h5 2>&1 | tee compare.log ;\
 		) >> $(ARTIFACTS)/3body.setup.stdout && \
-		( [ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] || exit 1 ) && \
-		NORM=$$( awk '{exp_p = 0.004358; exp_m = 3.05544e-08; exp_am = 0.00385792; if (NR==2) { printf("Period error = %.6f, momentum error = %.6g, angular momentum error = %.8f", 1.*$$1, 1.*$$3, 1*$$5); if ($$1 != exp_p || $$3 != exp_m || $$5 != exp_am) printf(" '$(DIFF)' (expected: %.6f, %.6g, %.8f)", exp_p, exp_m, exp_am); else printf(" '$(OK)'");} }' $${RUNDIR}/3body.csv ) ;\
-		cp $${RUNDIR}/3body.csv $(ARTIFACTS) &&\
-		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(PASSED)", $${NORM}" ) || \
+		[ $$( grep "^Total difference between" $${RUNDIR}/compare.log | awk '{print $$NF}' ) == 0 ] && \
+		( NORM=$$( awk '{exp_p = 0.004358; exp_m = 3.05544e-08; exp_am = 0.00385792; if (NR==2) { printf("Period error = %.6f, momentum error = %.6g, angular momentum error = %.8f", 1.*$$1, 1.*$$3, 1*$$5); if ($$1 != exp_p || $$3 != exp_m || $$5 != exp_am) printf(" '$(DIFF)' (expected: %.6f, %.6g, %.8f)", exp_p, exp_m, exp_am); else printf(" '$(OK)'");} }' $${RUNDIR}/3body.csv ) ;\
+			cp $${RUNDIR}/3body.csv $(ARTIFACTS) ;\
+			$(cleanup_tmpdir) ;\
+			$(ECHO) -e "  3-body test "$(PASSED)", $${NORM}" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  3-body test "$(FAILED) && exit 1 )
 
 # Target to run Propagation of Circularly polarized Alfvén Waves
