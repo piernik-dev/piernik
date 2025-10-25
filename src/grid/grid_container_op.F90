@@ -427,7 +427,7 @@ contains
                   do concurrent (k = klo : klo + ord/2 - 1, j = jlo : jhi, i = ilo : ihi)
                      do s = 0, ord
                         cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i, j, k + s) * this%idl(zdim)
-                     enddo 
+                     enddo
                   enddo
 
                   do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
