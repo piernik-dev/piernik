@@ -30,7 +30,7 @@
 
 module grid_cont_ref
 
-   use grid_cont_bseg,  only: grid_container_bseg_t
+   use grid_container_op,  only: grid_container_op_t
    use refinement_flag, only: ref_flag_t
 
    implicit none
@@ -39,7 +39,7 @@ module grid_cont_ref
    public :: grid_container_ref_t
 
    !> \brief Arrays in grid container that are required for refinement
-   type, extends(grid_container_bseg_t), abstract :: grid_container_ref_t
+   type, extends(grid_container_op_t), abstract :: grid_container_ref_t
 
       ! Refinements
       logical, allocatable, dimension(:,:,:) :: leafmap  !< .true. when a cell is not covered by finer cells, .false. otherwise

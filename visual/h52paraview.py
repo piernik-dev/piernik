@@ -15,6 +15,7 @@ import numpy as np
 import multiprocessing as mp
 import argparse
 import os
+import re
 from functools import partial
 
 try:
@@ -23,7 +24,8 @@ try:
         vtkAMRBox,
         vtkUniformGrid,
         vtkXMLUniformGridAMRWriter,
-        VTK_XYZ_GRID, VTK_XY_PLANE, VTK_XZ_PLANE, VTK_YZ_PLANE
+        VTK_XYZ_GRID, VTK_XY_PLANE, VTK_XZ_PLANE, VTK_YZ_PLANE,
+        vtkFloatArray,  # added for robust vector writing
     )
     from vtk.util import numpy_support
 except ImportError:
@@ -43,9 +45,79 @@ def get_field_names(h5_file):
         raise ValueError("HDF5 file does not contain a '/data' group or it is empty.")
 
 
+# -------------------- Vector detection helpers --------------------
+
+AXES = ("x", "y", "z")
+
+
+def _detect_vector_groups(field_names):
+    groups = {}
+
+    def key_name(style, base, tag):
+        name = base if (tag is None or tag == "") else f"{base}_{tag}"
+        return (style, base, tag), name
+
+    # Pass 1: prefix (xBase[_tag], y..., z...)
+    pre = re.compile(r'^([xyz])([A-Za-z][A-Za-z0-9]*?)(?:_(\w+))?$')
+    for f in field_names:
+        m = pre.match(f)
+        if not m:
+            continue
+        ax, base, tag = m.groups()
+        key, name = key_name("prefix", base, tag)
+        entry = groups.setdefault(key, {"name": name, "comps": {}})
+        entry["comps"][ax] = f
+
+    # Pass 2: suffix+tag (Base_tag_axis)
+    suf_tag = re.compile(r'^(.+?)_(\w+)_([xyz])$')
+    for f in field_names:
+        m = suf_tag.match(f)
+        if not m:
+            continue
+        base, tag, ax = m.groups()
+        key, name = key_name("suffix", base, tag)
+        entry = groups.setdefault(key, {"name": name, "comps": {}})
+        entry["comps"][ax] = f
+
+    # Pass 3: suffix only (Base_axis)
+    suf = re.compile(r'^(.+?)_([xyz])$')
+    for f in field_names:
+        m = suf.match(f)
+        if not m:
+            continue
+        base, ax = m.groups()
+        key, name = key_name("suffix", base, None)
+        entry = groups.setdefault(key, {"name": name, "comps": {}})
+        entry["comps"][ax] = f
+
+    # Keep only entries with >= 2 components (2D ok; we zero-fill the missing one)
+    result = []
+    for info in groups.values():
+        if sum(ax in info["comps"] for ax in AXES) >= 2:
+            result.append(info)
+    return result
+
+
+def _read_component_or_zeros(h5_block_group, field_name, shape_cells):
+    """Return component array flattened C-order; zero array if field missing/blank."""
+    if field_name and field_name in h5_block_group:
+        arr = h5_block_group[field_name][:]
+        return np.asarray(arr, dtype=np.float32).ravel(order="C")
+    # missing component (e.g., 2D): fill zeros
+    return np.zeros(int(np.prod(shape_cells)), dtype=np.float32)
+
+# -------------------------------------------------------------------------
+
+
 def create_vtk_amr_dataset(h5_file, field_names, v):
     if v == 1:
         print("[INFO] Reading block metadata...")
+
+    # Detect vector groups present in this file (based on field_names from first block)
+    vector_groups = _detect_vector_groups(field_names)
+    if v == 1 and vector_groups:
+        print(f"[INFO] Will assemble vector arrays: {[g['name'] for g in vector_groups]}")
+
     blocks = []
     levels_set = set()
     for name, g in h5_file["data"].items():
@@ -111,12 +183,32 @@ def create_vtk_amr_dataset(h5_file, field_names, v):
             point_dims[collapsed_axis] = 1
         ug.SetDimensions(int(point_dims[0]), int(point_dims[1]), int(point_dims[2]))
         cell_data = ug.GetCellData()
+        # Add scalar fields
+        gblock = h5_file["data"][b["name"]]
         for field in field_names:
-            arr_data = h5_file["data"][b["name"]][field][:]
+            arr_data = gblock[field][:]
             flat_arr = arr_data.astype(np.float32).ravel(order="C")
             vtk_arr = numpy_support.numpy_to_vtk(flat_arr, deep=True)
             vtk_arr.SetName(field)
             cell_data.AddArray(vtk_arr)
+        # Add vector fields assembled from components (robust writing via vtkFloatArray)
+        if vector_groups:
+            n_cells = int(np.prod(dims))
+            for grp in vector_groups:
+                comps = grp["comps"]
+                cx = _read_component_or_zeros(gblock, comps.get("x", ""), dims)
+                cy = _read_component_or_zeros(gblock, comps.get("y", ""), dims)
+                cz = _read_component_or_zeros(gblock, comps.get("z", ""), dims)
+                if cx.size != n_cells or cy.size != n_cells or cz.size != n_cells:
+                    raise ValueError(f"Vector '{grp['name']}' size mismatch in block '{b['name']}'")
+                vtk_vec = vtkFloatArray()
+                vtk_vec.SetName(grp["name"])
+                vtk_vec.SetNumberOfComponents(3)
+                vtk_vec.SetNumberOfTuples(n_cells)
+                # explicit tuple fill ensures component order is x,y,z
+                for i in range(n_cells):
+                    vtk_vec.SetTuple3(i, float(cx[i]), float(cy[i]), float(cz[i]))
+                cell_data.AddArray(vtk_vec)
         amr.SetDataSet(level_idx, block_idx, ug)
         next_idx[level_idx] += 1
     if v == 1:
