@@ -40,8 +40,6 @@ module initproblem
 
    implicit none
 
-
-
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
@@ -60,7 +58,6 @@ module initproblem
    character(len=dsetnamelen), parameter :: curlbnum = "curlbnum"
    character(len=dsetnamelen), parameter :: vcrossb  = "vcrossb"
    character(len=dsetnamelen), parameter :: vdotb    = "vdotb"
-
 
 contains
 
@@ -93,7 +90,6 @@ contains
       ! the default values
       order  = 2
 
-
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -124,7 +120,6 @@ contains
 
       endif
 
-
       call all_cg%reg_var(divvnum,  restart_mode = AT_IGNORE )
       call all_cg%reg_var(divvana,  restart_mode = AT_IGNORE )
       call all_cg%reg_var(divbnum,  restart_mode = AT_IGNORE )
@@ -134,9 +129,7 @@ contains
       call all_cg%reg_var(vcrossb,  dim4 = 3, restart_mode = AT_IGNORE)
       call all_cg%reg_var(vdotb,              restart_mode = AT_IGNORE)
 
-
    end subroutine read_problem_par
-
 
    subroutine problem_initial_conditions
 
@@ -148,6 +141,7 @@ contains
       use func,             only: ekin, emag
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
+
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -181,7 +175,6 @@ contains
 
                      cg%q(qna%ind(divvana))%arr(i,j,k) = 0.0
 
-
                      if (fl%has_energy) then
                         cg%u(fl%ien,i,j,k) = 1.0
                         cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
@@ -202,6 +195,7 @@ contains
             cgl => cgl%nxt
          enddo
       enddo
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -214,6 +208,7 @@ contains
 
          cgl => cgl%nxt
       enddo
+
    end subroutine problem_initial_conditions
 
 #ifdef HDF5
@@ -229,7 +224,6 @@ contains
       real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
-
 
       if (.not. qna%exists(divvana)) call die("[initproblem:user_out] cannot find divvana")
       if (.not. qna%exists(divvana)) call die("[initproblem:user_out] cannot find divvnum")
@@ -272,8 +266,8 @@ contains
       end select
 
    end subroutine user_out
-
 #endif /* HDF5 */
+
    subroutine verify_test
       use allreduce,        only: piernik_MPI_Allreduce
       use cg_list,          only: cg_list_element
@@ -283,12 +277,12 @@ contains
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna, wna
+
       implicit none
+
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-
       real :: ssum, smax
-
       integer :: i, j, k
       real :: xi, yj, sx, cx, sy, cy, dv
       real :: val, ana, ex, ey, ez, err2, lsum, lmax
@@ -318,7 +312,7 @@ contains
       call piernik_MPI_Allreduce(ssum, pSUM)
       call piernik_MPI_Allreduce(smax, pMAX)
       if (master) then
-         write(msg,'("||div(v)||_err:  L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
+         write(msg,'("||div(v)||_err : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
          call printinfo(msg, V_ESSENTIAL)
       endif
 
@@ -345,7 +339,7 @@ contains
       call piernik_MPI_Allreduce(ssum, pSUM)
       call piernik_MPI_Allreduce(smax, pMAX)
       if (master) then
-         write(msg,'("||div(B)||_err:  L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
+         write(msg,'("||div(B)||_err : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
          call printinfo(msg, V_ESSENTIAL)
       endif
 
@@ -438,7 +432,7 @@ contains
       call piernik_MPI_Allreduce(ssum, pSUM)
       call piernik_MPI_Allreduce(smax, pMAX)
       if (master) then
-         write(msg,'("||v×B||_err  : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
+         write(msg,'("||v×B||_err    : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
          call printinfo(msg, V_ESSENTIAL)
       endif
 
@@ -468,12 +462,14 @@ contains
       call piernik_MPI_Allreduce(ssum, pSUM)
       call piernik_MPI_Allreduce(smax, pMAX)
       if (master) then
-         write(msg,'("||v·B||_err  : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
+         write(msg,'("||v·B||_err    : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
          call printinfo(msg, V_ESSENTIAL)
       endif
+
    end subroutine verify_test
 
    subroutine dump_vec_gnuplot
+
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
@@ -481,6 +477,7 @@ contains
       use constants,        only: V_INFO
       use dataio_pub,       only: printinfo
       use mpisetup,         only: master
+
       implicit none
 
       type(cg_list_element), pointer :: cgl
@@ -488,7 +485,9 @@ contains
       integer :: i, j, j0, k0, lun
       real :: x, y, z0, sx, cx, sy, cy
       logical :: wrote_files
+
       call verify_test
+
       if (.not. master) return
 
       call printinfo('Writing .dat files for the gnuplot. 1D is along x for y = midpoint of the domain', V_INFO)
@@ -743,150 +742,150 @@ contains
       &                 'file u 1:(sf_fixed*($3-$2)) w lp ls 4 t "100*Residual", ' // &
       &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
       &                 '0 w l ls 9 notitle'
-      ! ------------------ 2D per-figure gnuplot ------------------
-      open(newunit=lun, file='test_plot_2d.gp', status='replace')
-      write(lun,'(a)') 'set encoding utf8'
-      write(lun,'(a)') 'set term pngcairo size 1200,520 font "Helvetica,10" enhanced'
-      write(lun,'(a)') 'set pm3d map'
-      write(lun,'(a)') 'set palette rgbformulae 33,13,10'
-      write(lun,'(a)') 'set view map'
-      write(lun,'(a)') 'set colorbox vertical; set cblabel "value"'
-      write(lun,'(a,f0.6)') 'z0 = ', z0
-      write(lun,'(a)') ''
+         ! ------------------ 2D per-figure gnuplot ------------------
+         open(newunit=lun, file='test_plot_2d.gp', status='replace')
+         write(lun,'(a)') 'set encoding utf8'
+         write(lun,'(a)') 'set term pngcairo size 1200,520 font "Helvetica,10" enhanced'
+         write(lun,'(a)') 'set pm3d map'
+         write(lun,'(a)') 'set palette rgbformulae 33,13,10'
+         write(lun,'(a)') 'set view map'
+         write(lun,'(a)') 'set colorbox vertical; set cblabel "value"'
+         write(lun,'(a,f0.6)') 'z0 = ', z0
+         write(lun,'(a)') ''
 
-      ! helper: two panes with shared cbrange + L2/Linf in the overall title
-      ! Each pane gets its own title: Analytical (left), Numerical (right)
+         ! helper: two panes with shared cbrange + L2/Linf in the overall title
+         ! Each pane gets its own title: Analytical (left), Numerical (right)
 
-      ! ---- div(v) ----
-      write(lun,'(a)') 'fname = "divv_2d.dat"'
-      write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-      write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-      write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-      write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-      write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-      write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-      write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-      write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-      write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-      write(lun,'(a)') 'set output "divv_2d.png"'
-      write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("div(v) - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-      write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-      write(lun,'(a)') 'set title "Analytical"'
-      write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-      write(lun,'(a)') 'set title "Numerical"'
-      write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-      write(lun,'(a)') 'unset multiplot'
-      write(lun,'(a)') ''
+         ! ---- div(v) ----
+         write(lun,'(a)') 'fname = "divv_2d.dat"'
+         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
+         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
+         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
+         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
+         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
+         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
+         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
+         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
+         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "divv_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("div(v) - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
+         write(lun,'(a)') 'set title "Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical"'
+         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
+         write(lun,'(a)') 'unset multiplot'
+         write(lun,'(a)') ''
 
-      ! ---- div(B) ----
-      write(lun,'(a)') 'fname = "divb_2d.dat"'
-      write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-      write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-      write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-      write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-      write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-      write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-      write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-      write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-      write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-      write(lun,'(a)') 'set output "divb_2d.png"'
-      write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("div(B) - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-      write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-      write(lun,'(a)') 'set title "Analytical"'
-      write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-      write(lun,'(a)') 'set title "Numerical"'
-      write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-      write(lun,'(a)') 'unset multiplot'
-      write(lun,'(a)') ''
+         ! ---- div(B) ----
+         write(lun,'(a)') 'fname = "divb_2d.dat"'
+         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
+         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
+         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
+         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
+         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
+         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
+         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
+         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
+         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "divb_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("div(B) - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
+         write(lun,'(a)') 'set title "Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical"'
+         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
+         write(lun,'(a)') 'unset multiplot'
+         write(lun,'(a)') ''
 
-      ! ---- curl(v)_z ----
-      write(lun,'(a)') 'fname = "curlv_z_2d.dat"'
-      write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-      write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-      write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-      write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-      write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-      write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-      write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-      write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-      write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-      write(lun,'(a)') 'set output "curlv_z_2d.png"'
-      write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("curl(v)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-      write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-      write(lun,'(a)') 'set title "Analytical"'
-      write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-      write(lun,'(a)') 'set title "Numerical"'
-      write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-      write(lun,'(a)') 'unset multiplot'
-      write(lun,'(a)') ''
+         ! ---- curl(v)_z ----
+         write(lun,'(a)') 'fname = "curlv_z_2d.dat"'
+         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
+         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
+         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
+         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
+         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
+         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
+         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
+         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
+         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "curlv_z_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("curl(v)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
+         write(lun,'(a)') 'set title "Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical"'
+         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
+         write(lun,'(a)') 'unset multiplot'
+         write(lun,'(a)') ''
 
-      ! ---- curl(B)_z ----
-      write(lun,'(a)') 'fname = "curlb_z_2d.dat"'
-      write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-      write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-      write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-      write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-      write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-      write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-      write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-      write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-      write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-      write(lun,'(a)') 'set output "curlb_z_2d.png"'
-      write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("curl(B)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-      write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-      write(lun,'(a)') 'set title "Analytical"'
-      write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-      write(lun,'(a)') 'set title "Numerical"'
-      write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-      write(lun,'(a)') 'unset multiplot'
-      write(lun,'(a)') ''
+         ! ---- curl(B)_z ----
+         write(lun,'(a)') 'fname = "curlb_z_2d.dat"'
+         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
+         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
+         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
+         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
+         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
+         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
+         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
+         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
+         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "curlb_z_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("curl(B)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
+         write(lun,'(a)') 'set title "Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical"'
+         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
+         write(lun,'(a)') 'unset multiplot'
+         write(lun,'(a)') ''
 
-      ! ---- (v x B)_z ----
-      write(lun,'(a)') 'fname = "vcrossb_z_2d.dat"'
-      write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-      write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-      write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-      write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-      write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-      write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-      write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-      write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-      write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-      write(lun,'(a)') 'set output "vcrossb_z_2d.png"'
-      write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("(v x B)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-      write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-      write(lun,'(a)') 'set title "Analytical"'
-      write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-      write(lun,'(a)') 'set title "Numerical"'
-      write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-      write(lun,'(a)') 'unset multiplot'
-      write(lun,'(a)') ''
+         ! ---- (v x B)_z ----
+         write(lun,'(a)') 'fname = "vcrossb_z_2d.dat"'
+         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
+         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
+         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
+         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
+         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
+         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
+         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
+         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
+         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "vcrossb_z_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("(v x B)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
+         write(lun,'(a)') 'set title "Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical"'
+         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
+         write(lun,'(a)') 'unset multiplot'
+         write(lun,'(a)') ''
 
-      ! ---- v·B ----
-      write(lun,'(a)') 'fname = "vdotb_2d.dat"'
-      write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-      write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-      write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-      write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-      write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-      write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-      write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-      write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-      write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-      write(lun,'(a)') 'set output "vdotb_2d.png"'
-      write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("v·B - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-      write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-      write(lun,'(a)') 'set title "Analytical"'
-      write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-      write(lun,'(a)') 'set title "Numerical"'
-      write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-      write(lun,'(a)') 'unset multiplot'
+         ! ---- v·B ----
+         write(lun,'(a)') 'fname = "vdotb_2d.dat"'
+         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
+         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
+         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
+         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
+         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
+         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
+         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
+         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
+         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "vdotb_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("v·B - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
+         write(lun,'(a)') 'set title "Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical"'
+         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
+         write(lun,'(a)') 'unset multiplot'
 
          close(lun)
 
          call printinfo('Wrote: *_line.dat, *_2d.dat, test_plot_1d.gp, test_plot_2d.gp', V_INFO)
-         call printinfo('1D: gnuplot test_plot_1d.gp  -> divv.png, divb.png, curlv_z.png, curlb_z.png, vcrossb_z.png, vdotb.png', V_INFO)
-         call printinfo('2D: gnuplot test_plot_2d.gp     -> *_2d.png (Analytical | Numerical)', V_INFO)
+         call printinfo('1D: gnuplot test_plot_1d.gp  ->  divv.png, divb.png, curlv_z.png, curlb_z.png, vcrossb_z.png, vdotb.png', V_INFO)
+         call printinfo('2D: gnuplot test_plot_2d.gp  ->  *_2d.png (Analytical | Numerical)', V_INFO)
       endif
 
    end subroutine dump_vec_gnuplot

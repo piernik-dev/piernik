@@ -31,7 +31,7 @@
 
 module grid_container_op
 
-   use grid_cont_bseg,     only: grid_container_bseg_t
+   use grid_cont_bseg, only: grid_container_bseg_t
 
    implicit none
 
@@ -40,9 +40,9 @@ module grid_container_op
 
    logical, save :: warn_ord_flg = .true.
 
-  type, extends(grid_container_bseg_t), abstract :: grid_container_op_t
+   type, extends(grid_container_bseg_t), abstract :: grid_container_op_t
 
-  contains
+   contains
 
       procedure, pass :: get_gradient    => cg_get_gradient
       procedure, pass :: get_divergence  => cg_get_divergence
@@ -50,7 +50,7 @@ module grid_container_op
       procedure, pass :: dot             => cg_dot
       procedure, pass :: cross           => cg_cross
 
-  end type grid_container_op_t
+   end type grid_container_op_t
 
 contains
 
@@ -58,13 +58,13 @@ contains
 
    subroutine get_central_method_coeffs(ord, a, b)
 
-      use dataio_pub,      only: die
-      use constants,       only: I_TWO, I_FOUR, I_SIX, I_EIGHT
+      use dataio_pub, only: die
+      use constants,  only: I_TWO, I_FOUR, I_SIX, I_EIGHT
 
       implicit none
 
-      integer(kind = 4),  intent(in)  :: ord            ! Stencil order
-      real,               intent(out) :: a(:), b(:)
+      integer(kind = 4), intent(in)  :: ord            ! Stencil order
+      real,              intent(out) :: a(:), b(:)
 
       a = 0.0                                ! Stores central different weights
       b = 0.0                                ! Stores forward/ - backward difference weights
@@ -90,7 +90,7 @@ contains
 
    function cg_dot(this, iv1, iv2, vec1, vec2) result(dot_prod)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
@@ -131,7 +131,7 @@ contains
 
    function cg_cross(this, iv1, iv2, vec1, vec2) result(cross_prod)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
@@ -143,7 +143,6 @@ contains
 
       real, allocatable :: cross_prod(:,:,:,:)
       integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(3), v2(3)
-
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -189,10 +188,9 @@ contains
       integer, dimension(3), optional, intent(in)  :: vec   !< array pointing to the index of u1_x, u2_x, u3_x if wna
       integer(kind = 4),               intent(in)  :: ord   !< Stencil order
 
-      real, allocatable          :: cg_div(:,:,:)
-      integer                    :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(3), s
-
-      real                       :: cfc(ord/2), cfo(0:ord)
+      real, allocatable :: cg_div(:,:,:)
+      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(3), s
+      real              :: cfc(ord/2), cfo(0:ord)
 
       if (master) then
          if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_divergence] Insufficient guard cells for chosen order")
@@ -282,10 +280,10 @@ contains
 
    function cg_get_curl(this, ord, iw, vec) result(cg_curl)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,   only: die, warn
-      use domain,       only: dom
-      use mpisetup,     only: master
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use mpisetup,   only: master
 
       implicit none
 
@@ -294,9 +292,8 @@ contains
       integer, dimension(3), optional, intent(in)  :: vec   !< array pointing to the index of u1_x, u2_x, u3_x if wna
       integer(kind = 4),               intent(in)  :: ord   !< Stencil order
 
-      real, allocatable    :: cg_curl(:,:,:,:), cg_jac(:,:,:,:)
-      integer              :: ilo, ihi, jlo, jhi, klo, khi, v1(3)
-
+      real, allocatable :: cg_curl(:,:,:,:), cg_jac(:,:,:,:)
+      integer           :: ilo, ihi, jlo, jhi, klo, khi, v1(3)
 
       if (master) then
          if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_curl] Insufficient guard cells for chosen order")
@@ -309,7 +306,6 @@ contains
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
       klo = this%lhn(zdim,LO); khi = this%lhn(zdim,HI)
-
 
       if (present(vec)) then
          v1 = vec
@@ -331,10 +327,10 @@ contains
 
    function cg_get_gradient(this, ord, iw, iq, vec) result(cg_grad)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,   only: die, warn
-      use domain,       only: dom
-      use mpisetup,     only: master
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use mpisetup,   only: master
 
       implicit none
 
