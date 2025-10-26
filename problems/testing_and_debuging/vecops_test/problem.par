@@ -7,12 +7,14 @@ $BASE_DOMAIN
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =-0.5
-    xmax   = 0.5
-    ymin   =-0.5
-    ymax   = 0.5
-    zmin   =-0.5
-    zmax   = 0.5
+
+    ! 1.5 is slightly less than pi/2 but works nicely with autoscaling in gnuplot
+    xmin   =-1.5
+    xmax   = 1.5
+    ymin   =-1.5
+    ymax   = 1.5
+    zmin   =-1.5
+    zmax   = 1.5
  /
 
  $MPI_BLOCKS
@@ -56,7 +58,7 @@ $BASE_DOMAIN
  /
 
  $PROBLEM_CONTROL
-    order = 8
+    order = 6  ! at 256×256 shows both roundoff errors and finite order errors in curl
  /
 
  $MULTIGRID_SOLVER
@@ -70,4 +72,5 @@ $BASE_DOMAIN
  /
 
  $AMR
+!   bsize = 3*32
  /

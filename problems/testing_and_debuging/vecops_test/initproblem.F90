@@ -474,190 +474,157 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use constants,        only: V_INFO, zdim, cbuff_len
+      use dataio_pub,       only: printinfo, die, warn, msg
       use grid_cont,        only: grid_container
-      use named_array_list, only: qna, wna
-      use constants,        only: V_INFO
-      use dataio_pub,       only: printinfo
       use mpisetup,         only: master
+      use named_array_list, only: qna, wna
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      integer :: i, j, j0, k0, lun
-      real :: x, y, z0, sx, cx, sy, cy
-      logical :: wrote_files
+      integer :: i, j, j0, k0, lun, dset
+      real :: x, y, z0, sx, cx, sy, cy, va, vn
+      logical :: first_cg
+
+      enum, bind(C)
+         enumerator :: DIVV, DIVB, CURLV_Z, CURLB_Z, V_DOT_B, VCROSSB_Z
+      end enum
+      character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: fnames     = [ "divv     ", "divb     ", "curlv_z  ", "curlb_z  ", "vcrossb_z", "vdotb    " ]
+      character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: map_titles = [ 'div(v)   ', 'div(B)   ', 'curl(v)_z', 'curl(B)_z', '(v×B)_z ',  'v·B     ' ]
 
       call verify_test
 
-      if (.not. master) return
+      if (.not. master) then
+         call warn("[initproblem:dump_vec_gnuplot] This is serial routine. The dumps will be incomplete – limited to master process")
+         return
+      endif
 
       call printinfo('Writing .dat files for the gnuplot. 1D is along x for y = midpoint of the domain', V_INFO)
-      wrote_files = .false.
 
+      first_cg = .true.
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         ! Mid-line in y, mid-plane in z
+         ! Mid-line in y, mid-plane in z (works nice only on single-block domain)
          j0 = (cg%js + cg%je)/2
          k0 = (cg%ks + cg%ke)/2
          y  = cg%y(j0);  sy = sin(y);  cy = cos(y)
          z0 = cg%z(k0)
 
-         ! ----------------------- 1D: div(v) -----------------------
-         open(newunit=lun, file='divv_line.dat', status='unknown')
-         do i = cg%is, cg%ie
-            x  = cg%x(i)
-            write(lun,'(4(1pe23.15))') x, 0.0, cg%q(qna%ind(divvnum))%arr(i,j0,k0), &
-                                       (cg%q(qna%ind(divvnum))%arr(i,j0,k0) - 0.0)
-         enddo
-         close(lun)
+         ! 1D slices
 
-         ! ----------------------- 1D: div(B) -----------------------
-         open(newunit=lun, file='divb_line.dat', status='unknown')
-         do i = cg%is, cg%ie
-            x  = cg%x(i)
-            write(lun,'(4(1pe23.15))') x, 0.0, cg%q(qna%ind(divbnum))%arr(i,j0,k0), &
-                                       (cg%q(qna%ind(divbnum))%arr(i,j0,k0) - 0.0)
+         do dset = DIVV, VCROSSB_Z
+            ! delete old file before writing first cg
+            open(newunit=lun, file=trim(fnames(dset)) // '_line.dat', status='unknown', access=trim(merge('sequential', 'append    ', first_cg)))
+            do i = cg%is, cg%ie
+               x  = cg%x(i)
+               sx = sin(x)
+               cx = cos(x)
+               select case (dset)
+                  case (DIVV)
+                     va = 0.0
+                     vn = cg%q(qna%ind(divvnum))%arr(i, j0, k0)
+                  case (DIVB)
+                     va = 0.0
+                     vn = cg%q(qna%ind(divbnum))%arr(i, j0, k0)
+                  case (CURLV_Z)
+                     va = 2.0 * sx * sy
+                     vn = cg%w(wna%ind(curlvnum))%arr(zdim, i, j0, k0)
+                  case (CURLB_Z)
+                     va = 2.0 * cx * cy
+                     vn = cg%w(wna%ind(curlbnum))%arr(zdim, i, j0, k0)
+                  case (V_DOT_B)
+                     va = -2.0 * sx * cx * sy * cy
+                     vn = cg%q(qna%ind(vdotb))%arr(i, j0, k0)
+                  case (VCROSSB_Z)
+                     va = sx * sx * cy * cy - cx * cx * sy * sy
+                     vn = cg%w(wna%ind(vcrossb))%arr(zdim, i, j0, k0)
+                  case default
+                     call die("[initproblem:dump_vec_gnuplot] unknown 1D case")
+               end select
+               write(lun,'(4(1pe23.15))') x, va, vn, vn - va
+            enddo
+            write(lun,'(a)') ''
+            close(lun)
          enddo
-         close(lun)
 
-         ! ---------------------- 1D: curl(v)_z (2 sin x sin y) -----
-         open(newunit=lun, file='curlv_z_line.dat', status='unknown')
-         do i = cg%is, cg%ie
-            x  = cg%x(i);  sx = sin(x)
-            write(lun,'(4(1pe23.15))') x, 2.0*sx*sy, cg%w(wna%ind(curlvnum))%arr(3,i,j0,k0), &
-                                       (cg%w(wna%ind(curlvnum))%arr(3,i,j0,k0) - 2.0*sx*sy)
-         enddo
-         close(lun)
-
-         ! ---------------------- 1D: curl(B)_z (2 cos x cos y) -----
-         open(newunit=lun, file='curlb_z_line.dat', status='unknown')
-         do i = cg%is, cg%ie
-            x  = cg%x(i);  cx = cos(x)
-            write(lun,'(4(1pe23.15))') x, 2.0*cx*cy, cg%w(wna%ind(curlbnum))%arr(3,i,j0,k0), &
-                                       (cg%w(wna%ind(curlbnum))%arr(3,i,j0,k0) - 2.0*cx*cy)
-         enddo
-         close(lun)
-
-         ! ----------------------- 1D: (v x B)_z --------------------
-         open(newunit=lun, file='vcrossb_z_line.dat', status='unknown')
-         do i = cg%is, cg%ie
-            x  = cg%x(i);  sx = sin(x); cx = cos(x)
-            write(lun,'(4(1pe23.15))') x, (sx*sx*cy*cy - cx*cx*sy*sy), cg%w(wna%ind(vcrossb))%arr(3,i,j0,k0), &
-                                       (cg%w(wna%ind(vcrossb))%arr(3,i,j0,k0) - (sx*sx*cy*cy - cx*cx*sy*sy))
-         enddo
-         close(lun)
-
-         ! ------------------------- 1D: v·B ------------------------
-         open(newunit=lun, file='vdotb_line.dat', status='unknown')
-         do i = cg%is, cg%ie
-            x  = cg%x(i);  sx = sin(x); cx = cos(x)
-            write(lun,'(4(1pe23.15))') x, (-2.0*sx*cx*sy*cy), cg%q(qna%ind(vdotb))%arr(i,j0,k0), &
-                                       (cg%q(qna%ind(vdotb))%arr(i,j0,k0) - (-2.0*sx*cx*sy*cy))
-         enddo
-         close(lun)
-
-         ! ----------------------- 2D slice dumps (x,y at fixed z) --
+         ! 2D maps (x,y at fixed z) --
          ! columns: x y ana num
-         open(newunit=lun, file='divv_2d.dat', status='unknown')
-         do j = cg%js, cg%je
-            y = cg%y(j)
-            do i = cg%is, cg%ie
-               x  = cg%x(i)
-               write(lun,'(4(1pe23.15))') x, y, 0.0, cg%q(qna%ind(divvnum))%arr(i,j,k0)
+         do dset = DIVV, VCROSSB_Z
+            open(newunit=lun, file=trim(fnames(dset)) // '_2d.dat', status='unknown', access=trim(merge('sequential', 'append    ', first_cg)))
+            do j = cg%js, cg%je
+               y = cg%y(j)
+               sy = sin(y)
+               cy = cos(y)
+               do i = cg%is, cg%ie
+                  x  = cg%x(i)
+                  sx = sin(x)
+                  cx = cos(x)
+                  select case (dset)
+                     case (DIVV)
+                        va = 0.0
+                        vn = cg%q(qna%ind(divvnum))%arr(i, j, k0)
+                     case (DIVB)
+                        va = 0.0
+                        vn = cg%q(qna%ind(divbnum))%arr(i, j, k0)
+                     case (CURLV_Z)
+                        va = 2.0 * sx * sy
+                        vn = cg%w(wna%ind(curlvnum))%arr(zdim, i, j, k0)
+                     case (CURLB_Z)
+                        va = 2.0 * cx * cy
+                        vn = cg%w(wna%ind(curlbnum))%arr(zdim, i, j, k0)
+                     case (V_DOT_B)
+                        va = -2.0 * sx * cx * sy * cy
+                        vn = cg%q(qna%ind(vdotb))%arr(i, j, k0)
+                     case (VCROSSB_Z)
+                        va = sx * sx * cy * cy - cx * cx * sy * sy
+                        vn = cg%w(wna%ind(vcrossb))%arr(zdim, i, j, k0)
+                     case default
+                        call die("[initproblem:dump_vec_gnuplot] unknown 2D case")
+                  end select
+                  write(lun,'(4(1pe23.15))') x, y, va, vn
+               enddo
+               write(lun,'(a)') ''
             enddo
             write(lun,'(a)') ''
+            close(lun)
          enddo
-         close(lun)
 
-         open(newunit=lun, file='divb_2d.dat', status='unknown')
-         do j = cg%js, cg%je
-            y = cg%y(j)
-            do i = cg%is, cg%ie
-               x  = cg%x(i)
-               write(lun,'(4(1pe23.15))') x, y, 0.0, cg%q(qna%ind(divbnum))%arr(i,j,k0)
-            enddo
-            write(lun,'(a)') ''
-         enddo
-         close(lun)
-
-         open(newunit=lun, file='curlv_z_2d.dat', status='unknown')
-         do j = cg%js, cg%je
-            y = cg%y(j); sy = sin(y)
-            do i = cg%is, cg%ie
-               x  = cg%x(i); sx = sin(x)
-               write(lun,'(4(1pe23.15))') x, y, 2.0*sx*sy, cg%w(wna%ind(curlvnum))%arr(3,i,j,k0)
-            enddo
-            write(lun,'(a)') ''
-         enddo
-         close(lun)
-
-         open(newunit=lun, file='curlb_z_2d.dat', status='unknown')
-         do j = cg%js, cg%je
-            y = cg%y(j); cy = cos(y)
-            do i = cg%is, cg%ie
-               x  = cg%x(i); cx = cos(x)
-               write(lun,'(4(1pe23.15))') x, y, 2.0*cx*cy, cg%w(wna%ind(curlbnum))%arr(3,i,j,k0)
-            enddo
-            write(lun,'(a)') ''
-         enddo
-         close(lun)
-
-         open(newunit=lun, file='vcrossb_z_2d.dat', status='unknown')
-         do j = cg%js, cg%je
-            y = cg%y(j); sy = sin(y); cy = cos(y)
-            do i = cg%is, cg%ie
-               x  = cg%x(i); sx = sin(x); cx = cos(x)
-               write(lun,'(4(1pe23.15))') x, y, (sx*sx*cy*cy - cx*cx*sy*sy), cg%w(wna%ind(vcrossb))%arr(3,i,j,k0)
-            enddo
-            write(lun,'(a)') ''
-         enddo
-         close(lun)
-
-         open(newunit=lun, file='vdotb_2d.dat', status='unknown')
-         do j = cg%js, cg%je
-            y = cg%y(j); sy = sin(y); cy = cos(y)
-            do i = cg%is, cg%ie
-               x  = cg%x(i); sx = sin(x); cx = cos(x)
-               write(lun,'(4(1pe23.15))') x, y, (-2.0*sx*cx*sy*cy), cg%q(qna%ind(vdotb))%arr(i,j,k0)
-            enddo
-            write(lun,'(a)') ''
-         enddo
-         close(lun)
-
-         wrote_files = .true.
-         exit
+         cgl => cgl%nxt
+         first_cg = .false.
       enddo
 
-      if (master .and. wrote_files) then
-         open(newunit=lun, file='test_plot_1d.gp', status='unknown')
-         write(lun,'(a)') 'set encoding utf8'
-         write(lun,'(a)') 'set term pngcairo size 1100,700 font "Helvetica,10" enhanced'
-         write(lun,'(a)') 'set grid xtics ytics mxtics mytics back lc rgb "#cccccc"'
-         write(lun,'(a)') 'set mxtics 2; set mytics 2'
-         write(lun,'(a)') 'set key at graph 0.5,0.98 center top horizontal opaque samplen 2 spacing 1.2'
-         write(lun,'(a)') 'set tics out; set format y "%1.2g"; set format y2 "%1.2g"; set y2tics'
-         write(lun,'(a)') 'set style line 1 lc rgb "#7b3294" lw 2.2'                  ! Analytical
-         write(lun,'(a)') 'set style line 2 lc rgb "#008837" lw 2.2'                  ! Numerical
-         write(lun,'(a)') 'set style line 3 lc rgb "#E69F00" lw 2.6 dt 1 pt 5 ps 0.8' ! Residual
-         write(lun,'(a)') 'set style line 4 lc rgb "#E69F00" lw 2.6 dt 3 pt 5 ps 0.8' ! 100×Residual
-         write(lun,'(a)') 'set style line 5 lc rgb "#0571B0" lw 3.0 dt 2'             ! |err| (y2)
-         write(lun,'(a)') 'set style line 9 lc rgb "#BBBBBB" lw 1.0 dt 3'             ! zero line
-         write(lun,'(a)') 'sf_fixed = 100.0'                                          ! scale for 100×Residual
-         write(lun,'(a)') ''
+      ! 1D script
+      open(newunit=lun, file='test_plot_1d.gp', status='unknown')
+      write(lun,'(a)') 'set encoding utf8'
+      write(lun,'(a)') 'print "Creating 1D plots for VecOps test"'
+      write(lun,'(a)') 'set term pngcairo size 1100,700 font "Helvetica,10" enhanced'
+      write(lun,'(a)') 'set grid xtics ytics mxtics mytics back lc rgb "#cccccc"'
+      write(lun,'(a)') 'set mxtics 2; set mytics 2'
+      write(lun,'(a)') 'set key at graph 0.5,0.98 center top horizontal opaque samplen 2 spacing 1.2'
+      write(lun,'(a)') 'set tics out; set format y "%1.2g"; set format y2 "%1.2g"; set y2tics'
+      write(lun,'(a)') 'set style line 1 lc rgb "#7b3294" lw 2.2'                  ! Analytical
+      write(lun,'(a)') 'set style line 2 lc rgb "#008837" lw 2.2'                  ! Numerical
+      write(lun,'(a)') 'set style line 3 lc rgb "#E69F00" lw 2.6 dt 1 pt 5 ps 0.8' ! Residual
+      write(lun,'(a)') 'set style line 4 lc rgb "#E69F00" lw 2.6 dt 3 pt 5 ps 0.8' ! 100×Residual
+      write(lun,'(a)') 'set style line 5 lc rgb "#0571B0" lw 1.0'                  ! |err| (y2)
+      write(lun,'(a)') 'set style line 9 lc rgb "#BBBBBB" lw 1.0 dt 3'             ! zero line
+      write(lun,'(a)') 'sf_fixed = 100.0'                                            ! scale for 100×Residual
+      write(lun,'(a)') ''
 
-         ! -------- div(v) --------
-         write(lun,'(a)') 'file="divv_line.dat"'
+      do dset = DIVV, VCROSSB_Z
+         write(lun,'(a)') 'file="' // trim(fnames(dset)) // '_line.dat"'
          write(lun,'(a)') 'stats file using 4 prefix "E"  nooutput'
          write(lun,'(a)') 'stats file using (column(4)**2) prefix "E2" nooutput'
          write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
          write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set output "divv.png"'
-         write(lun,'(a)') 'set title "div(v) - mid-line slice"'
+         write(lun,'(a)') 'set output "' // trim(fnames(dset)) // '.png"'
+         write(lun,'(a)') 'set title "' // trim(map_titles(dset)) // ' – mid-line slice"'
          write(lun,'(a)') 'set xlabel "x"; set ylabel "value"; set y2label "|error|"'
-         write(lun,'(a)') 'unset label; set label 1 sprintf("L2 = %s   Linf = %s", L2, Linf) at graph 0.5,0.92 center front'
+         write(lun,'(a)') 'unset label; set label 1 sprintf("L_2 = %s   L_∞ = %s", L2, Linf) at graph 0.5,0.92 center front'
          write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
       &                 'file u 1:3 w l  ls 2 t "Numerical", '       // &
       &                 'file u 1:($3-$2)          w lp ls 3 t "Residual", ' // &
@@ -665,101 +632,23 @@ contains
       &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
       &                 '0 w l ls 9 notitle'
          write(lun,'(a)') ''
+      enddo
+      close(lun)
 
-         ! -------- div(B) --------
-         write(lun,'(a)') 'file="divb_line.dat"'
-         write(lun,'(a)') 'stats file using 4 prefix "E"  nooutput'
-         write(lun,'(a)') 'stats file using (column(4)**2) prefix "E2" nooutput'
-         write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set output "divb.png"; set title "div(B) - mid-line slice"'
-         write(lun,'(a)') 'unset label; set label 1 sprintf("L2 = %s   Linf = %s", L2, Linf) at graph 0.5,0.92 center front'
-         write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
-      &                 'file u 1:3 w l  ls 2 t "Numerical", '       // &
-      &                 'file u 1:($3-$2)          w lp ls 3 t "Residual", ' // &
-      &                 'file u 1:(sf_fixed*($3-$2)) w lp ls 4 t "100*Residual", ' // &
-      &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
-      &                 '0 w l ls 9 notitle'
-         write(lun,'(a)') ''
+      ! 2D script
+      open(newunit=lun, file='test_plot_2d.gp', status='replace')
+      write(lun,'(a)') 'set encoding utf8'
+      write(lun,'(a)') 'set term pngcairo size 1200,520 font "Helvetica,10" enhanced'
+      write(lun,'(a)') 'set pm3d map'
+      write(lun,'(a)') 'set palette rgbformulae 33,13,10'
+      write(lun,'(a)') 'set view map'
+      write(lun,'(a)') 'set colorbox vertical; #set cblabel "value"'  ! cblabel would need an offset and rotation, otherwise it collides with ylabel of the right panel
+      write(lun,'(a,f0.6)') 'z0 = ', z0
+      write(lun,'(a)') ''
 
-         ! -------- curl(v)_z --------
-         write(lun,'(a)') 'file="curlv_z_line.dat"'
-         write(lun,'(a)') 'stats file using 4 prefix "E"  nooutput'
-         write(lun,'(a)') 'stats file using (column(4)**2) prefix "E2" nooutput'
-         write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set output "curlv_z.png"; set title "curl(v)_z - mid-line slice"'
-         write(lun,'(a)') 'unset label; set label 1 sprintf("L2 = %s   Linf = %s", L2, Linf) at graph 0.5,0.92 center front'
-         write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
-      &                 'file u 1:3 w l  ls 2 t "Numerical", '       // &
-      &                 'file u 1:($3-$2)          w lp ls 3 t "Residual", ' // &
-      &                 'file u 1:(sf_fixed*($3-$2)) w lp ls 4 t "100*Residual", ' // &
-      &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
-      &                 '0 w l ls 9 notitle'
-         write(lun,'(a)') ''
-
-         ! -------- curl(B)_z --------
-         write(lun,'(a)') 'file="curlb_z_line.dat"'
-         write(lun,'(a)') 'stats file using 4 prefix "E"  nooutput'
-         write(lun,'(a)') 'stats file using (column(4)**2) prefix "E2" nooutput'
-         write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set output "curlb_z.png"; set title "curl(B)_z - mid-line slice"'
-         write(lun,'(a)') 'unset label; set label 1 sprintf("L2 = %s   Linf = %s", L2, Linf) at graph 0.5,0.92 center front'
-         write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
-      &                 'file u 1:3 w l  ls 2 t "Numerical", '       // &
-      &                 'file u 1:($3-$2)          w lp ls 3 t "Residual", ' // &
-      &                 'file u 1:(sf_fixed*($3-$2)) w lp ls 4 t "100*Residual", ' // &
-      &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
-      &                 '0 w l ls 9 notitle'
-         write(lun,'(a)') ''
-
-         ! -------- (v x B)_z --------
-         write(lun,'(a)') 'file="vcrossb_z_line.dat"'
-         write(lun,'(a)') 'stats file using 4 prefix "E"  nooutput'
-         write(lun,'(a)') 'stats file using (column(4)**2) prefix "E2" nooutput'
-         write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set output "vcrossb_z.png"; set title "(v x B)_z - mid-line slice"'
-         write(lun,'(a)') 'unset label; set label 1 sprintf("L2 = %s   Linf = %s", L2, Linf) at graph 0.5,0.92 center front'
-         write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
-      &                 'file u 1:3 w l  ls 2 t "Numerical", '       // &
-      &                 'file u 1:($3-$2)          w lp ls 3 t "Residual", ' // &
-      &                 'file u 1:(sf_fixed*($3-$2)) w lp ls 4 t "100*Residual", ' // &
-      &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
-      &                 '0 w l ls 9 notitle'
-         write(lun,'(a)') ''
-
-         ! -------- v·B --------
-         write(lun,'(a)') 'file="vdotb_line.dat"'
-         write(lun,'(a)') 'stats file using 4 prefix "E"  nooutput'
-         write(lun,'(a)') 'stats file using (column(4)**2) prefix "E2" nooutput'
-         write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set output "vdotb.png"; set title "v·B - mid-line slice"'
-         write(lun,'(a)') 'unset label; set label 1 sprintf("L2 = %s   Linf = %s", L2, Linf) at graph 0.5,0.92 center front'
-         write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
-      &                 'file u 1:3 w l  ls 2 t "Numerical", '       // &
-      &                 'file u 1:($3-$2)          w lp ls 3 t "Residual", ' // &
-      &                 'file u 1:(sf_fixed*($3-$2)) w lp ls 4 t "100*Residual", ' // &
-      &                 'file u 1:(abs($4)) axes x1y2 w l  ls 5 t "|err|", ' // &
-      &                 '0 w l ls 9 notitle'
-         ! ------------------ 2D per-figure gnuplot ------------------
-         open(newunit=lun, file='test_plot_2d.gp', status='replace')
-         write(lun,'(a)') 'set encoding utf8'
-         write(lun,'(a)') 'set term pngcairo size 1200,520 font "Helvetica,10" enhanced'
-         write(lun,'(a)') 'set pm3d map'
-         write(lun,'(a)') 'set palette rgbformulae 33,13,10'
-         write(lun,'(a)') 'set view map'
-         write(lun,'(a)') 'set colorbox vertical; set cblabel "value"'
-         write(lun,'(a,f0.6)') 'z0 = ', z0
-         write(lun,'(a)') ''
-
-         ! helper: two panes with shared cbrange + L2/Linf in the overall title
-         ! Each pane gets its own title: Analytical (left), Numerical (right)
-
-         ! ---- div(v) ----
-         write(lun,'(a)') 'fname = "divv_2d.dat"'
+      write(lun,'(a)') 'print "Creating 2D plots for VecOps test"'
+      do dset = DIVV, VCROSSB_Z
+         write(lun,'(a)') 'fname = "' // trim(fnames(dset)) // '_2d.dat"'
          write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
          write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
          write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
@@ -768,127 +657,26 @@ contains
          write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
          write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
          write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-         write(lun,'(a)') 'set output "divv_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("div(v) - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
+         write(lun,'(a)') '#set cbrange [cmin' // ':' // 'cmax]'
+         write(lun,'(a)') 'set output "' // trim(fnames(dset)) // '_2d.png"'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("' // trim(map_titles(dset)) // ' – 2D slice z = %g  (L_2 = %s, L_∞ = %s)", z0, L2, Linf)'
          write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-         write(lun,'(a)') 'set title "Analytical"'
-         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
+         write(lun,'(a)') 'set title "Numerical - Analytical"'
+         write(lun,'(a)') 'splot fname u 1:2:($4-$3) w pm3d notitle'
          write(lun,'(a)') 'set title "Numerical"'
          write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
          write(lun,'(a)') 'unset multiplot'
          write(lun,'(a)') ''
+      enddo
+      close(lun)
 
-         ! ---- div(B) ----
-         write(lun,'(a)') 'fname = "divb_2d.dat"'
-         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-         write(lun,'(a)') 'set output "divb_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("div(B) - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-         write(lun,'(a)') 'set title "Analytical"'
-         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-         write(lun,'(a)') 'set title "Numerical"'
-         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-         write(lun,'(a)') 'unset multiplot'
-         write(lun,'(a)') ''
-
-         ! ---- curl(v)_z ----
-         write(lun,'(a)') 'fname = "curlv_z_2d.dat"'
-         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-         write(lun,'(a)') 'set output "curlv_z_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("curl(v)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-         write(lun,'(a)') 'set title "Analytical"'
-         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-         write(lun,'(a)') 'set title "Numerical"'
-         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-         write(lun,'(a)') 'unset multiplot'
-         write(lun,'(a)') ''
-
-         ! ---- curl(B)_z ----
-         write(lun,'(a)') 'fname = "curlb_z_2d.dat"'
-         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-         write(lun,'(a)') 'set output "curlb_z_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("curl(B)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-         write(lun,'(a)') 'set title "Analytical"'
-         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-         write(lun,'(a)') 'set title "Numerical"'
-         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-         write(lun,'(a)') 'unset multiplot'
-         write(lun,'(a)') ''
-
-         ! ---- (v x B)_z ----
-         write(lun,'(a)') 'fname = "vcrossb_z_2d.dat"'
-         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-         write(lun,'(a)') 'set output "vcrossb_z_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("(v x B)_z - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-         write(lun,'(a)') 'set title "Analytical"'
-         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-         write(lun,'(a)') 'set title "Numerical"'
-         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-         write(lun,'(a)') 'unset multiplot'
-         write(lun,'(a)') ''
-
-         ! ---- v·B ----
-         write(lun,'(a)') 'fname = "vdotb_2d.dat"'
-         write(lun,'(a)') 'stats fname u 3 prefix "A"  nooutput'
-         write(lun,'(a)') 'stats fname u 4 prefix "N"  nooutput'
-         write(lun,'(a)') 'stats fname u (abs($3-$4))   prefix "E"  nooutput'
-         write(lun,'(a)') 'stats fname u (($3-$4)**2)   prefix "E2" nooutput'
-         write(lun,'(a)') 'cmin = (A_min < N_min) ? A_min : N_min'
-         write(lun,'(a)') 'cmax = (A_max > N_max) ? A_max : N_max'
-         write(lun,'(a)') 'L2   = sprintf("%.3e", sqrt(E2_sum/E2_records))'
-         write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
-         write(lun,'(a)') 'set cbrange [cmin' // ':' // 'cmax]'
-         write(lun,'(a)') 'set output "vdotb_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("v·B - 2D slice z=%g  (L2=%s, Linf=%s)", z0, L2, Linf)'
-         write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
-         write(lun,'(a)') 'set title "Analytical"'
-         write(lun,'(a)') 'splot fname u 1:2:3 w pm3d notitle'
-         write(lun,'(a)') 'set title "Numerical"'
-         write(lun,'(a)') 'splot fname u 1:2:4 w pm3d notitle'
-         write(lun,'(a)') 'unset multiplot'
-
-         close(lun)
-
-         call printinfo('Wrote: *_line.dat, *_2d.dat, test_plot_1d.gp, test_plot_2d.gp', V_INFO)
-         call printinfo('1D: gnuplot test_plot_1d.gp  ->  divv.png, divb.png, curlv_z.png, curlb_z.png, vcrossb_z.png, vdotb.png', V_INFO)
-         call printinfo('2D: gnuplot test_plot_2d.gp  ->  *_2d.png (Analytical | Numerical)', V_INFO)
-      endif
+      call printinfo('Wrote: *_line.dat, *_2d.dat, test_plot_1d.gp, test_plot_2d.gp', V_INFO)
+      msg = '1D: gnuplot test_plot_1d.gp  ->'
+      do dset = DIVV, VCROSSB_Z
+         write(msg, '(a)') trim(msg) // ' ' // trim(fnames(dset)) // '.png'
+      enddo
+      call printinfo(trim(msg), V_INFO)
+      call printinfo('2D: gnuplot test_plot_2d.gp  ->  *_2d.png (Numerical - Analytical | Numerical)', V_INFO)
 
    end subroutine dump_vec_gnuplot
 
