@@ -54,7 +54,14 @@ module grid_container_op
 
 contains
 
-!! Gradient stencil coefficient. Implemented order : 2/4/6/8. To extend simply add a new case.
+!>
+!! \brief Gradient stencil coefficient.
+!!
+!! \details Implemented order : 2/4/6/8.
+!! To extend simply add a new case.
+!! Central finite difference is used by default.
+!! Backward and forward finite difference are applied where there are not enough guardcells for the central approximation (usually farthest guardcells).
+!<
 
    subroutine get_central_method_coeffs(ord, a, b)
 
@@ -90,18 +97,18 @@ contains
 
    function cg_dot(this, iv1, iv2, vec1, vec2) result(dot_prod)
 
-      use constants, only: xdim, ydim, zdim, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI, ndims
 
       implicit none
 
-      class(grid_container_op_t),      intent(in)  :: this  !< object invoking type-bound procedure
-      integer,                         intent(in)  :: iv1   ! cg list index of first vector
-      integer,                         intent(in)  :: iv2   ! cg list index of second vector
-      integer, dimension(3), optional, intent(in)  :: vec1  ! array pointing to the index of u1_x, u2_x, u3_x
-      integer, dimension(3), optional, intent(in)  :: vec2  ! array pointing to the index of v1_x, v2_x, v3_x
+      class(grid_container_op_t),          intent(in) :: this  !< object invoking type-bound procedure
+      integer,                             intent(in) :: iv1   ! cg list index of first vector
+      integer,                             intent(in) :: iv2   ! cg list index of second vector
+      integer, dimension(ndims), optional, intent(in) :: vec1  ! array pointing to the index of u1_x, u2_x, u3_x
+      integer, dimension(ndims), optional, intent(in) :: vec2  ! array pointing to the index of v1_x, v2_x, v3_x
 
       real, allocatable :: dot_prod(:,:,:)
-      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(3), v2(3)
+      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(ndims), v2(ndims)
 
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
@@ -122,27 +129,25 @@ contains
       endif
 
       do concurrent (k = klo : khi, j = jlo : jhi, i = ilo : ihi)
-         dot_prod(i, j, k) = this%w(iv1)%arr(v1(1), i, j, k) * this%w(iv2)%arr(v2(1), i, j, k)  &
-         &                 + this%w(iv1)%arr(v1(2), i, j, k) * this%w(iv2)%arr(v2(2), i, j, k)  &
-         &                 + this%w(iv1)%arr(v1(3), i, j, k) * this%w(iv2)%arr(v2(3), i, j, k)
+         dot_prod(i, j, k) = dot_product(this%w(iv1)%arr(v1(:), i, j, k), this%w(iv2)%arr(v2(:), i, j, k))
       enddo
 
    end function cg_dot
 
    function cg_cross(this, iv1, iv2, vec1, vec2) result(cross_prod)
 
-      use constants, only: xdim, ydim, zdim, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI, ndims
 
       implicit none
 
-      class(grid_container_op_t),      intent(in)  :: this  !< object invoking type-bound procedure
-      integer,                         intent(in)  :: iv1   !< cg list index of first vector
-      integer,                         intent(in)  :: iv2   !< cg list index of second vector
-      integer, dimension(3), optional, intent(in)  :: vec1  !< array pointing to the index of u1_x, u2_x, u3_x
-      integer, dimension(3), optional, intent(in)  :: vec2  !< array pointing to the index of v1_x, v2_x, v3_x
+      class(grid_container_op_t),          intent(in) :: this  !< object invoking type-bound procedure
+      integer,                             intent(in) :: iv1   !< cg list index of first vector
+      integer,                             intent(in) :: iv2   !< cg list index of second vector
+      integer, dimension(ndims), optional, intent(in) :: vec1  !< array pointing to the index of u1_x, u2_x, u3_x
+      integer, dimension(ndims), optional, intent(in) :: vec2  !< array pointing to the index of v1_x, v2_x, v3_x
 
       real, allocatable :: cross_prod(:,:,:,:)
-      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(3), v2(3)
+      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(ndims), v2(ndims)
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -162,34 +167,34 @@ contains
       endif
 
       do concurrent (k = klo : khi, j = jlo : jhi, i = ilo : ihi)
-         cross_prod(xdim, i, j, k) = this%w(iv1)%arr(v1(2), i, j, k) * this%w(iv2)%arr(v2(3), i, j, k)  &
-         &                         - this%w(iv1)%arr(v1(3), i, j, k) * this%w(iv2)%arr(v2(2), i, j, k)
+         cross_prod(xdim, i, j, k) = this%w(iv1)%arr(v1(ydim), i, j, k) * this%w(iv2)%arr(v2(zdim), i, j, k)  &
+         &                         - this%w(iv1)%arr(v1(zdim), i, j, k) * this%w(iv2)%arr(v2(ydim), i, j, k)
 
-         cross_prod(ydim, i, j, k) = this%w(iv1)%arr(v1(3), i, j, k) * this%w(iv2)%arr(v2(1), i, j, k)  &
-         &                         - this%w(iv1)%arr(v1(1), i, j, k) * this%w(iv2)%arr(v2(3), i, j, k)
+         cross_prod(ydim, i, j, k) = this%w(iv1)%arr(v1(zdim), i, j, k) * this%w(iv2)%arr(v2(xdim), i, j, k)  &
+         &                         - this%w(iv1)%arr(v1(xdim), i, j, k) * this%w(iv2)%arr(v2(zdim), i, j, k)
 
-         cross_prod(zdim, i, j, k) = this%w(iv1)%arr(v1(1), i, j, k) * this%w(iv2)%arr(v2(2), i, j, k)  &
-         &                         - this%w(iv1)%arr(v1(2), i, j, k) * this%w(iv2)%arr(v2(1), i, j, k)
+         cross_prod(zdim, i, j, k) = this%w(iv1)%arr(v1(xdim), i, j, k) * this%w(iv2)%arr(v2(ydim), i, j, k)  &
+         &                         - this%w(iv1)%arr(v1(ydim), i, j, k) * this%w(iv2)%arr(v2(xdim), i, j, k)
       enddo
 
    end function cg_cross
 
    function cg_get_divergence(this, ord, iw, vec) result(cg_div)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI
+      use constants,    only: xdim, ydim, zdim, LO, HI, ndims
       use dataio_pub,   only: die, warn
       use domain,       only: dom
       use mpisetup,     only: master
 
       implicit none
 
-      class(grid_container_op_t),      intent(in)  :: this  !< object invoking type-bound procedure
-      integer,                         intent(in)  :: iw    !< cg list index of type wna
-      integer, dimension(3), optional, intent(in)  :: vec   !< array pointing to the index of u1_x, u2_x, u3_x if wna
-      integer(kind = 4),               intent(in)  :: ord   !< Stencil order
+      class(grid_container_op_t),          intent(in) :: this  !< object invoking type-bound procedure
+      integer,                             intent(in) :: iw    !< cg list index of type wna
+      integer, dimension(ndims), optional, intent(in) :: vec   !< array pointing to the index of u1_x, u2_x, u3_x if wna
+      integer(kind = 4),                   intent(in) :: ord   !< Stencil order
 
       real, allocatable :: cg_div(:,:,:)
-      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(3), s
+      integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(ndims), s
       real              :: cfc(ord/2), cfo(0:ord)
 
       if (master) then
@@ -280,20 +285,20 @@ contains
 
    function cg_get_curl(this, ord, iw, vec) result(cg_curl)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, ydim, zdim, LO, HI, ndims
       use dataio_pub, only: die, warn
       use domain,     only: dom
       use mpisetup,   only: master
 
       implicit none
 
-      class(grid_container_op_t),      intent(in)  :: this  !< object invoking type-bound procedure
-      integer,                         intent(in)  :: iw    !< cg list index of type wna
-      integer, dimension(3), optional, intent(in)  :: vec   !< array pointing to the index of u1_x, u2_x, u3_x if wna
-      integer(kind = 4),               intent(in)  :: ord   !< Stencil order
+      class(grid_container_op_t),          intent(in) :: this  !< object invoking type-bound procedure
+      integer,                             intent(in) :: iw    !< cg list index of type wna
+      integer, dimension(ndims), optional, intent(in) :: vec   !< array pointing to the index of u1_x, u2_x, u3_x if wna
+      integer(kind = 4),                   intent(in) :: ord   !< Stencil order
 
       real, allocatable :: cg_curl(:,:,:,:), cg_jac(:,:,:,:)
-      integer           :: ilo, ihi, jlo, jhi, klo, khi, v1(3)
+      integer           :: ilo, ihi, jlo, jhi, klo, khi, v1(ndims)
 
       if (master) then
          if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_curl] Insufficient guard cells for chosen order")
@@ -327,7 +332,7 @@ contains
 
    function cg_get_gradient(this, ord, iw, iq, vec) result(cg_grad)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, ydim, zdim, LO, HI, ndims
       use dataio_pub, only: die, warn
       use domain,     only: dom
       use mpisetup,   only: master
@@ -364,7 +369,7 @@ contains
             allocate(v1(size(vec)))
             v1 = vec
          else
-            allocate(v1(3))
+            allocate(v1(ndims))
             v1 = [xdim, ydim, zdim]
          endif
          allocate(cg_grad(xdim : size(v1) * zdim, ilo : ihi, jlo : jhi, klo : khi))
