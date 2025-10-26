@@ -150,7 +150,6 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       integer                         :: p
-      integer :: vmap(3)
 
       do p = 1, flind%fluids
 
@@ -287,7 +286,10 @@ contains
       real :: xi, yj, sx, cx, sy, cy, dv
       real :: val, ana, ex, ey, ez, err2, lsum, lmax
 
-      if (master) call printinfo('--- Diagnostics (global volume-weighted L2 errors) ---', V_INFO)
+      if (master) then
+         write(msg,'("--- Diagnostics (global volume-weighted L2 errors, ", i1, a2, "-order of operators) ---")') order, merge("nd", "th", order == 2)
+         call printinfo(msg, V_INFO)
+      endif
 
       ssum = 0.0; smax = 0.0
       cgl => leaves%first
