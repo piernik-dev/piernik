@@ -127,10 +127,10 @@ contains
 
       endif
 
-      call all_cg%reg_var(divvnum,  restart_mode = AT_IGNORE )
-      call all_cg%reg_var(divvana,  restart_mode = AT_IGNORE )
-      call all_cg%reg_var(divbnum,  restart_mode = AT_IGNORE )
-      call all_cg%reg_var(divbana,  restart_mode = AT_IGNORE )
+      call all_cg%reg_var(divvnum,            restart_mode = AT_IGNORE)
+      call all_cg%reg_var(divvana,            restart_mode = AT_IGNORE)
+      call all_cg%reg_var(divbnum,            restart_mode = AT_IGNORE)
+      call all_cg%reg_var(divbana,            restart_mode = AT_IGNORE)
       call all_cg%reg_var(curlvnum, dim4 = 3, restart_mode = AT_IGNORE)
       call all_cg%reg_var(curlbnum, dim4 = 3, restart_mode = AT_IGNORE)
       call all_cg%reg_var(vcrossb,  dim4 = 3, restart_mode = AT_IGNORE)
@@ -166,31 +166,31 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+            do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                yj = cg%y(j)
-               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+               do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                   xi = cg%x(i)
-                  do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+                  do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                      zk = cg%z(k)
                      sx = sin(xi);  cx = cos(xi)
                      sy = sin(yj);  cy = cos(yj)
                      cg%u(fl%idn, i, j, k) = 1.0
-                     cg%u(fl%imx,i,j,k) =  cy*sx
-                     cg%u(fl%imy,i,j,k) = -cx*sy
+                     cg%u(fl%imx, i, j, k) =  cy*sx
+                     cg%u(fl%imy, i, j, k) = -cx*sy
                      cg%u(fl%imz, i, j, k) = 0.0
 
-                     cg%q(qna%ind(divvana))%arr(i,j,k) = 0.0
+                     cg%q(qna%ind(divvana))%arr(i, j, k) = 0.0
 
                      if (fl%has_energy) then
-                        cg%u(fl%ien,i,j,k) = 1.0
-                        cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+                        cg%u(fl%ien, i, j, k) = 1.0
+                        cg%u(fl%ien, i, j, k) = cg%u(fl%ien, i, j, k) + ekin(cg%u(fl%imx, i, j, k), cg%u(fl%imy, i, j, k), cg%u(fl%imz, i, j, k), cg%u(fl%idn, i, j, k))
 
                         if (fl%is_magnetized) then
                            cg%q(qna%ind(divbana))%arr(i, j, k) = 0.0
-                           cg%b(xdim,i,j,k) = -sy*cx
-                           cg%b(ydim,i,j,k) =  sx*cy
-                           cg%b(zdim,i,j,k) =  0.0
-                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                           cg%b(xdim, i, j, k) = -sy*cx
+                           cg%b(ydim, i, j, k) =  sx*cy
+                           cg%b(zdim, i, j, k) =  0.0
+                           cg%u(fl%ien, i, j, k) = cg%u(fl%ien, i, j, k) + emag(cg%b(xdim, i, j, k), cg%b(ydim, i, j, k), cg%b(zdim, i, j, k))
                         endif
                      endif
 
@@ -202,15 +202,17 @@ contains
          enddo
       enddo
 
+      fl => flind%all_fluids(1)%fl
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         cg%q(qna%ind(divvnum))%arr = cg%get_divergence(ord=order, iw=wna%fi, vec=[2,3,4])
-         cg%q(qna%ind(divbnum))%arr = cg%get_divergence(ord=order, iw=wna%bi, vec=[1,2,3])
-         cg%w(wna%ind(curlbnum))%arr = cg%get_curl(ord=order, iw=wna%bi, vec=[1,2,3])
-         cg%w(wna%ind(curlvnum))%arr = cg%get_curl(ord=order, iw=wna%fi, vec=[2,3,4])
-         cg%w(wna%ind(vcrossb))%arr = cg%cross(wna%fi,wna%bi,[2,3,4],[1,2,3])
-         cg%q(qna%ind(vdotb))%arr =  cg%dot(wna%fi,wna%bi,[2,3,4],[1,2,3])
+
+         cg%q(qna%ind(divvnum))%arr  = cg%get_divergence(ord=order, iw=wna%fi, vec=[fl%imx, fl%imy, fl%imz])
+         cg%q(qna%ind(divbnum))%arr  = cg%get_divergence(ord=order, iw=wna%bi, vec=[xdim, ydim, zdim])
+         cg%w(wna%ind(curlbnum))%arr = cg%get_curl      (ord=order, iw=wna%bi, vec=[xdim, ydim, zdim])
+         cg%w(wna%ind(curlvnum))%arr = cg%get_curl      (ord=order, iw=wna%fi, vec=[fl%imx, fl%imy, fl%imz])
+         cg%w(wna%ind(vcrossb))%arr  = cg%cross(wna%fi, wna%bi, [fl%imx, fl%imy, fl%imz], [xdim, ydim, zdim])
+         cg%q(qna%ind(vdotb))%arr    = cg%dot  (wna%fi, wna%bi, [fl%imx, fl%imy, fl%imz], [xdim, ydim, zdim])
 
          cgl => cgl%nxt
       enddo
@@ -231,8 +233,14 @@ contains
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
-      if (.not. qna%exists(divvana)) call die("[initproblem:user_out] cannot find divvana")
-      if (.not. qna%exists(divvana)) call die("[initproblem:user_out] cannot find divvnum")
+      if (.not. qna%exists(divvana))  call die("[initproblem:user_out] cannot find divvana")
+      if (.not. qna%exists(divvnum))  call die("[initproblem:user_out] cannot find divvnum")
+      if (.not. qna%exists(divbana))  call die("[initproblem:user_out] cannot find divbana")
+      if (.not. qna%exists(divbnum))  call die("[initproblem:user_out] cannot find divbnum")
+      if (.not. wna%exists(curlvnum)) call die("[initproblem:user_out] cannot find curlvnum")
+      if (.not. wna%exists(curlbnum)) call die("[initproblem:user_out] cannot find curlbnum")
+      if (.not. wna%exists(vcrossb))  call die("[initproblem:user_out] cannot find vcrossb")
+      if (.not. qna%exists(vdotb))    call die("[initproblem:user_out] cannot find vdotb")
 
       ierrh = 0
       select case (trim(var))
@@ -306,19 +314,20 @@ contains
          use allreduce,        only: piernik_MPI_Allreduce
          use cg_list,          only: cg_list_element
          use cg_leaves,        only: leaves
-         use constants,        only: pSUM, pMAX, xdim, ydim, zdim
+         use constants,        only: pSUM, pMAX, xdim, zdim
          use dataio_pub,       only: die
          use grid_cont,        only: grid_container
          use named_array_list, only: qna, wna
 
          implicit none
 
-         type(cg_list_element),  pointer :: cgl
-         type(grid_container),   pointer :: cg
          real, intent(out) :: err2, err_max
-         real :: lsum, lmax
-         real :: dv, xi, yj, sx, cx, sy, cy
+
+         type(cg_list_element), pointer :: cgl
+         type(grid_container),  pointer :: cg
+         real :: lsum, lmax, xi, yj, val
          integer :: i, j, k
+         real, dimension(xdim:zdim) :: vec
 
          err2 = 0.0
          err_max = 0.0
@@ -327,52 +336,51 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            dv = cg%dvol
-            lsum = 0.0 ; lmax = 0.0
+            lsum = 0.0
+            lmax = 0.0
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
-                  yj = cg%y(j) ; sy = sin(yj) ; cy = cos(yj)
+                  yj = cg%y(j)
+                  associate(sy => sin(yj), cy => cos(yj))
                   do i = cg%is, cg%ie
-                     xi = cg%x(i) ; sx = sin(xi) ; cx = cos(xi)
+                     xi = cg%x(i)
+                     associate (sx => sin(xi), cx => cos(xi))
                      select case (comp)
                         case (DIVV)
-                           lsum = lsum + cg%q(qna%ind(divvnum))%arr(i,j,k)**2
-                           lmax = max(lmax, abs(cg%q(qna%ind(divvnum))%arr(i,j,k)))
+                           val = cg%q(qna%ind(divvnum))%arr(i, j, k)
+                           lmax = max(lmax, abs(val))
+                           lsum = lsum + val*val
                         case (DIVB)
-                           lsum = lsum + cg%q(qna%ind(divbnum))%arr(i,j,k)**2
-                           lmax = max(lmax, abs(cg%q(qna%ind(divbnum))%arr(i,j,k)))
+                           val = cg%q(qna%ind(divbnum))%arr(i, j, k)
+                           lmax = max(lmax, abs(val))
+                           lsum = lsum + val*val
                         case (CURLV_Z)
-                           lsum = lsum + (cg%w(wna%ind(curlvnum))%arr(xdim,i,j,k)**2 + &
-                                &        cg%w(wna%ind(curlvnum))%arr(ydim,i,j,k)**2 + &
-                                &       (cg%w(wna%ind(curlvnum))%arr(zdim,i,j,k) - 2.0*sx*sy)**2)
-                           lmax = max(lmax, sqrt(cg%w(wna%ind(curlvnum))%arr(xdim,i,j,k)**2 + &
-                                &                cg%w(wna%ind(curlvnum))%arr(ydim,i,j,k)**2 + &
-                                &               (cg%w(wna%ind(curlvnum))%arr(zdim,i,j,k) - 2.0*sx*sy)**2))
+                           vec(:) = cg%w(wna%ind(curlvnum))%arr(xdim:zdim, i, j, k) - [ 0., 0., 2.0*sx*sy ]
+                           lmax = max(lmax, norm2(vec))
+                           lsum = lsum + norm2(vec)**2
                         case (CURLB_Z)
-                           lsum = lsum + (cg%w(wna%ind(curlbnum))%arr(xdim,i,j,k)**2 + &
-                                &        cg%w(wna%ind(curlbnum))%arr(ydim,i,j,k)**2 + &
-                                &       (cg%w(wna%ind(curlbnum))%arr(zdim,i,j,k) - 2.0*cx*cy)**2)
-                           lmax = max(lmax, sqrt(cg%w(wna%ind(curlbnum))%arr(xdim,i,j,k)**2 + &
-                                &                cg%w(wna%ind(curlbnum))%arr(ydim,i,j,k)**2 + &
-                                &               (cg%w(wna%ind(curlbnum))%arr(zdim,i,j,k) - 2.0*cx*cy)**2))
+                           vec(:) = cg%w(wna%ind(curlbnum))%arr(xdim:zdim, i, j, k) - [ 0., 0., 2.0*cx*cy ]
+                           lmax = max(lmax, norm2(vec))
+                           lsum = lsum + norm2(vec)**2
                         case (V_DOT_B)
-                           lsum = lsum + (cg%q(qna%ind(vdotb))%arr(i,j,k) + 2.0*sx*cx*sy*cy)**2
-                           lmax = max(lmax, abs(cg%q(qna%ind(vdotb))%arr(i,j,k) + 2.0*sx*cx*sy*cy))
+                           val = cg%q(qna%ind(vdotb))%arr(i, j, k) + 2.0*sx*cx*sy*cy
+                           lmax = max(lmax, abs(val))
+                           lsum = lsum + val*val
                         case (VCROSSB_Z)
-                           lsum = lsum + (cg%w(wna%ind(vcrossb))%arr(xdim,i,j,k)**2 + &
-                                &        cg%w(wna%ind(vcrossb))%arr(ydim,i,j,k)**2 + &
-                                &       (cg%w(wna%ind(vcrossb))%arr(zdim,i,j,k) - (sx*sx*cy*cy - cx*cx*sy*sy))**2)
-                           lmax = max(lmax, sqrt(cg%w(wna%ind(vcrossb))%arr(xdim,i,j,k)**2 + &
-                                &                cg%w(wna%ind(vcrossb))%arr(ydim,i,j,k)**2 + &
-                                &               (cg%w(wna%ind(vcrossb))%arr(zdim,i,j,k) - (sx*sx*cy*cy - cx*cx*sy*sy))**2))
+                           vec(:) = cg%w(wna%ind(vcrossb))%arr(xdim:zdim, i, j, k) - [ 0., 0., (sx*sx*cy*cy - cx*cx*sy*sy) ]
+                           lmax = max(lmax, norm2(vec))
+                           lsum = lsum + norm2(vec)**2
                         case default
                            call die("[initproblem:verify_test:calc_error] Unknown case")
                      end select
+                     end associate
                   enddo
+                  end associate
                enddo
             enddo
-            err2 = err2 + lsum*dv
+            err2 = err2 + lsum * cg%dvol
             err_max = max(err_max, lmax)
+
             cgl => cgl%nxt
          enddo
 
@@ -398,7 +406,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer :: i, j, j0, k0, lun, dset
-      real :: x, y, z0, sx, cx, sy, cy, va, vn
+      real :: x, y, z0, va, vn
       logical :: first_cg
 
       character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: fnames     = [ "divv     ", "divb     ", "curlv_z  ", "curlb_z  ", "vdotb    ", "vcrossb_z" ]
@@ -420,18 +428,17 @@ contains
          ! Mid-line in y, mid-plane in z (works nice only on single-block domain)
          j0 = (cg%js + cg%je)/2
          k0 = (cg%ks + cg%ke)/2
-         y  = cg%y(j0);  sy = sin(y);  cy = cos(y)
+         y  = cg%y(j0)
+         associate (sy => sin(y), cy => cos(y))
          z0 = cg%z(k0)
 
          ! 1D slices
-
          do dset = DIVV, VCROSSB_Z
             ! delete old file before writing first cg
             open(newunit=lun, file=trim(fnames(dset)) // '_line.dat', status='unknown', access=trim(merge('sequential', 'append    ', first_cg)))
             do i = cg%is, cg%ie
                x  = cg%x(i)
-               sx = sin(x)
-               cx = cos(x)
+               associate (sx => sin(x), cx => cos(x))
                select case (dset)
                   case (DIVV)
                      va = 0.0
@@ -454,11 +461,13 @@ contains
                   case default
                      call die("[initproblem:dump_vec_gnuplot] unknown 1D case")
                end select
+               end associate
                write(lun,'(4(1pe23.15))') x, va, vn, vn - va
             enddo
             write(lun,'(a)') ''
             close(lun)
          enddo
+         end associate
 
          ! 2D maps (x,y at fixed z) --
          ! columns: x y ana num
@@ -466,12 +475,10 @@ contains
             open(newunit=lun, file=trim(fnames(dset)) // '_2d.dat', status='unknown', access=trim(merge('sequential', 'append    ', first_cg)))
             do j = cg%js, cg%je
                y = cg%y(j)
-               sy = sin(y)
-               cy = cos(y)
+               associate (sy => sin(y), cy => cos(y))
                do i = cg%is, cg%ie
                   x  = cg%x(i)
-                  sx = sin(x)
-                  cx = cos(x)
+                  associate (sx => sin(x), cx => cos(x))
                   select case (dset)
                      case (DIVV)
                         va = 0.0
@@ -494,8 +501,10 @@ contains
                      case default
                         call die("[initproblem:dump_vec_gnuplot] unknown 2D case")
                   end select
+                  end associate
                   write(lun,'(4(1pe23.15))') x, y, va, vn
                enddo
+               end associate
                write(lun,'(a)') ''
             enddo
             write(lun,'(a)') ''
