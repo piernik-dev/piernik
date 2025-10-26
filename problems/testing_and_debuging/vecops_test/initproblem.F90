@@ -38,6 +38,8 @@ module initproblem
 
    use constants, only: dsetnamelen
 
+   use constants, only: cbuff_len
+
    implicit none
 
    private
@@ -58,6 +60,11 @@ module initproblem
    character(len=dsetnamelen), parameter :: curlbnum = "curlbnum"
    character(len=dsetnamelen), parameter :: vcrossb  = "vcrossb"
    character(len=dsetnamelen), parameter :: vdotb    = "vdotb"
+
+   enum, bind(C)
+      enumerator :: DIVV, DIVB, CURLV_Z, CURLB_Z, V_DOT_B, VCROSSB_Z
+   end enum
+   character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: titles = [ 'div(v)   ', 'div(B)   ', 'curl(v)_z', 'curl(B)_z', 'v·B     ', '(v×B)_z ' ]
 
 contains
 
@@ -268,205 +275,111 @@ contains
 #endif /* HDF5 */
 
    subroutine verify_test
-      use allreduce,        only: piernik_MPI_Allreduce
-      use cg_list,          only: cg_list_element
-      use cg_leaves,        only: leaves
-      use constants,        only: V_ESSENTIAL, V_INFO, pSUM, pMAX
-      use dataio_pub,       only: msg, printinfo
-      use grid_cont,        only: grid_container
-      use mpisetup,         only: master
-      use named_array_list, only: qna, wna
+
+      use constants,  only: V_ESSENTIAL, V_INFO
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
 
       implicit none
 
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
       real :: ssum, smax
-      integer :: i, j, k
-      real :: xi, yj, sx, cx, sy, cy, dv
-      real :: val, ana, ex, ey, ez, err2, lsum, lmax
+      integer :: comp
 
       if (master) then
          write(msg,'("--- Diagnostics (global volume-weighted L2 errors, ", i1, a2, "-order of operators) ---")') order, merge("nd", "th", order == 2)
          call printinfo(msg, V_INFO)
       endif
 
-      ssum = 0.0; smax = 0.0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg  => cgl%cg
-         dv  = cg%dvol
-         lsum = 0.0; lmax = 0.0
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  val  = cg%q(qna%ind(divvnum))%arr(i,j,k)
-                  err2 = val*val
-                  lsum = lsum + err2
-                  lmax = max(lmax, abs(val))
-               enddo
-            enddo
-         enddo
-         ssum = ssum + lsum*dv
-         smax = max(smax, lmax)
-         cgl => cgl%nxt
+      ! Main execution
+      do comp = DIVV, VCROSSB_Z
+         call calc_error(ssum, smax)
+         if (master) then
+            write(msg,'("||",a10,"||_err : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') trim(titles(comp)), sqrt(ssum), smax
+            call printinfo(msg, V_ESSENTIAL)
+         endif
       enddo
-      call piernik_MPI_Allreduce(ssum, pSUM)
-      call piernik_MPI_Allreduce(smax, pMAX)
-      if (master) then
-         write(msg,'("||div(v)||_err : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
-         call printinfo(msg, V_ESSENTIAL)
-      endif
 
-      ssum = 0.0; smax = 0.0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg  => cgl%cg
-         dv  = cg%dvol
-         lsum = 0.0; lmax = 0.0
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  val  = cg%q(qna%ind(divbnum))%arr(i,j,k)
-                  err2 = val*val
-                  lsum = lsum + err2
-                  lmax = max(lmax, abs(val))
-               enddo
-            enddo
-         enddo
-         ssum = ssum + lsum*dv
-         smax = max(smax, lmax)
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(ssum, pSUM)
-      call piernik_MPI_Allreduce(smax, pMAX)
-      if (master) then
-         write(msg,'("||div(B)||_err : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
-         call printinfo(msg, V_ESSENTIAL)
-      endif
+   contains
 
-      ssum = 0.0; smax = 0.0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg  => cgl%cg
-         dv  = cg%dvol
-         lsum = 0.0; lmax = 0.0
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               yj = cg%y(j);  sy = sin(yj);  cy = cos(yj)
-               do i = cg%is, cg%ie
-                  xi = cg%x(i); sx = sin(xi); cx = cos(xi)
-                  ex = cg%w(wna%ind(curlvnum))%arr(1,i,j,k) - 0.0
-                  ey = cg%w(wna%ind(curlvnum))%arr(2,i,j,k) - 0.0
-                  ez = cg%w(wna%ind(curlvnum))%arr(3,i,j,k) - (2.0*sx*sy)
-                  err2 = ex*ex + ey*ey + ez*ez
-                  lsum = lsum + err2
-                  lmax = max(lmax, sqrt(err2))
-               enddo
-            enddo
-         enddo
-         ssum = ssum + lsum*dv
-         smax = max(smax, lmax)
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(ssum, pSUM)
-      call piernik_MPI_Allreduce(smax, pMAX)
-      if (master) then
-         write(msg,'("||curl(v)||_err: L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
-         call printinfo(msg, V_ESSENTIAL)
-      endif
+      subroutine calc_error(err2, err_max)
 
-      ssum = 0.0; smax = 0.0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg  => cgl%cg
-         dv  = cg%dvol
-         lsum = 0.0; lmax = 0.0
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               yj = cg%y(j);  sy = sin(yj);  cy = cos(yj)
-               do i = cg%is, cg%ie
-                  xi = cg%x(i); sx = sin(xi); cx = cos(xi)
-                  ex = cg%w(wna%ind(curlbnum))%arr(1,i,j,k) - 0.0
-                  ey = cg%w(wna%ind(curlbnum))%arr(2,i,j,k) - 0.0
-                  ez = cg%w(wna%ind(curlbnum))%arr(3,i,j,k) - (2.0*cx*cy)
-                  err2 = ex*ex + ey*ey + ez*ez
-                  lsum = lsum + err2
-                  lmax = max(lmax, sqrt(err2))
-               enddo
-            enddo
-         enddo
-         ssum = ssum + lsum*dv
-         smax = max(smax, lmax)
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(ssum, pSUM)
-      call piernik_MPI_Allreduce(smax, pMAX)
-      if (master) then
-         write(msg,'("||curl(B)||_err: L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
-         call printinfo(msg, V_ESSENTIAL)
-      endif
+         use allreduce,        only: piernik_MPI_Allreduce
+         use cg_list,          only: cg_list_element
+         use cg_leaves,        only: leaves
+         use constants,        only: pSUM, pMAX, xdim, ydim, zdim
+         use dataio_pub,       only: die
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna, wna
 
-      ssum = 0.0; smax = 0.0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg  => cgl%cg
-         dv  = cg%dvol
-         lsum = 0.0; lmax = 0.0
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               yj = cg%y(j);  sy = sin(yj);  cy = cos(yj)
-               do i = cg%is, cg%ie
-                  xi = cg%x(i); sx = sin(xi); cx = cos(xi)
-                  ex = cg%w(wna%ind(vcrossb))%arr(1,i,j,k) - 0.0
-                  ey = cg%w(wna%ind(vcrossb))%arr(2,i,j,k) - 0.0
-                  ez = cg%w(wna%ind(vcrossb))%arr(3,i,j,k) - (sx*sx*cy*cy - cx*cx*sy*sy)
-                  err2 = ex*ex + ey*ey + ez*ez
-                  lsum = lsum + err2
-                  lmax = max(lmax, sqrt(err2))
-               enddo
-            enddo
-         enddo
-         ssum = ssum + lsum*dv
-         smax = max(smax, lmax)
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(ssum, pSUM)
-      call piernik_MPI_Allreduce(smax, pMAX)
-      if (master) then
-         write(msg,'("||v×B||_err    : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
-         call printinfo(msg, V_ESSENTIAL)
-      endif
+         implicit none
 
-      ssum = 0.0; smax = 0.0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg  => cgl%cg
-         dv  = cg%dvol
-         lsum = 0.0; lmax = 0.0
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               yj = cg%y(j);  sy = sin(yj);  cy = cos(yj)
-               do i = cg%is, cg%ie
-                  xi = cg%x(i); sx = sin(xi); cx = cos(xi)
-                  ana = -2.0*sx*cx*sy*cy
-                  val = cg%q(qna%ind(vdotb))%arr(i,j,k)
-                  err2 = (val - ana)**2
-                  lsum = lsum + err2
-                  lmax = max(lmax, abs(val - ana))
+         type(cg_list_element),  pointer :: cgl
+         type(grid_container),   pointer :: cg
+         real, intent(out) :: err2, err_max
+         real :: lsum, lmax
+         real :: dv, xi, yj, sx, cx, sy, cy
+         integer :: i, j, k
+
+         err2 = 0.0
+         err_max = 0.0
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            dv = cg%dvol
+            lsum = 0.0 ; lmax = 0.0
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  yj = cg%y(j) ; sy = sin(yj) ; cy = cos(yj)
+                  do i = cg%is, cg%ie
+                     xi = cg%x(i) ; sx = sin(xi) ; cx = cos(xi)
+                     select case (comp)
+                        case (DIVV)
+                           lsum = lsum + cg%q(qna%ind(divvnum))%arr(i,j,k)**2
+                           lmax = max(lmax, abs(cg%q(qna%ind(divvnum))%arr(i,j,k)))
+                        case (DIVB)
+                           lsum = lsum + cg%q(qna%ind(divbnum))%arr(i,j,k)**2
+                           lmax = max(lmax, abs(cg%q(qna%ind(divbnum))%arr(i,j,k)))
+                        case (CURLV_Z)
+                           lsum = lsum + (cg%w(wna%ind(curlvnum))%arr(xdim,i,j,k)**2 + &
+                                &        cg%w(wna%ind(curlvnum))%arr(ydim,i,j,k)**2 + &
+                                &       (cg%w(wna%ind(curlvnum))%arr(zdim,i,j,k) - 2.0*sx*sy)**2)
+                           lmax = max(lmax, sqrt(cg%w(wna%ind(curlvnum))%arr(xdim,i,j,k)**2 + &
+                                &                cg%w(wna%ind(curlvnum))%arr(ydim,i,j,k)**2 + &
+                                &               (cg%w(wna%ind(curlvnum))%arr(zdim,i,j,k) - 2.0*sx*sy)**2))
+                        case (CURLB_Z)
+                           lsum = lsum + (cg%w(wna%ind(curlbnum))%arr(xdim,i,j,k)**2 + &
+                                &        cg%w(wna%ind(curlbnum))%arr(ydim,i,j,k)**2 + &
+                                &       (cg%w(wna%ind(curlbnum))%arr(zdim,i,j,k) - 2.0*cx*cy)**2)
+                           lmax = max(lmax, sqrt(cg%w(wna%ind(curlbnum))%arr(xdim,i,j,k)**2 + &
+                                &                cg%w(wna%ind(curlbnum))%arr(ydim,i,j,k)**2 + &
+                                &               (cg%w(wna%ind(curlbnum))%arr(zdim,i,j,k) - 2.0*cx*cy)**2))
+                        case (V_DOT_B)
+                           lsum = lsum + (cg%q(qna%ind(vdotb))%arr(i,j,k) + 2.0*sx*cx*sy*cy)**2
+                           lmax = max(lmax, abs(cg%q(qna%ind(vdotb))%arr(i,j,k) + 2.0*sx*cx*sy*cy))
+                        case (VCROSSB_Z)
+                           lsum = lsum + (cg%w(wna%ind(vcrossb))%arr(xdim,i,j,k)**2 + &
+                                &        cg%w(wna%ind(vcrossb))%arr(ydim,i,j,k)**2 + &
+                                &       (cg%w(wna%ind(vcrossb))%arr(zdim,i,j,k) - (sx*sx*cy*cy - cx*cx*sy*sy))**2)
+                           lmax = max(lmax, sqrt(cg%w(wna%ind(vcrossb))%arr(xdim,i,j,k)**2 + &
+                                &                cg%w(wna%ind(vcrossb))%arr(ydim,i,j,k)**2 + &
+                                &               (cg%w(wna%ind(vcrossb))%arr(zdim,i,j,k) - (sx*sx*cy*cy - cx*cx*sy*sy))**2))
+                        case default
+                           call die("[initproblem:verify_test:calc_error] Unknown case")
+                     end select
+                  enddo
                enddo
             enddo
+            err2 = err2 + lsum*dv
+            err_max = max(err_max, lmax)
+            cgl => cgl%nxt
          enddo
-         ssum = ssum + lsum*dv
-         smax = max(smax, lmax)
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(ssum, pSUM)
-      call piernik_MPI_Allreduce(smax, pMAX)
-      if (master) then
-         write(msg,'("||v·B||_err    : L2_vw=",1pe12.5,"  Linf=",1pe12.5)') sqrt(ssum), smax
-         call printinfo(msg, V_ESSENTIAL)
-      endif
+
+         call piernik_MPI_Allreduce(err2, pSUM)
+         call piernik_MPI_Allreduce(err_max, pMAX)
+
+      end subroutine calc_error
 
    end subroutine verify_test
 
@@ -488,11 +401,7 @@ contains
       real :: x, y, z0, sx, cx, sy, cy, va, vn
       logical :: first_cg
 
-      enum, bind(C)
-         enumerator :: DIVV, DIVB, CURLV_Z, CURLB_Z, V_DOT_B, VCROSSB_Z
-      end enum
-      character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: fnames     = [ "divv     ", "divb     ", "curlv_z  ", "curlb_z  ", "vcrossb_z", "vdotb    " ]
-      character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: map_titles = [ 'div(v)   ', 'div(B)   ', 'curl(v)_z', 'curl(B)_z', '(v×B)_z ',  'v·B     ' ]
+      character(len=cbuff_len), dimension(DIVV:VCROSSB_Z), parameter :: fnames     = [ "divv     ", "divb     ", "curlv_z  ", "curlb_z  ", "vdotb    ", "vcrossb_z" ]
 
       call verify_test
 
@@ -622,7 +531,7 @@ contains
          write(lun,'(a)') 'L2 = sprintf("%.3e", sqrt(E2_sum/E2_records))'
          write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
          write(lun,'(a)') 'set output "' // trim(fnames(dset)) // '.png"'
-         write(lun,'(a)') 'set title "' // trim(map_titles(dset)) // ' – mid-line slice"'
+         write(lun,'(a)') 'set title "' // trim(titles(dset)) // ' – mid-line slice"'
          write(lun,'(a)') 'set xlabel "x"; set ylabel "value"; set y2label "|error|"'
          write(lun,'(a)') 'unset label; set label 1 sprintf("L_2 = %s   L_∞ = %s", L2, Linf) at graph 0.5,0.92 center front'
          write(lun,'(a)') 'plot file u 1:2 w l  ls 1 t "Analytical", ' // &
@@ -659,7 +568,7 @@ contains
          write(lun,'(a)') 'Linf = sprintf("%.3e", E_max)'
          write(lun,'(a)') '#set cbrange [cmin' // ':' // 'cmax]'
          write(lun,'(a)') 'set output "' // trim(fnames(dset)) // '_2d.png"'
-         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("' // trim(map_titles(dset)) // ' – 2D slice z = %g  (L_2 = %s, L_∞ = %s)", z0, L2, Linf)'
+         write(lun,'(a)') 'set multiplot layout 1,2 title sprintf("' // trim(titles(dset)) // ' – 2D slice z = %g  (L_2 = %s, L_∞ = %s)", z0, L2, Linf)'
          write(lun,'(a)') 'set xlabel "x"; set ylabel "y"'
          write(lun,'(a)') 'set title "Numerical - Analytical"'
          write(lun,'(a)') 'splot fname u 1:2:($4-$3) w pm3d notitle'
