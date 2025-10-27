@@ -26,8 +26,13 @@
 !
 #include "piernik.h"
 
-!> \brief This module extends cg by including type bound procedures for gradient/divergence/curl and taking dot and cross product
-!> of vectors in different cg list. For gradient it is important to call the procedure with the keyword iq or iw.
+!>
+!! \brief This module extends cg by including type bound procedures for gradient/divergence/curl and taking dot and cross product
+!! of vectors in different cg list. For gradient it is important to call the procedure with the keyword iq or iw.
+!!
+!! OPT: explore possible performance gains of do concorrent vs. regular do loops (try -ftree-parallelize-loops=NPROC for cheap shared-memory approach).
+!! OPT: explore possible performance gains of using dot_product() intrinsic instead of loops over s variable.
+!<
 
 module grid_container_op
 
