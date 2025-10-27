@@ -233,7 +233,7 @@ contains
 
          do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
             do s = 0, ord
-               cg_div(i, j, k) = cg_div(i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(xdim), i - s , j, k) * this%idl(xdim)
+               cg_div(i, j, k) = cg_div(i, j, k) - cfo(s) * this%w(iw)%arr(v1(xdim), i - s , j, k) * this%idl(xdim)
             enddo
          enddo
       endif
@@ -254,7 +254,7 @@ contains
 
          do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
             do s = 0, ord
-               cg_div(i, j, k) = cg_div(i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ydim), i, j - s, k) * this%idl(ydim)
+               cg_div(i, j, k) = cg_div(i, j, k) - cfo(s) * this%w(iw)%arr(v1(ydim), i, j - s, k) * this%idl(ydim)
             enddo
 
          enddo
@@ -276,7 +276,7 @@ contains
 
          do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
             do s = 0, ord
-               cg_div(i, j, k) = cg_div(i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(zdim), i, j, k - s) * this%idl(zdim)
+               cg_div(i, j, k) = cg_div(i, j, k) - cfo(s) * this%w(iw)%arr(v1(zdim), i, j, k - s) * this%idl(zdim)
             enddo
          enddo
       endif
@@ -393,7 +393,7 @@ contains
 
                   do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
                      do s = 0, ord
-                        cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ddim), i - s , j, k) * this%idl(xdim)
+                        cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) - cfo(s) * this%w(iw)%arr(v1(ddim), i - s , j, k) * this%idl(xdim)
                      enddo
                   enddo
             endif
@@ -413,7 +413,7 @@ contains
 
                   do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
                      do s = 0, ord
-                        cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ddim), i, j - s, k) * this%idl(ydim)
+                        cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) - cfo(s) * this%w(iw)%arr(v1(ddim), i, j - s, k) * this%idl(ydim)
                      enddo
                   enddo
             endif
@@ -433,7 +433,7 @@ contains
 
                   do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
                      do s = 0, ord
-                        cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ddim), i, j, k - s) * this%idl(zdim)
+                        cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) - cfo(s) * this%w(iw)%arr(v1(ddim), i, j, k - s) * this%idl(zdim)
                      enddo
                   enddo
             endif
@@ -459,7 +459,7 @@ contains
 
             do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
                do s = 0, ord
-                  cg_grad(xdim, i, j, k) = cg_grad(xdim, i, j, k) - cfo(ord - s) * this%q(iq)%arr(i - s , j, k) * this%idl(xdim)
+                  cg_grad(xdim, i, j, k) = cg_grad(xdim, i, j, k) - cfo(s) * this%q(iq)%arr(i - s , j, k) * this%idl(xdim)
                enddo
             enddo
          endif
@@ -481,7 +481,7 @@ contains
 
             do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
                do s = 0, ord
-                  cg_grad(ydim, i, j, k) = cg_grad(ydim, i, j, k) - cfo(ord - s) * this%q(iq)%arr(i, j - s, k) * this%idl(ydim)
+                  cg_grad(ydim, i, j, k) = cg_grad(ydim, i, j, k) - cfo(s) * this%q(iq)%arr(i, j - s, k) * this%idl(ydim)
                enddo
             enddo
          endif
@@ -503,7 +503,7 @@ contains
 
             do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
                do s = 0, ord
-                  cg_grad(zdim, i, j, k) = cg_grad(zdim, i, j, k) - cfo(ord - s) * this%q(iq)%arr(i, j, k - s) * this%idl(zdim)
+                  cg_grad(zdim, i, j, k) = cg_grad(zdim, i, j, k) - cfo(s) * this%q(iq)%arr(i, j, k - s) * this%idl(zdim)
                enddo
             enddo
          endif
