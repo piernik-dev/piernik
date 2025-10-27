@@ -54,6 +54,33 @@ module grid_container_op
 
 contains
 
+   !> Validate stencil order and guard cells
+   subroutine validate_stencil_order(ord, operation)
+
+      use dataio_pub, only: die, warn, msg
+      use domain,     only: dom
+      use mpisetup,   only: master
+
+      implicit none
+
+      integer(kind=4),            intent(in) :: ord
+      character(len=*),           intent(in) :: operation
+
+      if (.not. any(ord == [2, 4, 6, 8])) call die("[grid_container_op:" // trim(operation) // "] Invalid stencil order. Must be 2, 4, 6 or 8")
+
+      if (master) then
+         if (dom%nb < ord/2) then
+            write(msg,'(3a,i2,a,i2)') "[grid_container_op:", trim(operation), "] Need at least ", ord/2, " guard cells, but only have ", dom%nb
+            call die(msg)
+         endif
+         if (dom%nb < ord .and. warn_ord_flg) then
+            call warn("[grid_container_op:" // trim(operation) // "] Insufficient guard cells may cause artifacts")
+            warn_ord_flg = .false.
+         endif
+      endif
+
+   end subroutine validate_stencil_order
+
 !>
 !! \brief Gradient stencil coefficient.
 !!
@@ -181,10 +208,8 @@ contains
 
    function cg_get_divergence(this, ord, iw, vec) result(cg_div)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI, ndims
-      use dataio_pub,   only: die, warn
-      use domain,       only: dom
-      use mpisetup,     only: master
+      use constants, only: xdim, ydim, zdim, LO, HI, ndims
+      use domain,    only: dom
 
       implicit none
 
@@ -197,13 +222,7 @@ contains
       integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(ndims), s
       real              :: cfc(ord/2), cfo(0:ord)
 
-      if (master) then
-         if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_divergence] Insufficient guard cells for chosen order")
-         if (dom%nb < ord .and. warn_ord_flg) then
-            call warn("[grid_container_op:cg_get_divergence] Insufficient guard cells for chosen order. Expect artifacts")
-            warn_ord_flg = .false.
-         endif
-      endif
+      call validate_stencil_order(ord, "cg_get_divergence")
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -290,10 +309,7 @@ contains
 
    function cg_get_curl(this, ord, iw, vec) result(cg_curl)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, ndims
-      use dataio_pub, only: die, warn
-      use domain,     only: dom
-      use mpisetup,   only: master
+      use constants, only: xdim, ydim, zdim, LO, HI, ndims
 
       implicit none
 
@@ -305,13 +321,7 @@ contains
       real, allocatable :: cg_curl(:,:,:,:), cg_jac(:,:,:,:)
       integer           :: ilo, ihi, jlo, jhi, klo, khi, v1(ndims)
 
-      if (master) then
-         if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_curl] Insufficient guard cells for chosen order")
-         if (dom%nb < ord .and. warn_ord_flg) then
-            call warn("[grid_container_op:cg_get_curl] Insufficient guard cells for chosen order. Expect artifacts")
-            warn_ord_flg = .false.
-         endif
-      endif
+      call validate_stencil_order(ord, "cg_get_curl")
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -338,9 +348,8 @@ contains
    function cg_get_gradient(this, ord, iw, iq, vec) result(cg_grad)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, ndims
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die
       use domain,     only: dom
-      use mpisetup,   only: master
 
       implicit none
 
@@ -355,13 +364,7 @@ contains
       real                    :: cfc(ord/2), cfo(0:ord)
       integer, allocatable    :: v1(:)
 
-      if (master) then
-         if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_gradient] Insufficient guard cells for chosen order")
-         if (dom%nb < ord .and. warn_ord_flg) then
-            call warn("[grid_container_op:cg_get_gradient] Insufficient guard cells for chosen order. Expect artifacts")
-            warn_ord_flg = .false.
-         endif
-      endif
+      call validate_stencil_order(ord, "cg_get_gradient")
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
