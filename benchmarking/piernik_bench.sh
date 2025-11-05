@@ -137,7 +137,7 @@ run_piernik() {
         case $problem in
             sedov)
                 local xmul=1
-                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf(" %8.4f ", $12); t+=$12; n++;}} END {printf(" %9.5f ", t/n)}'
+                run_strong_weak_scaling $scaling $threads $nx "$mpirun_cmd" $max_mem $xmul | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($3 != 0) {printf(" %8.4f ", $12); t+=$12; n++;}} END {printf(" %9.5f ", t/n)}'
                 ;;
             crtest)
                 local xmul=512
