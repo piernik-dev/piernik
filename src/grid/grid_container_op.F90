@@ -26,8 +26,13 @@
 !
 #include "piernik.h"
 
-!> \brief This module extends cg by including type bound procedures for gradient/divergence/curl and taking dot and cross product
-!> of vectors in different cg list. For gradient it is important to call the procedure with the keyword iq or iw.
+!>
+!! \brief This module extends cg by including type bound procedures for gradient/divergence/curl and taking dot and cross product
+!! of vectors in different cg list. For gradient it is important to call the procedure with the keyword iq or iw.
+!!
+!! OPT: explore possible performance gains of do concorrent vs. regular do loops (try -ftree-parallelize-loops=NPROC for cheap shared-memory approach).
+!! OPT: explore possible performance gains of using dot_product() intrinsic instead of loops over s variable.
+!<
 
 module grid_container_op
 
@@ -53,6 +58,33 @@ module grid_container_op
    end type grid_container_op_t
 
 contains
+
+   !> Validate stencil order and guard cells
+   subroutine validate_stencil_order(ord, operation)
+
+      use dataio_pub, only: die, warn, msg
+      use domain,     only: dom
+      use mpisetup,   only: master
+
+      implicit none
+
+      integer(kind=4),            intent(in) :: ord
+      character(len=*),           intent(in) :: operation
+
+      if (.not. any(ord == [2, 4, 6, 8])) call die("[grid_container_op:" // trim(operation) // "] Invalid stencil order. Must be 2, 4, 6 or 8")
+
+      if (master) then
+         if (dom%nb < ord/2) then
+            write(msg,'(3a,i2,a,i2)') "[grid_container_op:", trim(operation), "] Need at least ", ord/2, " guard cells, but only have ", dom%nb
+            call die(msg)
+         endif
+         if (dom%nb < ord .and. warn_ord_flg) then
+            call warn("[grid_container_op:" // trim(operation) // "] Insufficient guard cells may cause artifacts")
+            warn_ord_flg = .false.
+         endif
+      endif
+
+   end subroutine validate_stencil_order
 
 !>
 !! \brief Gradient stencil coefficient.
@@ -181,10 +213,8 @@ contains
 
    function cg_get_divergence(this, ord, iw, vec) result(cg_div)
 
-      use constants,    only: xdim, ydim, zdim, LO, HI, ndims
-      use dataio_pub,   only: die, warn
-      use domain,       only: dom
-      use mpisetup,     only: master
+      use constants, only: xdim, ydim, zdim, LO, HI, ndims
+      use domain,    only: dom
 
       implicit none
 
@@ -197,13 +227,7 @@ contains
       integer           :: i, j, k, ilo, ihi, jlo, jhi, klo, khi, v1(ndims), s
       real              :: cfc(ord/2), cfo(0:ord)
 
-      if (master) then
-         if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_divergence] Insufficient guard cells for chosen order")
-         if (dom%nb < ord .and. warn_ord_flg) then
-            call warn("[grid_container_op:cg_get_divergence] Insufficient guard cells for chosen order. Expect artifacts")
-            warn_ord_flg = .false.
-         endif
-      endif
+      call validate_stencil_order(ord, "cg_get_divergence")
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -218,6 +242,7 @@ contains
       allocate(cg_div(ilo : ihi, jlo : jhi, klo : khi))
       cg_div = 0.0
       if (dom%has_dir(xdim)) then
+
          do concurrent (k = klo : khi, j = jlo : jhi, i = ilo + ord/2 : ihi - ord/2 )
             do s = 1, ord/2
                cg_div(i, j, k) = cg_div(i, j, k) + &
@@ -233,12 +258,14 @@ contains
 
          do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
             do s = 0, ord
-               cg_div(i, j, k) = cg_div(i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(xdim), i - s , j, k) * this%idl(xdim)
+               cg_div(i, j, k) = cg_div(i, j, k) - cfo(s) * this%w(iw)%arr(v1(xdim), i - s , j, k) * this%idl(xdim)
             enddo
          enddo
+
       endif
 
       if (dom%has_dir(ydim)) then
+
          do concurrent (k = klo : khi, j = jlo + ord/2 : jhi - ord/2, i = ilo : ihi)
             do s = 1, ord/2
                cg_div(i, j, k) = cg_div(i, j, k) + &
@@ -254,13 +281,14 @@ contains
 
          do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
             do s = 0, ord
-               cg_div(i, j, k) = cg_div(i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ydim), i, j - s, k) * this%idl(ydim)
+               cg_div(i, j, k) = cg_div(i, j, k) - cfo(s) * this%w(iw)%arr(v1(ydim), i, j - s, k) * this%idl(ydim)
             enddo
-
          enddo
+
       endif
 
       if (dom%has_dir(zdim)) then
+
          do concurrent (k = klo + ord/2 : khi - ord/2, j = jlo : jhi, i = ilo : ihi)
             do s = 1, ord/2
                cg_div(i, j, k) = cg_div(i, j, k) + &
@@ -276,19 +304,17 @@ contains
 
          do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
             do s = 0, ord
-               cg_div(i, j, k) = cg_div(i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(zdim), i, j, k - s) * this%idl(zdim)
+               cg_div(i, j, k) = cg_div(i, j, k) - cfo(s) * this%w(iw)%arr(v1(zdim), i, j, k - s) * this%idl(zdim)
             enddo
          enddo
+
       endif
 
    end function cg_get_divergence
 
    function cg_get_curl(this, ord, iw, vec) result(cg_curl)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, ndims
-      use dataio_pub, only: die, warn
-      use domain,     only: dom
-      use mpisetup,   only: master
+      use constants, only: xdim, ydim, zdim, LO, HI, ndims
 
       implicit none
 
@@ -300,13 +326,7 @@ contains
       real, allocatable :: cg_curl(:,:,:,:), cg_jac(:,:,:,:)
       integer           :: ilo, ihi, jlo, jhi, klo, khi, v1(ndims)
 
-      if (master) then
-         if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_curl] Insufficient guard cells for chosen order")
-         if (dom%nb < ord .and. warn_ord_flg) then
-            call warn("[grid_container_op:cg_get_curl] Insufficient guard cells for chosen order. Expect artifacts")
-            warn_ord_flg = .false.
-         endif
-      endif
+      call validate_stencil_order(ord, "cg_get_curl")
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -333,9 +353,8 @@ contains
    function cg_get_gradient(this, ord, iw, iq, vec) result(cg_grad)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, ndims
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die
       use domain,     only: dom
-      use mpisetup,   only: master
 
       implicit none
 
@@ -350,13 +369,7 @@ contains
       real                    :: cfc(ord/2), cfo(0:ord)
       integer, allocatable    :: v1(:)
 
-      if (master) then
-         if (dom%nb < ord/2 ) call die("[grid_container_op:cg_get_gradient] Insufficient guard cells for chosen order")
-         if (dom%nb < ord .and. warn_ord_flg) then
-            call warn("[grid_container_op:cg_get_gradient] Insufficient guard cells for chosen order. Expect artifacts")
-            warn_ord_flg = .false.
-         endif
-      endif
+      call validate_stencil_order(ord, "cg_get_gradient")
 
       ilo = this%lhn(xdim,LO); ihi = this%lhn(xdim,HI)
       jlo = this%lhn(ydim,LO); jhi = this%lhn(ydim,HI)
@@ -378,64 +391,70 @@ contains
          ! This is for wna
          do ddim = xdim, size(v1)
             if (dom%has_dir(xdim)) then
-                  do concurrent (k = klo : khi, j = jlo : jhi, i = ilo + ord/2 : ihi - ord/2 )
-                     do s = 1, ord/2
-                        cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) + &
-                        &                        cfc(s) * (this%w(iw)%arr(v1(ddim), i + s , j, k) - this%w(iw)%arr(v1(ddim), i - s , j, k)) * this%idl(xdim)
-                     enddo
-                  enddo
 
-                  do concurrent (k = klo : khi, j = jlo : jhi, i = ilo : ilo + ord/2 - 1)
-                     do s = 0, ord
-                        cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i + s , j, k) * this%idl(xdim)
-                     enddo
+               do concurrent (k = klo : khi, j = jlo : jhi, i = ilo + ord/2 : ihi - ord/2 )
+                  do s = 1, ord/2
+                     cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) + &
+                          &                        cfc(s) * (this%w(iw)%arr(v1(ddim), i + s , j, k) - this%w(iw)%arr(v1(ddim), i - s , j, k)) * this%idl(xdim)
                   enddo
+               enddo
 
-                  do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
-                     do s = 0, ord
-                        cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ddim), i - s , j, k) * this%idl(xdim)
-                     enddo
+               do concurrent (k = klo : khi, j = jlo : jhi, i = ilo : ilo + ord/2 - 1)
+                  do s = 0, ord
+                     cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i + s , j, k) * this%idl(xdim)
                   enddo
+               enddo
+
+               do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
+                  do s = 0, ord
+                     cg_grad(xdim + 3 * (ddim - 1), i, j, k) = cg_grad(xdim + 3 * (ddim - 1), i, j, k) - cfo(s) * this%w(iw)%arr(v1(ddim), i - s , j, k) * this%idl(xdim)
+                  enddo
+               enddo
+
             endif
             if (dom%has_dir(ydim)) then
-                  do concurrent (k = klo : khi, j = jlo + ord/2 : jhi - ord/2, i = ilo : ihi)
-                     do s = 1, ord/2
-                        cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) + &
-                        &                        cfc(s) * (this%w(iw)%arr(v1(ddim), i, j + s, k) - this%w(iw)%arr(v1(ddim), i, j - s, k)) * this%idl(ydim)
-                     enddo
-                  enddo
 
-                  do concurrent (k = klo : khi, j = jlo : jlo + ord/2 - 1, i = ilo : ihi)
-                     do s = 0, ord
-                        cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i, j + s, k) * this%idl(ydim)
-                     enddo
+               do concurrent (k = klo : khi, j = jlo + ord/2 : jhi - ord/2, i = ilo : ihi)
+                  do s = 1, ord/2
+                     cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) + &
+                          &                        cfc(s) * (this%w(iw)%arr(v1(ddim), i, j + s, k) - this%w(iw)%arr(v1(ddim), i, j - s, k)) * this%idl(ydim)
                   enddo
+               enddo
 
-                  do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
-                     do s = 0, ord
-                        cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ddim), i, j - s, k) * this%idl(ydim)
-                     enddo
+               do concurrent (k = klo : khi, j = jlo : jlo + ord/2 - 1, i = ilo : ihi)
+                  do s = 0, ord
+                     cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i, j + s, k) * this%idl(ydim)
                   enddo
+               enddo
+
+               do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
+                  do s = 0, ord
+                     cg_grad(ydim + 3 * (ddim - 1), i, j, k) = cg_grad(ydim + 3 * (ddim - 1), i, j, k) - cfo(s) * this%w(iw)%arr(v1(ddim), i, j - s, k) * this%idl(ydim)
+                  enddo
+               enddo
+
             endif
             if (dom%has_dir(zdim)) then
-                  do concurrent (k = klo + ord/2 : khi - ord/2, j = jlo : jhi, i = ilo : ihi)
-                     do s = 1, ord/2
-                        cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) + &
-                        &                        cfc(s) * (this%w(iw)%arr(v1(ddim), i, j, k + s) - this%w(iw)%arr(v1(ddim), i, j, k - s)) * this%idl(zdim)
-                     enddo
-                  enddo
 
-                  do concurrent (k = klo : klo + ord/2 - 1, j = jlo : jhi, i = ilo : ihi)
-                     do s = 0, ord
-                        cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i, j, k + s) * this%idl(zdim)
-                     enddo
+               do concurrent (k = klo + ord/2 : khi - ord/2, j = jlo : jhi, i = ilo : ihi)
+                  do s = 1, ord/2
+                     cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) + &
+                          &                        cfc(s) * (this%w(iw)%arr(v1(ddim), i, j, k + s) - this%w(iw)%arr(v1(ddim), i, j, k - s)) * this%idl(zdim)
                   enddo
+               enddo
 
-                  do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
-                     do s = 0, ord
-                        cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) - cfo(ord - s) * this%w(iw)%arr(v1(ddim), i, j, k - s) * this%idl(zdim)
-                     enddo
+               do concurrent (k = klo : klo + ord/2 - 1, j = jlo : jhi, i = ilo : ihi)
+                  do s = 0, ord
+                     cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) + cfo(s) * this%w(iw)%arr(v1(ddim), i, j, k + s) * this%idl(zdim)
                   enddo
+               enddo
+
+               do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
+                  do s = 0, ord
+                     cg_grad(3*ddim, i, j, k) = cg_grad(3*ddim, i, j, k) - cfo(s) * this%w(iw)%arr(v1(ddim), i, j, k - s) * this%idl(zdim)
+                  enddo
+               enddo
+
             endif
          enddo
       else if (present(iq) .and. .not. present(iw)) then
@@ -459,9 +478,10 @@ contains
 
             do concurrent (k = klo : khi, j = jlo : jhi, i = ihi - ord/2 + 1 : ihi)
                do s = 0, ord
-                  cg_grad(xdim, i, j, k) = cg_grad(xdim, i, j, k) - cfo(ord - s) * this%q(iq)%arr(i - s , j, k) * this%idl(xdim)
+                  cg_grad(xdim, i, j, k) = cg_grad(xdim, i, j, k) - cfo(s) * this%q(iq)%arr(i - s , j, k) * this%idl(xdim)
                enddo
             enddo
+
          endif
 
          if (dom%has_dir(ydim)) then
@@ -481,9 +501,10 @@ contains
 
             do concurrent (k = klo : khi, j = jhi - ord/2 + 1 : jhi, i = ilo : ihi)
                do s = 0, ord
-                  cg_grad(ydim, i, j, k) = cg_grad(ydim, i, j, k) - cfo(ord - s) * this%q(iq)%arr(i, j - s, k) * this%idl(ydim)
+                  cg_grad(ydim, i, j, k) = cg_grad(ydim, i, j, k) - cfo(s) * this%q(iq)%arr(i, j - s, k) * this%idl(ydim)
                enddo
             enddo
+
          endif
 
          if (dom%has_dir(zdim)) then
@@ -503,9 +524,10 @@ contains
 
             do concurrent (k = khi - ord/2 + 1 : khi, j = jlo  : jhi, i = ilo  : ihi)
                do s = 0, ord
-                  cg_grad(zdim, i, j, k) = cg_grad(zdim, i, j, k) - cfo(ord - s) * this%q(iq)%arr(i, j, k - s) * this%idl(zdim)
+                  cg_grad(zdim, i, j, k) = cg_grad(zdim, i, j, k) - cfo(s) * this%q(iq)%arr(i, j, k - s) * this%idl(zdim)
                enddo
             enddo
+
          endif
       else
          call die("grid_container_op:cg_get_gradient] Both vector and scalar array not allowed at the same time")
