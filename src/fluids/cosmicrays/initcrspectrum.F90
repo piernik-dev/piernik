@@ -163,11 +163,8 @@ module initcrspectrum
 
    real :: f_synchIC, def_dtadiab, def_dtsynchIC
 
-!====================================================================================================
-!
 contains
-!
-!====================================================================================================
+
    subroutine init_cresp
 
       use bcast,           only: piernik_MPI_Bcast

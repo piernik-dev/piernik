@@ -1,6 +1,7 @@
 #!/bin/bash
 
-SEP="===================================================="
+SEP="-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
+# for some weird reasons SEP="++++++++++++++++++++++++++++++++++++" results in very slow execution of final awk
 
 NONMATCH=$( for i in `git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$"` ; do
 	echo $SEP $i

@@ -244,13 +244,13 @@ contains
    end subroutine internal_sources
 
 #if !defined(BALSARA) || defined(SHEAR) || defined(CORIOLIS) || defined(NON_INERTIAL)
-!/*
+
 !>
 !! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
 !!
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
-!*/
+
    subroutine get_updates_from_acc(n, u, usrc, acc)
 
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
@@ -273,13 +273,10 @@ contains
    end subroutine get_updates_from_acc
 #endif /* !BALSARA || SHEAR || CORIOLIS || NON_INERTIAL */
 
-!==========================================================================================
-
-!/*
 !>
 !! \brief Subroutine collects dt limits estimations from sources
 !<
-!*/
+
    subroutine timestep_sources(dt)
 
 #ifndef BALSARA
@@ -299,7 +296,6 @@ contains
 
    end subroutine timestep_sources
 
-!==========================================================================================
    subroutine care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
       use fluidindex, only: flind, nmag
@@ -327,7 +323,6 @@ contains
 
    end subroutine care_for_positives
 
-!==========================================================================================
    subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
       use constants,   only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, zero
@@ -396,7 +391,6 @@ contains
 
    end subroutine limit_minimal_density
 
-!==========================================================================================
    subroutine limit_minimal_intener(n, bb, u1)
 
       use constants,  only: xdim, ydim, zdim, zero
@@ -467,5 +461,4 @@ contains
    end subroutine limit_minimal_ecr
 #endif /* COSM_RAYS */
 
-!==========================================================================================
 end module sources

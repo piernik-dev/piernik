@@ -27,7 +27,6 @@
 
 #include "piernik.h"
 
-!!$ ============================================================================
 !>
 !! \brief Implicit diffusion multigrid solver
 !!
@@ -75,10 +74,6 @@ module multigrid_diffusion
 
 contains
 
-!!$ ============================================================================
-!!
-!! Initialization
-!!
 !>
 !! \brief Routine to set parameters values from namelist MULTIGRID_DIFFUSION
 !!
@@ -262,10 +257,10 @@ contains
 
    end subroutine multigrid_diff_par
 
-!!$ ============================================================================
 !>
 !! \brief Cleanup
 !<
+
    subroutine cleanup_multigrid_diff
 
       implicit none
@@ -309,7 +304,6 @@ contains
 
    end function inworth_mg_diff
 
-!!$ ============================================================================
 !>
 !! \brief Multigrid diffusion driver. This is the only multigrid routine intended to be called from the fluidupdate module.
 !! This routine is also responsible for communicating the solution to the rest of world
@@ -365,7 +359,6 @@ contains
 
    end subroutine multigrid_solve_diff
 
-!!$ ============================================================================
 !>
 !! \brief Make a local copy of source
 !<
@@ -409,7 +402,6 @@ contains
 
    end subroutine init_source
 
-!!$ ============================================================================
 !>
 !! \brief Initialize solution with current CR density (no solution recycling as yet)
 !<
@@ -436,7 +428,6 @@ contains
 
    end subroutine init_solution
 
-!!$ ============================================================================
 !>
 !! \brief Initialize magnetic field components
 !!
@@ -497,7 +488,6 @@ contains
 
    end subroutine init_b
 
-!!$ ============================================================================
 !>
 !! \brief Huang-Greengard V-cycle
 !<
@@ -641,7 +631,6 @@ contains
 
    end subroutine vcycle_hg
 
-!!$ ============================================================================
 !>
 !! \brief Compute diffusive flux in the crdim-direction
 !!
@@ -716,7 +705,6 @@ contains
 
    end subroutine diff_flux
 
-!!$ ============================================================================
 !>
 !! \brief 2nd order: grad (c grad)
 !!
@@ -789,7 +777,6 @@ contains
 
    end subroutine residual
 
-!!$ ============================================================================
 !>
 !! \brief Relaxation.
 !!
