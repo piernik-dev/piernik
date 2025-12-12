@@ -209,7 +209,7 @@ contains
       pacc_max%assoc = dt_nbody
 
 #ifdef DUST_PARTICLES
-      if (factor_v * dt_nbody > one)) dt_nbody = dt_nbody / factor_v
+      if (factor_v * dt_nbody > one) dt_nbody = dt_nbody / factor_v
 #endif /* DUST_PARTICLES */
 
       call locate_extremum(pacc_max)

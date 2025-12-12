@@ -378,12 +378,12 @@ module constants
    end enum
 
    ! misc
-   logical, parameter :: has_B = &
 #ifdef MAGNETIC
-        .true.
+   logical, parameter :: has_B = .true.
 #else /* !MAGNETIC */
-        .false.
+   logical, parameter :: has_B = .false.
 #endif /* !MAGNETIC */
+
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
       enumerator :: RD, WR                               !< constants for wd_{rd,wr} selection
