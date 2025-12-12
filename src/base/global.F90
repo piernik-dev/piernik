@@ -552,11 +552,10 @@ contains
       endif
 #endif /* MAGNETIC */
 
-      if (master) &
 #  ifdef MPIF08
-           call printinfo("    use mpi_f08 (modern interface)", V_DEBUG)
+      if (master) call printinfo("    use mpi_f08 (modern interface)", V_DEBUG)
 #  else /* !MPIF08 */
-           call printinfo("    use mpi (old interface)", V_DEBUG)
+      if (master) call printinfo("    use mpi (old interface)", V_DEBUG)
 #  endif /* !MPIF08 */
 
       if (all(ord_fluid_prolong /= [O_INJ, O_LIN])) then

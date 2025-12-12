@@ -46,11 +46,11 @@ module allreduce
 
    !< translation between pSUM:pLAND and MPI_SUM:MPI_LAND
 #ifdef MPIF08
-   type(MPI_Op),    &
+   type(MPI_Op),    dimension(pSUM:pLAND) :: mpiop
 #else /* !MPIF08 */
-   integer(kind=4), &
+   integer(kind=4), dimension(pSUM:pLAND) :: mpiop
 #endif /* !MPIF08 */
-                    & dimension(pSUM:pLAND) :: mpiop
+
    type(arrsum) :: size_allr
 
 #ifdef NO_F2018

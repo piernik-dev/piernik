@@ -1,0 +1,76 @@
+$BASE_DOMAIN
+    n_d = 256, 256, 1
+    nb = 10
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+
+    ! 1.5 is slightly less than pi/2 but works nicely with autoscaling in gnuplot
+    xmin   =-1.5
+    xmax   = 1.5
+    ymin   =-1.5
+    ymax   = 1.5
+    zmin   =-1.5
+    zmax   = 1.5
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = 'cgs'
+ /
+
+ $RESTART_CONTROL
+ /
+
+ $END_CONTROL
+    tend   = 0.2
+    nend   = 0
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'vec'
+    run_id =  'tst'
+    dt_hdf  = 2.0e-2
+    vars(1:) = "velx", "vely", "velz", "magx", "magy", "magz", "divv_num", "divv_ana", "divb_num", "divb_ana", "curlv_num_x", "curlb_num_x", "curlv_num_y", "curlb_num_y","curlv_num_z", "curlb_num_z", "vcrossb_x","vcrossb_y","vcrossb_z","vdotb"
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.666666666
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-3
+    smallei= 1.e-5
+    print_divb = 10
+ /
+
+ $GRAVITY
+ /
+
+ $PROBLEM_CONTROL
+    order = 6  ! at 256×256 shows both roundoff errors and finite order errors in curl
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+!   bsize = 3*32
+ /

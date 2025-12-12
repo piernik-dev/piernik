@@ -150,12 +150,12 @@ contains
 #ifdef DUST
       dst => flind%dst
 #else /* !DUST */
-      call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!"
+      call warn("[initproblem]: Dust fluid not initialized. I hope you know what you are doing!")
 #endif /* !DUST */
 #ifdef NEUTRAL
       neu => flind%neu
 #else /* !NEUTRAL */
-      call warn("[initproblem]: Neutral fluid not initialized. I hope you know what you are doing!"
+      call warn("[initproblem]: Neutral fluid not initialized. I hope you know what you are doing!")
 #endif /* !NEUTRAL */
 
       if (run_id == 'lnA') then

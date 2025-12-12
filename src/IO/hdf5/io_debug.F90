@@ -120,18 +120,14 @@ contains
 
       implicit none
 
-      if (force_hdf5_dump) &
 #ifdef HDF5
-           call write_hdf5(.false.)
+      if (force_hdf5_dump) call write_hdf5(.false.)
+      if (force_res_dump)  call write_restart_hdf5(.false.)
 #else /* !HDF5 */
-           call warn("[io_debug:force_dumps] no HDF5 available (w)")
+      if (force_hdf5_dump) call warn("[io_debug:force_dumps] no HDF5 available (w)")
+      if (force_res_dump)  call warn("[io_debug:force_dumps] no HDF5 available (r)")
 #endif /* !HDF5 */
-      if (force_res_dump) &
-#ifdef HDF5
-           call write_restart_hdf5(.false.)
-#else /* !HDF5 */
-           call warn("[io_debug:force_dumps] no HDF5 available (r)")
-#endif /* !HDF5 */
+
       if (force_allbnd_dump) call warn("[io_debug:force_dumps] force_allbnd_dump has no effect for single-file HDF5 restart files")
       if (force_log_dump)    call write_data(output=LOGF)
 
