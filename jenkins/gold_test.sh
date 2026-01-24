@@ -55,7 +55,7 @@ fi
 HAS_KEEPPAR=0
 if [ -e .setuprc ] ; then
     grep -q keeppar .setuprc && HAS_KEEPPAR=1
-    sed -i 's/--keeppar//g' .setuprc
+    sed -i 's/ --keeppar//g' .setuprc
 fi
 
 # Run the gold test if needed (in the background)
@@ -182,7 +182,7 @@ if [ $RIEMANN == 0 ] ; then
     fi
 fi
 
-[ $HAS_KEEPPAR == 1 ] && echo " --keeppar" >> .setuprc
+[ $HAS_KEEPPAR == 1 ] && sed -i '1s/$/ --keeppar/' .setuprc
 
 # Fail if gold distance is not 0.
 [ $( ( grep "^Total difference between" $GOLD_LOG || echo 1 ) | awk '{print $NF}' ) == 0 ] || exit 1
