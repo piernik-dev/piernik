@@ -132,6 +132,11 @@ contains
 
       integer(kind=4) :: rind, i
 
+      if (len_trim(name) > dsetnamelen) then
+         write(msg, '(3a)') "[named_array_list:find_ind] name too long: '", trim(name),"'"
+         call die(msg)
+      endif
+
       rind = INVALID
       if (allocated(this%lst)) then
          do i = lbound(this%lst, dim=1, kind=4), ubound(this%lst, dim=1, kind=4)
@@ -143,11 +148,6 @@ contains
                rind = i
             endif
          enddo
-      endif
-
-      if (len_trim(name) > dsetnamelen) then
-         write(msg, '(3a)') "[named_array_list:find_ind] name too long: '", trim(name),"'"
-         call die(msg)
       endif
 
    end function find_ind
