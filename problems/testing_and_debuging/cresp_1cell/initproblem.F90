@@ -325,13 +325,13 @@ contains
       use constants,      only: LO, HI
       use dataio_pub,     only: nh
       use global,         only: t, dt
-      use initcosmicrays, only: nspc
+      use initcosmicrays, only: ncrb
       use initcrspectrum, only: crel
 
       implicit none
 
       open(newunit=nh%lun, file=outfile, status="unknown", position="append")
-      write(nh%lun, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, dt, nspc, crel%i_cut(LO), crel%i_cut(HI), crel%p, crel%f, crel%q
+      write(nh%lun, '(2e16.9, 3(1x,i8), 600(1x,ES18.9E3))') t, dt, ncrb, crel%i_cut(LO), crel%i_cut(HI), crel%p, crel%f, crel%q
       close(nh%lun)
 
    end subroutine printer
