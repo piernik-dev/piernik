@@ -144,7 +144,7 @@ module constants
    integer(kind=4), parameter :: idlen = 3                  !< COMMENT ME
    integer(kind=4), parameter :: singlechar = 1             !< a single character
 
-   integer(kind=4), parameter :: rep_len = 112              !< default length of "---...", "+++..." and "===..." strings in the log
+   integer(kind=4), parameter :: rep_len = 112              !< default length of "--...", "++..." and "==..." strings in the log
 
    ! simulation state
    enum, bind(C)
@@ -378,12 +378,12 @@ module constants
    end enum
 
    ! misc
-   logical, parameter :: has_B = &
 #ifdef MAGNETIC
-        .true.
+   logical, parameter :: has_B = .true.
 #else /* !MAGNETIC */
-        .false.
+   logical, parameter :: has_B = .false.
 #endif /* !MAGNETIC */
+
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
       enumerator :: RD, WR                               !< constants for wd_{rd,wr} selection

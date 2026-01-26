@@ -140,8 +140,6 @@ contains
 
    end subroutine all_fluxes
 
-!==========================================================================================
-!/*
 !>
 !! \brief This subroutine applies flux limiter.
 !!
@@ -176,7 +174,7 @@ contains
 !! \f}
 !! are %fluxes of left- and right-moving waves interpolated to cell boundaries.
 !<
-!*/
+
    subroutine set_limiter(lname)
 
       use constants,  only: V_VERBOSE

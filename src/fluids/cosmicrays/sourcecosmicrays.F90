@@ -108,8 +108,6 @@ contains
 
    end subroutine src_gpcr
 
-!==========================================================================================
-
 !>
 !! \brief Computation of Cosmic ray particles spallation and decay
 !! \warning multiplying by cr_sigma may cause underflow errors in some unit sets

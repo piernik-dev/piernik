@@ -63,8 +63,6 @@ contains
 
    end subroutine bnd_a
 
-!=====================================================================================================
-
    subroutine bnd_emf(ivar, emfdir, dir, cg)
 
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_ONE, &

@@ -216,7 +216,6 @@ contains
 
    end subroutine cleanup_neutral
 
-!==========================================================================================
 !
 ! OPT: This routine may cost as much as 30% of rtvd. It seems that all the data fit well a 512kB L2 cache, but Ir:Dr:Dw is like 8:2:1
 ! OPT: \todo Try an explicit loop over RNG2 to check if we're better than the compiler

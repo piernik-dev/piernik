@@ -27,7 +27,6 @@
 
 #include "piernik.h"
 
-!!$ ============================================================================
 !>
 !! \brief Multigrid solver initialization and cleanup
 !!
@@ -49,10 +48,6 @@ module multigrid
 
 contains
 
-!!$ ============================================================================
-!!
-!! Initializations and cleanup
-!!
 !>
 !! \brief Routine to set parameters values from namelist MULTIGRID_SOLVER
 !!

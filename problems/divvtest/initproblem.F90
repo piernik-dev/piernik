@@ -225,11 +225,10 @@ contains
                enddo
             enddo
          enddo
+#endif /* COSM_RAYS */
 
          cgl => cgl%nxt
       enddo
-
-#endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
 
