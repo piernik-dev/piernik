@@ -74,6 +74,8 @@ contains
       dt_cre_synch = huge(1.)
       dt_cre_adiab = huge(1.)
 
+      empty_cell = .false. ! WARNING if not initialized (additionally) here, it remains .true. and dt_cre_synch is not computed
+
       if (.not. use_cresp_evol) return
 
       abs_max_ud   = zero
