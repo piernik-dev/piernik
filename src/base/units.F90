@@ -543,7 +543,7 @@ contains
 #endif /* CRESP */
          case ("gpot", "sgpt")
             val = lmtvB(U_VEL) ** 2
-            write(s_val, '(a,"**2")') trim(s_lmtvB(U_VEL))
+            write(s_val, '("(",a,")**2")') trim(s_lmtvB(U_VEL))
          case default
             val = 1.0
             s_val = "dimensionless"
