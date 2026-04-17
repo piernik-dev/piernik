@@ -209,7 +209,7 @@ def plotcompose(pthfilen, var, output, options):
     if uupd:
         smin = pu.list3_division(smin, usc)
         smax = pu.list3_division(smax, usc)
-    cgcount = int(h5f['data'].attrs['cg_count'])
+    cgcount = int(h5f['data'].attrs['cg_count'][0])
     glevels = h5f['grid_level'][:]
     maxglev = max(glevels)
 
