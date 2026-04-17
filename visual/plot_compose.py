@@ -71,7 +71,7 @@ def plot1d(refis, field, parts, equip1d, ncut, n1, n2):
     if parts[0]:
         pxyz, pm, nbins, pcolor, psize, player, pstype, labh = parts[1:]
         pn1, pmm = pxyz[ncut], pm
-        ax = plot1d_particles(ax, pn1, pmm, nbins, [smin[ncut], smax[ncut]], pcolor, psize)
+        ax = plot1d_particles(ax, pn1, pmm, nbins, [zoom[1][ncut], zoom[2][ncut]], pcolor, psize)
         label.append(labh)
 
     P.ylabel('  |  '.join(label))
@@ -117,7 +117,7 @@ def draw_plotcomponent(ax, refis, field, parts, equip2d, ncut, n1, n2):
                 pmm = pm
         else:
             pn1, pn2, pmm = pxyz[n1], pxyz[n2], pm
-        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [smin[n1], smax[n1], smin[n2], smax[n2]], field[0], pcolor, psize, pstype)
+        ax, ah = draw_particles(ax, pn1, pn2, pmm, nbins, [zoom[1][n1], zoom[2][n1], zoom[1][n2], zoom[2][n2]], field[0], pcolor, psize, pstype)
     ax = plot_axes(ax, ulen, "xyz"[n1], zoom[1][n1], zoom[2][n1], "xyz"[n2], zoom[1][n2], zoom[2][n2])
     ax.set_xticks([center[n1]], minor=True)
     ax.set_yticks([center[n2]], minor=True)
