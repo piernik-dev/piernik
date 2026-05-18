@@ -37,7 +37,7 @@ module inittracer
    implicit none
 
    private
-   public :: init_tracer, tracer_index, iarr_trc, trace_fluid
+   public :: init_tracer, tracer_index, iarr_trc, trace_fluid, tracers_max
 
    integer(kind=4), dimension(:), allocatable :: iarr_trc, trace_fluid
    integer(kind=4) :: ntracers
@@ -47,7 +47,7 @@ module inittracer
 contains
 
 !>
-!! \brief Routine to set parameter values from namelist FLUID_DUST
+!! \brief Routine to set parameter values from namelist FLUID_TRACER
 !!
 !! \n \n
 !! @b FLUID_TRACER
@@ -63,12 +63,14 @@ contains
 
       use bcast,      only: piernik_MPI_Bcast
       use constants,  only: INT4
-      use dataio_pub, only: warn, nh
+      use dataio_pub, only: warn, nh, die
       use mpisetup,   only: master, slave, ibuff
 
       implicit none
 
       namelist /FLUID_TRACER/ tracers
+
+      if (tracers_max > ubound(ibuff, 1)) call die("[inittracer:init_tracer] tracers_max exceeds ibuff size")
 
       tracers(:) = 0_INT4; tracers(1) = 1_INT4 ! activate only first tracer fluid by default
 
@@ -99,6 +101,9 @@ contains
          tracers  = int(ibuff(1:tracers_max), kind=4)
 
       endif
+
+      !! \deprecated The values of tracers are ignored except that we just count how many non-0 components are there.
+      !! Seems overcomplicated, we can read ntracers directly as well.
 
       ntracers = count(tracers > 0, kind=4)
 
