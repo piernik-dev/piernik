@@ -305,8 +305,17 @@ contains
          use fluidindex,       only: flind
          use fluids_pub,       only: has_dst, has_ion, has_neu
          use named_array_list, only: wna, na_var_4d
+#ifdef TRACER
+         use constants,        only: dsetnamelen
+         use inittracer,       only: tracers_max
+#endif /* TRACER */
 
          implicit none
+
+#ifdef TRACER
+         integer(kind=4) :: i, itrc
+         character(len=dsetnamelen) :: trc_name, fmt
+#endif /* TRACER */
 
          select type (lst => wna%lst)
             type is (na_var_4d)
@@ -332,6 +341,15 @@ contains
                   call lst(wna%fi)%set_compname(flind%dst%imy, "momyd")
                   call lst(wna%fi)%set_compname(flind%dst%imz, "momzd")
                endif
+#ifdef TRACER
+               write(fmt, '(i9)') tracers_max
+               itrc = len_trim(adjustl(fmt), kind=4)   ! convert max number of tracers into number of required digits
+               write(fmt,'("(a,i",i1,".",i1,")")') itrc, itrc
+               do i = flind%trc%beg, flind%trc%end
+                  write(trc_name, fmt)"tracer_", i - flind%trc%beg + 1
+                  call lst(wna%fi)%set_compname(i, trc_name)
+               enddo
+#endif /* TRACER */
          end select
 
       end subroutine set_fluid_names
