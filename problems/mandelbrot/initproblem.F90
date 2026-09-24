@@ -50,19 +50,21 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
-   integer(kind=4) :: order   !< Order of mandelbrot set
-   integer(kind=4) :: maxiter !< Maximum number of iterations
-   logical :: smooth_map      !< Try continuous colouring
-   logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
-   character(len=cbuff_len) :: x_polar  !< x-coordinate for polar mode
-   character(len=cbuff_len) :: y_polar  !< y-coordinate for polar mode
-   real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
-   real :: ref_thr            !< threshold for refining a grid
+   integer(kind=4) :: order               !< Order of mandelbrot set
+   integer(kind=4) :: maxiter             !< Maximum number of iterations
+   logical :: smooth_map                  !< Try continuous colouring
+   real :: ref_thr                        !< threshold for refining a grid
+   character(len=cbuff_len) :: precision  !< precision of Mandelbrot calculations
+   logical :: log_polar                   !< Use polar mapping around x_polar + i * y_polar
+   character(len=cbuff_len) :: x_polar    !< x-coordinate for polar mode
+   character(len=cbuff_len) :: y_polar    !< y-coordinate for polar mode
+   real :: c_polar                        !< correct colouring with x-coordinate multiplied by this factor
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, precision
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
+   integer :: prec
 
 contains
 
@@ -91,7 +93,7 @@ contains
    subroutine read_problem_par
 
       use bcast,      only: piernik_MPI_Bcast
-      use constants,  only: ydim, LO, HI, dpi
+      use constants,  only: ydim, LO, HI, dpi, INVALID, FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
       use dataio_pub, only: warn, die, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, lbuff, ibuff, rbuff, master, slave
@@ -105,6 +107,7 @@ contains
       log_polar = .false.
       x_polar = "0."
       y_polar = "0."
+      precision = "double"
       c_polar = 0.
       ref_thr = 1.
 
@@ -137,6 +140,7 @@ contains
 
          cbuff(1) = x_polar
          cbuff(2) = y_polar
+         cbuff(3) = precision
 
       endif
 
@@ -158,11 +162,26 @@ contains
 
          x_polar    = cbuff(1)
          y_polar    = cbuff(2)
+         precision  = cbuff(3)
 
       endif
 
       if (any(dom%has_dir(:) .neqv. [ .true., .true., .false. ])) &
            call die("[initproblem:read_problem_par] Mandelbrot is supposed to by run only with XY plane and without Z-direction present")
+
+      select case (trim(precision))
+         case ("single")
+            prec = FP_REAL
+         case ("double")
+            prec = FP_DOUBLE
+         case ("extended")
+            prec = FP_EXT
+         case ("quad")
+            prec = FP_QUAD
+         case default
+            call die("[initproblem:read_problem_par] precision must be single, double, extended, or quad")
+            prec = INVALID
+      end select
 
       if (order /= 2) then
          if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
@@ -184,6 +203,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use constants,        only: FP_QUAD
       use dataio_pub,       only: warn
       use grid_cont,        only: grid_container
       use fluidindex,       only: iarr_all_dn
@@ -194,14 +214,12 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      integer :: i, j, k, nit
+      integer :: i, j, k
       real, dimension(:,:,:), pointer :: mand, r__l, imag
-      real, parameter :: bailout2 = 10., min_log_mand = 0.1
-      real(kind=10) :: zx, zy, zt, cx, cy, xp, yp
-      real :: rnit, r, f
+      real(kind=FP_QUAD) :: xp_qp, yp_qp
 
-      read(x_polar, *) xp
-      read(y_polar, *) yp
+      read(x_polar, *) xp_qp
+      read(y_polar, *) yp_qp
 
       ! Create the initial density arrays
       cgl => leaves%first
@@ -223,37 +241,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     if (log_polar) then
-                        r = 10**cg%x(i)
-                        f = cg%y(j)
-                        cx = xp + real(r, kind=10)*cos(f)
-                        cy = yp + real(r, kind=10)*sin(f)
-                     else
-                        cx = cg%x(i)
-                        cy = cg%y(j)
-                     endif
-
-                     zx = cx
-                     zy = cy
-                     nit = 1
-                     do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
-                        zt = zx*zx - zy*zy + cx
-                        zy = 2*zx*zy + cy
-                        zx = zt
-                        nit = nit + 1
-                     enddo
-
-                     rnit = nit
-                     if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(real(sqrt(zx*zx + zy*zy), kind=8)))/log(2.)
-
-                     if (nit >= maxiter) then
-                        mand(i, j, k) = min_log_mand ! increase contrast between interior and exterior
-                     else
-                        mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * cg%x(i))
-                     endif
-                     r__l(i, j, k) = real(zx, kind=8)
-                     imag(i, j, k) = real(zy, kind=8)
-
+                     call calculate_mandelbrot(xp_qp, yp_qp, cg%x(i), cg%y(j), mand(i,j,k), r__l(i,j,k), imag(i,j,k), prec)
                   enddo
                enddo
             enddo
@@ -265,6 +253,142 @@ contains
       call leaves%qw_copy(qna%ind(mand_n), wna%fi, iarr_all_dn(1)) ! prevent spurious FP exceptions
 
    end subroutine problem_initial_conditions
+
+! Herw we would benefit a lot from Fortran's 2023 typeof()/classof() functions.
+
+   subroutine calculate_mandelbrot(xp, yp, x, y, mand, real_z, imag_z, k)
+
+      use constants,  only: FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
+      use dataio_pub, only: die
+
+      implicit none
+
+      real(kind=FP_QUAD), intent(in) :: xp, yp
+      real, intent(in) :: x, y
+      real, intent(out) :: mand, real_z, imag_z
+      integer, intent(in) :: k
+
+      real :: zxr, zyr
+      integer :: nit
+      real :: rnit, r, f
+      real, parameter :: bailout2 = 10., min_log_mand = 0.1
+
+      nit = 1
+      if (log_polar) then
+         r = 10.**x
+         f = y
+      endif
+      select case (k)
+         case (FP_REAL)
+            block
+               real(kind=FP_REAL) :: zx, zy, zt, cx, cy
+
+               if (log_polar) then
+                  cx = real(xp + r*cos(f), kind=FP_REAL)
+                  cy = real(yp + r*sin(f), kind=FP_REAL)
+               else
+                  cx = real(x, kind=FP_REAL)
+                  cy = real(y, kind=FP_REAL)
+               endif
+
+               zx = cx
+               zy = cy
+               do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
+                  zt = zx*zx - zy*zy + cx
+                  zy = 2._FP_REAL*zx*zy + cy
+                  zx = zt
+                  nit = nit + 1
+               enddo
+               zxr = zx
+               zyr = zy
+            end block
+         case (FP_DOUBLE)
+            block
+               real(kind=FP_DOUBLE) :: zx, zy, zt, cx, cy
+
+               if (log_polar) then
+                  cx = real(xp + r*cos(f), kind=FP_DOUBLE)
+                  cy = real(yp + r*sin(f), kind=FP_DOUBLE)
+               else
+                  cx = x
+                  cy = y
+               endif
+
+               zx = cx
+               zy = cy
+               do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
+                  zt = zx*zx - zy*zy + cx
+                  zy = 2.*zx*zy + cy
+                  zx = zt
+                  nit = nit + 1
+               enddo
+               zxr = zx
+               zyr = zy
+            end block
+         case (FP_EXT)
+            block
+               real(kind=FP_EXT) :: zx, zy, zt, cx, cy
+
+               if (log_polar) then
+                  cx = real(xp + r*cos(f), kind=FP_EXT)
+                  cy = real(yp + r*sin(f), kind=FP_EXT)
+               else
+                  cx = x
+                  cy = y
+               endif
+
+               zx = cx
+               zy = cy
+               do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
+                  zt = zx*zx - zy*zy + cx
+                  zy = 2.*zx*zy + cy
+                  zx = zt
+                  nit = nit + 1
+               enddo
+               zxr = real(zx, kind=FP_DOUBLE)
+               zyr = real(zy, kind=FP_DOUBLE)
+            end block
+         case (FP_QUAD)
+            block
+               real(kind=FP_QUAD) :: zx, zy, zt, cx, cy
+
+               if (log_polar) then
+                  cx = xp + r*cos(f)
+                  cy = yp + r*sin(f)
+               else
+                  cx = x
+                  cy = y
+               endif
+
+               zx = cx
+               zy = cy
+               do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
+                  zt = zx*zx - zy*zy + cx
+                  zy = 2.*zx*zy + cy
+                  zx = zt
+                  nit = nit + 1
+               enddo
+               zxr = real(zx, kind=FP_DOUBLE)
+               zyr = real(zy, kind=FP_DOUBLE)
+            end block
+         case default
+            call die("[initproblem:calculate_mandelbrot] non-implemented type")
+            zxr = 0.
+            zyr = 0.
+            nit = 0
+      end select
+
+      rnit = nit
+      if (smooth_map .and. zxr*zxr + zyr*zyr > bailout2) rnit = rnit + 1 - log(log(sqrt(zxr*zxr + zyr*zyr)))/log(2.)
+      if (nit >= maxiter) then
+         mand = min_log_mand
+      else
+         mand = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * x)
+      endif
+      real_z = zxr
+      imag_z = zyr
+
+   end subroutine calculate_mandelbrot
 
 !> \brief Add fields for iteration count and real and imaginary coordinate of the point at the end of iterations
 
