@@ -42,7 +42,7 @@
 
 module initproblem
 
-   use constants, only: dsetnamelen
+   use constants, only: dsetnamelen, cbuff_len
 
    implicit none
 
@@ -54,8 +54,8 @@ module initproblem
    integer(kind=4) :: maxiter !< Maximum number of iterations
    logical :: smooth_map      !< Try continuous colouring
    logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
-   real :: x_polar            !< x-coordinate for polar mode
-   real :: y_polar            !< y-coordinate for polar mode
+   character(len=cbuff_len) :: x_polar  !< x-coordinate for polar mode
+   character(len=cbuff_len) :: y_polar  !< y-coordinate for polar mode
    real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
 
@@ -94,7 +94,7 @@ contains
       use constants,  only: ydim, LO, HI, dpi
       use dataio_pub, only: warn, die, nh
       use domain,     only: dom
-      use mpisetup,   only: lbuff, ibuff, rbuff, master, slave
+      use mpisetup,   only: cbuff, lbuff, ibuff, rbuff, master, slave
 
       implicit none
 
@@ -103,8 +103,8 @@ contains
       maxiter = 100
       smooth_map = .true.
       log_polar = .false.
-      x_polar = 0.
-      y_polar = 0.
+      x_polar = "0."
+      y_polar = "0."
       c_polar = 0.
       ref_thr = 1.
 
@@ -133,15 +133,17 @@ contains
          lbuff(2) = log_polar
 
          rbuff(1) = ref_thr
-         rbuff(3) = x_polar
-         rbuff(4) = y_polar
-         rbuff(5) = c_polar
+         rbuff(2) = c_polar
+
+         cbuff(1) = x_polar
+         cbuff(2) = y_polar
 
       endif
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -152,9 +154,10 @@ contains
          log_polar  = lbuff(2)
 
          ref_thr    = rbuff(1)
-         x_polar    = rbuff(3)
-         y_polar    = rbuff(4)
-         c_polar    = rbuff(5)
+         c_polar    = rbuff(2)
+
+         x_polar    = cbuff(1)
+         y_polar    = cbuff(2)
 
       endif
 
@@ -194,7 +197,11 @@ contains
       integer :: i, j, k, nit
       real, dimension(:,:,:), pointer :: mand, r__l, imag
       real, parameter :: bailout2 = 10., min_log_mand = 0.1
-      real :: zx, zy, zt, cx, cy, rnit, r, f
+      real(kind=10) :: zx, zy, zt, cx, cy, xp, yp
+      real :: rnit, r, f
+
+      read(x_polar, *) xp
+      read(y_polar, *) yp
 
       ! Create the initial density arrays
       cgl => leaves%first
@@ -219,8 +226,8 @@ contains
                      if (log_polar) then
                         r = 10**cg%x(i)
                         f = cg%y(j)
-                        cx = x_polar + r*cos(f)
-                        cy = y_polar + r*sin(f)
+                        cx = xp + real(r, kind=10)*cos(f)
+                        cy = yp + real(r, kind=10)*sin(f)
                      else
                         cx = cg%x(i)
                         cy = cg%y(j)
@@ -237,15 +244,15 @@ contains
                      enddo
 
                      rnit = nit
-                     if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
+                     if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(real(sqrt(zx*zx + zy*zy), kind=8)))/log(2.)
 
                      if (nit >= maxiter) then
                         mand(i, j, k) = min_log_mand ! increase contrast between interior and exterior
                      else
                         mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * cg%x(i))
                      endif
-                     r__l(i, j, k) = zx
-                     imag(i, j, k) = zy
+                     r__l(i, j, k) = real(zx, kind=8)
+                     imag(i, j, k) = real(zy, kind=8)
 
                   enddo
                enddo
