@@ -27,17 +27,17 @@
 #include "piernik.h"
 
 !>
-!! \brief calculate the lovely shape of the Mandelbrot set.  Refine on the
+!! \brief Calculate the lovely shape of the Mandelbrot set. Refine the
 !! set to follow the interesting details.
 !!
 !! The Mandelbrot problem is intended for stress testing of the AMR
-!! subsystem. There are more efficient fractal generators around but
+!! subsystem. There are more efficient fractal generators, but
 !! one may consider some fun ideas:
-!! * Use some multiprecision or implement own fixed point, optimized for
-!!   these calculations.
+!! * Use multiprecision or implement a custom fixed-point representation
+!!   optimized for these calculations.
 !! * Use speedup tricks like these in fast deep zoom programs.
-!! * Detect interior of minibrotsfor further speedups (already sort of works
-!!   as it dos not get refined too much.
+!! * Detect the interiors of minibrots for further speedups. This already
+!!   works to some extent because they are not refined too much.
 !<
 
 module initproblem
@@ -167,7 +167,7 @@ contains
       endif
 
       if (any(dom%has_dir(:) .neqv. [ .true., .true., .false. ])) &
-           call die("[initproblem:read_problem_par] Mandelbrot is supposed to by run only with XY plane and without Z-direction present")
+           call die("[initproblem:read_problem_par] Mandelbrot is supposed to be run only in the XY plane without a Z direction")
 
       select case (trim(precision))
          case ("single")
@@ -234,7 +234,7 @@ contains
             r__l => cg%q(qna%ind(re_n  ))%arr
             imag => cg%q(qna%ind(imag_n))%arr
             if (.not. associated(mand) .or. .not. associated(r__l) .or. .not. associated(imag)) then
-               if (master) call warn("[initproblem:analytic_solution] Cannot store the set")
+               if (master) call warn("[initproblem:problem_initial_conditions] Cannot store the set")
                return
             endif
 
@@ -254,7 +254,10 @@ contains
 
    end subroutine problem_initial_conditions
 
-! Herw we would benefit a lot from Fortran's 2023 typeof()/classof() functions.
+! Fortran 2018 has no assumed-kind polymorphism for this calculation. The
+! explicit blocks below keep the selected kind visible for teaching purposes.
+
+! TODO: Implement a double-double approach for comparison with built-in quad.
 
    subroutine calculate_mandelbrot(xp, yp, x, y, mand, real_z, imag_z, k)
 
@@ -450,7 +453,7 @@ contains
       do while (associated(cgl))
          associate (cg => cgl%cg)
             ! Cannot use mand_n as long as it stays uninitialized during second call to problem_refine_derefine in update_refinement
-            ! wna%fi is vital and thus automagilaclly prolonged
+            ! wna%fi is vital and is therefore automatically prolonged
             ! Possible fixes:
             ! * make mand_n vital
             ! * do not call problem_refine_derefine twice in update_refinement
