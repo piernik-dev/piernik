@@ -259,7 +259,7 @@ contains
 
 ! TODO: Implement a double-double approach for comparison with built-in quad.
 
-   subroutine calculate_mandelbrot(xp, yp, x, y, mand, real_z, imag_z, k)
+   subroutine calculate_mandelbrot(xp, yp, xx, yy, mand, real_z, imag_z, k)
 
       use constants,  only: FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
       use dataio_pub, only: die
@@ -267,32 +267,31 @@ contains
       implicit none
 
       real(kind=FP_QUAD), intent(in) :: xp, yp
-      real, intent(in) :: x, y
+      real, intent(in) :: xx, yy
       real, intent(out) :: mand, real_z, imag_z
       integer, intent(in) :: k
 
-      real :: zxr, zyr
       integer :: nit
-      real :: rnit, r, f
+      real :: rnit, r, x, y
       real, parameter :: bailout2 = 10., min_log_mand = 0.1
 
       nit = 1
       if (log_polar) then
-         r = 10.**x
-         f = y
+         r = 10.**xx
+         x = r*cos(yy)
+         y = r*sin(yy)
+      else
+         x = xx
+         y = yy
       endif
+
       select case (k)
          case (FP_REAL)
             block
                real(kind=FP_REAL) :: zx, zy, zt, cx, cy
 
-               if (log_polar) then
-                  cx = real(xp + r*cos(f), kind=FP_REAL)
-                  cy = real(yp + r*sin(f), kind=FP_REAL)
-               else
-                  cx = real(x, kind=FP_REAL)
-                  cy = real(y, kind=FP_REAL)
-               endif
+               cx = real(xp + x, kind=kind(cx))
+               cy = real(yp + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -302,20 +301,16 @@ contains
                   zx = zt
                   nit = nit + 1
                enddo
-               zxr = zx
-               zyr = zy
+               x = real(zx, kind=kind(x))
+               y = real(zy, kind=kind(y))
+
             end block
          case (FP_DOUBLE)
             block
                real(kind=FP_DOUBLE) :: zx, zy, zt, cx, cy
 
-               if (log_polar) then
-                  cx = real(xp + r*cos(f), kind=FP_DOUBLE)
-                  cy = real(yp + r*sin(f), kind=FP_DOUBLE)
-               else
-                  cx = x
-                  cy = y
-               endif
+               cx = real(xp + x, kind=kind(cx))
+               cy = real(yp + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -325,20 +320,16 @@ contains
                   zx = zt
                   nit = nit + 1
                enddo
-               zxr = zx
-               zyr = zy
+               x = real(zx, kind=kind(x))
+               y = real(zy, kind=kind(y))
+
             end block
          case (FP_EXT)
             block
                real(kind=FP_EXT) :: zx, zy, zt, cx, cy
 
-               if (log_polar) then
-                  cx = real(xp + r*cos(f), kind=FP_EXT)
-                  cy = real(yp + r*sin(f), kind=FP_EXT)
-               else
-                  cx = x
-                  cy = y
-               endif
+               cx = real(xp + x, kind=kind(cx))
+               cy = real(yp + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -348,20 +339,16 @@ contains
                   zx = zt
                   nit = nit + 1
                enddo
-               zxr = real(zx, kind=FP_DOUBLE)
-               zyr = real(zy, kind=FP_DOUBLE)
+               x = real(zx, kind=kind(x))
+               y = real(zy, kind=kind(y))
+
             end block
          case (FP_QUAD)
             block
                real(kind=FP_QUAD) :: zx, zy, zt, cx, cy
 
-               if (log_polar) then
-                  cx = xp + r*cos(f)
-                  cy = yp + r*sin(f)
-               else
-                  cx = x
-                  cy = y
-               endif
+               cx = real(xp + x, kind=kind(cx))
+               cy = real(yp + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -371,25 +358,26 @@ contains
                   zx = zt
                   nit = nit + 1
                enddo
-               zxr = real(zx, kind=FP_DOUBLE)
-               zyr = real(zy, kind=FP_DOUBLE)
+               x = real(zx, kind=kind(x))
+               y = real(zy, kind=kind(y))
+
             end block
          case default
-            call die("[initproblem:calculate_mandelbrot] non-implemented type")
-            zxr = 0.
-            zyr = 0.
+            call die("[initproblem:calculate_mandelbrot] non-implemented precision")
+            x = 0.
+            y = 0.
             nit = 0
       end select
 
       rnit = nit
-      if (smooth_map .and. zxr*zxr + zyr*zyr > bailout2) rnit = rnit + 1 - log(log(sqrt(zxr*zxr + zyr*zyr)))/log(2.)
+      if (smooth_map .and. x*x + y*y > bailout2) rnit = rnit + 1 - log(log(sqrt(x*x + y*y)))/log(2.)
       if (nit >= maxiter) then
          mand = min_log_mand
       else
-         mand = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * x)
+         mand = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * xx)
       endif
-      real_z = zxr
-      imag_z = zyr
+      real_z = x
+      imag_z = y
 
    end subroutine calculate_mandelbrot
 
