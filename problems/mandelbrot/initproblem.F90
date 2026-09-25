@@ -42,7 +42,7 @@
 
 module initproblem
 
-   use constants, only: dsetnamelen, cbuff_len
+   use constants, only: dsetnamelen, cbuff_len, FP_QUAD
 
    implicit none
 
@@ -50,21 +50,22 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
-   integer(kind=4) :: order               !< Order of mandelbrot set
    integer(kind=4) :: maxiter             !< Maximum number of iterations
    logical :: smooth_map                  !< Try continuous colouring
    real :: ref_thr                        !< threshold for refining a grid
    character(len=cbuff_len) :: precision  !< precision of Mandelbrot calculations
-   logical :: log_polar                   !< Use polar mapping around x_polar + i * y_polar
-   character(len=cbuff_len) :: x_polar    !< x-coordinate for polar mode
-   character(len=cbuff_len) :: y_polar    !< y-coordinate for polar mode
+   logical :: log_polar                   !< Use polar mapping around x_center + i * y_center
+   character(len=cbuff_len) :: x_center   !< x-coordinate of the center (crucial for polar mode)
+   character(len=cbuff_len) :: y_center   !< y-coordinate of the center (crucial for polar mode)
    real :: c_polar                        !< correct colouring with x-coordinate multiplied by this factor
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, precision
+   namelist /PROBLEM_CONTROL/  maxiter, smooth_map, log_polar, x_center, y_center, c_polar, ref_thr, precision
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
-   integer :: prec
+
+   integer :: prec  ! decoded precision level
+   real(kind=FP_QUAD) :: xcq, ycq  ! decoded central coordinates
 
 contains
 
@@ -101,12 +102,11 @@ contains
       implicit none
 
       ! namelist default parameter values
-      order = 2
       maxiter = 100
       smooth_map = .true.
       log_polar = .false.
-      x_polar = "0."
-      y_polar = "0."
+      x_center = "0."
+      y_center = "0."
       precision = "double"
       c_polar = 0.
       ref_thr = 1.
@@ -129,8 +129,7 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         ibuff(1) = order
-         ibuff(2) = maxiter
+         ibuff(1) = maxiter
 
          lbuff(1) = smooth_map
          lbuff(2) = log_polar
@@ -138,8 +137,8 @@ contains
          rbuff(1) = ref_thr
          rbuff(2) = c_polar
 
-         cbuff(1) = x_polar
-         cbuff(2) = y_polar
+         cbuff(1) = x_center
+         cbuff(2) = y_center
          cbuff(3) = precision
 
       endif
@@ -151,8 +150,7 @@ contains
 
       if (slave) then
 
-         order      = ibuff(1)
-         maxiter    = ibuff(2)
+         maxiter    = ibuff(1)
 
          smooth_map = lbuff(1)
          log_polar  = lbuff(2)
@@ -160,8 +158,8 @@ contains
          ref_thr    = rbuff(1)
          c_polar    = rbuff(2)
 
-         x_polar    = cbuff(1)
-         y_polar    = cbuff(2)
+         x_center   = cbuff(1)
+         y_center   = cbuff(2)
          precision  = cbuff(3)
 
       endif
@@ -183,15 +181,13 @@ contains
             prec = INVALID
       end select
 
-      if (order /= 2) then
-         if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
-         order = 2
-      endif
-
       if (log_polar .and. master) then
          if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
          if (dom%edge(ydim, HI) - dom%edge(ydim, LO) > 1.001*dpi) call warn("[initproblem:read_problem_par] covering more than full angle")
       endif
+
+      read(x_center, *) xcq
+      read(y_center, *) ycq
 
       call register_user_var
 
@@ -203,7 +199,6 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: FP_QUAD
       use dataio_pub,       only: warn
       use grid_cont,        only: grid_container
       use fluidindex,       only: iarr_all_dn
@@ -216,10 +211,6 @@ contains
       type(grid_container), pointer :: cg
       integer :: i, j, k
       real, dimension(:,:,:), pointer :: mand, r__l, imag
-      real(kind=FP_QUAD) :: xp_qp, yp_qp
-
-      read(x_polar, *) xp_qp
-      read(y_polar, *) yp_qp
 
       ! Create the initial density arrays
       cgl => leaves%first
@@ -241,7 +232,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     call calculate_mandelbrot(xp_qp, yp_qp, cg%x(i), cg%y(j), mand(i,j,k), r__l(i,j,k), imag(i,j,k), prec)
+                     call calculate_mandelbrot(cg%x(i), cg%y(j), mand(i,j,k), r__l(i,j,k), imag(i,j,k))
                   enddo
                enddo
             enddo
@@ -259,17 +250,15 @@ contains
 
 ! TODO: Implement a double-double approach for comparison with built-in quad.
 
-   subroutine calculate_mandelbrot(xp, yp, xx, yy, mand, real_z, imag_z, k)
+   subroutine calculate_mandelbrot(xx, yy, mand, real_z, imag_z)
 
       use constants,  only: FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
       use dataio_pub, only: die
 
       implicit none
 
-      real(kind=FP_QUAD), intent(in) :: xp, yp
       real, intent(in) :: xx, yy
       real, intent(out) :: mand, real_z, imag_z
-      integer, intent(in) :: k
 
       integer :: nit
       real :: rnit, r, x, y
@@ -285,13 +274,13 @@ contains
          y = yy
       endif
 
-      select case (k)
+      select case (prec)
          case (FP_REAL)
             block
                real(kind=FP_REAL) :: zx, zy, zt, cx, cy
 
-               cx = real(xp + x, kind=kind(cx))
-               cy = real(yp + y, kind=kind(cy))
+               cx = real(xcq + x, kind=kind(cx))
+               cy = real(ycq + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -309,8 +298,8 @@ contains
             block
                real(kind=FP_DOUBLE) :: zx, zy, zt, cx, cy
 
-               cx = real(xp + x, kind=kind(cx))
-               cy = real(yp + y, kind=kind(cy))
+               cx = real(xcq + x, kind=kind(cx))
+               cy = real(ycq + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -328,8 +317,8 @@ contains
             block
                real(kind=FP_EXT) :: zx, zy, zt, cx, cy
 
-               cx = real(xp + x, kind=kind(cx))
-               cy = real(yp + y, kind=kind(cy))
+               cx = real(xcq + x, kind=kind(cx))
+               cy = real(ycq + y, kind=kind(cy))
 
                zx = cx
                zy = cy
@@ -347,8 +336,8 @@ contains
             block
                real(kind=FP_QUAD) :: zx, zy, zt, cx, cy
 
-               cx = real(xp + x, kind=kind(cx))
-               cy = real(yp + y, kind=kind(cy))
+               cx = real(xcq + x, kind=kind(cx))
+               cy = real(ycq + y, kind=kind(cy))
 
                zx = cx
                zy = cy

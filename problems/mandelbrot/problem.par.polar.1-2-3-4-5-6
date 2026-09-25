@@ -45,8 +45,8 @@
     maxiter = 1000000
     !smooth_map = .false.
     log_polar = .true.
-    x_polar = -1.75871277034079676
-    y_polar = 0.01905087420563406
+    x_center = -1.75871277034079676
+    y_center = 0.01905087420563406
     c_polar = 0.7
  /
 

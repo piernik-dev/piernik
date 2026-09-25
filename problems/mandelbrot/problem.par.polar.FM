@@ -47,8 +47,8 @@
     !smooth_map = .false.
     log_polar = .true.
 ! Feigenbaum-Myrberg point
-    x_polar = -1.4011551890920505
-    y_polar = 0.
+    x_center = -1.4011551890920505
+    y_center = 0.
     c_polar = 1.05
  /
 
