@@ -31,8 +31,11 @@
 !! set to follow the interesting details.
 !!
 !! The Mandelbrot problem is intended for stress testing of the AMR
-!! subsystem. There are more efficient fractal generators, but
-!! one may consider some fun ideas:
+!! subsystem. It can be also used for presenting how precision of different
+!! floating-point types affect the results.
+!!
+!! It is not intended for serious research. There are more efficient fractal
+!! generators, but one may consider some fun ideas:
 !! * Use multiprecision or implement a custom fixed-point representation
 !!   optimized for these calculations.
 !! * Use speedup tricks like these in fast deep zoom programs.
@@ -174,6 +177,7 @@ contains
 
       select case (trim(precision))
          case ("single", "float")
+            ! Human-friendly aliases for the internal scalar precision levels.
             prec = FP_REAL
          case ("double")
             prec = FP_DOUBLE
@@ -182,6 +186,7 @@ contains
          case ("quad")
             prec = FP_QUAD
          case ("quad complex")
+            ! ``quad complex'' is not a scalar kind here; it uses the native complex type.
             prec = FP_QCMPLX
          case default
             call die("[initproblem:read_problem_par] precision must be single, double, extended, or quad")
@@ -381,10 +386,15 @@ contains
       end select
 
       rnit = nit
+      ! The stored field is a smooth, log-like escape-time measure rather than the
+      ! raw iteration count. This produces a continuous color map without changing
+      ! the actual escape test.
       if (smooth_map .and. x*x + y*y > bailout2) rnit = rnit + 1 - log(log(sqrt(x*x + y*y)))/log(2.)
       if (nit >= maxiter) then
          mand = min_log_mand
       else
+         ! The polar bias is useful for making logarithmic radial features stand out,
+         ! while the lower bound keeps the colouring finite for interior points.
          mand = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * xx)
       endif
       real_z = x
@@ -460,7 +470,9 @@ contains
 !!$                 & exp(minval(cg%q(qna%ind(mand_n))%span(cg%ijkse), mask=cg%leafmap))
 
             diffmax = -huge(1.)
-            ! Look one cell beyond boundary to prevent unnecessary derefinements
+            ! Check a one-cell halo before deciding to derefine. This avoids flagging
+            ! blocks only because the escape metric changes sharply at a coarse/fine
+            ! interface, which would otherwise cause spurious AMR oscillations.
             do i = cg%is-dom%D_x, cg%ie+dom%D_x
                do j = cg%js-dom%D_y, cg%je+dom%D_y
                   do k = cg%ks-dom%D_z, cg%ke+dom%D_z
