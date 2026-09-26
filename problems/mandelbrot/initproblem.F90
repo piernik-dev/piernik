@@ -42,7 +42,7 @@
 
 module initproblem
 
-   use constants, only: dsetnamelen, cbuff_len, FP_QUAD
+   use constants, only: dsetnamelen, cbuff_len, FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
 
    implicit none
 
@@ -66,6 +66,9 @@ module initproblem
 
    integer :: prec  ! decoded precision level
    real(kind=FP_QUAD) :: xcq, ycq  ! decoded central coordinates
+   enum, bind(C)
+      enumerator :: FP_QCMPLX = maxval([FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD]) + 1 !, FP_2FLOAT, FP_2DOUBLE
+   end enum
 
 contains
 
@@ -94,7 +97,7 @@ contains
    subroutine read_problem_par
 
       use bcast,      only: piernik_MPI_Bcast
-      use constants,  only: ydim, LO, HI, dpi, INVALID, FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
+      use constants,  only: ydim, LO, HI, dpi, INVALID
       use dataio_pub, only: warn, die, nh
       use domain,     only: dom
       use mpisetup,   only: cbuff, lbuff, ibuff, rbuff, master, slave
@@ -168,14 +171,16 @@ contains
            call die("[initproblem:read_problem_par] Mandelbrot is supposed to be run only in the XY plane without a Z direction")
 
       select case (trim(precision))
-         case ("single")
+         case ("single", "float")
             prec = FP_REAL
          case ("double")
             prec = FP_DOUBLE
-         case ("extended")
+         case ("extended", "long")
             prec = FP_EXT
          case ("quad")
             prec = FP_QUAD
+         case ("quad complex")
+            prec = FP_QCMPLX
          case default
             call die("[initproblem:read_problem_par] precision must be single, double, extended, or quad")
             prec = INVALID
@@ -349,6 +354,21 @@ contains
                enddo
                x = real(zx, kind=kind(x))
                y = real(zy, kind=kind(y))
+
+            end block
+         case (FP_QCMPLX)
+            ! Using native complex type is more compact but also about 10% slower
+            block
+               complex(kind=FP_QUAD) :: z, c
+
+               c = complex(xcq + x, ycq + y)
+               z = c
+               do while (real(z)**2 + imag(z)**2 < bailout2 .and. nit < maxiter)
+                  z = z*z + c
+                  nit = nit + 1
+               enddo
+               x = real(z, kind=kind(x))
+               y = real(imag(z), kind=kind(y))
 
             end block
          case default
