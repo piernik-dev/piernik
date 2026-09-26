@@ -42,7 +42,7 @@
 
 module initproblem
 
-   use constants, only: dsetnamelen, cbuff_len, FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
+   use constants, only: dsetnamelen, cwdlen, FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
 
    implicit none
 
@@ -50,14 +50,14 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
-   integer(kind=4) :: maxiter             !< Maximum number of iterations
-   logical :: smooth_map                  !< Try continuous colouring
-   real :: ref_thr                        !< threshold for refining a grid
-   character(len=cbuff_len) :: precision  !< precision of Mandelbrot calculations
-   logical :: log_polar                   !< Use polar mapping around x_center + i * y_center
-   character(len=cbuff_len) :: x_center   !< x-coordinate of the center (crucial for polar mode)
-   character(len=cbuff_len) :: y_center   !< y-coordinate of the center (crucial for polar mode)
-   real :: c_polar                        !< correct colouring with x-coordinate multiplied by this factor
+   integer(kind=4)       :: maxiter     !< Maximum number of iterations
+   logical               :: smooth_map  !< Try continuous colouring
+   real                  :: ref_thr     !< threshold for refining a grid
+   character(len=cwdlen) :: precision   !< precision of Mandelbrot calculations, long string used only for simplicity here
+   logical               :: log_polar   !< Use polar mapping around x_center + i * y_center
+   character(len=cwdlen) :: x_center    !< x-coordinate of the center (crucial for polar mode)
+   character(len=cwdlen) :: y_center    !< y-coordinate of the center (crucial for polar mode)
+   real                  :: c_polar     !< correct colouring with x-coordinate multiplied by this factor (useful for polar mode)
 
    namelist /PROBLEM_CONTROL/  maxiter, smooth_map, log_polar, x_center, y_center, c_polar, ref_thr, precision
 
@@ -97,12 +97,14 @@ contains
    subroutine read_problem_par
 
       use bcast,      only: piernik_MPI_Bcast
-      use constants,  only: ydim, LO, HI, dpi, INVALID
+      use constants,  only: ydim, LO, HI, dpi, INVALID, I_THREE
       use dataio_pub, only: warn, die, nh
       use domain,     only: dom
-      use mpisetup,   only: cbuff, lbuff, ibuff, rbuff, master, slave
+      use mpisetup,   only: lbuff, ibuff, rbuff, master, slave
 
       implicit none
+
+      character(len=cwdlen), dimension(I_THREE) :: lcbuff !< buffer for long string parameters
 
       ! namelist default parameter values
       maxiter = 100
@@ -140,16 +142,16 @@ contains
          rbuff(1) = ref_thr
          rbuff(2) = c_polar
 
-         cbuff(1) = x_center
-         cbuff(2) = y_center
-         cbuff(3) = precision
+         lcbuff(1) = x_center
+         lcbuff(2) = y_center
+         lcbuff(3) = precision
 
       endif
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(lcbuff, cwdlen)
 
       if (slave) then
 
@@ -161,9 +163,9 @@ contains
          ref_thr    = rbuff(1)
          c_polar    = rbuff(2)
 
-         x_center   = cbuff(1)
-         y_center   = cbuff(2)
-         precision  = cbuff(3)
+         x_center   = lcbuff(1)
+         y_center   = lcbuff(2)
+         precision  = lcbuff(3)
 
       endif
 
