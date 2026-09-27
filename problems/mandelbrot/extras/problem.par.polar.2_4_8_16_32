@@ -26,7 +26,7 @@
 
  $OUTPUT_CONTROL
     problem_name = 'mandelbrot_polar'
-    run_id =  'fpq'
+    run_id =  '2n_'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
@@ -36,7 +36,7 @@
     maxiter = 200000
     !smooth_map = .false.
     log_polar = .true.
-    precision = 'extended' !'quad'
+    precision = 'quad'
     ! This zoom peeks deeply into nested mandelbrot structures and thus it is
     ! quite slow in quad precision
     x_center = "-0.1528719009565961044726929242913352694564663551310107112319327"
@@ -51,4 +51,4 @@
  /
 
 ! Visualisation example
-! ../../visual/pvf.py mandelbrot_polar_fpq_0000.h5 -d mand -D gist_ncar -z 1,6
+! ../../visual/pvf.py mandelbrot_polar_2n__0000.h5 -d mand -D gist_ncar -z 1,6

@@ -61,7 +61,7 @@
 ! Illustrative precision check: this block shows how the same polar coordinates
 ! are represented with different floating-point precisions, highlighting the effect
 ! of reduced mantissa length on the final location.
-!               x_polar                                        y_polar
+!               x_center                                       y_center
 ! char(len=32)  -0.16337093430484253886831311185               1.026178602930346497605177946429
 ! real(16)      -0.1633709343048425388683131118500000103       1.0261786029303464976051779464289999446
 ! real(10)      -0.1633709343048425388677299258111119684       1.0261786029303464975754450749789725705

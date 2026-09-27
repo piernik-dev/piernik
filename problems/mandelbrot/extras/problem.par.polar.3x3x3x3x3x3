@@ -1,6 +1,6 @@
  $BASE_DOMAIN
-    n_d = 192, 16, 1
-    xmin   = -13.
+    n_d = 128, 16, 1
+    xmin   = -15.
     xmax   =  1.
     ymin   =  -2.2
     ymax   =  4.0832
@@ -8,9 +8,6 @@
     bnd_xr = "outd"
     bnd_yl = "outd"
     bnd_yr = "outd"
- /
-
- $MPI_BLOCKS
  /
 
  $UNITS
@@ -35,26 +32,18 @@
     vars(1:) = 'mand', 'dist', 'ang', 'level'
  /
 
- $FLUID_NEUTRAL
- /
-
- $NUMERICAL_SETUP
- /
-
  $PROBLEM_CONTROL
     maxiter = 300000
     !smooth_map = .false.
     log_polar = .true.
-    x_center = -1.78644025556363695
-    y_center = 0.
+    !precision = "extended"
+    x_center = "-1.78644025556363935453441385540870158534802335201"
+    y_center = "0."
     c_polar = 0.63
  /
 
- $INTERACTIONS
- /
-
  $AMR
-    bsize = 3*16
+    bsize = 3*8
     level_max = 4
     n_updAMR = 1
  /
