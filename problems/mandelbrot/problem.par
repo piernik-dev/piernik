@@ -1,3 +1,5 @@
+! The base setup showing the famous Mandelbrot set in smooth coloring
+
  $BASE_DOMAIN
     n_d = 2*64, 1
     xmin   = -2.25
@@ -8,9 +10,6 @@
     bnd_xr = "outd"
     bnd_yl = "outd"
     bnd_yr = "outd"
- /
-
- $MPI_BLOCKS
  /
 
  $UNITS
@@ -29,24 +28,15 @@
 
  $OUTPUT_CONTROL
     problem_name = 'mandelbrot'
-    run_id =  'ts0'
+    run_id =  'mbr'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
  /
 
- $FLUID_NEUTRAL
- /
-
- $NUMERICAL_SETUP
- /
-
  $PROBLEM_CONTROL
     maxiter = 1000
 !    smooth_map = .false.
- /
-
- $INTERACTIONS
  /
 
  $AMR
