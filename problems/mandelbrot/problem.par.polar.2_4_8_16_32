@@ -1,6 +1,6 @@
  $BASE_DOMAIN
-    n_d = 64, 16, 1
-    xmin   = -19
+    n_d = 128, 32, 1
+    xmin   = -35
     xmax   =  1.
     ymin   =  -3.14159265 !0.
     ymax   =  3.14159265 !6.2831853
@@ -26,22 +26,22 @@
 
  $OUTPUT_CONTROL
     problem_name = 'mandelbrot_polar'
-    run_id =  '+-3'
+    run_id =  'fpq'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
  /
 
  $PROBLEM_CONTROL
-    maxiter = 3000000
+    maxiter = 200000
     !smooth_map = .false.
     log_polar = .true.
-    precision = 'extended' 
-    !'quad' is computationally too expensive, also very hard to find, even
-    !on fastest deep zoom programs
-    x_center = "-0.163370934304842538871179661196616590545613344"
-    y_center = "1.026178602930346497615424247380777061942108517"
-    c_polar = 0.6666
+    precision = 'extended' !'quad'
+    ! This zoom peeks deeply into nested mandelbrot structures and thus it is
+    ! quite slow in quad precision
+    x_center = "-0.1528719009565961044726929242913352694564663551310107112319327"
+    y_center = "-1.0403093367537139625747624283738382405293476514809075203506933"
+    c_polar = 0.2
  /
 
  $AMR
@@ -49,3 +49,6 @@
     level_max = 3
     n_updAMR = 1
  /
+
+! Visualisation example
+! ../../visual/pvf.py mandelbrot_polar_fpq_0000.h5 -d mand -D gist_ncar -z 1,6

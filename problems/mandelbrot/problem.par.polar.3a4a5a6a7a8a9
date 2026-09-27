@@ -1,6 +1,8 @@
+! Deep zoom on minibrots on the main antenna
+
  $BASE_DOMAIN
     n_d = 64, 16, 1
-    xmin   = -19
+    xmin   = -35
     xmax   =  1.
     ymin   =  -3.14159265 !0.
     ymax   =  3.14159265 !6.2831853
@@ -26,26 +28,24 @@
 
  $OUTPUT_CONTROL
     problem_name = 'mandelbrot_polar'
-    run_id =  '+-3'
+    run_id =  'fpq'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
  /
 
  $PROBLEM_CONTROL
-    maxiter = 3000000
+    maxiter = 500000
     !smooth_map = .false.
     log_polar = .true.
-    precision = 'extended' 
-    !'quad' is computationally too expensive, also very hard to find, even
-    !on fastest deep zoom programs
-    x_center = "-0.163370934304842538871179661196616590545613344"
-    y_center = "1.026178602930346497615424247380777061942108517"
-    c_polar = 0.6666
+    precision = 'extended' !'quad'
+    x_center = "-1.789215019537189581673282328380209711507548910977315688881572432666"
+    y_center = "0"
+    c_polar = 0.25
  /
 
  $AMR
     bsize = 3*8
-    level_max = 3
+    level_max = 2
     n_updAMR = 1
  /
