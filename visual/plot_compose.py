@@ -190,7 +190,7 @@ def add_cbar(figmode, cbar_mode, grid, ab, ic, clab, sct, field):
 
 
 def plotcompose(pthfilen, var, output, options):
-    axc, umin, umax, cmap, pcolor, player, psize, sctype, scnorm, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel = options
+    axc, umin, umax, cmap, pcolor, player, psize, sctype, scnorm, pstype, cu, center, cmpr, drawg, drawd, drawu, drawa, drawp, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel, magnification = options
     labh = ps.particles_label
     drawh = drawp and nbins > 1
     h5f = h5py.File(pthfilen, 'r')
@@ -302,6 +302,6 @@ def plotcompose(pthfilen, var, output, options):
 
         P.draw()
         out2d = output[0] + pu.plane_in_outputname(figmode, draw2D) + output[1]
-        P.savefig(out2d, facecolor=ps.f_facecolor)
+        P.savefig(out2d, facecolor=ps.f_facecolor, dpi=100 * magnification)
         print(out2d, "written to disk")
         P.clf()

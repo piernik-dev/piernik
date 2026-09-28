@@ -34,6 +34,7 @@ dnames = ''
 uaxes = ''
 nbins = 1
 player = True, '0', '0', '0'
+magnification = 1.0
 
 print('PIERNIK VISUALIZATION FACILITY')
 
@@ -63,6 +64,7 @@ def print_usage():
     print(' -l LEVEL1[,LEVEL2], \t--level LEVEL1[,LEVEL2] \t\tplot only requested grid levels [default: all]')
     print(' -L LEVEL1[,LEVEL2]\t--compare-level LEVEL1[,LEVEL2] \tspecify different grid levels to compare accross files [default: the same levels]')
     print('\t\t\t--linestyle STYLELIST \t\t\tline styles list for different refinement levels in 1D plots [default: %s]' % ps.plot1d_linestyle)
+    print(' -m FACTOR, \t\t--magnification FACTOR \t\t scale 2D output resolution [default: 1]')
     print(' -n LABEL, \t\t--varlabel LABEL \t\t\tuse VAR or LABEL as label to describe plotted datafield or translate it (possible values: 0 | var, 1 | describe, 2 | symbol, LABEL (directly)) [default: %s]' % ps.cbar_varlabel)
     print(' -o OUTPUT, \t\t--output OUTPUT \t\t\tdump plot files into OUTPUT directory [default: %s]' % ps.f_plotdir)
     print(' -p,\t\t\t--particles\t\t\t\tscatter particles onto slices [default: switched-off]')
@@ -81,7 +83,7 @@ def print_usage():
 
 def cli_params(argv):
     try:
-        opts, args = getopt.getopt(argv, "a:b:c:Cd:D:e:F:g:hl:L:n:o:pP:r:R:s:t:T:u:v:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-adjusted-grids", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "scalenorm=", "uniform", "units=", "varlabel=", "zlim=", "zoom="])
+        opts, args = getopt.getopt(argv, "a:b:c:Cd:D:e:F:g:hl:L:m:n:o:pP:r:R:s:t:T:u:v:z:", ["help", "amr", "axes=", "bins=", "center=", "colormap=", "compare-adjusted-grids", "compare-datafield=", "compare-file=", "compare-level=", "compare-type=", "dataset=", "extension=", "gridcolor=", "grid-list=", "level=", "linestyle=", "magnification=", "output=", "particles", "particle-color=", "particle-h2d-scale=", "particle-space=", "particle-sizes=", "particle-slice=", "scale=", "scalenorm=", "uniform", "units=", "varlabel=", "zlim=", "zoom="])
     except getopt.GetoptError:
         print("Unrecognized options: %s \n" % argv)
         print_usage()
@@ -162,6 +164,13 @@ def cli_params(argv):
         elif pu.recognize_opt(opt, ("-l", "--level")):
             global plotlevels
             plotlevels = [int(i) for i in arg.split(',')]
+
+        elif pu.recognize_opt(opt, ("-m", "--magnification")):
+            global magnification
+            magnification = float(arg)
+            if magnification <= 0:
+                print('Magnification factor must be greater than zero.')
+                sys.exit(2)
 
         elif pu.recognize_opt(opt, ("-L", "--compare-level")):
             global cmprl
@@ -317,7 +326,7 @@ axc = [p1x, p1y, p1z], [p2yz, p2xz, p2xy]
 
 compare = cmpr, cmprb, cmprf, cmprd, cmprl, cmprt, False
 
-options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, scnorm, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel
+options = axc, zmin, zmax, cmap, pcolor, player, psize, sctype, scnorm, pstype, cu, center, compare, draw_grid, draw_data, draw_uni, draw_amr, draw_part, nbins, uaxes, zoom, plotlevels, gridlist, gcolor, linstyl, varlabel, magnification
 if not os.path.exists(plotdir):
     os.makedirs(plotdir)
 
