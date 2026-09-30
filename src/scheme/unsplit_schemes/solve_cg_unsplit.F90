@@ -160,6 +160,7 @@ contains
       use hlld,           only: riemann_wrap_u
       use interpolations, only: interpol
       use dataio_pub,     only: die
+      use unsplit_mag_modules, only: apply_fluid_ext_fluxes
 
       implicit none
 
@@ -179,10 +180,7 @@ contains
       call interpol(ui, ql, qr)
       call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      call apply_fluid_ext_fluxes(eflx, flx)
 
    end subroutine solve_u
 

@@ -32,15 +32,31 @@ module unsplit_mag_modules
    implicit none
 
    private
-   public  :: solve_cg_ub, apply_flux
+   public  :: solve_cg_ub, apply_flux, apply_fluid_ext_fluxes
 
 contains
+
+   subroutine apply_fluid_ext_fluxes(eflx, flx)
+
+      use fluxtypes, only: ext_fluxes
+
+      implicit none
+
+      type(ext_fluxes), intent(inout) :: eflx
+      real, dimension(:,:), intent(inout) :: flx
+
+      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
+      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
+      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
+      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+
+   end subroutine apply_fluid_ext_fluxes
 
    subroutine solve_cg_ub(cg,istep)
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, magh_n, uh_n, &
-                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim, I_ONE
+                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim
       use global,           only: integration_order
       use domain,           only: dom
       use fluidindex,       only: iarr_all_swp, iarr_mag_swp
@@ -191,10 +207,7 @@ contains
       call interpol(ui, ql, qr, bi, bl, br)
       call riemann_wrap(ql, qr, bl, br, cs2, flx, bflx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      call apply_fluid_ext_fluxes(eflx, flx)
 
       if (divB_0_method == DIVB_HDC) then
          if (associated(eflx%li)) bflx(eflx%li%index, :) = eflx%li%bflx
