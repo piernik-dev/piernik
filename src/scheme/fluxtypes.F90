@@ -36,7 +36,7 @@ module fluxtypes
    implicit none
 
    private
-   public  :: ext_fluxes
+   public  :: ext_fluxes, apply_fluid_ext_fluxes, apply_magnetic_ext_fluxes
 
    !> \brief Structure that may contain pointers to fluxes to be passed to or obtained from the RTVD/Riemann routine.
    !! Unassociated pointer means that no operation is required.
@@ -66,5 +66,33 @@ contains
       this%ro => null()
 
    end subroutine init
+
+   subroutine apply_fluid_ext_fluxes(eflx, flx)
+
+      implicit none
+
+      type(ext_fluxes), intent(inout) :: eflx
+      real, dimension(:,:), intent(inout) :: flx
+
+      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
+      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
+      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
+      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+
+   end subroutine apply_fluid_ext_fluxes
+
+   subroutine apply_magnetic_ext_fluxes(eflx, flx)
+
+      implicit none
+
+      type(ext_fluxes), intent(inout) :: eflx
+      real, dimension(:,:), intent(inout) :: flx
+
+      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%bflx
+      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%bflx
+      if (associated(eflx%lo)) eflx%lo%bflx = flx(eflx%lo%index, :)
+      if (associated(eflx%ro)) eflx%ro%bflx = flx(eflx%ro%index, :)
+
+   end subroutine apply_magnetic_ext_fluxes
 
 end module fluxtypes

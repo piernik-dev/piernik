@@ -317,7 +317,7 @@ contains
    subroutine solve(u0, b0, u1, b1, cs2, dtodx, eflx)
 
       use constants,      only: DIVB_HDC, xdim, ydim, zdim
-      use fluxtypes,      only: ext_fluxes
+      use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes, apply_magnetic_ext_fluxes
       use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
@@ -349,16 +349,10 @@ contains
       call interpol(u1, ql, qr, b1, bl, br)
       call riemann_wrap(ql, qr, bl, br, cs2, flx, mag_flx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      call apply_fluid_ext_fluxes(eflx, flx)
 
       if (divB_0_method == DIVB_HDC) then
-         if (associated(eflx%li)) mag_flx(eflx%li%index, :) = eflx%li%bflx
-         if (associated(eflx%ri)) mag_flx(eflx%ri%index, :) = eflx%ri%bflx
-         if (associated(eflx%lo)) eflx%lo%bflx = mag_flx(eflx%lo%index, :)
-         if (associated(eflx%ro)) eflx%ro%bflx = mag_flx(eflx%ro%index, :)
+         call apply_magnetic_ext_fluxes(eflx, mag_flx)
       endif
 
       associate (nx => size(u0, in))
@@ -376,7 +370,7 @@ contains
 
    subroutine solve_u(u0, u1, cs2, dtodx, eflx)
 
-      use fluxtypes,      only: ext_fluxes
+      use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes
       use hlld,           only: riemann_wrap_u
       use interpolations, only: interpol
 
@@ -401,10 +395,7 @@ contains
       call interpol(u1, ql, qr)
       call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      call apply_fluid_ext_fluxes(eflx, flx)
 
       associate (nx => size(u0, in))
          u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))

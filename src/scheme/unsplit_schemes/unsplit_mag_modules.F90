@@ -32,25 +32,9 @@ module unsplit_mag_modules
    implicit none
 
    private
-   public  :: solve_cg_ub, apply_flux, apply_fluid_ext_fluxes
+   public  :: solve_cg_ub, apply_flux
 
 contains
-
-   subroutine apply_fluid_ext_fluxes(eflx, flx)
-
-      use fluxtypes, only: ext_fluxes
-
-      implicit none
-
-      type(ext_fluxes), intent(inout) :: eflx
-      real, dimension(:,:), intent(inout) :: flx
-
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
-
-   end subroutine apply_fluid_ext_fluxes
 
    subroutine solve_cg_ub(cg,istep)
       use grid_cont,        only: grid_container
@@ -181,7 +165,7 @@ contains
    subroutine solve(ui, bi, cs2, eflx, flx, bflx)
 
       use constants,      only: DIVB_HDC
-      use fluxtypes,      only: ext_fluxes
+      use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes, apply_magnetic_ext_fluxes
       use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
@@ -210,10 +194,7 @@ contains
       call apply_fluid_ext_fluxes(eflx, flx)
 
       if (divB_0_method == DIVB_HDC) then
-         if (associated(eflx%li)) bflx(eflx%li%index, :) = eflx%li%bflx
-         if (associated(eflx%ri)) bflx(eflx%ri%index, :) = eflx%ri%bflx
-         if (associated(eflx%lo)) eflx%lo%bflx = bflx(eflx%lo%index, :)
-         if (associated(eflx%ro)) eflx%ro%bflx = bflx(eflx%ro%index, :)
+         call apply_magnetic_ext_fluxes(eflx, bflx)
       else
          call die("[unsplit_mag_modules:solve] Unplit method is only implemented with Hyperbolic Divergence Cleaning")
       endif

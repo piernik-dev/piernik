@@ -156,12 +156,10 @@ contains
 
    subroutine solve_u(ui, cs2, eflx, flx)
 
-      use fluxtypes,      only: ext_fluxes
+      use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes
       use hlld,           only: riemann_wrap_u
       use interpolations, only: interpol
       use dataio_pub,     only: die
-      use unsplit_mag_modules, only: apply_fluid_ext_fluxes
-
       implicit none
 
       real, dimension(:,:),        intent(in)    :: ui       !< cell-centered intermediate fluid states

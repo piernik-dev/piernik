@@ -99,7 +99,7 @@ contains
       use domain,       only: dom
       use fluidindex,   only: flind, nmag
       use fluxes,       only: flimiter, all_fluxes
-      use fluxtypes,    only: ext_fluxes
+      use fluxtypes,    only: ext_fluxes, apply_fluid_ext_fluxes
       use gridgeometry, only: gc, GC1, GC2, GC3
 
       implicit none
@@ -171,10 +171,7 @@ contains
          ! * Set f0 to 0 only when it would produce incoming flux.
          ! I don't remember which approach was already (unsuccessfully) tested
          ! \todo remove transpositions by changing index order in eflx
-         if (associated(eflx%li)) fu(eflx%li%index, :) = eflx%li%uflx
-         if (associated(eflx%ri)) fu(eflx%ri%index, :) = eflx%ri%uflx
-         if (associated(eflx%lo)) eflx%lo%uflx = fu(eflx%lo%index, :)
-         if (associated(eflx%ro)) eflx%ro%uflx = fu(eflx%ro%index, :)
+         call apply_fluid_ext_fluxes(eflx, fu)
 
          if (dom%geometry_type == GEO_XYZ) then
             u1(2:n, :) = u0(2:n, :) -                  dtx * (                fu(2:n, :) -                fu(1:n-1, :) )
