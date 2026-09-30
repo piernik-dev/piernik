@@ -53,6 +53,28 @@ module fc_fluxes
 
 contains
 
+   subroutine set_dir_range(cdim, dir_first, dir_last)
+
+      use constants, only: INVALID, xdim, zdim
+
+      implicit none
+
+      integer(kind=4), optional, intent(in)  :: cdim
+      integer,                     intent(out) :: dir_first, dir_last
+
+      if (.not. present(cdim)) then
+         dir_first = xdim
+         dir_last = zdim
+      else if (cdim == INVALID) then
+         dir_first = xdim
+         dir_last = zdim
+      else
+         dir_first = cdim
+         dir_last = cdim
+      endif
+
+   end subroutine set_dir_range
+
 !>
 !! \brief Post a non-blocking MPI receives for all expected fluxes from fine grids.
 !! Returns number of requests in `nr`
@@ -63,7 +85,7 @@ contains
       use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, INVALID, base_level_id, xdim, zdim
+      use constants,    only: LO, HI, base_level_id
       use domain,       only: dom
       use pppmpi,       only: req_ppp
 
@@ -75,17 +97,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
       integer :: cdim_i, dir_first, dir_last, g
-      logical :: all_dirs
 
-      all_dirs = .not. present(cdim)
-      if (present(cdim)) all_dirs = cdim == INVALID
-      if (all_dirs) then
-         dir_first = xdim
-         dir_last = zdim
-      else
-         dir_first = cdim
-         dir_last = cdim
-      endif
+      call set_dir_range(cdim, dir_first, dir_last)
 
       call req%init(owncomm = .true., label = "fc_flx")
 
@@ -100,7 +113,7 @@ contains
          call cgl%cg%costs%start
 
          do cdim_i = dir_first, dir_last
-            if (all_dirs .and. .not. dom%has_dir(cdim_i)) cycle
+            if (dir_first /= dir_last .and. .not. dom%has_dir(cdim_i)) cycle
             cgl%cg%processed = .false.
             cgl%cg%finebnd(cdim_i, LO)%uflx(:, :, :) = 0. !> \warning overkill
             cgl%cg%finebnd(cdim_i, HI)%uflx(:, :, :) = 0.
@@ -125,7 +138,7 @@ contains
 
    subroutine recv_cg_finebnd(req, cdim, cg, all_received)
 
-      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI, xdim, zdim
+      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: flind
@@ -144,19 +157,10 @@ contains
 
       integer :: cdim_i, dir_first, dir_last, g, lh
       logical(kind=4) :: received
-      logical :: all_dirs
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       character(len=*), parameter :: recv_label = "cg_recv_fine_bnd"
 
-      all_dirs = .not. present(cdim)
-      if (present(cdim)) all_dirs = cdim == INVALID
-      if (all_dirs) then
-         dir_first = xdim
-         dir_last = zdim
-      else
-         dir_first = cdim
-         dir_last = cdim
-      endif
+      call set_dir_range(cdim, dir_first, dir_last)
 
       call ppp_main%start(recv_label, PPP_MPI)
 
@@ -164,7 +168,7 @@ contains
       if (allocated(cg%rif_tgt%seg)) then
          associate ( seg => cg%rif_tgt%seg )
          do cdim_i = dir_first, dir_last
-            if (all_dirs .and. .not. dom%has_dir(cdim_i)) cycle
+            if (dir_first /= dir_last .and. .not. dom%has_dir(cdim_i)) cycle
             do g = lbound(seg, dim=1), ubound(seg, dim=1)
                jc = seg(g)%se(cdim_i, :)
                if (jc(LO) == jc(HI)) then
@@ -204,7 +208,7 @@ contains
 
    subroutine send_cg_coarsebnd(req, cdim, cg)
 
-      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI, xdim, zdim
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
@@ -221,25 +225,16 @@ contains
       integer :: cdim_i, dir_first, dir_last, g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       integer(kind=8) :: j, k
-      logical :: all_dirs
       character(len=*), parameter :: send_label = "cg_send_coarse_bnd"
 
-      all_dirs = .not. present(cdim)
-      if (present(cdim)) all_dirs = cdim == INVALID
-      if (all_dirs) then
-         dir_first = xdim
-         dir_last = zdim
-      else
-         dir_first = cdim
-         dir_last = cdim
-      endif
+      call set_dir_range(cdim, dir_first, dir_last)
 
       call ppp_main%start(send_label, PPP_MPI)
 
       if (allocated(cg%rof_tgt%seg)) then
          associate ( seg => cg%rof_tgt%seg )
          do cdim_i = dir_first, dir_last
-            if (all_dirs .and. .not. dom%has_dir(cdim_i)) cycle
+            if (dir_first /= dir_last .and. .not. dom%has_dir(cdim_i)) cycle
             do g = lbound(seg, dim=1), ubound(seg, dim=1)
                jc = seg(g)%se(cdim_i, :) !> \warning: partially duplicated code (see above)
                if (jc(LO) == jc(HI)) then
