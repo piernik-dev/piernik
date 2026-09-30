@@ -32,7 +32,7 @@ module unsplit_mag_modules
    implicit none
 
    private
-   public  :: solve_cg_ub
+   public  :: solve_cg_ub, apply_flux
 
 contains
 
