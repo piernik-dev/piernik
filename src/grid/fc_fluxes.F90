@@ -31,7 +31,8 @@
 !!
 !! These routines have to be called in particular order:
 !!
-!!     initiate_flx_recv(cdim) initializes the transfer for the specified direction and returns number of messages
+!!     initiate_flx_recv(cdim) initializes the transfer for the specified direction and returns number of messages.
+!!     If cdim is omitted or INVALID, all active directions are initialized for an unsplit solver.
 !!     recv_cg_finebnd and send_cg_coarsebnd have to be called for each cg
 !!     finalize_fcflx does a clean-up
 !!
@@ -62,17 +63,29 @@ contains
       use cg_cost_data, only: I_MHD  ! ToDo: for explicit diffusion use I_DIFFUSE or I_REFINE
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: LO, HI, base_level_id
+      use constants,    only: LO, HI, INVALID, base_level_id, xdim, zdim
+      use domain,       only: dom
       use pppmpi,       only: req_ppp
 
       implicit none
 
       type(req_ppp),             intent(inout) :: req
-      integer(kind=4),           intent(in)    :: cdim
+      integer(kind=4), optional, intent(in)    :: cdim
       integer(kind=4), optional, intent(in)    :: max_level
 
       type(cg_list_element), pointer :: cgl
-      integer :: g
+      integer :: cdim_i, dir_first, dir_last, g
+      logical :: all_dirs
+
+      all_dirs = .not. present(cdim)
+      if (present(cdim)) all_dirs = cdim == INVALID
+      if (all_dirs) then
+         dir_first = xdim
+         dir_last = zdim
+      else
+         dir_first = cdim
+         dir_last = cdim
+      endif
 
       call req%init(owncomm = .true., label = "fc_flx")
 
@@ -86,18 +99,21 @@ contains
       do while (associated(cgl))
          call cgl%cg%costs%start
 
-         cgl%cg%processed = .false.
-         cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
-         cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
-         if (allocated(cgl%cg%finebnd(cdim, LO)%bflx)) cgl%cg%finebnd(cdim, LO)%bflx(:, :, :) = 0.
-         if (allocated(cgl%cg%finebnd(cdim, HI)%bflx)) cgl%cg%finebnd(cdim, HI)%bflx(:, :, :) = 0.
-         if (allocated(cgl%cg%rif_tgt%seg)) then
-            associate ( seg => cgl%cg%rif_tgt%seg )
-               do g = lbound(seg, dim=1), ubound(seg, dim=1)
-                  if (seg(g)%se(cdim, LO) == seg(g)%se(cdim, HI)) call seg(g)%recv_buf(req)
-               enddo
-            end associate
-         endif
+         do cdim_i = dir_first, dir_last
+            if (all_dirs .and. .not. dom%has_dir(cdim_i)) cycle
+            cgl%cg%processed = .false.
+            cgl%cg%finebnd(cdim_i, LO)%uflx(:, :, :) = 0. !> \warning overkill
+            cgl%cg%finebnd(cdim_i, HI)%uflx(:, :, :) = 0.
+            if (allocated(cgl%cg%finebnd(cdim_i, LO)%bflx)) cgl%cg%finebnd(cdim_i, LO)%bflx(:, :, :) = 0.
+            if (allocated(cgl%cg%finebnd(cdim_i, HI)%bflx)) cgl%cg%finebnd(cdim_i, HI)%bflx(:, :, :) = 0.
+            if (allocated(cgl%cg%rif_tgt%seg)) then
+               associate ( seg => cgl%cg%rif_tgt%seg )
+                  do g = lbound(seg, dim=1), ubound(seg, dim=1)
+                     if (seg(g)%se(cdim_i, LO) == seg(g)%se(cdim_i, HI)) call seg(g)%recv_buf(req)
+                  enddo
+               end associate
+            endif
+         enddo
 
          call cgl%cg%costs%stop(I_MHD)
          cgl => cgl%nxt
@@ -109,8 +125,9 @@ contains
 
    subroutine recv_cg_finebnd(req, cdim, cg, all_received)
 
-      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI
+      use constants,  only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims, PPP_MPI, xdim, zdim
       use dataio_pub, only: die
+      use domain,     only: dom
       use fluidindex, only: flind
       use grid_cont,  only: grid_container
       use MPIF,       only: MPI_STATUS_IGNORE, MPI_Test, MPI_Wait
@@ -121,23 +138,36 @@ contains
       implicit none
 
       type(req_ppp),                 intent(inout) :: req
-      integer(kind=4),               intent(in)    :: cdim
+      integer(kind=4), optional,     intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       logical, optional,             intent(out)   :: all_received
 
-      integer :: g, lh
+      integer :: cdim_i, dir_first, dir_last, g, lh
       logical(kind=4) :: received
+      logical :: all_dirs
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       character(len=*), parameter :: recv_label = "cg_recv_fine_bnd"
+
+      all_dirs = .not. present(cdim)
+      if (present(cdim)) all_dirs = cdim == INVALID
+      if (all_dirs) then
+         dir_first = xdim
+         dir_last = zdim
+      else
+         dir_first = cdim
+         dir_last = cdim
+      endif
 
       call ppp_main%start(recv_label, PPP_MPI)
 
       if (present(all_received)) all_received = .true.
       if (allocated(cg%rif_tgt%seg)) then
          associate ( seg => cg%rif_tgt%seg )
-         do g = lbound(seg, dim=1), ubound(seg, dim=1)
-            jc = seg(g)%se(cdim, :)
-            if (jc(LO) == jc(HI)) then
+         do cdim_i = dir_first, dir_last
+            if (all_dirs .and. .not. dom%has_dir(cdim_i)) cycle
+            do g = lbound(seg, dim=1), ubound(seg, dim=1)
+               jc = seg(g)%se(cdim_i, :)
+               if (jc(LO) == jc(HI)) then
                if (present(all_received)) then
                   call MPI_Test(req%r(seg(g)%ireq), received, MPI_STATUS_IGNORE, err_mpi)
                else
@@ -145,22 +175,23 @@ contains
                   received = .true.
                endif
                if (received) then  !> \warning: partially duplicated code (see send_cg_coarsebnd())
-                  j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
-                  j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
-                  if (all(cg%finebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                  j1 = seg(g)%se(pdims(cdim_i, ORTHO1), :)
+                  j2 = seg(g)%se(pdims(cdim_i, ORTHO2), :)
+                  if (all(cg%finebnd(cdim_i, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                      lh = LO
-                  else if (all(cg%finebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                  else if (all(cg%finebnd(cdim_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                      lh = HI
                   else
                      call die("[fc_fluxes:recv_cg_finebnd] Cannot determine side (Recv)")
                      lh = INVALID
                   endif
-                  cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
-                  if (allocated(cg%finebnd(cdim, lh)%bflx)) cg%finebnd(cdim, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
+                  cg%finebnd(cdim_i, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
+                  if (allocated(cg%finebnd(cdim_i, lh)%bflx)) cg%finebnd(cdim_i, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
                else
                   if (present(all_received)) all_received = .false.
                endif
-            endif
+               endif
+            enddo
          enddo
          end associate
       endif
@@ -173,7 +204,7 @@ contains
 
    subroutine send_cg_coarsebnd(req, cdim, cg)
 
-      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI
+      use constants,    only: pdims, LO, HI, ORTHO1, ORTHO2, INVALID, PPP_MPI, xdim, zdim
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
@@ -184,26 +215,39 @@ contains
       implicit none
 
       type(req_ppp),                 intent(inout) :: req
-      integer(kind=4),               intent(in)    :: cdim
+      integer(kind=4), optional,     intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer :: g, lh
+      integer :: cdim_i, dir_first, dir_last, g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       integer(kind=8) :: j, k
+      logical :: all_dirs
       character(len=*), parameter :: send_label = "cg_send_coarse_bnd"
+
+      all_dirs = .not. present(cdim)
+      if (present(cdim)) all_dirs = cdim == INVALID
+      if (all_dirs) then
+         dir_first = xdim
+         dir_last = zdim
+      else
+         dir_first = cdim
+         dir_last = cdim
+      endif
 
       call ppp_main%start(send_label, PPP_MPI)
 
       if (allocated(cg%rof_tgt%seg)) then
          associate ( seg => cg%rof_tgt%seg )
-         do g = lbound(seg, dim=1), ubound(seg, dim=1)
-            jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see above)
-            if (jc(LO) == jc(HI)) then
-               j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
-               j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
-               if (all(cg%coarsebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+         do cdim_i = dir_first, dir_last
+            if (all_dirs .and. .not. dom%has_dir(cdim_i)) cycle
+            do g = lbound(seg, dim=1), ubound(seg, dim=1)
+               jc = seg(g)%se(cdim_i, :) !> \warning: partially duplicated code (see above)
+               if (jc(LO) == jc(HI)) then
+                  j1 = seg(g)%se(pdims(cdim_i, ORTHO1), :)
+                  j2 = seg(g)%se(pdims(cdim_i, ORTHO2), :)
+                  if (all(cg%coarsebnd(cdim_i, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                   lh = LO
-               else if (all(cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                  else if (all(cg%coarsebnd(cdim_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                   lh = HI
                else
                   call die("[fc_fluxes:send_cg_coarsebnd] Cannot determine side (Send)")
@@ -213,16 +257,17 @@ contains
                seg(g)%buf(:, :, :) = 0.
                do j = j1(LO), j1(HI)
                   do k = j2(LO), j2(HI)
-                     if (allocated(cg%coarsebnd(cdim, lh)%bflx)) then
-                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim, lh)%uflx(:, j, k), cg%coarsebnd(cdim, lh)%bflx(:, j, k) ]
+                     if (allocated(cg%coarsebnd(cdim_i, lh)%bflx)) then
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim_i, lh)%uflx(:, j, k), cg%coarsebnd(cdim_i, lh)%bflx(:, j, k) ]
                      else
-                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim_i, lh)%uflx(:, j, k)
                      endif
                   enddo
                enddo
                seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
                call seg(g)%send_buf(req)
-            endif
+               endif
+            enddo
          enddo
          end associate
       endif
