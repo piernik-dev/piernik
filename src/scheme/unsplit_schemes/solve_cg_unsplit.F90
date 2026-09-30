@@ -82,7 +82,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: iarr_all_swp
       use fluxtypes,        only: ext_fluxes
-      use unsplit_mag_modules, only: apply_flux
+      use unsplit_state_update, only: apply_flux
       use unsplit_source,   only: apply_source
       use diagnostics,      only: my_allocate, my_deallocate
 
