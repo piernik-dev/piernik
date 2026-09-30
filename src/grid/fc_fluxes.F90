@@ -27,16 +27,16 @@
 #include "piernik.h"
 
 !>
-!! \brief Here we communicate fine-coarse fluxes obtained from a solver via cg%finebnd and cg%coarsebnd buffres
+!! \brief Communicate solver fluxes between fine and coarse neighboring patches.
 !!
 !! These routines have to be called in particular order:
 !!
 !!     initiate_flx_recv(cdim) initializes the transfer for the specified direction and returns number of messages.
 !!     If cdim is omitted or INVALID, all active directions are initialized for an unsplit solver.
 !!     recv_cg_finebnd and send_cg_coarsebnd have to be called for each cg
-!!     finalize_fcflx does a clean-up
+!!     req%waitall completes the outstanding sends after all patches are processed.
 !!
-!! No other Piernik MPI communication should take place between calls to initiate_flx_recv and finalize_fcflx because of use the req%r array.
+!! No other Piernik MPI communication should use req%r between initiate_flx_recv and req%waitall.
 !!
 !! See sweeps module for more hints about proper usage.
 !!
@@ -53,6 +53,8 @@ module fc_fluxes
 
 contains
 
+!> \brief Convert an optional direction into an inclusive direction range.
+!! An omitted or INVALID direction denotes the active directions of an unsplit solve.
    subroutine set_dir_range(cdim, dir_first, dir_last)
 
       use constants, only: INVALID, xdim, zdim
@@ -77,7 +79,6 @@ contains
 
 !>
 !! \brief Post a non-blocking MPI receives for all expected fluxes from fine grids.
-!! Returns number of requests in `nr`
 !<
 
    subroutine initiate_flx_recv(req, cdim, max_level)
@@ -111,10 +112,10 @@ contains
 
       do while (associated(cgl))
          call cgl%cg%costs%start
+         cgl%cg%processed = .false.
 
          do cdim_i = dir_first, dir_last
             if (dir_first /= dir_last .and. .not. dom%has_dir(cdim_i)) cycle
-            cgl%cg%processed = .false.
             cgl%cg%finebnd(cdim_i, LO)%uflx(:, :, :) = 0. !> \warning overkill
             cgl%cg%finebnd(cdim_i, HI)%uflx(:, :, :) = 0.
             if (allocated(cgl%cg%finebnd(cdim_i, LO)%bflx)) cgl%cg%finebnd(cdim_i, LO)%bflx(:, :, :) = 0.
@@ -172,28 +173,28 @@ contains
             do g = lbound(seg, dim=1), ubound(seg, dim=1)
                jc = seg(g)%se(cdim_i, :)
                if (jc(LO) == jc(HI)) then
-               if (present(all_received)) then
-                  call MPI_Test(req%r(seg(g)%ireq), received, MPI_STATUS_IGNORE, err_mpi)
-               else
-                  call MPI_Wait(req%r(seg(g)%ireq), MPI_STATUS_IGNORE, err_mpi)
-                  received = .true.
-               endif
-               if (received) then  !> \warning: partially duplicated code (see send_cg_coarsebnd())
-                  j1 = seg(g)%se(pdims(cdim_i, ORTHO1), :)
-                  j2 = seg(g)%se(pdims(cdim_i, ORTHO2), :)
-                  if (all(cg%finebnd(cdim_i, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                     lh = LO
-                  else if (all(cg%finebnd(cdim_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                     lh = HI
+                  if (present(all_received)) then
+                     call MPI_Test(req%r(seg(g)%ireq), received, MPI_STATUS_IGNORE, err_mpi)
                   else
-                     call die("[fc_fluxes:recv_cg_finebnd] Cannot determine side (Recv)")
-                     lh = INVALID
+                     call MPI_Wait(req%r(seg(g)%ireq), MPI_STATUS_IGNORE, err_mpi)
+                     received = .true.
                   endif
-                  cg%finebnd(cdim_i, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
-                  if (allocated(cg%finebnd(cdim_i, lh)%bflx)) cg%finebnd(cdim_i, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
-               else
-                  if (present(all_received)) all_received = .false.
-               endif
+                  if (received) then  !> \warning: partially duplicated code (see send_cg_coarsebnd())
+                     j1 = seg(g)%se(pdims(cdim_i, ORTHO1), :)
+                     j2 = seg(g)%se(pdims(cdim_i, ORTHO2), :)
+                     if (all(cg%finebnd(cdim_i, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                        lh = LO
+                     else if (all(cg%finebnd(cdim_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                        lh = HI
+                     else
+                        call die("[fc_fluxes:recv_cg_finebnd] Cannot determine side (Recv)")
+                        lh = INVALID
+                     endif
+                     cg%finebnd(cdim_i, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:flind%all, :, :)
+                     if (allocated(cg%finebnd(cdim_i, lh)%bflx)) cg%finebnd(cdim_i, lh)%bflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(flind%all+1:, :, :)
+                  else
+                     if (present(all_received)) all_received = .false.
+                  endif
                endif
             enddo
          enddo
@@ -241,26 +242,26 @@ contains
                   j1 = seg(g)%se(pdims(cdim_i, ORTHO1), :)
                   j2 = seg(g)%se(pdims(cdim_i, ORTHO2), :)
                   if (all(cg%coarsebnd(cdim_i, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                  lh = LO
+                     lh = LO
                   else if (all(cg%coarsebnd(cdim_i, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                  lh = HI
-               else
-                  call die("[fc_fluxes:send_cg_coarsebnd] Cannot determine side (Send)")
-                  lh = INVALID
-               endif
+                     lh = HI
+                  else
+                     call die("[fc_fluxes:send_cg_coarsebnd] Cannot determine side (Send)")
+                     lh = INVALID
+                  endif
 
-               seg(g)%buf(:, :, :) = 0.
-               do j = j1(LO), j1(HI)
-                  do k = j2(LO), j2(HI)
-                     if (allocated(cg%coarsebnd(cdim_i, lh)%bflx)) then
-                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim_i, lh)%uflx(:, j, k), cg%coarsebnd(cdim_i, lh)%bflx(:, j, k) ]
-                     else
-                        seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim_i, lh)%uflx(:, j, k)
-                     endif
+                  seg(g)%buf(:, :, :) = 0.
+                  do j = j1(LO), j1(HI)
+                     do k = j2(LO), j2(HI)
+                        if (allocated(cg%coarsebnd(cdim_i, lh)%bflx)) then
+                           seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + [ cg%coarsebnd(cdim_i, lh)%uflx(:, j, k), cg%coarsebnd(cdim_i, lh)%bflx(:, j, k) ]
+                        else
+                           seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim_i, lh)%uflx(:, j, k)
+                        endif
+                     enddo
                   enddo
-               enddo
-               seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
-               call seg(g)%send_buf(req)
+                  seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
+                  call seg(g)%send_buf(req)
                endif
             enddo
          enddo
