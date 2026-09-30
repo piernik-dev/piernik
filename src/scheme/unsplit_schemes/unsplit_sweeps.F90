@@ -43,43 +43,6 @@ module unsplit_sweeps
 
 contains
 
-   subroutine update_boundaries(istep)
-
-      use all_boundaries, only: all_fluid_boundaries
-!      use cg_leaves,      only: leaves
-      use constants,      only: first_stage, DIVB_HDC, xdim, zdim
-      use domain,         only: dom
-      use global,         only: sweeps_mgu, integration_order, divB_0_method
-#ifdef MAGNETIC
-      use all_boundaries, only: all_mag_boundaries
-#endif /* MAGNETIC */
-
-      implicit none
-
-      integer, intent(in) :: istep
-
-      integer(kind=4) :: ub_i
-
-      if (sweeps_mgu) then
-         if (istep == first_stage(integration_order)) then
-            do ub_i = xdim, zdim
-               if (.not. dom%has_dir(ub_i)) cycle
-               call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep = istep)
-            enddo
-         else
-            call all_fluid_boundaries(nocorners = .true., istep = istep)
-         endif
-      else
-         call all_fluid_boundaries(istep=istep)
-      endif
-      if (divB_0_method == DIVB_HDC) then
-#ifdef MAGNETIC
-         call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
-#endif /* MAGNETIC */
-      endif
-
-   end subroutine update_boundaries
-
    subroutine unsplit_sweep()
 
       use cg_cost_data,      only: I_MHD, I_REFINE
@@ -97,6 +60,7 @@ contains
       use ppp,               only: ppp_main
       use pppmpi,            only: req_ppp
       use sources,           only: prepare_sources
+      use sweeps,            only: update_boundaries
       use solvecg_unsplit,   only: solve_cg_unsplit
 
       implicit none
@@ -183,7 +147,7 @@ contains
 
          call req%waitall("sweeps")
 
-         call update_boundaries(istep)
+         call update_boundaries(istep = istep)
       enddo
 
       call sl%delete
