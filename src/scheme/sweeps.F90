@@ -116,9 +116,9 @@ contains
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
          if (present(cdim)) then
-            call all_mag_boundaries ! ToDo: take care of psi boundaries
+            call all_mag_boundaries ! Also updates psi boundaries when psi exists.
          else
-            call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
+            call all_mag_boundaries(istep) ! Also updates psi boundaries when psi exists.
          endif
 #endif /* MAGNETIC */
       endif

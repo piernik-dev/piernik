@@ -36,8 +36,6 @@ module solvecg_unsplit
 
 contains
 
-! This routine has to conform to the interface defined in sweeps::sweep
-
    subroutine solve_cg_unsplit(cg, istep)
 
       use constants,             only: mag_n, GEO_XYZ

@@ -27,10 +27,8 @@
 #include "piernik.h"
 
 !>
-!! \brief The job of this module is simple : Pass a  block of cg to solve to do a unsplit update of the state
-!! Currently we dont not add AMR support or ppp monitoring. Sister module sweeps is used for directional sweep update and is called by
-!! fluid update module. We will call this module from fluid_unsplit_update which is in turn mentioned in fluid_update to keep this line of
-!! additions away from the main code and merger it later. We are not adding fargo support either. This will be the first update after this works
+!! \brief Coordinates unsplit updates across grid blocks for each integration stage.
+!! Handles inter-block flux communication and profiling around each block solve.
 !<
 
 module unsplit_sweeps
@@ -118,7 +116,7 @@ contains
                      ! The tricky part is that we need to fit all the switching inside the conditional part
                      ! and don't mess pairing and don't let them to nest.
 
-                     call cg%cleanup_flux()      ! Seems unnecessary.This just sets the flux array to 0.0
+                     call cg%cleanup_flux()      ! Clear stored fluxes before recomputing this block for the current stage.
 
                      call cg%costs%start
                      call solve_cg_unsplit(cg, istep)

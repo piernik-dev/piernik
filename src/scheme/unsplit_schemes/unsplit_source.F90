@@ -36,7 +36,7 @@ module unsplit_source
 
 contains
 
-! This routine has to conform to the interface defined in sweeps::sweep
+! Apply source terms across active directions after the unsplit flux update.
 
    subroutine apply_source(cg, istep)
 
@@ -70,9 +70,9 @@ contains
       integer                                                     :: bhi
       bhi = wna%ind(magh_n)
 #else /* !MAGNETIC */
-      real, dimension(1, 1)                                       :: b_ugly ! ugly
+      real, dimension(1, 1)                                       :: b_dummy ! Required by source routines in non-magnetic builds.
 
-      b_ugly = 0.0
+      b_dummy = 0.0
 #endif /* !MAGNETIC */
 
       uhi = wna%ind(uh_n)
@@ -109,10 +109,10 @@ contains
                      call care_for_positives(size(u, 1, kind=4), u1, b, cg, ddim, i1, i2)
                   endif
 #else
-                  call internal_sources(size(u, 1, kind=4), u, u1, b_ugly, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
+                  call internal_sources(size(u, 1, kind=4), u, u1, b_dummy, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
 
                   if (istep == last_stage(integration_order)) then
-                     call care_for_positives(size(u, 1, kind=4), u1, b_ugly, cg, ddim, i1, i2)
+                     call care_for_positives(size(u, 1, kind=4), u1, b_dummy, cg, ddim, i1, i2)
                   endif
 
 #endif /* MAGNETIC */

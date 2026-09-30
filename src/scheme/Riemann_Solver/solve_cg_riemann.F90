@@ -186,11 +186,8 @@ contains
                b0(:, iarr_mag_swp(ddim,:)) = transpose(pb0(:,:))
                b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
             else
-               ! For CT we have small inconsequence here: we don't call magfield
-               ! and we discard transverse magnetic fluxes after first stage.
-               ! Same applies to RTVD + CT.
-               ! Beware: staggered grid will perhaps require magnetic boundary
-               ! exchange with corners every time.
+               ! For CT, we do not call magfield, and transverse magnetic fluxes are discarded after the first stage.
+               ! The same applies to RTVD + CT. Staggered grids may require magnetic boundary exchange at corners every stage.
                b0(:, xdim:zdim) = interpolate_mag_field(ddim, cg, i1, i2, bhi)
                b(:, :) = interpolate_mag_field(ddim, cg, i1, i2, wna%bi)
             endif
@@ -261,7 +258,7 @@ contains
       real, dimension(size(u,1),size(u,2))       :: u0, u1
       real, dimension(size(u,1), flind%fluids), target :: vx
       type(ext_fluxes)                           :: eflx
-      real, dimension(1, 1) :: b ! ugly
+      real, dimension(1, 1) :: b ! Dummy magnetic field passed to source routines in non-magnetic runs.
       integer                                    :: i_cs_iso2
 
       b = 0.

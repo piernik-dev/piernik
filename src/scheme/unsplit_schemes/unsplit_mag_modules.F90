@@ -196,7 +196,7 @@ contains
       if (divB_0_method == DIVB_HDC) then
          call apply_magnetic_ext_fluxes(eflx, bflx)
       else
-         call die("[unsplit_mag_modules:solve] Unplit method is only implemented with Hyperbolic Divergence Cleaning")
+         call die("[unsplit_mag_modules:solve] Unsplit method is only implemented with Hyperbolic Divergence Cleaning")
       endif
 
    end subroutine solve

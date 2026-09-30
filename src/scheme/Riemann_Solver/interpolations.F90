@@ -263,7 +263,7 @@ contains
             !! The WENO scheme is self-similar. The same applies to ESWENO.
             !! The grid spacing \Delta x is replaced with the grid spacing
             !! in the computational domain \Delta xi = 1/j, where j is the
-            !! total number of gird cells.
+            !! total number of grid cells.
             !<
 
             ! \Delta xi is mentioned before Eq. 63
