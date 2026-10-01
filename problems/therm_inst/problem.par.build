@@ -23,22 +23,22 @@ $BASE_DOMAIN
  /
 
  $RESTART_CONTROL
-    restart = 'last'
+ restart=''
  /
 
  $END_CONTROL
-    tend   = 0.05
+    tend   = 0.01
  /
 
  $OUTPUT_CONTROL
     colormode = .false.
     problem_name = 'thermal'
-    run_id =  't00'
-    dt_hdf  = 1.0e-1
+    run_id =  'jen'
+    dt_hdf  = 1.0e-2
     dt_res  = 0.0
     dt_log  = 1.0e-5
     dt_tsl  = 1.0e-5
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', 'temn'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', 'temp'
  /
 
  $FLUID_IONIZED
@@ -77,6 +77,7 @@ $BASE_DOMAIN
     x_ion          = 1.0
     cfl_coolheat   = 0.000001
     isochoric      = 1
+    d_isochoric    = 1.0
  /
  $PROBLEM_CONTROL
     d0     = 1.0
