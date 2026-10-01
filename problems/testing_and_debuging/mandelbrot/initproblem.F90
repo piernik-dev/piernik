@@ -70,14 +70,116 @@ module initproblem
    integer :: prec  ! decoded precision level
    real(kind=FP_QUAD) :: xcq, ycq  ! decoded central coordinates
    enum, bind(C)
-      enumerator :: FP_QCMPLX = maxval([FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD]) + 1, FP_2DOUBLE !, FP_2FLOAT, FP_2EXT, FP_2QUAD
+      enumerator :: FP_QCMPLX = maxval([FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD]) + 1, FP_2FLOAT, FP_2DOUBLE !, FP_2EXT, FP_2QUAD
    end enum
+
+   type :: double_float
+      real(kind=FP_REAL) :: hi, lo
+   end type double_float
 
    type :: double_double
       real(kind=FP_DOUBLE) :: hi, lo
    end type double_double
 
 contains
+
+   pure function df_from_quad(value) result(pair)
+
+      implicit none
+
+      real(kind=FP_QUAD), intent(in) :: value
+      type(double_float) :: pair
+
+      pair%hi = real(value, kind=FP_REAL)
+      pair%lo = real(value - real(pair%hi, kind=FP_QUAD), kind=FP_REAL)
+
+   end function df_from_quad
+
+   pure subroutine df_two_sum(a, b, sum, error)
+
+      implicit none
+
+      real(kind=FP_REAL), intent(in) :: a, b
+      real(kind=FP_REAL), intent(out) :: sum, error
+      real(kind=FP_REAL) :: b_virtual
+
+      sum = a + b
+      b_virtual = sum - a
+      error = (a - (sum - b_virtual)) + (b - b_virtual)
+
+   end subroutine df_two_sum
+
+   pure subroutine df_two_product(a, b, product, error)
+
+      implicit none
+
+      real(kind=FP_REAL), intent(in) :: a, b
+      real(kind=FP_REAL), intent(out) :: product, error
+      real(kind=FP_REAL), parameter :: splitter = 4097._FP_REAL
+      real(kind=FP_REAL) :: a_split, a_hi, a_lo, b_split, b_hi, b_lo
+      real(kind=FP_REAL) :: error1, error2, error3
+
+      product = a * b
+      a_split = splitter * a
+      a_hi = a_split - (a_split - a)
+      a_lo = a - a_hi
+      b_split = splitter * b
+      b_hi = b_split - (b_split - b)
+      b_lo = b - b_hi
+      error1 = product - a_hi * b_hi
+      error2 = error1 - a_lo * b_hi
+      error3 = error2 - a_hi * b_lo
+      error = a_lo * b_lo - error3
+
+   end subroutine df_two_product
+
+   pure function df_add(a, b) result(sum)
+
+      implicit none
+
+      type(double_float), intent(in) :: a, b
+      type(double_float) :: sum
+      real(kind=FP_REAL) :: hi_sum, hi_error, lo_sum, lo_error
+      real(kind=FP_REAL) :: correction, correction_error, result_hi, result_error
+
+      call df_two_sum(a%hi, b%hi, hi_sum, hi_error)
+      call df_two_sum(a%lo, b%lo, lo_sum, lo_error)
+      call df_two_sum(hi_error, lo_sum, correction, correction_error)
+      call df_two_sum(hi_sum, correction, result_hi, result_error)
+      result_error = result_error + correction_error + lo_error
+      call df_two_sum(result_hi, result_error, sum%hi, sum%lo)
+
+   end function df_add
+
+   pure function df_subtract(a, b) result(difference)
+
+      implicit none
+
+      type(double_float), intent(in) :: a, b
+      type(double_float) :: difference, negative_b
+
+      negative_b%hi = -b%hi
+      negative_b%lo = -b%lo
+      difference = df_add(a, negative_b)
+
+   end function df_subtract
+
+   pure function df_multiply(a, b) result(product)
+
+      implicit none
+
+      type(double_float), intent(in) :: a, b
+      type(double_float) :: product, cross
+
+      call df_two_product(a%hi, b%hi, product%hi, product%lo)
+      call df_two_product(a%hi, b%lo, cross%hi, cross%lo)
+      product = df_add(product, cross)
+      call df_two_product(a%lo, b%hi, cross%hi, cross%lo)
+      product = df_add(product, cross)
+      call df_two_product(a%lo, b%lo, cross%hi, cross%lo)
+      product = df_add(product, cross)
+
+   end function df_multiply
 
    pure function dd_from_quad(value) result(pair)
 
@@ -296,11 +398,14 @@ contains
          case ("quad complex")
             ! ``quad complex'' is not a scalar kind here; it uses the native complex type.
             prec = FP_QCMPLX
+         case ("double-float")
+            ! ``double-float'' uses two single-precision components.
+            prec = FP_2FLOAT
          case ("double-double")
             ! ``double-double'' is a demonstration of Dekker (1971) double-double arithmetic.
             prec = FP_2DOUBLE
          case default
-            call die("[initproblem:read_problem_par] precision must be single, double, extended, or quad")
+            call die("[initproblem:read_problem_par] unsupported precision; use 'single', 'double', 'extended', 'quad', 'quad complex', 'double-float', or 'double-double'")
             prec = INVALID
       end select
 
@@ -489,6 +594,25 @@ contains
                y = real(imag(z), kind=kind(y))
 
             end block
+         case (FP_2FLOAT)
+            ! This is a demonstration of Dekker (1971) double-float arithmetic.
+            block
+               type(double_float) :: zx, zy, cx, cy, zt
+
+               cx = df_from_quad(xcq + real(x, kind=FP_QUAD))
+               cy = df_from_quad(ycq + real(y, kind=FP_QUAD))
+               zx = cx
+               zy = cy
+               do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
+                  zt = df_add(df_subtract(df_multiply(zx, zx), df_multiply(zy, zy)), cx)
+                  zy = df_add(df_add(df_multiply(zx, zy), df_multiply(zx, zy)), cy)
+                  zx = zt
+                  nit = nit + 1
+               enddo
+               x = real(zx%hi, kind=kind(x))
+               y = real(zy%hi, kind=kind(y))
+
+            end block
          case (FP_2DOUBLE)
             ! This is a demonstration of Dekker (1971) double-double arithmetic.
             block
@@ -498,9 +622,7 @@ contains
                cy = dd_from_quad(ycq + real(y, kind=FP_QUAD))
                zx = cx
                zy = cy
-
                do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
-
                   zt = dd_add(dd_subtract(dd_multiply(zx, zx), dd_multiply(zy, zy)), cx)
                   zy = dd_add(dd_add(dd_multiply(zx, zy), dd_multiply(zx, zy)), cy)
                   zx = zt
