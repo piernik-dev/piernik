@@ -38,19 +38,20 @@ contains
 
    subroutine solve_cg_unsplit(cg, istep)
 
-      use constants,             only: mag_n, GEO_XYZ
-      use dataio_pub,            only: die
-      use domain,                only: dom
-      use fluidindex,            only: flind
-      use grid_cont,             only: grid_container
-      use named_array_list,      only: wna
-      use sources,               only: prepare_sources
-      use unsplit_mag_modules,   only: solve_cg_ub
+      use constants,           only: mag_n, GEO_XYZ
+      use dataio_pub,          only: die
+      use domain,              only: dom
+      use fluidindex,          only: flind
+      use grid_cont,           only: grid_container
+      use named_array_list,    only: wna
+      use sources,             only: prepare_sources
+      use unsplit_mag_modules, only: solve_cg_ub
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
+
       integer :: nmag, i
 
       if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg_unsplit:solve_cg_unsplit] Non-cartesian geometry is not implemented yet in this Unsplit solver.")
@@ -75,16 +76,17 @@ contains
 
    subroutine solve_cg_u(cg, istep)
 
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna, qna
-      use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, uh_n, cs_i2_n, first_stage, xdim, ydim, zdim
-      use global,           only: integration_order
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_swp
-      use fluxtypes,        only: ext_fluxes
+      use constants,            only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, uh_n, cs_i2_n, &
+           &                          first_stage, xdim, ydim, zdim
+      use diagnostics,          only: my_allocate, my_deallocate
+      use domain,               only: dom
+      use fluidindex,           only: iarr_all_swp
+      use fluxtypes,            only: ext_fluxes
+      use global,               only: integration_order
+      use grid_cont,            only: grid_container
+      use named_array_list,     only: wna, qna
       use unsplit_state_update, only: apply_flux
-      use unsplit_source,   only: apply_source
-      use diagnostics,      only: my_allocate, my_deallocate
+      use unsplit_source,       only: apply_source
 
       implicit none
 
@@ -154,10 +156,11 @@ contains
 
    subroutine solve_u(ui, cs2, eflx, flx)
 
+      use dataio_pub,     only: die
       use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes
       use hlld,           only: riemann_wrap_u
       use interpolations, only: interpol
-      use dataio_pub,     only: die
+
       implicit none
 
       real, dimension(:,:),        intent(in)    :: ui       !< cell-centered intermediate fluid states

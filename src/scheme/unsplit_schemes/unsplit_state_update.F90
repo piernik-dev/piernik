@@ -54,11 +54,12 @@ contains
 !<
    subroutine apply_flux(cg, istep, mag)
 
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use global,           only: integration_order, dt
-      use named_array_list, only: wna
       use constants,        only: xdim, ydim, zdim, last_stage, rk_coef, uh_n, I_ONE, ndims, magh_n
+      use domain,           only: dom
+      use global,           only: integration_order, dt
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
+
       implicit none
 
       type :: fxptr
@@ -133,11 +134,11 @@ contains
 !<
    subroutine update_psi(cg, istep)
 
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use global,           only: integration_order, dt
-      use named_array_list, only: qna
       use constants,        only: xdim, ydim, zdim, last_stage, rk_coef, I_ONE, ndims, psi_n, psih_n
+      use domain,           only: dom
+      use global,           only: integration_order, dt
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
