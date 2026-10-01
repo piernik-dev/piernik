@@ -33,10 +33,10 @@
  /
 
  $PROBLEM_CONTROL
-    maxiter = 100000000  ! Required for resolving of the leftmost part (period 2**18 bulb near F-M point)
+      maxiter = 100000000  ! Up to 100 million iterations per cell; this preset can be very slow.
     !smooth_map = .false.
     log_polar = .true.
-! Feigenbaum-Myrberg point, extremely slow to converge becuse the Lyapunov exponent approaches 0. here
+! Feigenbaum-Myrberg point: convergence is extremely slow because the Lyapunov exponent approaches zero here.
     precision = "extended"  ! this is slower than double precision but it can resolve bulbs down to 1e-16 from F-M point
     x_center = "-1.4011551890920506005238267878938612922263"
     y_center = "0."

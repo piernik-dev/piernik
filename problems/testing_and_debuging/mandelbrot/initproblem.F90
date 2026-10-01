@@ -266,7 +266,8 @@ contains
 ! Fortran 2018 has no assumed-kind polymorphism for this calculation. The
 ! explicit blocks below keep the selected kind visible for teaching purposes.
 
-! The double-double arithmetic is kept separate from the built-in quad path.
+! Double-float and double-double arithmetic are implemented in pair_arithmetic;
+! the scalar and native-complex paths below remain explicit for comparison.
 
    subroutine calculate_mandelbrot(xx, yy, mand, real_z, imag_z)
 
@@ -377,6 +378,7 @@ contains
                complex(kind=FP_QUAD) :: z, c
 
                c = complex(xcq + x, ycq + y)
+
                z = c
                do while (real(z)**2 + imag(z)**2 < bailout2 .and. nit < maxiter)
                   z = z*z + c
@@ -393,10 +395,11 @@ contains
 
                cx = float_from_quad(xcq + real(x, kind=FP_QUAD))
                cy = float_from_quad(ycq + real(y, kind=FP_QUAD))
+
                zx = cx
                zy = cy
+               ! No need to compute the bailout in full precision - high components are sufficient here
                do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
-
                   zt = pair_add(pair_subtract(pair_multiply(zx, zx), pair_multiply(zy, zy)), cx)
                   zy = pair_add(pair_add(pair_multiply(zx, zy), pair_multiply(zx, zy)), cy)
                   zx = zt
@@ -413,10 +416,11 @@ contains
 
                cx = double_from_quad(xcq + real(x, kind=FP_QUAD))
                cy = double_from_quad(ycq + real(y, kind=FP_QUAD))
+
                zx = cx
                zy = cy
-
-                do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
+               ! No need to compute the bailout in full precision - high components are sufficient here
+               do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
                   zt = pair_add(pair_subtract(pair_multiply(zx, zx), pair_multiply(zy, zy)), cx)
                   zy = pair_add(pair_add(pair_multiply(zx, zy), pair_multiply(zx, zy)), cy)
                   zx = zt

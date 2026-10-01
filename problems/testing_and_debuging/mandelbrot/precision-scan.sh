@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # Run one polar Mandelbrot setup sequentially at increasing FP precision.
-# Best practiced on problem.par.polar.straight_scepter-quad_precision_test
+# Run from its generated Piernik run directory, with problem.par set to
+# problem.par.polar.straight_scepter-quad_precision_test; ./piernik must exist.
+# The visualizer path below is relative to that run directory.
 
 run_scan() {
 	local run_id="$1"

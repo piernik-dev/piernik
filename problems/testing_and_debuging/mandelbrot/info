@@ -1,1 +1,1 @@
-Calculates a mandelbrot set and tests refinements on it
+Mandelbrot set generator and AMR refinement test with Cartesian, polar, and precision-comparison setups.
