@@ -26,8 +26,22 @@
 !
 #include "piernik.h"
 
-!>
-!! \brief 
+!> \brief Compensated arithmetic for values represented by two floating-point components.
+!!
+!! A pair represents the unevaluated sum hi + lo. The leading component uses
+!! either single or double precision; the low component retains rounding
+!! information that would otherwise be lost. Error-free transforms recover
+!! residuals from basic additions and products and carry them in the low
+!! component; the resulting pair still has finite precision.
+!!
+!! The transforms assume IEEE round-to-nearest arithmetic. Their guarantees
+!! require finite inputs, no overflowing intermediate operations, and
+!! representable residuals. They do not protect against overflow or underflow.
+!!
+!! New pair formats require a pair type, conversion routine, and arithmetic
+!! overloads. A double-extended or double-quad pair may carry more precision
+!! than FP_QUAD, so coordinates for those formats must be parsed directly into
+!! the pair or through a wider intermediate rather than first rounded to quad.
 !<
 
 module pair_arithmetic
@@ -40,28 +54,49 @@ module pair_arithmetic
    public :: double_float, double_double, float_from_quad, double_from_quad
    public :: pair_add, pair_subtract, pair_multiply
 
+   !> A two-component value based on the FP_REAL kind.
+   !!
+   !! The represented value is approximately hi + lo.
    type :: double_float
-      real(kind=FP_REAL) :: hi, lo
+      real(kind=FP_REAL) :: hi !< Leading component
+      real(kind=FP_REAL) :: lo !< Low component carrying the rounding residual
    end type double_float
 
+   !> A two-component value based on the FP_DOUBLE kind.
+   !!
+   !! The represented value is approximately hi + lo.
    type :: double_double
-      real(kind=FP_DOUBLE) :: hi, lo
+      real(kind=FP_DOUBLE) :: hi !< Leading component
+      real(kind=FP_DOUBLE) :: lo !< Low component carrying the rounding residual
    end type double_double
 
+   !> \brief Add two values represented by the same pair type.
+   !! \details Overloaded for double_float and double_double. The result is
+   !! renormalized so its leading component contains the rounded sum and its
+   !! low component retains the remaining correction.
    interface pair_add
       module procedure df_add, dd_add
    end interface pair_add
 
+   !> \brief Subtract the second pair from the first.
+   !! \details Overloaded for double_float and double_double.
    interface pair_subtract
       module procedure df_subtract, dd_subtract
    end interface pair_subtract
 
+   !> \brief Multiply two values represented by the same pair type.
+   !! \details Overloaded for double_float and double_double. The four
+   !! component products are accumulated with their product residuals.
    interface pair_multiply
       module procedure df_multiply, dd_multiply
    end interface pair_multiply
 
 contains
 
+   !> \brief Split a quad-precision value into two FP_REAL components.
+   !! \param[in] value Value to convert.
+   !! \return A double_float pair whose components retain the leading value
+   !! and representable residual.
    pure function float_from_quad(value) result(pair)
 
       use constants, only: FP_QUAD
@@ -77,6 +112,10 @@ contains
 
    end function float_from_quad
 
+   !> \brief Split a quad-precision value into two FP_DOUBLE components.
+   !! \param[in] value Value to convert.
+   !! \return A double_double pair whose components retain the leading value
+   !! and representable residual.
    pure function double_from_quad(value) result(pair)
 
       use constants, only: FP_QUAD
@@ -92,6 +131,14 @@ contains
 
    end function double_from_quad
 
+   !> \brief Compute a rounded sum and its addition residual for FP_REAL values.
+   !! \details Knuth's TwoSum transform. With round-to-nearest arithmetic, no
+   !! overflowing intermediates, and a representable residual, sum + error
+   !! equals the exact sum.
+   !! \param[in] a First addend.
+   !! \param[in] b Second addend.
+   !! \param[out] sum Rounded sum.
+   !! \param[out] error Addition residual.
    pure subroutine df_two_sum(a, b, sum, error)
 
       implicit none
@@ -107,6 +154,14 @@ contains
 
    end subroutine df_two_sum
 
+   !> \brief Compute a rounded sum and its addition residual for FP_DOUBLE values.
+   !! \details This is the double-precision form of Knuth's TwoSum transform.
+   !! Under the same rounding and range conditions as df_two_sum, sum + error
+   !! equals the exact sum.
+   !! \param[in] a First addend.
+   !! \param[in] b Second addend.
+   !! \param[out] sum Rounded sum.
+   !! \param[out] error Addition residual.
    pure subroutine dd_two_sum(a, b, sum, error)
 
       implicit none
@@ -122,6 +177,13 @@ contains
 
    end subroutine dd_two_sum
 
+   !> \brief Recover the rounding residual of an FP_REAL product.
+   !! \details Dekker splitting separates each operand into leading and low
+   !! parts before reconstructing the product error.
+   !! \param[in] a First factor.
+   !! \param[in] b Second factor.
+   !! \param[out] product Rounded product.
+   !! \param[out] error Product residual.
    pure subroutine df_two_product(a, b, product, error)
 
       implicit none
@@ -147,6 +209,13 @@ contains
 
    end subroutine df_two_product
 
+   !> \brief Recover the rounding residual of an FP_DOUBLE product.
+   !! \details This is the double-precision form of Dekker's splitting
+   !! algorithm; the splitter is chosen for the FP_DOUBLE significand width.
+   !! \param[in] a First factor.
+   !! \param[in] b Second factor.
+   !! \param[out] product Rounded product.
+   !! \param[out] error Product residual.
    pure subroutine dd_two_product(a, b, product, error)
 
       implicit none
@@ -172,6 +241,10 @@ contains
 
    end subroutine dd_two_product
 
+   !> \brief Add two double_float values and renormalize the result.
+   !! \param[in] a First addend.
+   !! \param[in] b Second addend.
+   !! \return Sum represented by leading and low components.
    pure function df_add(a, b) result(sum)
 
       implicit none
@@ -191,6 +264,10 @@ contains
 
    end function df_add
 
+   !> \brief Add two double_double values and renormalize the result.
+   !! \param[in] a First addend.
+   !! \param[in] b Second addend.
+   !! \return Sum represented by leading and low components.
    pure function dd_add(a, b) result(sum)
 
       implicit none
@@ -209,6 +286,10 @@ contains
 
    end function dd_add
 
+   !> \brief Subtract one double_float value from another.
+   !! \param[in] a Minuend.
+   !! \param[in] b Subtrahend.
+   !! \return Difference represented by leading and low components.
    pure function df_subtract(a, b) result(difference)
 
       implicit none
@@ -223,6 +304,10 @@ contains
 
    end function df_subtract
 
+   !> \brief Subtract one double_double value from another.
+   !! \param[in] a Minuend.
+   !! \param[in] b Subtrahend.
+   !! \return Difference represented by leading and low components.
    pure function dd_subtract(a, b) result(difference)
 
       implicit none
@@ -237,6 +322,10 @@ contains
 
    end function dd_subtract
 
+   !> \brief Multiply two double_float values.
+   !! \param[in] a First factor.
+   !! \param[in] b Second factor.
+   !! \return Product represented by leading and low components.
    pure function df_multiply(a, b) result(product)
 
       implicit none
@@ -255,6 +344,10 @@ contains
 
    end function df_multiply
 
+   !> \brief Multiply two double_double values.
+   !! \param[in] a First factor.
+   !! \param[in] b Second factor.
+   !! \return Product represented by leading and low components.
    pure function dd_multiply(a, b) result(product)
 
       implicit none
