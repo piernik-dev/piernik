@@ -73,217 +73,7 @@ module initproblem
       enumerator :: FP_QCMPLX = maxval([FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD]) + 1, FP_2FLOAT, FP_2DOUBLE !, FP_2EXT, FP_2QUAD
    end enum
 
-   type :: double_float
-      real(kind=FP_REAL) :: hi, lo
-   end type double_float
-
-   type :: double_double
-      real(kind=FP_DOUBLE) :: hi, lo
-   end type double_double
-
 contains
-
-   pure function df_from_quad(value) result(pair)
-
-      implicit none
-
-      real(kind=FP_QUAD), intent(in) :: value
-      type(double_float) :: pair
-
-      pair%hi = real(value, kind=FP_REAL)
-      pair%lo = real(value - real(pair%hi, kind=FP_QUAD), kind=FP_REAL)
-
-   end function df_from_quad
-
-   pure subroutine df_two_sum(a, b, sum, error)
-
-      implicit none
-
-      real(kind=FP_REAL), intent(in) :: a, b
-      real(kind=FP_REAL), intent(out) :: sum, error
-      real(kind=FP_REAL) :: b_virtual
-
-      sum = a + b
-      b_virtual = sum - a
-      error = (a - (sum - b_virtual)) + (b - b_virtual)
-
-   end subroutine df_two_sum
-
-   pure subroutine df_two_product(a, b, product, error)
-
-      implicit none
-
-      real(kind=FP_REAL), intent(in) :: a, b
-      real(kind=FP_REAL), intent(out) :: product, error
-      real(kind=FP_REAL), parameter :: splitter = 4097._FP_REAL
-      real(kind=FP_REAL) :: a_split, a_hi, a_lo, b_split, b_hi, b_lo
-      real(kind=FP_REAL) :: error1, error2, error3
-
-      product = a * b
-      a_split = splitter * a
-      a_hi = a_split - (a_split - a)
-      a_lo = a - a_hi
-      b_split = splitter * b
-      b_hi = b_split - (b_split - b)
-      b_lo = b - b_hi
-      error1 = product - a_hi * b_hi
-      error2 = error1 - a_lo * b_hi
-      error3 = error2 - a_hi * b_lo
-      error = a_lo * b_lo - error3
-
-   end subroutine df_two_product
-
-   pure function df_add(a, b) result(sum)
-
-      implicit none
-
-      type(double_float), intent(in) :: a, b
-      type(double_float) :: sum
-      real(kind=FP_REAL) :: hi_sum, hi_error, lo_sum, lo_error
-      real(kind=FP_REAL) :: correction, correction_error, result_hi, result_error
-
-      call df_two_sum(a%hi, b%hi, hi_sum, hi_error)
-      call df_two_sum(a%lo, b%lo, lo_sum, lo_error)
-      call df_two_sum(hi_error, lo_sum, correction, correction_error)
-      call df_two_sum(hi_sum, correction, result_hi, result_error)
-      result_error = result_error + correction_error + lo_error
-      call df_two_sum(result_hi, result_error, sum%hi, sum%lo)
-
-   end function df_add
-
-   pure function df_subtract(a, b) result(difference)
-
-      implicit none
-
-      type(double_float), intent(in) :: a, b
-      type(double_float) :: difference, negative_b
-
-      negative_b%hi = -b%hi
-      negative_b%lo = -b%lo
-      difference = df_add(a, negative_b)
-
-   end function df_subtract
-
-   pure function df_multiply(a, b) result(product)
-
-      implicit none
-
-      type(double_float), intent(in) :: a, b
-      type(double_float) :: product, cross
-
-      call df_two_product(a%hi, b%hi, product%hi, product%lo)
-      call df_two_product(a%hi, b%lo, cross%hi, cross%lo)
-      product = df_add(product, cross)
-      call df_two_product(a%lo, b%hi, cross%hi, cross%lo)
-      product = df_add(product, cross)
-      call df_two_product(a%lo, b%lo, cross%hi, cross%lo)
-      product = df_add(product, cross)
-
-   end function df_multiply
-
-   pure function dd_from_quad(value) result(pair)
-
-      implicit none
-
-      real(kind=FP_QUAD), intent(in) :: value
-
-      type(double_double) :: pair
-
-      pair%hi = real(value, kind=FP_DOUBLE)
-      pair%lo = real(value - real(pair%hi, kind=FP_QUAD), kind=FP_DOUBLE)
-
-   end function dd_from_quad
-
-   pure subroutine two_sum(a, b, sum, error)
-
-      implicit none
-
-      real(kind=FP_DOUBLE), intent(in) :: a, b
-      real(kind=FP_DOUBLE), intent(out) :: sum, error
-
-      real(kind=FP_DOUBLE) :: b_virtual
-
-      sum = a + b
-      b_virtual = sum - a
-      error = (a - (sum - b_virtual)) + (b - b_virtual)
-
-   end subroutine two_sum
-
-   pure subroutine two_product(a, b, product, error)
-
-      implicit none
-
-      real(kind=FP_DOUBLE), intent(in) :: a, b
-      real(kind=FP_DOUBLE), intent(out) :: product, error
-
-      real(kind=FP_DOUBLE), parameter :: splitter = 134217729._FP_DOUBLE
-      real(kind=FP_DOUBLE) :: a_split, a_hi, a_lo, b_split, b_hi, b_lo
-      real(kind=FP_DOUBLE) :: error1, error2, error3
-
-      product = a * b
-      a_split = splitter * a
-      a_hi = a_split - (a_split - a)
-      a_lo = a - a_hi
-      b_split = splitter * b
-      b_hi = b_split - (b_split - b)
-      b_lo = b - b_hi
-      error1 = product - a_hi * b_hi
-      error2 = error1 - a_lo * b_hi
-      error3 = error2 - a_hi * b_lo
-      error = a_lo * b_lo - error3
-
-   end subroutine two_product
-
-   pure function dd_add(a, b) result(sum)
-
-      implicit none
-
-      type(double_double), intent(in) :: a, b
-
-      type(double_double) :: sum
-      real(kind=FP_DOUBLE) :: hi_sum, hi_error, lo_sum, lo_error
-      real(kind=FP_DOUBLE) :: correction, correction_error, result_hi, result_error
-
-      call two_sum(a%hi, b%hi, hi_sum, hi_error)
-      call two_sum(a%lo, b%lo, lo_sum, lo_error)
-      call two_sum(hi_error, lo_sum, correction, correction_error)
-      call two_sum(hi_sum, correction, result_hi, result_error)
-      result_error = result_error + correction_error + lo_error
-      call two_sum(result_hi, result_error, sum%hi, sum%lo)
-
-   end function dd_add
-
-   pure function dd_subtract(a, b) result(difference)
-
-      implicit none
-
-      type(double_double), intent(in) :: a, b
-
-      type(double_double) :: difference, negative_b
-
-      negative_b%hi = -b%hi
-      negative_b%lo = -b%lo
-      difference = dd_add(a, negative_b)
-
-   end function dd_subtract
-
-   pure function dd_multiply(a, b) result(product)
-
-      implicit none
-
-      type(double_double), intent(in) :: a, b
-
-      type(double_double) :: product, cross
-
-      call two_product(a%hi, b%hi, product%hi, product%lo)
-      call two_product(a%hi, b%lo, cross%hi, cross%lo)
-      product = dd_add(product, cross)
-      call two_product(a%lo, b%hi, cross%hi, cross%lo)
-      product = dd_add(product, cross)
-      call two_product(a%lo, b%lo, cross%hi, cross%lo)
-      product = dd_add(product, cross)
-
-   end function dd_multiply
 
 !> Set up some user hooks
 
@@ -480,8 +270,10 @@ contains
 
    subroutine calculate_mandelbrot(xx, yy, mand, real_z, imag_z)
 
-      use constants,  only: FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
-      use dataio_pub, only: die
+      use constants,       only: FP_REAL, FP_DOUBLE, FP_EXT, FP_QUAD
+      use dataio_pub,      only: die
+      use pair_arithmetic, only: double_float, double_double, float_from_quad, double_from_quad, &
+           &                     pair_add, pair_subtract, pair_multiply
 
       implicit none
 
@@ -599,13 +391,14 @@ contains
             block
                type(double_float) :: zx, zy, cx, cy, zt
 
-               cx = df_from_quad(xcq + real(x, kind=FP_QUAD))
-               cy = df_from_quad(ycq + real(y, kind=FP_QUAD))
+               cx = float_from_quad(xcq + real(x, kind=FP_QUAD))
+               cy = float_from_quad(ycq + real(y, kind=FP_QUAD))
                zx = cx
                zy = cy
                do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
-                  zt = df_add(df_subtract(df_multiply(zx, zx), df_multiply(zy, zy)), cx)
-                  zy = df_add(df_add(df_multiply(zx, zy), df_multiply(zx, zy)), cy)
+
+                  zt = pair_add(pair_subtract(pair_multiply(zx, zx), pair_multiply(zy, zy)), cx)
+                  zy = pair_add(pair_add(pair_multiply(zx, zy), pair_multiply(zx, zy)), cy)
                   zx = zt
                   nit = nit + 1
                enddo
@@ -618,13 +411,14 @@ contains
             block
                type(double_double) :: zx, zy, cx, cy, zt
 
-               cx = dd_from_quad(xcq + real(x, kind=FP_QUAD))
-               cy = dd_from_quad(ycq + real(y, kind=FP_QUAD))
+               cx = double_from_quad(xcq + real(x, kind=FP_QUAD))
+               cy = double_from_quad(ycq + real(y, kind=FP_QUAD))
                zx = cx
                zy = cy
-               do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
-                  zt = dd_add(dd_subtract(dd_multiply(zx, zx), dd_multiply(zy, zy)), cx)
-                  zy = dd_add(dd_add(dd_multiply(zx, zy), dd_multiply(zx, zy)), cy)
+
+                do while (zx%hi*zx%hi + zy%hi*zy%hi < bailout2 .and. nit < maxiter)
+                  zt = pair_add(pair_subtract(pair_multiply(zx, zx), pair_multiply(zy, zy)), cx)
+                  zy = pair_add(pair_add(pair_multiply(zx, zy), pair_multiply(zx, zy)), cy)
                   zx = zt
                   nit = nit + 1
                enddo
