@@ -1,0 +1,77 @@
+! This setup is intended to stress floating-point arithmetic by zooming into
+! a narrow polar slice of the Mandelbrot set. The visible structure and runtime
+! depend strongly on the selected precision. Available precisions are single,
+! double, extended, and quad.
+
+ $BASE_DOMAIN
+    n_d = 128, 32, 1
+    xmin   = -35
+    xmax   =  1.
+    ymin   =  -4.44159265 !0.
+    ymax   =  1.84159265 !6.2831853
+    bnd_xl = "outd"
+    bnd_xr = "outd"
+    bnd_yl = "outd"
+    bnd_yr = "outd"
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    res_id   = ''
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 0
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'mandelbrot_polar'
+    run_id =  'fpq'
+    use_v2_io = .true.
+    dt_hdf  = 0.5
+    vars(1:) = 'mand', 'dist', 'ang', 'level'
+ /
+
+ $PROBLEM_CONTROL
+    maxiter = 300
+    ref_thr = 0.5
+    !smooth_map = .false.
+    log_polar = .true.  ! Use a logarithmic-polar transform around the coordinates below.
+    precision = 'quad'
+
+    ! Center of the logarithmic-polar map. In this mode the code evaluates the
+    ! Mandelbrot plane in polar form around (x_center, y_center), which emphasizes
+    ! the narrow structure seen in this setup. The chosen point is a deep zoom that
+    ! still keeps the iteration count modest enough for fast execution even in quad
+    ! precision, and it selects a relatively straight feature that fits the frame
+    ! without winding around the center.
+    x_center = "-1.26065643699626398827073518981554398869030919771830042267879123302"
+    y_center = "0.04879713277975911862978128621866172283645390931722308498409912544"
+
+    ! Small radial bias added to the escape metric to highlight the polar structure
+    ! while leaving the underlying Mandelbrot test unchanged.
+    c_polar = 0.03
+ /
+
+! Separate illustrative coordinates (not the active center above), represented
+! at different project precisions to show the effect of mantissa length.
+!             x_center                                       y_center
+! text(32)    -0.16337093430484253886831311185               1.026178602930346497605177946429
+! FP_QUAD     -0.1633709343048425388683131118500000103       1.0261786029303464976051779464289999446
+! FP_EXT      -0.1633709343048425388677299258111119684       1.0261786029303464975754450749789725705
+! FP_DOUBLE   -0.1633709343048425355338082454181858338       1.0261786029303465728190758454729802906
+! FP_REAL     -0.1633709371089935302734375000000000000       1.0261785984039306640625000000000000000
+
+ $AMR
+    bsize = 3*8
+    level_max = 4
+    n_updAMR = 1
+ /
+
+! Visualisation example
+! ../../visual/pvf.py mandelbrot_polar_fpq_0000.h5 -d mand -D gist_ncar -z 1,5

@@ -1,0 +1,51 @@
+ $BASE_DOMAIN
+    n_d = 128, 16, 1
+    xmin   = -35
+    xmax   =  1.
+    ymin   =  -4.14159265 !0.
+    ymax   =  2.14159265 !6.2831853
+    bnd_xl = "outd"
+    bnd_xr = "outd"
+    bnd_yl = "outd"
+    bnd_yr = "outd"
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    res_id   = ''
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 0
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'mandelbrot_polar'
+    run_id =  'fpw'
+    use_v2_io = .true.
+    dt_hdf  = 0.5
+    vars(1:) = 'mand', 'dist', 'ang', 'level'
+ /
+
+ $PROBLEM_CONTROL
+    maxiter = 1000
+    ref_thr = 0.5
+    !smooth_map = .false.
+    log_polar = .true.
+    precision = 'quad'
+    x_center = "-0.742930911803983127347841469925300898876935037304255396331072016031966"
+    y_center = "0.290570984516569118197689589985198688149526405428783065305279984059822"
+
+    c_polar = 0.03
+ /
+
+ $AMR
+    bsize = 3*8
+    level_max = 3
+    n_updAMR = 1
+ /

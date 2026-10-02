@@ -1,16 +1,15 @@
  $BASE_DOMAIN
-    n_d = 192, 16, 1
-    xmin   = -13.
-    xmax   =  1.
-    ymin   =  0.
-    ymax   =  6.2832
+    n_d = 2*64, 1
+    xmin   = -1.1559
+    xmax   = -1.1553
+    ymin   =  0.3049
+    ymax   =  0.3055
+    zmin   =  0.
+    zmax   =  0.00006
     bnd_xl = "outd"
     bnd_xr = "outd"
     bnd_yl = "outd"
     bnd_yr = "outd"
- /
-
- $MPI_BLOCKS
  /
 
  $UNITS
@@ -28,33 +27,20 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'mandelbrot_polar'
-    run_id =  '3-3'
+    problem_name = 'mandelbrot'
+    run_id =  'tz1'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
  /
 
- $FLUID_NEUTRAL
- /
-
- $NUMERICAL_SETUP
- /
-
  $PROBLEM_CONTROL
-    maxiter = 1000000
-    !smooth_map = .false.
-    log_polar = .true.
-    x_polar = -0.15284673572976598
-    y_polar = 1.03969513783305789
-    c_polar = 0.66
- /
-
- $INTERACTIONS
+    maxiter = 1000
+!    smooth_map = .false.
  /
 
  $AMR
     bsize = 3*16
-    level_max = 4
+    level_max = 5
     n_updAMR = 1
  /

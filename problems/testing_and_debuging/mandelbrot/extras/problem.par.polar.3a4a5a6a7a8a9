@@ -1,16 +1,15 @@
+! Deep zoom on minibrots on the main antenna
+
  $BASE_DOMAIN
-    n_d = 192, 16, 1
-    xmin   = -12.
+    n_d = 64, 16, 1
+    xmin   = -35
     xmax   =  1.
-    ymin   =  -2.25
-    ymax   =  4.0332
+    ymin   =  -3.14159265 !0.
+    ymax   =  3.14159265 !6.2831853
     bnd_xl = "outd"
     bnd_xr = "outd"
     bnd_yl = "outd"
     bnd_yr = "outd"
- /
-
- $MPI_BLOCKS
  /
 
  $UNITS
@@ -29,34 +28,24 @@
 
  $OUTPUT_CONTROL
     problem_name = 'mandelbrot_polar'
-    run_id =  'F-M'
+    run_id =  '3a9'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
  /
 
- $FLUID_NEUTRAL
- /
-
- $NUMERICAL_SETUP
- /
-
  $PROBLEM_CONTROL
-    maxiter = 1000000
-    ! maxiter = 100000000 for better coloring of the leftmost part (period 2**18 bulb near F-M point)
+    maxiter = 500000
     !smooth_map = .false.
     log_polar = .true.
-! Feigenbaum-Myrberg point
-    x_polar = -1.4011551890920505
-    y_polar = 0.
-    c_polar = 1.05
- /
-
- $INTERACTIONS
+    precision = 'quad'
+    x_center = "-1.789215019537189581673282328380209711507548910977315688881572432666"
+    y_center = "0"
+    c_polar = 0.25
  /
 
  $AMR
-    bsize = 3*16
-    level_max = 3
+    bsize = 3*8
+    level_max = 2
     n_updAMR = 1
  /

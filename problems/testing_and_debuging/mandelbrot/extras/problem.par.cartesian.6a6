@@ -1,0 +1,54 @@
+! This is a cartesian quad-precision zoom based on problem.par.polar.6a6
+
+ $BASE_DOMAIN
+    n_d = 32, 32, 1
+    xmin   = -2e-30
+    xmax   =  2e-30
+    ymin   = -2e-30
+    ymax   =  2e-30
+    zmin   = -2e-31  ! this will make it possible to visualize using pvf
+    zmax   =  2e-31
+    bnd_xl = "outd"
+    bnd_xr = "outd"
+    bnd_yl = "outd"
+    bnd_yr = "outd"
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    res_id   = ''
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 0
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'mandelbrot'
+    run_id =  '6a6'
+    use_v2_io = .true.
+    dt_hdf  = 0.5
+    vars(1:) = 'mand', 'dist', 'ang', 'level'
+ /
+
+ $PROBLEM_CONTROL
+    maxiter = 50000
+    ref_thr = 0.5
+    !smooth_map = .false.
+    precision = 'quad'
+    x_center = "-1.99637859830127622318041140356304662056545479566444217157832784805"
+    y_center = "-0.00009846411789164279281147049701099777327914008761108428659555385"
+ /
+
+ $AMR
+    bsize = 3*8
+    level_max = 3
+    n_updAMR = 1
+ /
+
+!../../visual/pvf.py mandelbrot_6a6_0000.h5 -d mand -D nipy_spectral -z 9,10.5
