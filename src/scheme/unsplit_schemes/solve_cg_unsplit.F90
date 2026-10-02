@@ -36,23 +36,22 @@ module solvecg_unsplit
 
 contains
 
-! This routine has to conform to the interface defined in sweeps::sweep
-
    subroutine solve_cg_unsplit(cg, istep)
 
-      use constants,             only: mag_n, GEO_XYZ
-      use dataio_pub,            only: die
-      use domain,                only: dom
-      use fluidindex,            only: flind
-      use grid_cont,             only: grid_container
-      use named_array_list,      only: wna
-      use sources,               only: prepare_sources
-      use unsplit_mag_modules,   only: solve_cg_ub
+      use constants,           only: mag_n, GEO_XYZ
+      use dataio_pub,          only: die
+      use domain,              only: dom
+      use fluidindex,          only: flind
+      use grid_cont,           only: grid_container
+      use named_array_list,    only: wna
+      use sources,             only: prepare_sources
+      use unsplit_mag_modules, only: solve_cg_ub
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
+
       integer :: nmag, i
 
       if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg_unsplit:solve_cg_unsplit] Non-cartesian geometry is not implemented yet in this Unsplit solver.")
@@ -77,15 +76,17 @@ contains
 
    subroutine solve_cg_u(cg, istep)
 
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna, qna
-      use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, uh_n, cs_i2_n, first_stage, xdim, ydim, zdim
-      use global,           only: integration_order
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_swp
-      use fluxtypes,        only: ext_fluxes
-      use unsplit_source,   only: apply_source
-      use diagnostics,      only: my_allocate, my_deallocate
+      use constants,            only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, uh_n, cs_i2_n, &
+           &                          first_stage, xdim, ydim, zdim
+      use diagnostics,          only: my_allocate, my_deallocate
+      use domain,               only: dom
+      use fluidindex,           only: iarr_all_swp
+      use fluxtypes,            only: ext_fluxes
+      use global,               only: integration_order
+      use grid_cont,            only: grid_container
+      use named_array_list,     only: wna, qna
+      use unsplit_state_update, only: apply_flux
+      use unsplit_source,       only: apply_source
 
       implicit none
 
@@ -147,7 +148,7 @@ contains
          call my_deallocate(u); call my_deallocate(flux); call my_deallocate(tflux)
 
       enddo
-      call apply_flux(cg, istep)
+      call apply_flux(cg, istep, .false.)
       call apply_source(cg, istep)
       nullify(cs2)
 
@@ -155,10 +156,10 @@ contains
 
    subroutine solve_u(ui, cs2, eflx, flx)
 
-      use fluxtypes,      only: ext_fluxes
+      use dataio_pub,     only: die
+      use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes
       use hlld,           only: riemann_wrap_u
       use interpolations, only: interpol
-      use dataio_pub,     only: die
 
       implicit none
 
@@ -178,96 +179,8 @@ contains
       call interpol(ui, ql, qr)
       call riemann_wrap_u(ql, qr, cs2, flx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      call apply_fluid_ext_fluxes(eflx, flx)
 
    end subroutine solve_u
-
-   subroutine apply_flux(cg, istep)
-      use domain,             only: dom
-      use grid_cont,          only: grid_container
-      use global,             only: integration_order, dt
-      use named_array_list,   only: wna
-      use constants,          only: xdim, ydim, zdim, last_stage, rk_coef, uh_n, I_ONE, ndims
-
-      implicit none
-
-      type :: fxptr
-         real, pointer :: flx(:,:,:,:)
-      end type fxptr
-
-      type(grid_container), pointer, intent(in)   :: cg
-      integer,                       intent(in)   :: istep
-
-      logical                     :: active(ndims)
-      integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer                     :: afdim, uhi
-      real, pointer               :: T(:,:,:,:)
-      type(fxptr)                 :: F(ndims)
-
-      T=> null()
-      active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
-
-      F(xdim)%flx => cg%fx   ;  F(ydim)%flx => cg%gy   ;  F(zdim)%flx => cg%hz
-
-      L0 = [ lbound(cg%w(wna%fi)%arr, 2), lbound(cg%w(wna%fi)%arr, 3), lbound(cg%w(wna%fi)%arr, 4) ]
-      U0 = [ ubound(cg%w(wna%fi)%arr, 2), ubound(cg%w(wna%fi)%arr, 3), ubound(cg%w(wna%fi)%arr, 4) ]
-
-      uhi = wna%ind(uh_n)
-
-      if (istep == last_stage(integration_order) .or. integration_order == I_ONE) then
-         T => cg%w(wna%fi)%arr
-      else
-         cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
-         T => cg%w(uhi)%arr
-      endif
-
-      do afdim = xdim, zdim
-         if (.not. active(afdim)) cycle
-
-         call bounds_for_flux(L0, U0, active, afdim, L, U)
-
-         shift = 0 ;  shift(afdim) = I_ONE
-
-         T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) = T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) &
-              + dt / cg%dl(afdim) * rk_coef(istep) * ( &
-              F(afdim)%flx(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) - &
-              F(afdim)%flx(:, L(xdim)+shift(xdim):U(xdim)+shift(xdim), &
-              &               L(ydim)+shift(ydim):U(ydim)+shift(ydim), &
-              &               L(zdim)+shift(zdim):U(zdim)+shift(zdim)) )
-      enddo
-
-   end subroutine apply_flux
-
-   subroutine bounds_for_flux(L0, U0, active, afdim, L, U)
-
-      use constants, only: xdim, zdim, I_ONE, ndims
-      use domain,    only: dom
-
-      implicit none
-
-      integer, intent(in)  :: L0(ndims), U0(ndims)   ! original bounds
-      logical, intent(in)  :: active(ndims)          ! dom%has_dir flags
-      integer, intent(in)  :: afdim                  ! direction we are updating (1,2,3)
-      integer, intent(out) :: L(ndims), U(ndims)     ! returned bounds
-
-      integer :: d, nb_1
-
-      L = L0 ;  U = U0                     ! start from raw array bounds
-      nb_1 = dom%nb - I_ONE
-
-      do d = xdim, zdim
-         if (active(d)) then               ! remove outer 1-cell ghosts
-            L(d) = L(d) + I_ONE
-            U(d) = U(d) - I_ONE
-            if (d /= afdim) then           ! shrink transverse dirs by 3 extra
-               L(d) = L(d) + nb_1
-               U(d) = U(d) - nb_1
-            endif
-         endif
-      enddo
-   end subroutine bounds_for_flux
 
 end module solvecg_unsplit

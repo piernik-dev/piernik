@@ -27,10 +27,8 @@
 #include "piernik.h"
 
 !>
-!! \brief The job of this module is simple : Pass a  block of cg to solve to do a unsplit update of the state
-!! Currently we dont not add AMR support or ppp monitoring. Sister module sweeps is used for directional sweep update and is called by
-!! fluid update module. We will call this module from fluid_unsplit_update which is in turn mentioned in fluid_update to keep this line of
-!! additions away from the main code and merger it later. We are not adding fargo support either. This will be the first update after this works
+!! \brief Coordinates unsplit updates across grid blocks for each integration stage.
+!! Handles inter-block flux communication and profiling around each block solve.
 !<
 
 module unsplit_sweeps
@@ -42,43 +40,6 @@ module unsplit_sweeps
    public :: unsplit_sweep
 
 contains
-
-   subroutine update_boundaries(istep)
-
-      use all_boundaries, only: all_fluid_boundaries
-!      use cg_leaves,      only: leaves
-      use constants,      only: first_stage, DIVB_HDC, xdim, zdim
-      use domain,         only: dom
-      use global,         only: sweeps_mgu, integration_order, divB_0_method
-#ifdef MAGNETIC
-      use all_boundaries, only: all_mag_boundaries
-#endif /* MAGNETIC */
-
-      implicit none
-
-      integer, intent(in) :: istep
-
-      integer(kind=4) :: ub_i
-
-      if (sweeps_mgu) then
-         if (istep == first_stage(integration_order)) then
-            do ub_i = xdim, zdim
-               if (.not. dom%has_dir(ub_i)) cycle
-               call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep = istep)
-            enddo
-         else
-            call all_fluid_boundaries(nocorners = .true., istep = istep)
-         endif
-      else
-         call all_fluid_boundaries(istep=istep)
-      endif
-      if (divB_0_method == DIVB_HDC) then
-#ifdef MAGNETIC
-         call all_mag_boundaries(istep) ! ToDo: take care of psi boundaries
-#endif /* MAGNETIC */
-      endif
-
-   end subroutine update_boundaries
 
    subroutine unsplit_sweep()
 
@@ -97,6 +58,7 @@ contains
       use ppp,               only: ppp_main
       use pppmpi,            only: req_ppp
       use sources,           only: prepare_sources
+      use sweeps,            only: update_boundaries
       use solvecg_unsplit,   only: solve_cg_unsplit
 
       implicit none
@@ -154,7 +116,7 @@ contains
                      ! The tricky part is that we need to fit all the switching inside the conditional part
                      ! and don't mess pairing and don't let them to nest.
 
-                     call cg%cleanup_flux()      ! Seems unnecessary.This just sets the flux array to 0.0
+                     call cg%cleanup_flux()      ! Clear stored fluxes before recomputing this block for the current stage.
 
                      call cg%costs%start
                      call solve_cg_unsplit(cg, istep)
@@ -183,7 +145,7 @@ contains
 
          call req%waitall("sweeps")
 
-         call update_boundaries(istep)
+         call update_boundaries(istep = istep)
       enddo
 
       call sl%delete

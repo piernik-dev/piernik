@@ -81,7 +81,7 @@ contains
    end subroutine aux_var
 
 !>
-!! \brief recalcualte the speed of propagation of psi waves
+!! \brief recalculate the speed of propagation of psi waves
 !!
 !! This can be perhaps evaluated somewhere in timestep and reused here.
 !<
@@ -223,7 +223,7 @@ contains
 
       chspeed = small  ! suppress -Wmaybe-uninitialized on chspeed
 #ifdef ISO
-      chspeed = cfl_glm * cg%cs_iso2(i, j, k)  ! BUG? should be rather sqrt(cs_iso2)
+   chspeed = cfl_glm * sqrt(cg%cs_iso2(i, j, k))
 #else /* !ISO */
       if (has_ion) then
          fl => flind%ion
@@ -445,7 +445,7 @@ contains
       endif
 
       ! OPT: to avoid these boundary exchanges one must provide div(B) and grad(psi) on bigger area and alter whole blocks.
-      ! Thi may require extra guardcells
+      ! This may require extra guardcells
       ! Beware: higher orders of div(B) and grad(psi) may require boundary update at the beginning too
       call all_fluid_boundaries
       call leaves%leaf_arr3d_boundaries(ipsi)

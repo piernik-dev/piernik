@@ -40,12 +40,13 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use constants,        only: pdims, ORTHO1, ORTHO2, I_ONE, LO, HI, magh_n, uh_n, &
-                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim, I_ONE
+                                  psi_n, psih_n, psidim, cs_i2_n, first_stage, xdim, ydim, zdim
       use global,           only: integration_order
       use domain,           only: dom
       use fluidindex,       only: iarr_all_swp, iarr_mag_swp
       use fluxtypes,        only: ext_fluxes
       use unsplit_source,   only: apply_source
+      use unsplit_state_update, only: apply_flux, update_psi
       use diagnostics,      only: my_allocate, my_deallocate
 
       implicit none
@@ -165,7 +166,7 @@ contains
    subroutine solve(ui, bi, cs2, eflx, flx, bflx)
 
       use constants,      only: DIVB_HDC
-      use fluxtypes,      only: ext_fluxes
+      use fluxtypes,      only: ext_fluxes, apply_fluid_ext_fluxes, apply_magnetic_ext_fluxes
       use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
@@ -191,169 +192,14 @@ contains
       call interpol(ui, ql, qr, bi, bl, br)
       call riemann_wrap(ql, qr, bl, br, cs2, flx, bflx) ! Now we advance the left and right states by a timestep.
 
-      if (associated(eflx%li)) flx(eflx%li%index, :) = eflx%li%uflx
-      if (associated(eflx%ri)) flx(eflx%ri%index, :) = eflx%ri%uflx
-      if (associated(eflx%lo)) eflx%lo%uflx = flx(eflx%lo%index, :)
-      if (associated(eflx%ro)) eflx%ro%uflx = flx(eflx%ro%index, :)
+      call apply_fluid_ext_fluxes(eflx, flx)
 
       if (divB_0_method == DIVB_HDC) then
-         if (associated(eflx%li)) bflx(eflx%li%index, :) = eflx%li%bflx
-         if (associated(eflx%ri)) bflx(eflx%ri%index, :) = eflx%ri%bflx
-         if (associated(eflx%lo)) eflx%lo%bflx = bflx(eflx%lo%index, :)
-         if (associated(eflx%ro)) eflx%ro%bflx = bflx(eflx%ro%index, :)
+         call apply_magnetic_ext_fluxes(eflx, bflx)
       else
-         call die("[unsplit_mag_modules:solve] Unplit method is only implemented with Hyperbolic Divergence Cleaning")
+         call die("[unsplit_mag_modules:solve] Unsplit method is only implemented with Hyperbolic Divergence Cleaning")
       endif
 
    end subroutine solve
-
-   subroutine apply_flux(cg, istep, mag)
-
-      use domain,             only: dom
-      use grid_cont,          only: grid_container
-      use global,             only: integration_order, dt
-      use named_array_list,   only: wna
-      use constants,          only: xdim, ydim, zdim, last_stage, rk_coef, uh_n, I_ONE, ndims, magh_n
-
-      implicit none
-
-      type :: fxptr
-         real, pointer :: flx(:,:,:,:)
-      end type fxptr
-
-      type(grid_container), pointer, intent(in)   :: cg
-      integer,                       intent(in)   :: istep
-      logical,                       intent(in)   :: mag
-
-      logical                     :: active(ndims)
-      integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer                     :: afdim, uhi, bhi
-      real, pointer               :: T(:,:,:,:)
-      type(fxptr)                 :: F(ndims)
-
-      T => null()
-      active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
-
-      if (mag) then
-
-         F(xdim)%flx => cg%bfx   ;  F(ydim)%flx => cg%bgy   ;  F(zdim)%flx => cg%bhz
-
-         L0 = [ lbound(cg%w(wna%bi)%arr, 2), lbound(cg%w(wna%bi)%arr, 3), lbound(cg%w(wna%bi)%arr, 4) ]
-         U0 = [ ubound(cg%w(wna%bi)%arr, 2), ubound(cg%w(wna%bi)%arr, 3), ubound(cg%w(wna%bi)%arr, 4) ]
-
-         bhi = wna%ind(magh_n)
-         if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-            T => cg%w(wna%bi)%arr
-         else
-            cg%w(bhi)%arr(:,:,:,:) = cg%w(wna%bi)%arr(:,:,:,:)
-            T => cg%w(bhi)%arr
-         endif
-      else
-         F(xdim)%flx => cg%fx   ;  F(ydim)%flx => cg%gy   ;  F(zdim)%flx => cg%hz
-
-         L0 = [ lbound(cg%w(wna%fi)%arr,2), lbound(cg%w(wna%fi)%arr,3), lbound(cg%w(wna%fi)%arr,4) ]
-         U0 = [ ubound(cg%w(wna%fi)%arr,2), ubound(cg%w(wna%fi)%arr,3), ubound(cg%w(wna%fi)%arr,4) ]
-
-         uhi = wna%ind(uh_n)
-         if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-            T => cg%w(wna%fi)%arr
-         else
-            cg%w(uhi)%arr(:,:,:,:) = cg%w(wna%fi)%arr(:,:,:,:)
-            T => cg%w(uhi)%arr
-         endif
-      endif
-      do afdim = xdim, zdim
-         if (.not. active(afdim)) cycle
-
-         call bounds_for_flux(L0,U0,active,afdim,L,U)
-
-         shift = 0 ;  shift(afdim) = I_ONE
-         T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) = T(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) &
-              + dt / cg%dl(afdim) * rk_coef(istep) * ( &
-              F(afdim)%flx(:, L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) - &
-              F(afdim)%flx(:, L(xdim)+shift(xdim):U(xdim)+shift(xdim), &
-              &               L(ydim)+shift(ydim):U(ydim)+shift(ydim), &
-              &               L(zdim)+shift(zdim):U(zdim)+shift(zdim)) )
-      enddo
-
-   end subroutine apply_flux
-
-   subroutine update_psi(cg, istep)
-
-      use domain,             only: dom
-      use grid_cont,          only: grid_container
-      use global,             only: integration_order, dt
-      use named_array_list,   only: qna
-      use constants,          only: xdim, ydim, zdim, last_stage, rk_coef, I_ONE, ndims, psi_n, psih_n
-
-      implicit none
-
-      type(grid_container), pointer, intent(in)   :: cg
-      integer,                       intent(in)   :: istep
-
-      logical                     :: active(ndims)
-      integer                     :: L0(ndims), U0(ndims), L(ndims), U(ndims), shift(ndims)
-      integer                     :: afdim, psihi, psii
-      real, pointer               :: TP(:,:,:)
-
-      TP => null()
-
-      active = [ dom%has_dir(xdim), dom%has_dir(ydim), dom%has_dir(zdim) ]
-
-      psii = qna%ind(psi_n)
-      psihi = qna%ind(psih_n)
-      L0 = [ lbound(cg%q(psii)%arr, 1), lbound(cg%q(psii)%arr, 2), lbound(cg%q(psii)%arr, 3) ]
-      U0 = [ ubound(cg%q(psii)%arr, 1), ubound(cg%q(psii)%arr, 2), ubound(cg%q(psii)%arr, 3) ]
-
-      if (istep==last_stage(integration_order) .or. integration_order==I_ONE) then
-         TP => cg%q(psii)%arr
-      else
-         cg%q(psihi)%arr(:,:,:) = cg%q(psii)%arr(:,:,:)
-         TP => cg%q(psihi)%arr
-      endif
-
-      do afdim = xdim, zdim
-         if (.not. active(afdim)) cycle
-         call bounds_for_flux(L0,U0,active,afdim,L,U)
-         shift = 0 ;  shift(afdim) = I_ONE
-         TP(L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) = TP(L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) &
-              + dt / cg%dl(afdim) * rk_coef(istep) * ( &
-              cg%psiflx(afdim,L(xdim):U(xdim), L(ydim):U(ydim), L(zdim):U(zdim)) - &
-              cg%psiflx(afdim,L(xdim)+shift(xdim):U(xdim)+shift(xdim), &
-              &               L(ydim)+shift(ydim):U(ydim)+shift(ydim), &
-              &               L(zdim)+shift(zdim):U(zdim)+shift(zdim)) )
-      enddo
-
-   end subroutine update_psi
-
-   subroutine bounds_for_flux(L0, U0, active, afdim, L, U)
-
-      use constants, only: xdim, zdim, I_ONE, ndims
-      use domain,    only: dom
-
-      implicit none
-
-      integer, intent(in)  :: L0(ndims), U0(ndims)   ! original bounds
-      logical, intent(in)  :: active(ndims)          ! dom%has_dir flags
-      integer, intent(in)  :: afdim                  ! direction we are updating (1,2,3)
-      integer, intent(out) :: L(ndims), U(ndims)     ! returned bounds
-
-      integer :: d,nb_1
-
-      L = L0 ;  U = U0                     ! start from raw array bounds
-      nb_1 = dom%nb - I_ONE
-
-      do d = xdim, zdim
-         if (active(d)) then               ! remove outer 1-cell ghosts
-            L(d) = L(d) + I_ONE
-            U(d) = U(d) - I_ONE
-            if (d /= afdim) then           ! shrink transverse dirs by 3 extra
-               L(d) = L(d) + nb_1
-               U(d) = U(d) - nb_1
-            endif
-         endif
-      enddo
-
-   end subroutine bounds_for_flux
 
 end module unsplit_mag_modules

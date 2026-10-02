@@ -49,7 +49,7 @@ module sweeps
    implicit none
 
    private
-   public :: sweep
+   public :: sweep, update_boundaries
 
 contains
 
@@ -66,7 +66,7 @@ contains
 
       use all_boundaries, only: all_fluid_boundaries
 !      use cg_leaves,      only: leaves
-      use constants,      only: first_stage, DIVB_HDC
+      use constants,      only: first_stage, DIVB_HDC, xdim, zdim
       use domain,         only: dom
       use global,         only: sweeps_mgu, integration_order, divB_0_method
 #ifdef MAGNETIC
@@ -75,31 +75,51 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: cdim
-      integer,         intent(in) :: istep
+      integer(kind=4), optional, intent(in) :: cdim
+      integer,                   intent(in) :: istep
+      integer(kind=4)                        :: ub_i
 
-      if (dom%has_dir(cdim)) then
+      if (present(cdim)) then
+         if (dom%has_dir(cdim)) then
+            if (sweeps_mgu) then
+               if (istep == first_stage(integration_order)) then
+                  call all_fluid_boundaries(nocorners = .true., dir = cdim)
+               else
+                  call all_fluid_boundaries(nocorners = .true.)
+               endif
+            else
+               ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
+               ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
+
+               ! if (istep == first_stage(integration_order)) then
+               !    call all_fluid_boundaries(nocorners = .true.)
+               ! else
+                  call all_fluid_boundaries !(nocorners = .true., dir = cdim)
+               ! endif
+            endif
+         endif
+      else
          if (sweeps_mgu) then
             if (istep == first_stage(integration_order)) then
-               call all_fluid_boundaries(nocorners = .true., dir = cdim)
+               do ub_i = xdim, zdim
+                  if (.not. dom%has_dir(ub_i)) cycle
+                  call all_fluid_boundaries(nocorners = .true., dir = ub_i, istep = istep)
+               enddo
             else
-               call all_fluid_boundaries(nocorners = .true.)
+               call all_fluid_boundaries(nocorners = .true., istep = istep)
             endif
          else
-            ! nocorners and dir = cdim can be used safely only when ord_fluid_prolong == 0 .and. cc_mag
-            ! essential speedups here are possible but it requires c/f boundary prolongation that does not require corners
-
-            ! if (istep == first_stage(integration_order)) then
-            !    call all_fluid_boundaries(nocorners = .true.)
-            ! else
-               call all_fluid_boundaries !(nocorners = .true., dir = cdim)
-            ! endif
+            call all_fluid_boundaries(istep = istep)
          endif
       endif
 
       if (divB_0_method == DIVB_HDC) then
 #ifdef MAGNETIC
-         call all_mag_boundaries ! ToDo: take care of psi boundaries
+         if (present(cdim)) then
+            call all_mag_boundaries ! Also updates psi boundaries when psi exists.
+         else
+            call all_mag_boundaries(istep) ! Also updates psi boundaries when psi exists.
+         endif
 #endif /* MAGNETIC */
       endif
 
