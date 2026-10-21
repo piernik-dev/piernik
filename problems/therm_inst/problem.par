@@ -27,7 +27,7 @@ $BASE_DOMAIN
  /
 
  $END_CONTROL
-    tend   = 0.1
+    tend   = 0.05
  /
 
  $OUTPUT_CONTROL
@@ -80,7 +80,7 @@ $BASE_DOMAIN
  /
  $PROBLEM_CONTROL
     d0     = 1.0
-    T0     = 20000.0
+    T0     = 100000.0
     bx0    = 0.0
     by0    = 0.0
     bz0    = 0.0
