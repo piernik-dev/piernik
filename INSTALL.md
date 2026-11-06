@@ -93,6 +93,8 @@ which should finish with a message:
 
 The `./setup` command without any arguments will give you a list of recognized options. You can put some them in `.setuprc` file if you want to use them always.
 
+Next steps: [doc/GETTING_STARTED.md](doc/GETTING_STARTED.md) (first run, configuration, contributing), [doc/HOWTO.md](doc/HOWTO.md) (recipes), [doc/GLOSSARY.md](doc/GLOSSARY.md), [CONTRIBUTING.md](CONTRIBUTING.md) and, if you plan to use AI assistants, [doc/AI_DEVELOPMENT.md](doc/AI_DEVELOPMENT.md). Open cleanup tasks: [doc/BACKLOG.md](doc/BACKLOG.md).
+
 Also look at the top of `Makefile` to find some useful tricks.
 
 The file `bin/bash_completion.sh` may also make your life with Piernik a little bit easier by allowing to complete some setup options and problem names.
