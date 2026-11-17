@@ -11,7 +11,7 @@ Parent: [../AGENTS.md](../AGENTS.md). Scripts are run from the repository root u
 - `generate_public.py` – proposes `public` lists (imports `qa`). **Python 2 syntax**, does not run under python3.
 
 ## Testing / regression
-- `check_valgrind.py` – filters Valgrind XML reports to definite/indirect leaks allocated by the Piernik executable, ignoring MPI/runtime allocations.
+- `check_valgrind.py` – filters definite/indirect leaks by the allocation frame in `-e`/`--executable`; `-v`/`--verbose` formats Piernik leaks and `-a`/`--all` includes every unsuppressed Valgrind finding.
 - `regenerate_golds.sh` – rebuilds gold files from fixed historical commits; **contains an absolute path to a private disk** (`/raid_hum/...`)
   and old compiler names (`gnu47`): treat as documentation of how golds were produced, not as a portable tool.
   Current gold tests are defined in `../jenkins/gold_configs/` (see [../jenkins/AGENTS.md](../jenkins/AGENTS.md)).

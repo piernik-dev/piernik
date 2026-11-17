@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report definite and indirect leaks allocated by the Piernik executable."""
+"""Report Valgrind findings and detect leaks allocated by Piernik."""
 
 import argparse
 import sys
@@ -27,14 +27,53 @@ def allocation_frame(error):
     return None
 
 
+def frame_location(frame):
+    if frame is None:
+        return "allocation site unavailable"
+
+    function = frame.findtext("fn", default="unknown function")
+    source = frame.findtext("file", default="")
+    line = frame.findtext("line", default="")
+    if source:
+        location = f"{source}:{line}" if line else source
+        return f"{function} at {location}"
+    return function
+
+
+def is_project_leak(error, executable):
+    frame = allocation_frame(error)
+    if frame is None:
+        return False, frame
+
+    obj = frame.findtext("obj", default="")
+    if not obj:
+        return False, frame
+    return Path(obj).resolve() == executable, frame
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--executable", required=True, type=Path)
+    parser.add_argument(
+        "-e", "--executable",
+        required=True,
+        type=Path,
+        help="binary used to distinguish Piernik allocations from MPI/runtime",
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="show Piernik leak findings with their allocation locations",
+    )
+    parser.add_argument(
+        "-a", "--all",
+        action="store_true",
+        help="show every unsuppressed Valgrind finding, including MPI/runtime",
+    )
     parser.add_argument("reports", nargs="+", type=Path)
     args = parser.parse_args()
 
     executable = args.executable.resolve()
-    project_leaks = []
+    findings = []
     for report in args.reports:
         try:
             root = ET.parse(report).getroot()
@@ -49,27 +88,66 @@ def main():
 
         for error in root.findall("error"):
             kind = error.findtext("kind", default="")
-            if kind not in LEAK_KINDS:
-                continue
-            frame = allocation_frame(error)
-            if frame is None:
-                continue
-            obj = frame.findtext("obj", default="")
-            if not obj or Path(obj).resolve() != executable:
-                continue
+            frame = None
+            project_leak = False
+            if kind in LEAK_KINDS:
+                project_leak, frame = is_project_leak(error, executable)
+            elif args.all:
+                stack = error.find("./stack")
+                if stack is not None:
+                    frame = stack.find("./frame")
 
-            location = frame.findtext("file", default="unknown source")
-            line = frame.findtext("line", default="")
-            if line:
-                location = f"{location}:{line}"
-            description = error.findtext("xwhat/text", default=kind)
-            project_leaks.append(f"{report}: {description} ({location})")
+            if kind not in LEAK_KINDS and not args.all:
+                continue
+            if kind in LEAK_KINDS or args.all:
+                description = error.findtext("xwhat/text")
+                if not description:
+                    description = error.findtext("what")
+                if not description:
+                    description = kind
+                findings.append({
+                    "report": report,
+                    "pid": root.findtext("pid", default="?"),
+                    "kind": kind,
+                    "description": description,
+                    "frame": frame,
+                    "project_leak": project_leak,
+                })
+
+    project_leaks = [finding for finding in findings
+                     if finding["project_leak"]]
+    display_all = args.all
+    display_verbose = args.verbose or display_all
+    displayed = findings if display_all else project_leaks
+
+    if display_verbose:
+        for finding in displayed:
+            owner = "Piernik" if finding["project_leak"] else "external"
+            print(
+                f"{finding['report']} (PID {finding['pid']}): "
+                f"{owner} {finding['kind']}: {finding['description']}"
+            )
+            print(f"  {frame_location(finding['frame'])}")
+    elif project_leaks:
+        for finding in project_leaks:
+            print(
+                f"{finding['report']}: {finding['description']} "
+                f"({frame_location(finding['frame'])})",
+                file=sys.stderr,
+            )
 
     if project_leaks:
-        print("\n".join(project_leaks), file=sys.stderr)
         return 1
 
-    print(f"No Piernik-originating definite/indirect leaks in {len(args.reports)} reports.")
+    if display_all:
+        print(f"Displayed {len(findings)} unsuppressed Valgrind findings.")
+    elif args.verbose:
+        print(
+            "No Piernik-originating definite/indirect leaks in "
+            f"{len(args.reports)} reports."
+        )
+    else:
+        print(f"No Piernik-originating definite/indirect leaks in {len(args.reports)} reports.")
     return 0
 
 
