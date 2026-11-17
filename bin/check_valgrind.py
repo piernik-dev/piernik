@@ -40,6 +40,36 @@ def frame_location(frame):
     return function
 
 
+def print_stack(stack):
+    frames = stack.findall("frame")
+    if not frames:
+        print("    (no frames available)")
+    for frame in frames:
+        address = frame.findtext("ip", default="?")
+        function = frame.findtext("fn", default="unknown function")
+        directory = frame.findtext("dir", default="")
+        filename = frame.findtext("file", default="")
+        line = frame.findtext("line", default="")
+        obj = frame.findtext("obj", default="")
+        location = str(Path(directory) / filename) if filename else obj
+        if line and filename:
+            location = f"{location}:{line}"
+        print(f"    {address}: {function}" + (f" ({location})" if location else ""))
+
+
+def print_error_stacks(element):
+    for child in element:
+        if child.tag == "auxwhat" and child.text:
+            print(f"  {child.text}")
+        elif child.tag == "stack":
+            print_stack(child)
+        elif child.tag == "origin":
+            description = child.findtext("what")
+            if description:
+                print(f"  {description}")
+            print_error_stacks(child)
+
+
 def is_project_leak(error, executable):
     frame = allocation_frame(error)
     if frame is None:
@@ -62,7 +92,7 @@ def main():
     parser.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="show Piernik leak findings with their allocation locations",
+        help="show full Valgrind call stacks for Piernik leak findings",
     )
     parser.add_argument(
         "-a", "--all",
@@ -112,6 +142,7 @@ def main():
                     "description": description,
                     "frame": frame,
                     "project_leak": project_leak,
+                    "error": error,
                 })
 
     project_leaks = [finding for finding in findings
@@ -127,7 +158,7 @@ def main():
                 f"{finding['report']} (PID {finding['pid']}): "
                 f"{owner} {finding['kind']}: {finding['description']}"
             )
-            print(f"  {frame_location(finding['frame'])}")
+            print_error_stacks(finding["error"])
     elif project_leaks:
         for finding in project_leaks:
             print(
