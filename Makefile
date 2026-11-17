@@ -28,6 +28,7 @@
 #   'make gold'            # run the gold tests from ./jenkins directory
 #   'make gold-serial'     # run the gold tests from ./jenkins directory in serial mode
 #   'make gold-clean'      # remove files after gold test
+#   'make optional'        # run optional tests (not part of CI)
 #   'make CI'              # run all checks locally (replaces Jenkins to some extent)
 #
 # Resetup will also call make for the object directories, unless you've
@@ -87,6 +88,16 @@ GOLD_TEST_SCRIPT = $(JENKINS_DIR)/gold_test.sh
 QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
 ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body CPAW
 GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
+OPTIONAL_TESTS = MHD_blast_wave_memcheck
+VALGRIND ?= valgrind
+# Use Open MPI's known-leak suppressions when available; other MPI builds can override this path.
+MPI_VALGRIND_SUPPRESSIONS ?= $(shell \
+	if command -v ompi_info >/dev/null 2>&1; then \
+		pkgdir=$$(ompi_info --path pkgdatadir 2>/dev/null | sed -n 's/^[[:space:]]*Pkgdatadir: //p'); \
+		if [ -f "$$pkgdir/openmpi-valgrind.supp" ]; then \
+			printf '%s' "$$pkgdir/openmpi-valgrind.supp"; \
+		fi; \
+	fi)
 
 # Common command sequences
 define cleanup_tmpdir
@@ -96,7 +107,7 @@ endef
 # Define phony targets
 .PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
 	oldgold gold-serial gold-clean pep8 view_dep colortest \
-	CI QA artifacts gold $(QA_TESTS) $(ARTIFACT_TESTS) $(GOLD_TESTS)
+	CI QA artifacts gold optional $(QA_TESTS) $(ARTIFACT_TESTS) $(GOLD_TESTS) $(OPTIONAL_TESTS)
 
 # Default target to build all object directories
 all: $(ALLOBJ)
@@ -188,6 +199,7 @@ help:
 	@$(ECHO) "  QA        - Run all QA checks       ($(QA_TESTS))"
 	@$(ECHO) "  artifacts - Run all artifact tests  ($(ARTIFACT_TESTS))"
 	@$(ECHO) "  gold      - Run all gold tests      ($(GOLD_TESTS))"
+	@$(ECHO) "  optional  - Run optional tests      ($(OPTIONAL_TESTS))"
 	@$(ECHO) "  CI        - Run all CI checks       (QA artifacts gold)"
 	@$(ECHO) "  help      - Show this help"
 
@@ -372,6 +384,39 @@ artifacts:
 	$(MAKE) -k $(ARTIFACT_TESTS) || \
 		( $(ECHO) -e $(RED)"Some artifact tests failed."$(RESET)" Details can be found in "$(ARTIFACTS)" directory." && exit 1 )
 	$(ECHO) -e $(BLUE)"All artifact tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
+
+# Target to run a short MHD blast-wave test under Valgrind
+MHD_blast_wave_memcheck:
+	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
+	RUNDIR=$(RUNS_DIR)/MHD_blast_wave_$${OTMPDIR//obj_/} ;\
+	VALGRIND_LOG_PREFIX="$(CURDIR)/$(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_$${OTMPDIR//obj_/}" ;\
+	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) || true ;\
+	$(SETUP) sedov/MHD_blast_wave --param problem.par.memcheck -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout && \
+		( cd $${RUNDIR} ;\
+			SUPPRESSIONS= ;\
+			if [ -n "$(MPI_VALGRIND_SUPPRESSIONS)" ]; then \
+				if [ ! -f "$(MPI_VALGRIND_SUPPRESSIONS)" ]; then \
+					$(ECHO) "MPI Valgrind suppression file not found: $(MPI_VALGRIND_SUPPRESSIONS)" >&2 ;\
+					exit 1 ;\
+				fi ;\
+				SUPPRESSIONS="--suppressions=$(MPI_VALGRIND_SUPPRESSIONS)" ;\
+			fi ;\
+			$(MPIEXEC) -n 3 $(VALGRIND) --quiet --xml=yes \
+				--xml-file="$$VALGRIND_LOG_PREFIX.%p.xml" \
+				--leak-check=full --show-leak-kinds=definite,indirect \
+				--errors-for-leak-kinds=definite,indirect \
+				$$SUPPRESSIONS ./piernik \
+		) >> $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout 2>&1 && \
+		$(PYTHON) $(CURDIR)/bin/check_valgrind.py --executable "$${RUNDIR}/piernik" "$${VALGRIND_LOG_PREFIX}".*.xml && \
+		( echo $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(PASSED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" ) || \
+		( echo $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(FAILED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" && exit 1 )
+
+# Target to run the optional tests, which are not part of CI
+optional:
+	$(ECHO) -e $(BLUE)"Starting optional tests ..."$(RESET)
+	$(MAKE) -k $(OPTIONAL_TESTS) || \
+		( $(ECHO) -e $(RED)"Some optional tests failed."$(RESET)" Details can be found in "$(ARTIFACTS)" directory." && exit 1 )
+	$(ECHO) -e $(BLUE)"All optional tests "$(PASSED)". Details can be found in "$(ARTIFACTS)" directory."
 
 # Target to run all gold tests (old version)
 oldgold:

@@ -21,6 +21,7 @@ Parent: [../AGENTS.md](../AGENTS.md). ~40 top-level problems, ~190 parameter fil
 |------|---------|
 | artifacts: `Jeans`, `Maclaurin`, `CPAW`, `IOv2` (`advection_test`), `3body` (`2body/3body`), `noHDF5` (`crtest`), `dep`/`I64` (`testing_and_debuging/chimaera`) | `jeans`, `maclaurin`, `cpaw`, `advection_test`, ... |
 | gold (`jenkins/gold_configs`) | `mcrtest` (`mcrtest_new`), `mcrtest/mcrtest_cresp`, `mcrwind`, `sedov/MHD_blast_wave` (AMR), `tearing` (`resist`), `streaming_global` |
+| optional: `MHD_blast_wave_memcheck` | `sedov/MHD_blast_wave` (`problem.par.memcheck`) |
 Parameter files used by tests must keep working: changing `problem.par.gold`/`.build` or initial conditions changes gold results (see [../jenkins/AGENTS.md](../jenkins/AGENTS.md)).
 
 ## Selected problems (see each `info`)
