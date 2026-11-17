@@ -90,6 +90,7 @@ ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body CPAW
 GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
 OPTIONAL_TESTS = MHD_blast_wave_memcheck
 VALGRIND ?= valgrind
+MEMCHECK_TEST_LEAK ?= 0
 # Use Open MPI's known-leak suppressions when available; other MPI builds can override this path.
 MPI_VALGRIND_SUPPRESSIONS ?= $(shell \
 	if command -v ompi_info >/dev/null 2>&1; then \
@@ -392,7 +393,7 @@ MHD_blast_wave_memcheck:
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/MHD_blast_wave_$${OTMPDIR//obj_/} ;\
 	VALGRIND_LOG_PREFIX="$(CURDIR)/$(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_$${OTMPDIR//obj_/}" ;\
-	$(SETUP) sedov/MHD_blast_wave --param problem.par.memcheck -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout && \
+	$(SETUP) sedov/MHD_blast_wave --param problem.par.memcheck $(if $(filter 1,$(MEMCHECK_TEST_LEAK)),-d TEST_MEMORY_LEAK) -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			SUPPRESSIONS= ;\
 			if [ -n "$(MPI_VALGRIND_SUPPRESSIONS)" ]; then \

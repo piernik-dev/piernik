@@ -74,6 +74,8 @@
 !!
 !! \b \#define \b "DEBUG" - enable modules: piernikdebug (src/base/debug.F90) and piernikiodebug (src/hdf5/io_debug.F90)
 !!
+!! \b \#define \b "TEST_MEMORY_LEAK" - deliberately leak 17 bytes per MPI rank and accepted timestep to test memory leak detection; never enable in production
+!!
 !! \b \#define \b "VERBOSE" - print additional diagnostic information on stdout
 !!
 !! \b \#define \b "NO_FFT" - don't use FFTW libraries at all (may be useful on some restricted environments)
