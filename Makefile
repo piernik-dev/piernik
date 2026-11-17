@@ -387,10 +387,11 @@ artifacts:
 
 # Target to run a short MHD blast-wave test under Valgrind
 MHD_blast_wave_memcheck:
+	mkdir -p $(ARTIFACTS) && \
+	$(RM) -f $(ARTIFACTS)/MHD_blast_wave_memcheck_*.xml || exit 1 ;\
 	OTMPDIR=$$(mktemp -d obj_XXXXXX) ;\
 	RUNDIR=$(RUNS_DIR)/MHD_blast_wave_$${OTMPDIR//obj_/} ;\
 	VALGRIND_LOG_PREFIX="$(CURDIR)/$(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_$${OTMPDIR//obj_/}" ;\
-	[ ! -e $(ARTIFACTS) ] && mkdir -p $(ARTIFACTS) || true ;\
 	$(SETUP) sedov/MHD_blast_wave --param problem.par.memcheck -o $${OTMPDIR//obj_/} > $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout && \
 		( cd $${RUNDIR} ;\
 			SUPPRESSIONS= ;\
@@ -408,8 +409,8 @@ MHD_blast_wave_memcheck:
 				$$SUPPRESSIONS ./piernik \
 		) >> $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout 2>&1 && \
 		$(PYTHON) $(CURDIR)/bin/check_valgrind.py --executable "$${RUNDIR}/piernik" "$${VALGRIND_LOG_PREFIX}".*.xml && \
-		( echo $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(PASSED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" ) || \
-		( echo $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(FAILED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" && exit 1 )
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(PASSED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" ) || \
+		( $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(FAILED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" && exit 1 )
 
 # Target to run the optional tests, which are not part of CI
 optional:
