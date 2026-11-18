@@ -227,13 +227,13 @@ def compare_time(h5f1: h5.File, h5f2: h5.File) -> float:
     time_key = "time"
     t1 = h5f1.attrs[time_key][0]
     t2 = h5f2.attrs[time_key][0]
-    if t1 > 0. and t2 > 0.:
-        return abs(t1 - t2) / (t1 + t2)
-    else:
-        if t1 == 0.:
-            return 0.
-        else:
-            return 1.
+    if (t1 < 0. < t2) or (t2 < 0. < t1):
+        logging.warning(f"Comparing times with opposite signs: {t1} and {t2}; negative simulation time detected.")
+        return 1.
+    denominator = abs(t1) + abs(t2)
+    if denominator == 0.:
+        return 0.
+    return abs(t1 - t2) / denominator
 
 
 def compare_data(ds1: np.ndarray, ds2: np.ndarray) -> float:
