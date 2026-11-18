@@ -16,6 +16,7 @@ that contains the new behaviour, **explaining it in the commit message**. Never 
 Adding a test: a config file + a `gold_<name>` target and an entry in `GOLD_TESTS` in the `Makefile` (`custom_gold` automatically runs every config whose name is *not* hard-coded in the Makefile case list, so a new config is picked up by `make gold` even without a target).
 
 ## Other
+- `make MHD_blast_wave_memcheck` replaces its previous Valgrind XML reports in `jenkins/artifacts/` before each run; other test artifacts are retained. `MEMCHECK_TEST_LEAK=1` enables intentional per-step leaks to check that detection fails.
 - `extract_jobs.sh` – dumps shell commands from Jenkins job XMLs (`$JENKINS_HOME`), for migrating the server configuration into the repo.
 
 ## Observations
