@@ -123,6 +123,26 @@ class CheckValgrindTest(unittest.TestCase):
             self.assertIn("library_call", result.stdout)
             self.assertIn("caller", result.stdout)
 
+    def test_color_always_emits_ansi_and_color_never_does_not(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "report.xml"
+            report.write_text(
+                "<valgrindoutput><status><state>FINISHED</state></status>"
+                "<error><kind>InvalidRead</kind><what>Invalid read</what>"
+                "</error></valgrindoutput>"
+            )
+            base = [sys.executable, str(SCRIPT), "-e", "/piernik", "-a"]
+            colored = subprocess.run(
+                base + ["--color", "always", str(report)],
+                capture_output=True, text=True, check=False,
+            )
+            plain = subprocess.run(
+                base + ["--color", "never", str(report)],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertIn("\033[", colored.stdout)
+            self.assertNotIn("\033[", plain.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,17 @@ ALLOCATOR_FUNCTIONS = {
     "__libc_malloc", "__libc_calloc", "__libc_realloc",
     "operator new", "operator new[]",
 }
+RESET = "\033[0m"
+BOLD = "\033[1m"
+RED = "\033[31m"
+YELLOW = "\033[33m"
+CYAN = "\033[36m"
+DIM = "\033[2m"
+
+
+def paint(text, color, enabled):
+    """Apply an ANSI color when color output is enabled."""
+    return f"{color}{text}{RESET}" if enabled else text
 
 
 def allocation_frame(error):
@@ -40,7 +51,7 @@ def frame_location(frame):
     return function
 
 
-def print_stack(stack):
+def print_stack(stack, color):
     frames = stack.findall("frame")
     if not frames:
         print("    (no frames available)")
@@ -54,20 +65,25 @@ def print_stack(stack):
         location = str(Path(directory) / filename) if filename else obj
         if line and filename:
             location = f"{location}:{line}"
-        print(f"    {address}: {function}" + (f" ({location})" if location else ""))
+        location_text = f" ({paint(location, CYAN, color)})" if location else ""
+        print(
+            f"    {paint(address, DIM, color)}: "
+            f"{paint(function, BOLD, color)}"
+            f"{location_text}"
+        )
 
 
-def print_error_stacks(element):
+def print_error_stacks(element, color):
     for child in element:
         if child.tag == "auxwhat" and child.text:
             print(f"  {child.text}")
         elif child.tag == "stack":
-            print_stack(child)
+            print_stack(child, color)
         elif child.tag == "origin":
             description = child.findtext("what")
             if description:
                 print(f"  {description}")
-            print_error_stacks(child)
+            print_error_stacks(child, color)
 
 
 def is_project_leak(error, executable):
@@ -99,6 +115,12 @@ def main():
         "-a", "--all",
         action="store_true",
         help="show every unsuppressed Valgrind finding, including MPI/runtime",
+    )
+    parser.add_argument(
+        "--color",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="use ANSI colors automatically, always, or never (default: auto)",
     )
     parser.add_argument("reports", nargs="+", type=Path)
     args = parser.parse_args()
@@ -163,21 +185,30 @@ def main():
                      if finding["project_leak"]]
     display_all = args.all
     displayed = findings if display_all else project_leaks
+    output = sys.stdout if display_all or args.verbose else sys.stderr
+    color = args.color == "always" or (
+        args.color == "auto" and output.isatty()
+    )
 
     if args.verbose:
         for finding in displayed:
             owner = "Piernik" if finding["project_leak"] else "external"
+            owner_color = RED if finding["project_leak"] else YELLOW
             print(
-                f"{finding['report']} (PID {finding['pid']}): "
-                f"{owner} {finding['kind']}: {finding['description']}"
+                f"{paint(finding['report'], DIM, color)} "
+                f"(PID {finding['pid']}): "
+                f"{paint(owner, owner_color, color)} "
+                f"{finding['kind']}: {finding['description']}"
             )
-            print_error_stacks(finding["error"])
+            print_error_stacks(finding["error"], color)
     else:
-        output = sys.stdout if display_all else sys.stderr
         for finding in displayed:
             owner = "Piernik" if finding["project_leak"] else "external"
+            owner_color = RED if finding["project_leak"] else YELLOW
             print(
-                f"{finding['report']}: {owner}: {finding['description']} "
+                f"{paint(finding['report'], DIM, color)}: "
+                f"{paint(owner, owner_color, color)}: "
+                f"{finding['description']} "
                 f"({frame_location(finding['frame'])})",
                 file=output,
             )
@@ -186,14 +217,25 @@ def main():
         return 1
 
     if display_all and not displayed:
-        print(f"Displayed {len(findings)} unsuppressed Valgrind findings.")
-    elif args.verbose:
         print(
+            paint(
+                f"Displayed {len(findings)} unsuppressed Valgrind findings.",
+                DIM,
+                color,
+            )
+        )
+    elif args.verbose:
+        message = (
             "No Piernik-originating definite/indirect leaks in "
             f"{len(args.reports)} reports."
         )
+        print(paint(message, CYAN, color))
     else:
-        print(f"No Piernik-originating definite/indirect leaks in {len(args.reports)} reports.")
+        message = (
+            "No Piernik-originating definite/indirect leaks in "
+            f"{len(args.reports)} reports."
+        )
+        print(paint(message, CYAN, color))
     return 0
 
 
