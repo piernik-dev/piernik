@@ -13,6 +13,33 @@ SCRIPT = Path(__file__).with_name("check_valgrind.py")
 
 
 class CheckValgrindTest(unittest.TestCase):
+    def test_detects_project_leak_from_executable_recorded_in_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "report.xml"
+            deleted_executable = Path(directory) / "piernik"
+            root = ET.Element("valgrindoutput")
+            status = ET.SubElement(root, "status")
+            ET.SubElement(status, "state").text = "FINISHED"
+            args = ET.SubElement(root, "args")
+            argv = ET.SubElement(args, "argv")
+            ET.SubElement(argv, "exe").text = "./piernik"
+            error = ET.SubElement(root, "error")
+            ET.SubElement(error, "kind").text = "Leak_DefinitelyLost"
+            xwhat = ET.SubElement(error, "xwhat")
+            ET.SubElement(xwhat, "text").text = "16 bytes definitely lost"
+            stack = ET.SubElement(error, "stack")
+            frame = ET.SubElement(stack, "frame")
+            ET.SubElement(frame, "fn").text = "test_memory_leak"
+            ET.SubElement(frame, "obj").text = str(deleted_executable)
+            ET.ElementTree(root).write(report)
+
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(report)],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("test_memory_leak", result.stderr)
+
     def test_verbose_shows_all_stacks_without_changing_leak_status(self):
         with tempfile.TemporaryDirectory() as directory:
             executable = Path(directory) / "piernik"
@@ -60,7 +87,7 @@ class CheckValgrindTest(unittest.TestCase):
             self.assertLess(result.stdout.index("malloc"), result.stdout.index("allocate"))
             self.assertLess(result.stdout.index("allocate"), result.stdout.index("caller"))
 
-    def test_all_shows_external_stacks_without_failing(self):
+    def test_all_shows_external_summary_without_stack(self):
         with tempfile.TemporaryDirectory() as directory:
             report = Path(directory) / "report.xml"
             report.write_text(
@@ -71,6 +98,24 @@ class CheckValgrindTest(unittest.TestCase):
             )
             result = subprocess.run(
                 [sys.executable, str(SCRIPT), "-e", "/piernik", "-a", str(report)],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("Invalid read", result.stdout)
+            self.assertIn("library_call", result.stdout)
+            self.assertNotIn("caller", result.stdout)
+
+    def test_all_and_verbose_show_external_stacks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "report.xml"
+            report.write_text(
+                "<valgrindoutput><status><state>FINISHED</state></status>"
+                "<error><kind>InvalidRead</kind><what>Invalid read</what>"
+                "<stack><frame><fn>library_call</fn></frame>"
+                "<frame><fn>caller</fn></frame></stack></error></valgrindoutput>"
+            )
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "-e", "/piernik", "-a", "-v", str(report)],
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(result.returncode, 0)

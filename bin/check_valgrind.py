@@ -78,21 +78,22 @@ def is_project_leak(error, executable):
     obj = frame.findtext("obj", default="")
     if not obj:
         return False, frame
-    return Path(obj).resolve() == executable, frame
+    if executable.is_absolute():
+        return Path(obj).resolve() == executable, frame
+    return Path(obj).name == executable.name, frame
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-e", "--executable",
-        required=True,
         type=Path,
-        help="binary used to distinguish Piernik allocations from MPI/runtime",
+        help="binary path to use instead of the executable recorded in the report",
     )
     parser.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="show full Valgrind call stacks for Piernik leak findings",
+        help="show full Valgrind call stacks for selected findings",
     )
     parser.add_argument(
         "-a", "--all",
@@ -102,7 +103,6 @@ def main():
     parser.add_argument("reports", nargs="+", type=Path)
     args = parser.parse_args()
 
-    executable = args.executable.resolve()
     findings = []
     for report in args.reports:
         try:
@@ -115,6 +115,20 @@ def main():
         if not statuses or statuses[-1].findtext("state") != "FINISHED":
             print(f"{report}: Valgrind report did not finish", file=sys.stderr)
             return 1
+
+        executable = args.executable
+        if executable is None:
+            executable_name = root.findtext("./args/argv/exe", default="")
+            if not executable_name:
+                print(
+                    f"{report}: executable is missing from Valgrind XML; "
+                    "pass --executable",
+                    file=sys.stderr,
+                )
+                return 1
+            executable = Path(executable_name)
+        elif executable.is_absolute():
+            executable = executable.resolve()
 
         for error in root.findall("error"):
             kind = error.findtext("kind", default="")
@@ -148,10 +162,9 @@ def main():
     project_leaks = [finding for finding in findings
                      if finding["project_leak"]]
     display_all = args.all
-    display_verbose = args.verbose or display_all
     displayed = findings if display_all else project_leaks
 
-    if display_verbose:
+    if args.verbose:
         for finding in displayed:
             owner = "Piernik" if finding["project_leak"] else "external"
             print(
@@ -159,18 +172,20 @@ def main():
                 f"{owner} {finding['kind']}: {finding['description']}"
             )
             print_error_stacks(finding["error"])
-    elif project_leaks:
-        for finding in project_leaks:
+    else:
+        output = sys.stdout if display_all else sys.stderr
+        for finding in displayed:
+            owner = "Piernik" if finding["project_leak"] else "external"
             print(
-                f"{finding['report']}: {finding['description']} "
+                f"{finding['report']}: {owner}: {finding['description']} "
                 f"({frame_location(finding['frame'])})",
-                file=sys.stderr,
+                file=output,
             )
 
     if project_leaks:
         return 1
 
-    if display_all:
+    if display_all and not displayed:
         print(f"Displayed {len(findings)} unsuppressed Valgrind findings.")
     elif args.verbose:
         print(

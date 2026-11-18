@@ -409,7 +409,7 @@ MHD_blast_wave_memcheck:
 				--errors-for-leak-kinds=definite,indirect \
 				$$SUPPRESSIONS ./piernik \
 		) >> $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout 2>&1 && \
-		$(PYTHON) $(CURDIR)/bin/check_valgrind.py --executable "$${RUNDIR}/piernik" "$${VALGRIND_LOG_PREFIX}".*.xml && \
+		$(PYTHON) $(CURDIR)/bin/check_valgrind.py "$${VALGRIND_LOG_PREFIX}".*.xml && \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(PASSED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" ) || \
 		( $(cleanup_tmpdir) ; $(ECHO) -e "  MHD blast-wave Valgrind test "$(FAILED)", details in $(ARTIFACTS)/MHD_blast_wave_memcheck.setup.stdout and $(JENKINS_DIR)/artifacts/MHD_blast_wave_memcheck_*.xml" && exit 1 )
 
