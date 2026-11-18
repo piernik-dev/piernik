@@ -101,6 +101,40 @@ class DatasetMetricTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.paths = [Path(self.tmp.name) / f"{i}.h5" for i in range(3)]
 
+    def test_self_comparison_with_extreme_domain_sizes(self):
+        for edge in (1.e-200, 1., 1.e200):
+            with self.subTest(edge=edge):
+                make_file(self.paths[0])
+                with h5py.File(self.paths[0], "a") as f:
+                    f["simulation_parameters"].attrs["domain_right_edge"] = [edge] * 3
+                self.assertEqual(total_distance(self.paths[0], self.paths[0]), 0.)
+
+    def test_domain_overlap_with_extreme_values(self):
+        for edge in (1.e-200, 1., 1.e200):
+            with self.subTest(edge=edge):
+                make_file(self.paths[0])
+                make_file(self.paths[1])
+                with h5py.File(self.paths[0], "a") as f:
+                    f["simulation_parameters"].attrs["domain_right_edge"] = [edge] * 3
+                with h5py.File(self.paths[1], "a") as f:
+                    f["simulation_parameters"].attrs["domain_right_edge"] = [edge, edge, 2. * edge]
+                with h5py.File(self.paths[0], "r") as f1, h5py.File(self.paths[1], "r") as f2:
+                    distance, _, _ = module["compare_domains"](f1, f2)
+                    self.assertAlmostEqual(distance, .5)
+
+    def test_domain_width_larger_than_float_range(self):
+        make_file(self.paths[0])
+        make_file(self.paths[1])
+        with h5py.File(self.paths[0], "a") as f:
+            f["simulation_parameters"].attrs["domain_left_edge"] = [-1.e308, 0., 0.]
+            f["simulation_parameters"].attrs["domain_right_edge"] = [1.e308, 1., 1.]
+        with h5py.File(self.paths[1], "a") as f:
+            f["simulation_parameters"].attrs["domain_right_edge"] = [1.e308, 1., 1.]
+        self.assertEqual(total_distance(self.paths[0], self.paths[0]), 0.)
+        with h5py.File(self.paths[0], "r") as f1, h5py.File(self.paths[1], "r") as f2:
+            distance, _, _ = module["compare_domains"](f1, f2)
+            self.assertAlmostEqual(distance, .5)
+
     def test_particle_id_triangle_counterexample(self):
         make_file(self.paths[0], particles={1: 1., 2: 0., 3: 0.})
         make_file(self.paths[1], particles={2: 0., 3: 0., 4: 0.})
