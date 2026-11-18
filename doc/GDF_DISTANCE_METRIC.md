@@ -96,9 +96,11 @@ The last inequality follows from \((c-a)(b-a)\ge0\). Dividing by
 \(a+c\) proves the triangle inequality. This includes scalar time as the
 one-dimensional case.
 
-Next, let \(d_i\) be any finite family of metrics bounded by 1. Their
-probabilistic sum \(D=1-\prod_i(1-d_i)\) is a metric. Non-negativity,
-symmetry, and the zero condition are immediate. For the triangle inequality,
+Next, let \(d_i\) be a finite family of pseudometrics bounded by 1 on the
+same space. Their probabilistic sum \(D=1-\prod_i(1-d_i)\) is a
+pseudometric: non-negativity, symmetry, and \(D(x,x)=0\) are immediate.
+Moreover, \(D(x,y)=0\) exactly when every \(d_i(x,y)=0\), so \(D\) is a
+metric if the family jointly separates points. For the triangle inequality,
 write \(p_i=d_i(x,y)\) and \(q_i=d_i(y,z)\). Since
 \(d_i(x,z)\le\min(1,p_i+q_i)\), it suffices to show
 \(F(\min(1,p+q))\le F(p)+F(q)\), where
@@ -115,10 +117,15 @@ the union bound give
  =F(p)+F(q).
 \]
 
-Within a fixed structure, field and particle groups form a fixed collection
-of coordinates, so the preceding result proves that the total is a metric on
-their logical values. For different structures the distance is 1, while
-every within-structure distance is at most 1. A triangle with endpoints in
+Within a fixed structure, time, field groups and particle groups form a fixed
+collection of coordinates. Each \(\delta_i\) is a metric on its own
+coordinate space, but only a pseudometric on the space of complete logical
+data: two data sets can agree on one coordinate and differ elsewhere.
+Together these coordinates determine all the logical values, so their
+pseudometrics jointly separate points. The preceding result therefore proves
+that the total is a metric on the complete logical data for that structure.
+For different structures the distance is 1, while every within-structure
+distance is at most 1. A triangle with endpoints in
 different structures has at least one cross-structure edge of length 1; if
 the endpoints have the same structure but the intermediate point does not,
 both other edges have length 1. Thus the triangle inequality also holds
