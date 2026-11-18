@@ -24,6 +24,7 @@
 #                            (obsoleted by pycodestyle)
 #   'make pycodestyle'     # run pycodestyle on all Python scripts, ignore long lines
 #   'make chk_err_msg'     # check filenames in error messages
+#   'make gdf-distance-test' # run GDF distance unit tests
 #   'make doxy'            # generate/updare Doxygen documentation
 #   'make gdf-distance-pdf' # generate the GDF distance proof as PDF
 #   'make gold'            # run the gold tests from ./jenkins directory
@@ -66,6 +67,7 @@ BIN_DIR = bin
 PYTHON_DIR = python
 JENKINS_DIR = ./jenkins
 ARTIFACTS = "$(JENKINS_DIR)/artifacts"
+QA_ARTIFACTS = "$(JENKINS_DIR)/qa-artifacts"
 GOLDSPACE = "$(JENKINS_DIR)/workspace"
 CONFIG_DIR = $(JENKINS_DIR)/gold_configs
 
@@ -85,7 +87,7 @@ GOLD_TEST_SCRIPT = $(JENKINS_DIR)/gold_test.sh
 
 
 # Sets of tests
-QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa
+QA_TESTS = chk_err_msg chk_lic_hdr pycodestyle qa gdf-distance-test
 ARTIFACT_TESTS = dep py3 noHDF5 I64 IOv2 Jeans Maclaurin 3body CPAW
 GOLD_TESTS = gold_CRESP gold_mcrtest gold_mcrwind gold_MHDsedovAMR gold_resist gold_streaming_instability custom_gold
 
@@ -176,6 +178,13 @@ pycodestyle:
 	pycodestyle `git ls-files | grep '\.py$$'` $(BIN_DIR)/gdf_distance --ignore=E501,E722,W504,W605 && \
 		$(ECHO) -e "$$TSTNAME"$(PASSED)"$$REMARK" ||\
 		( $(ECHO) -e "$$TSTNAME"$(FAILED)"$$REMARK" && exit 1 )
+
+# Target to test the GDF distance comparator
+gdf-distance-test:
+	mkdir -p $(QA_ARTIFACTS)
+	$(PYTHON) $(BIN_DIR)/test_gdf_distance.py > $(QA_ARTIFACTS)/gdf-distance-test.log 2>&1 && \
+		$(ECHO) -e "  GDF distance test "$(PASSED) || \
+		( $(ECHO) -e "  GDF distance test "$(FAILED)" (details in $(QA_ARTIFACTS)/gdf-distance-test.log)" && exit 1 )
 
 # Target to check error messages in the Fortran source files
 chk_err_msg:

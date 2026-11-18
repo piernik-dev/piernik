@@ -16,6 +16,8 @@ Parent: [../AGENTS.md](../AGENTS.md). Scripts are run from the repository root u
   Current gold tests are defined in `../jenkins/gold_configs/` (see [../jenkins/AGENTS.md](../jenkins/AGENTS.md)).
 - `gdfdiff`, `gdf_distance`, `resdiff` – compare two HDF5 outputs (GDF dumps / restart). `gdf_distance` is the modern one (py3, argparse, typing);
   `gdfdiff` shebang is `/usr/bin/python` and `resdiff` is python2 (uses `scipy.misc`, now removed).
+- `test_gdf_distance.py` – unit tests for `gdf_distance`; run `make gdf-distance-test` or `make QA`. Requires Python 3, numpy and h5py;
+  per-test progress and details are logged to `jenkins/qa-artifacts/gdf-distance-test.log` (separate from `jenkins/artifacts/`, which `make CI` clears).
 - `validate.py` – old (python2) validation driver with hard-coded paths; superseded by `make CI`.
 
 ## Run-time / debugging
@@ -32,4 +34,3 @@ Parent: [../AGENTS.md](../AGENTS.md). Scripts are run from the repository root u
   Port to python3 or delete; they are not covered by CI, so they rot silently. A cheap guard: `python3 -m py_compile` on all scripts in the `pycodestyle`/QA target.
 - Mixed shebangs (`python`, `python3`, `/usr/bin/python`, `/usr/bin/env python`) – on macOS/modern Linux plain `python` often does not exist; use `#!/usr/bin/env python3`.
 - `bash_completion.sh` option list duplicates `setup`; generate it from `./setup --help` instead.
-- No tests for the helpers themselves.

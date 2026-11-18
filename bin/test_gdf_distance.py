@@ -23,7 +23,20 @@ def time_file(time):
     return SimpleNamespace(attrs={"time": [time]})
 
 
-class CompareTimeTest(unittest.TestCase):
+class GdfTestCase(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        print(file=sys.stderr, flush=True)
+
+    def subTest(self, msg=None, **params):
+        description = ", ".join(f"{key}={value!r}" for key, value in params.items())
+        print(f"  Subtest: {description or msg}", file=sys.stderr, flush=True)
+        if msg is None:
+            return super().subTest(**params)
+        return super().subTest(msg, **params)
+
+
+class CompareTimeTest(GdfTestCase):
     def test_opposite_signs_warn_and_return_one(self):
         for t1, t2 in ((-2., 3.), (3., -2.)):
             with self.subTest(t1=t1, t2=t2), self.assertLogs(level="WARNING") as logs:
@@ -40,7 +53,7 @@ class CompareTimeTest(unittest.TestCase):
         self.assertAlmostEqual(compare_time(time_file(1.e308), time_file(5.e307)), 1. / 3.)
 
 
-class CompareDataTest(unittest.TestCase):
+class CompareDataTest(GdfTestCase):
     def test_small_and_large_values_do_not_underflow_or_overflow(self):
         for value in (1.e-200, 1.e200):
             with self.subTest(value=value):
@@ -95,8 +108,9 @@ def total_distance(first, second, levels=None):
     return 1. - np.prod([1. - value for value in values])
 
 
-class DatasetMetricTest(unittest.TestCase):
+class DatasetMetricTest(GdfTestCase):
     def setUp(self):
+        super().setUp()
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.paths = [Path(self.tmp.name) / f"{i}.h5" for i in range(3)]
@@ -201,14 +215,20 @@ class DatasetMetricTest(unittest.TestCase):
             total_distance(self.paths[0], self.paths[1])
 
     def test_triangle_and_symmetry_with_matching_structure(self):
+        descriptions = {}
         for i, path in enumerate(self.paths):
             make_file(path, fields={"dens": i + 1., "velx": i + .5, "vely": 2.},
                       particles={1: i + 1., 2: 2.}, time=i + 1.)
+            descriptions[path] = (f"{path.name}: time={i + 1}, dens={i + 1}, "
+                                  f"velx={i + .5}, particle 1 position_x={i + 1}")
+        print("  Shared: vely=2, particle 2 position_x=2, other physical particle values=0",
+              file=sys.stderr, flush=True)
         for a, b, c in itertools.permutations(self.paths):
-            ab = total_distance(a, b)
-            self.assertAlmostEqual(ab, total_distance(b, a))
-            self.assertLessEqual(total_distance(a, c), ab + total_distance(b, c) + 1.e-14)
+            with self.subTest(a=descriptions[a], b=descriptions[b], c=descriptions[c]):
+                ab = total_distance(a, b)
+                self.assertAlmostEqual(ab, total_distance(b, a))
+                self.assertLessEqual(total_distance(a, c), ab + total_distance(b, c) + 1.e-14)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
