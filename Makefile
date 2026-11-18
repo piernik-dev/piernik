@@ -25,6 +25,7 @@
 #   'make pycodestyle'     # run pycodestyle on all Python scripts, ignore long lines
 #   'make chk_err_msg'     # check filenames in error messages
 #   'make doxy'            # generate/updare Doxygen documentation
+#   'make gdf-distance-pdf' # generate the GDF distance proof as PDF
 #   'make gold'            # run the gold tests from ./jenkins directory
 #   'make gold-serial'     # run the gold tests from ./jenkins directory in serial mode
 #   'make gold-clean'      # remove files after gold test
@@ -94,7 +95,7 @@ define cleanup_tmpdir
 endef
 
 # Define phony targets
-.PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy help \
+.PHONY: $(ALLOBJ) ctags resetup clean check allsetup doxy gdf-distance-pdf help \
 	oldgold gold-serial gold-clean pep8 view_dep colortest \
 	CI QA artifacts gold $(QA_TESTS) $(ARTIFACT_TESTS) $(GOLD_TESTS)
 
@@ -154,6 +155,12 @@ allsetup:
 doxy:
 	doxygen piernik.doxy
 
+# Target to generate the GDF distance proof
+gdf-distance-pdf: doc/GDF_DISTANCE_METRIC.pdf
+
+doc/GDF_DISTANCE_METRIC.pdf: doc/GDF_DISTANCE_METRIC.md
+	pandoc -f markdown+tex_math_single_backslash --pdf-engine=xelatex -o $@ $<
+
 # Target to run qa.py checks
 qa:
 	$(BIN_DIR)/qa.py -q $$( git ls-files | grep -vE "^(compilers/tests|doc/general)" | grep "\.F90$$" ) && \
@@ -190,6 +197,7 @@ help:
 	@$(ECHO) "  gold      - Run all gold tests      ($(GOLD_TESTS))"
 	@$(ECHO) "  CI        - Run all CI checks       (QA artifacts gold)"
 	@$(ECHO) "  help      - Show this help"
+	@$(ECHO) "  gdf-distance-pdf - Generate the GDF distance proof as PDF"
 
 # Testing ANSI colors in current terminal
 colortest:

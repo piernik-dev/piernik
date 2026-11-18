@@ -12,4 +12,5 @@ dep.png
 jenkins/workspace/
 jenkins/artifacts/
 doc/latex/
+doc/GDF_DISTANCE_METRIC.pdf
 results/
