@@ -26,7 +26,7 @@
 !
 #include "piernik.h"
 !>
-!! Main program
+!! \brief Main program
 !<
 program piernik
 
@@ -89,6 +89,10 @@ program piernik
    code_progress = PIERNIK_START
 
    call init_piernik
+
+#ifdef TEST_MEMORY_LEAK
+   if (master) call warn("[piernik] TEST_MEMORY_LEAK enabled: intentionally leaking memory each timestep")
+#endif /* TEST_MEMORY_LEAK */
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
@@ -166,6 +170,9 @@ program piernik
       call check_cfl_violation(flind)
 
       rs = repeat_step()  ! enforce function call
+#ifdef TEST_MEMORY_LEAK
+      if (.not. rs) call test_memory_leak
+#endif /* TEST_MEMORY_LEAK */
       if ((t - tlast < tiny(1.0)) .and. .not. first_step .and. .not. rs) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
@@ -276,6 +283,28 @@ program piernik
    if (master) write(stdout,'(a,/)')"#"
 
 contains
+
+#ifdef TEST_MEMORY_LEAK
+
+!> \brief Create an intentional memory leak for Memcheck testing.
+!! Allocate one block per call and intentionally leave it reachable only
+!! through Valgrind until process termination.
+
+   subroutine test_memory_leak
+
+      implicit none
+
+      integer, parameter :: leak_bytes = 17  ! Should be greater or equal to the length of the string "memory leak test"
+      character(len=leak_bytes), pointer, volatile :: leaked
+      integer :: alloc_status
+
+      allocate(leaked, stat=alloc_status)
+      if (alloc_status /= 0) call die("[piernik:test_memory_leak] failed to allocate test leak")
+      leaked = "memory leak test"
+
+   end subroutine test_memory_leak
+
+#endif /* TEST_MEMORY_LEAK */
 
    subroutine print_progress(nstep)
 
